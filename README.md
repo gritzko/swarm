@@ -1,4 +1,4 @@
-# Swarm: node.js data sync library
+# Swarm: a node.js data sync library
 
 Swarm is a minimal M(VC) library that focuses on synchronozed models,
 i.e. JavaScript classes that magically synchronize between all your
@@ -6,7 +6,7 @@ clients and servers using WebSocket connections. All instances of an
 object will form a dynamic spanning tree, of sorts, sending deltas to
 each other and merging changes.
 Regarding V and C parts of the MVC, you may either attach your own
-View and Constroller or insert Swarm into your MVC framework of choice
+View and Controller or insert Swarm into your MVC framework of choice
 (like backbone.js).
 The vision behind Swarm is to get back to the good old days: program
 a real-time multiuser multiserver app like a local app, let things
@@ -164,10 +164,10 @@ which, probably, rerenders some view:
     });
 
 The alternative was to do an RPC invocation at the original client
-without checking out the entire object first. Then, event proceed
+without checking out the entire object first. Then, events proceed
 along the same lines, as the change will travel to the responsible
 server, where it gets applied to an object and then it gets
-redistributed to any other servers/clients who have that object
+redistributed to any other servers/clients which have that object
 opened.
 
 Both objects and changes might be cached in client storage to allow
