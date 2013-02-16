@@ -1,69 +1,90 @@
-var swarm = require('../lib/swarm.js');
-var Swarm = swarm.Swarm;
-var LocalPeer = swarm.LocalPeer;
-var assert = require('assert');
+function isEqual (a,b) {
+    if (a!=b)
+        console.trace('expected',b,'got',a);
+};
+
+if (typeof(require)=='function')
+    Peer = require('../lib/swarm.js');
 
 function Obj (id) {
     this._id = id;
     this.key = '';
     this._lstn = [];
 }
-Swarm.extend(Obj);
+Peer.extend(Obj);
 
 
-var port = process.argv[2];
+/*var port = process.argv[2];
 var hubPort = process.argv[3];
 console.log('swarm peer starts at port',port);
-Swarm.listen({port:port});
+swarm.listen({port:port});
 if (hubPort)
-    Swarm.connectPeer('ws://localhost:'+hubPort);
+    swarm.connectPeer('ws://localhost:'+hubPort);
 
-/*var serverA = new Swarm('&00-Aa');
-var serverB = new Swarm('&00-Bb');
-var storage = new MemoryStorage();
-Swarm.addPeer(serverA);
-Swarm.addPeer(serverB);
-Swarm.addStorage(storage);
+var obj = swarm.on('/Obj#id',function(change){
+	console.log(change);
+});
 
-var clientA = new Swarm('&AA');
-clientA.addPeer(serverA);
-var clientB = new Swarm('&BB');
-clientB.addPeer(serverB);
+var i=0;
 
+setInterval(function(){
+	if (i++&1)
+		obj.set('key',port);
+},1000);
+*/	
+
+
+var swarmA = new Peer('&00-Aa');
+var swarmB = new Peer('&00-Bb');
+var wrapA = new Peer.JsonSeDe( swarmA, swarmB.id, {
+    send : function (str) { wrapB.onMessage(str) }
+});
+var wrapB = new Peer.JsonSeDe( swarmB, swarmA.id, {
+    send : function (str) { wrapA.onMessage(str) }
+});
+/*wrapA.pipe = {
+};
+wrapB.pipe = {
+};
+swarmB.addPeer(wrapA);
+swarmA.addPeer(wrapB);*/
+
+function logChange (op) {
+    console.trace('\t*',op);
+};
 // all sync
-var objA = clientA.open(new Obj()); // most natural form
-var objB = clientB.open(new Obj(objA._id));
+var objA = swarmA.on(new Obj(),logChange); // most natural form
+console.log('\nSWARMA\n',swarmA,'\nSWARMB\n',swarmB);
+var objB = swarmB.on(new Obj(objA._id),logChange);
 
-assert.equal(objA.key,'');
+isEqual(objA.key,'');
 objA.set('key','testA');
-assert.equal(objA.key,'testA');
-assert.equal(objB.key,'');
+isEqual(objA.key,'testA');
+isEqual(objB.key,'');
 
-serverA.addPeer(serverB);
-serverB.addPeer(serverA);
-
-assert.equal(objB.key,'testA');
+isEqual(objB.key,'testA');
 objB.set('key','testB');
-assert.equal(objB.key,'testB');
-assert.equal(objA.key,'testB');
+isEqual(objB.key,'testB');
+isEqual(objA.key,'testB');
 
-var serverC = new Swarm();
-var clientC = new Swarm(serverC);
+
+/*var serverC = new swarm();
+var clientC = new swarm(serverC);
 
 serverC.addPeer({
     open : function () {
         setTimeout(function(){
-            serverB.open();
+            swarmB.open();
         },100);
     },
     apply : function () {
         setTimeout(function(){
-            serverB.apply();
+            swarmB.apply();
         },100);
     }
 });
 
 var objC = clientC.open(new Obj(objA._id));
 setTimeout(function(){
-    assert.equal(objC.key,'testB');
+    isEqual(objC.key,'testB');
 },120);*/
