@@ -1,6 +1,8 @@
 function isEqual (a,b) {
-    if (a!=b)
-        console.trace('expected',b,'got',a);
+    if (a!=b) {
+        console.warn('expected',b,'got',a);
+        console.trace();
+    }
 };
 
 if (typeof(require)=='function')
@@ -33,58 +35,117 @@ setInterval(function(){
 },1000);
 */	
 
+var PEER_ID_A='&AA',
+    PEER_ID_B='&BB',
+    PEER_ID_C='&CC',
+    OBJ_ID_A='',
+    OBJ_ID_B='',
+    OBJ_ID_C='';
 
-var swarmA = new Peer('&00-Aa');
-var swarmB = new Peer('&00-Bb');
-var wrapA = new Peer.JsonSeDe( swarmA, swarmB.id, {
-    send : function (str) { wrapB.onMessage(str) }
-});
-var wrapB = new Peer.JsonSeDe( swarmB, swarmA.id, {
-    send : function (str) { wrapA.onMessage(str) }
-});
-/*wrapA.pipe = {
-};
-wrapB.pipe = {
-};
-swarmB.addPeer(wrapA);
-swarmA.addPeer(wrapB);*/
+function linkPeers (peerA,peerB) {
+    var mock1 = {
+        send : function (str) { mock2.cb(str) },
+        on : function (evmsg, cb) { this.cb = cb; }
+    };
+    var mock2 = {
+        send : function (str) { mock1.cb(str) },
+        on : function (evmsg, cb) { this.cb = cb; }
+    };
+    var sedeA = new Peer.JsonSeDe( peerA, peerB.id, mock1 );
+    var sedeB = new Peer.JsonSeDe( peerB, peerA.id, mock2 );
+    peerB.addPeer(sedeA);
+    peerA.addPeer(sedeB);
+}
 
-function logChange (op) {
-    console.trace('\t*',op);
-};
-// all sync
-var objA = swarmA.on(new Obj(),logChange); // most natural form
-console.log('\nSWARMA\n',swarmA,'\nSWARMB\n',swarmB);
-var objB = swarmB.on(new Obj(objA._id),logChange);
+function logChange (op,obj) {
+    console.log(obj._host.id,obj._id,op);
+}
 
-isEqual(objA.key,'');
-objA.set('key','testA');
-isEqual(objA.key,'testA');
-isEqual(objB.key,'');
+function testBasicSetGet () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+    linkPeers(peerA,peerB);
+    var objA = peerA.on(new Obj(),logChange); // most natural form
+    var objB = peerB.on(new Obj(objA._id),logChange);
+    isEqual(objA.key,'');
+    objA.set('key','testA');
+    isEqual(objA.key,'testA');
+    isEqual(objB.key,'testA');
+    objB.set('key','testB');
+    isEqual(objB.key,'testB');
+    isEqual(objA.key,'testB');
+    unlinkPeers(peerA,peerB);
+    peerA.close();
+    peerB.close();
+}
 
-isEqual(objB.key,'testA');
-objB.set('key','testB');
-isEqual(objB.key,'testB');
-isEqual(objA.key,'testB');
+function testOpenPush () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+    var objA = peerA.on(new Obj(OBJ_ID_B),logChange);
+    objA.set('key','A');
+    linkPeers(peerA,peerB);
+    isEqual(objB.key,'A');
+    peerA.close();
+    peerB.close();
+}
+
+function testOpenPull () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+    var objA = peerA.on(new Obj(OBJ_ID_A),logChange);
+    objA.set('key','A');
+    linkPeers(peerA,peerB);
+    var objB = peerB.on(new Obj(OBJ_ID_A),logChange);
+    isEqual(objB.key,'A');
+    peerA.close();
+    peerB.close();
+}
+
+function testUplinkPush () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+    var objA = peerA.on(new Obj(OBJ_ID_C),logChange);
+    var objB = peerB.on(new Obj(OBJ_ID_C),logChange);
+    objA.set('key','A');
+    isEqual(objA.key,'A');
+    isEqual(objB.key,'');
+    linkPeers(peerA,peerB);
+    isEqual(objB.key,'A');
+    var peerC = new Peer(PEER_ID_C);
+    linkPeers(peerC,peerA);
+    linkPeers(peerC,peerB);  // TODO immediate pex
+    // must rebalance the tree, open the obj
+    var objC = peerC.objects[OBJ_ID_C];
+    isEqual(objC.key,'A');
+    unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
+    unlinkPeers(peerC,peerB);
+    // must readjust after the disconnection
+    objB.set('key','B');
+    isEqual(objA.key,'B');
+    peerA.close();
+    peerB.close();
+    peerC.close();
+}
+
+function testMergeSync () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+    var objA = peerA.on(new Obj(OBJ_ID_B),logChange);
+    var objB = peerB.on(new Obj(OBJ_ID_B),logChange);
+    objA.set('key','A');
+    linkPeers(peerA,peerB);
+    isEqual(objB.key,'A');
+    peerA.close();
+    peerB.close();
+}
 
 
-/*var serverC = new swarm();
-var clientC = new swarm(serverC);
+testBasicSetGet();
 
-serverC.addPeer({
-    open : function () {
-        setTimeout(function(){
-            swarmB.open();
-        },100);
-    },
-    apply : function () {
-        setTimeout(function(){
-            swarmB.apply();
-        },100);
-    }
-});
+testOpenPull();
+testOpenPush();
 
-var objC = clientC.open(new Obj(objA._id));
-setTimeout(function(){
-    isEqual(objC.key,'testB');
-},120);*/
+testUplinkPull();
+
+testMergeSync();
