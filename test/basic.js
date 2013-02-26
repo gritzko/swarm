@@ -1,6 +1,6 @@
-function isEqual (a,b) {
-    if (a!=b) {
-        console.warn('expected',b,'got',a);
+function isEqual (fact,expect) {
+    if (fact!=expect) {
+        console.warn('expected',expect,'got',fact);
         console.trace();
     }
 };
@@ -15,6 +15,9 @@ function Obj (id) {
 }
 Peer.extend(Obj);
 
+var spec = '/2222-2222#2222!2222-2222';
+var specf = Peer.filter(spec,'!');
+isEqual(specf,'!2222-2222');
 
 /*var port = process.argv[2];
 var hubPort = process.argv[3];
@@ -42,7 +45,7 @@ var PEER_ID_A='&AA',
     OBJ_ID_B='',
     OBJ_ID_C='';
 
-function linkPeers (peerA,peerB) {
+function linkPeers (peer1,peer2) {
     var mock1 = {
         send : function (str) { mock2.cb(str) },
         on : function (evmsg, cb) { this.cb = cb; }
@@ -51,10 +54,13 @@ function linkPeers (peerA,peerB) {
         send : function (str) { mock1.cb(str) },
         on : function (evmsg, cb) { this.cb = cb; }
     };
-    var sedeA = new Peer.JsonSeDe( peerA, peerB.id, mock1 );
-    var sedeB = new Peer.JsonSeDe( peerB, peerA.id, mock2 );
-    peerB.addPeer(sedeA);
-    peerA.addPeer(sedeB);
+    var sede1 = new Peer.JsonSeDe( peer1, peer2.id, mock1 );
+    var sede2 = new Peer.JsonSeDe( peer2, peer1.id, mock2 );
+}
+
+function unlinkPeers (peer1,peer2) {
+    peer1.removePeer(peer2);
+    peer2.removePeer(peer1);
 }
 
 function logChange (op,obj) {
@@ -85,7 +91,8 @@ function testOpenPush () {
     var objA = peerA.on(new Obj(OBJ_ID_B),logChange);
     objA.set('key','A');
     linkPeers(peerA,peerB);
-    isEqual(objB.key,'A');
+    objB = peerB.objects[OBJ_ID_B];
+    isEqual(objB && objB.key,'A');
     peerA.close();
     peerB.close();
 }
@@ -117,7 +124,7 @@ function testUplinkPush () {
     linkPeers(peerC,peerB);  // TODO immediate pex
     // must rebalance the tree, open the obj
     var objC = peerC.objects[OBJ_ID_C];
-    isEqual(objC.key,'A');
+    isEqual(objC&&objC.key,'A');
     unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
     unlinkPeers(peerC,peerB);
     // must readjust after the disconnection
@@ -146,6 +153,6 @@ testBasicSetGet();
 testOpenPull();
 testOpenPush();
 
-testUplinkPull();
+testUplinkPush();
 
 testMergeSync();
