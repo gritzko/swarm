@@ -98,6 +98,7 @@ function logChange (op,obj) {
 }
 
 function testBasicSetGet () {
+    console.log('testBasicSetGet');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
     linkPeers(peerA,peerB);
@@ -110,12 +111,15 @@ function testBasicSetGet () {
     objB.set('key','testB');
     isEqual(objB.key,'testB');
     isEqual(objA.key,'testB');
+    peerB.off(objA._id,logChange);
+    isEqual(peerB.objects[objA._id],null);
     unlinkPeers(peerA,peerB);
     peerA.close();
     peerB.close();
 }
 
 function testOpenPush () {
+    console.log('testOpenPush');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
     var objA = peerA.on(new SimpleObject(OBJ_ID_B),logChange);
@@ -128,18 +132,20 @@ function testOpenPush () {
 }
 
 function testOpenPull () {
+    console.log('testOpenPull');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
-    var objA = peerA.on(new SimpleObject(OBJ_ID_A),logChange);
+    var objA = peerA.on(new SimpleObject(),logChange);
     objA.set('key','A');
     linkPeers(peerA,peerB);
-    var objB = peerB.on(new SimpleObject(OBJ_ID_A),logChange);
+    var objB = peerB.on(objA._id,logChange);
     isEqual(objB.key,'A');
     peerA.close();
     peerB.close();
 }
 
 function testUplinkPush () {
+    console.log('testUplinkPush');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
     var objA = peerA.on(new SimpleObject(OBJ_ID_C),logChange);
@@ -166,6 +172,7 @@ function testUplinkPush () {
 }
 
 function testMergeSync () {
+    console.log('testMergeSync');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
     var objA = peerA.on(new SimpleObject(OBJ_ID_B),logChange);
