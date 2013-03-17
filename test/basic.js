@@ -1,8 +1,11 @@
+var test_count = 1;
+
 function isEqual (fact,expect) {
     if (fact!=expect) {
-        console.warn('expected',expect,'got',fact);
+        console.warn(test_count++,'FAIL',expect,fact);
         console.trace();
-    }
+    } else
+        console.log(test_count++,'OK',fact);
 };
 
 if (typeof(require)=='function')
@@ -149,18 +152,19 @@ function testUplinkPush () {
     console.log('testUplinkPush');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
-    var objA = peerA.on(new SimpleObject(OBJ_ID_C),logChange);
-    var objB = peerB.on(new SimpleObject(OBJ_ID_C),logChange);
+    var peerC = new Peer(PEER_SSN_C);
+    var idC = peerC.createOid(SimpleObject);
+    var objA = peerA.on(idC,logChange);
+    var objB = peerB.on(idC,logChange);
     objA.set('key','A');
     isEqual(objA.key,'A');
     isEqual(objB.key,'');
     linkPeers(peerA,peerB);
     isEqual(objB.key,'A');
-    var peerC = new Peer(PEER_SSN_C);
     linkPeers(peerC,peerA);
     linkPeers(peerC,peerB);  // TODO immediate pex
     // must rebalance the tree, open the obj
-    var objC = peerC.objects[OBJ_ID_C];
+    var objC = peerC.objects[idC];
     isEqual(objC&&objC.key,'A');
     unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
     unlinkPeers(peerC,peerB);
