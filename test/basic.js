@@ -168,6 +168,7 @@ function testUplinkPush () {
     isEqual(objC&&objC.key,'A');
     unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
     unlinkPeers(peerC,peerB);
+    isEqual(peerC.objects[idC],undefined);
     // must readjust after the disconnection
     objB.set('key','B');
     isEqual(objA.key,'B');
@@ -180,11 +181,15 @@ function testMergeSync () {
     console.log('testMergeSync');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
-    var objA = peerA.on(new SimpleObject(OBJ_ID_B),logChange);
-    var objB = peerB.on(new SimpleObject(OBJ_ID_B),logChange);
+    var objA = peerA.on(SimpleObject,logChange);
+    var objB = peerB.on(objA._id,logChange);
     objA.set('key','A');
+    objB.set('key2','B');
     linkPeers(peerA,peerB);
     isEqual(objB.key,'A');
+    isEqual(objB.key2,'B');
+    isEqual(objA.key2,'B');
+    isEqual(objA.key,'A');
     peerA.close();
     peerB.close();
 }
