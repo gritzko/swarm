@@ -122,10 +122,11 @@ function testOpenPush () {
     console.log('testOpenPush');
     var peerA = new Peer(PEER_SSN_A);
     var peerB = new Peer(PEER_SSN_B);
-    var objA = peerA.on(new SimpleObject(OBJ_ID_B),logChange);
+    var objA = peerA.on
+        (new SimpleObject(peerB.createOid(SimpleObject)), logChange);
     objA.set('key','A');
     linkPeers(peerA,peerB);
-    objB = peerB.objects[OBJ_ID_B];
+    var objB = peerB.objects[objA._id];
     isEqual(objB && objB.key,'A');
     peerA.close();
     peerB.close();
