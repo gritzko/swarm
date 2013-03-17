@@ -1,7 +1,7 @@
 var test_count = 1;
 
 function isEqual (fact,expect) {
-    if (fact!=expect) {
+    if (fact!==expect) {
         console.warn(test_count++,'FAIL',expect,fact);
         console.trace();
     } else
@@ -21,7 +21,7 @@ Peer.extend(SimpleObject);
 function testSpec () {
     var spec = Spec.parse32('/222a-222a#222a!222a-222a');
     var specf = Spec.filter(spec,'!');
-    isEqual(specf,'!0606');
+    isEqual(specf.toString(),'!0606');
     var parsed = Spec.parseId(specf);
     isEqual(parsed.src,'06');
 }
@@ -115,7 +115,7 @@ function testBasicSetGet () {
     isEqual(objB.key,'testB');
     isEqual(objA.key,'testB');
     peerB.off(objA._id,logChange);
-    isEqual(peerB.objects[objA._id],null);
+    isEqual(peerB.objects[objA._id],undefined);
     unlinkPeers(peerA,peerB);
     peerA.close();
     peerB.close();
