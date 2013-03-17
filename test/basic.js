@@ -21,9 +21,9 @@ Peer.extend(SimpleObject);
 function testSpec () {
     var spec = Spec.parse32('/222a-222a#222a!222a-222a');
     var specf = Spec.filter(spec,'!');
-    isEqual(specf.toString(),'!0606');
+    isEqual(specf.toString(),'!060600');
     var parsed = Spec.parseId(specf);
-    isEqual(parsed.src,'06');
+    isEqual(parsed.seq,'06');
 }
 
 /*var port = process.argv[2];
@@ -48,6 +48,7 @@ setInterval(function(){
 var PEER_SSN_A='01',
     PEER_SSN_B='02',
     PEER_SSN_C='03',
+    PEER_SSN_D='04',
     OBJ_ID_A = Spec.parse32('/SimpleObject#A-A-A'),
     OBJ_ID_B = Spec.parse32('/SimpleObject#A-A-B'),
     OBJ_ID_C = Spec.parse32('/SimpleObject#A-A-C');
@@ -194,13 +195,40 @@ function testMergeSync () {
     peerB.close();
 }
 
+function testChaining () {
+    console.log('testChaining');
+    var peerA = new Peer(PEER_SSN_A);
+    var peerB = new Peer(PEER_SSN_B);
+    var peerC = new Peer(PEER_SSN_C);
+    var peerD = new Peer(PEER_SSN_D);
+    linkPeers(peerA,peerB);
+    linkPeers(peerC,peerB);
+    linkPeers(peerC,peerD);
+    var idC = peerC.createOid(SimpleObject);
+    var objA = peerA.on(idC,logChange);
+    var objD = peerD.on(idC,logChange);
+    objA.set('key','A');
+    isEqual(objD.key,'A');
+    objD.set('key','D');
+    isEqual(objA.key,'D');
+    isEqual(objA._vmap,objD._vmap);
+    var objB = peerB.on(idC,logChange);
+    objB.set('key','B');
+    isEqual(objD.key,'B');
+    peerA.close();
+    peerB.close();
+    peerC.close();
+    peerD.close();
+}
+
+
 testSpec();
 
 testBasicSetGet();
 
 testOpenPull();
 testOpenPush();
-
 testUplinkPush();
 
 testMergeSync();
+testChaining();
