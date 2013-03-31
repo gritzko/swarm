@@ -8,8 +8,10 @@ function isEqual (fact,expect) {
         console.log(test_count++,'OK',fact);
 };
 
-if (typeof(require)=='function')
+if (typeof(require)=='function') {
     Peer = require('../lib/swarm.js');
+    Spec = Peer.Spec;
+}
 
 function SimpleObject (id) {
     this._id = id;
@@ -23,7 +25,8 @@ function testSpec () {
     var specf = Spec.filter(spec,'!');
     isEqual(specf.toString(),'!060600');
     var parsed = Spec.parseId(specf);
-    isEqual(parsed.seq,'06');
+    isEqual(parsed.seq,'0');
+    isEqual(parsed.ssn,'6');
 }
 
 /*var port = process.argv[2];
@@ -88,8 +91,8 @@ function linkPeers (peer1,peer2) {
         q : [],
         cb : function () { this.q.push(arguments); }
     };
-    var sede1 = new Peer.JsonSeDe( peer1, peer2.id, mock1 );
-    var sede2 = new Peer.JsonSeDe( peer2, peer1.id, mock2 );
+    new Peer.JsonSeDe( peer1, peer2.id, mock1 );
+    new Peer.JsonSeDe( peer2, peer1.id, mock2 );
 }
 
 function unlinkPeers (peer1,peer2) {
