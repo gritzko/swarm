@@ -39,33 +39,94 @@ to be inherently unreliable) to larger setups using swarms of single
 threaded node.js processes.
 
 Our guiding principles:
+
 * massive parallelism,
 * reasonable redundancy and
 * self-organization.
+
+## Signatures
+
+We do our best to extend well-known conventions for method signatures
+to the case of a distributed replicated object graph.
+
+subscribe to object events:
+
+    on(event,callback_fn)
+
+swarm-scale garbage collection (swarm gc)
+
+    off(event,callback_fn)
+
+once all listeners are removed the object is garbage collected
+
+    send(key,value)  // send({key:value})
+
+"key" and "event" names are generalized as _specifiers_
+
+    /collection#object.field!version
+    /collection#object:method
+
+don't be shocked once you encounter that in the debugger
+Spec.to32(key) gives you
+
+    /Mice#mouse1.x
+
+which is way more readable
+
+The same applies to the networking part
+Basically, we extend the same send/on/off signature to a stack
+of "pipes" that handle various aspects of network communication.
+Pipes may be stacked, i.e. peer1 may be connected to peer2 by
+a stack of pipes:
+
+    BundlePipe // bundles on/off/send calls into spec-val objects
+    JsonPipe // serializes on/off/send calls as JSON pieces
+    LinePipe  // line-oriented format
+    WebSocketPipe // sends/receives data by WebSocket
+    TCPPipe // ...  by a raw TCP socket
+    LocalPipe // for testing purposes
+    WebStoragePipe // caches operations to WebStorage
+    SocketIoPipe // socket.io
+
+Example:
+
+    websocket.on('connect', function(sock) {
+        var net = new WebSocketPipe(sock);
+        var json = new JsonPipe(net);
+        var bundle = new BundlePipe(json);
+        var cache = new WebStoragePipe(bundle);
+        localPeer.addPeer(cache);
+    });
 
 ## API
 
 Our main building block is a synchronized JavaScript object that has
 three key methods:
-* open(id) -- subscribe to an object with a given id
-* close() -- unsubscribe
-* set(key,value) -- change an attribute
+
+    on(id+event,fn) -- subscribe to an object with a given id
+    off(id+event,fn) -- unsubscribe
+    off(key,value) -- change an attribute
 
 Objects also support mutation events:
-* on(key,callback) -- start listening to object's attribute changes
-* onKeyChange(newval,oldval) -- define this method to listen on
-  for the event _every_ such object (static events)
+
+    on(key,callback) -- start listening to object's attribute changes
+    onKeyChange(newval,oldval) -- define this method to listen on for
+    the event _every_ such object (static events)
 
 Key internal Swarm methods:
-* diff(version) -- get a difference from a given past version
-* apply(diff) -- apply the diff to an object (merge, converge)
-* version() -- get the current version of an object
+
+    diff(version) -- get a difference from a given past version
+    apply(diff) -- apply the diff to an object (merge, converge)
+    version() -- get the current version of an object
 
 To make your plain JavaScript object swarmable please call:
-* Swarm.extend(PrototypeFunction)
+
+    Swarm.extend(PrototypeFunction)
 
 Fire-and-forget RPC call (instead of opening an object locally):
-* Swarm.call(PrototypeFunction,id,methodName,arguments)
+
+    Swarm.call(PrototypeFunction,id,methodName,arguments)
+
 
 ## How it works
 
