@@ -29,6 +29,12 @@ function testSpec () {
     isEqual(parsed.ssn,'6');
 }
 
+function testNewId () {
+    var id = new ID('!',16);
+    var str = id.toString();
+    isEqual(str.substr(4),'0@0');
+}
+
 /*var port = process.argv[2];
 var hubPort = process.argv[3];
 console.log('swarm peer starts at port',port);
@@ -226,6 +232,8 @@ function testChaining () {
 
 
 testSpec();
+
+testNewId();
 
 testBasicSetGet();
 
