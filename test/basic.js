@@ -33,6 +33,18 @@ function testNewId () {
     var id = new ID('!',16);
     var str = id.toString();
     isEqual(str.substr(4),'0@0');
+
+    var samples = {
+        '.wrongcaps': 'wrongcaps',
+        '.field_name': 'fieldName',
+        '/Class_name': 'ClassName'
+    };
+    for(var base32 in samples) {
+        var quant = base32.charAt(0), body = base32.substr(1);
+        var meth = ID.parse32(quant,body);
+        var now32 = meth.toString32();
+        isEqual(now32,samples[base32]);
+    }
 }
 
 /*var port = process.argv[2];
