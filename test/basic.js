@@ -37,7 +37,8 @@ function testNewId () {
     var samples = {
         '.wrongcaps': 'wrongcaps',
         '.field_name': 'fieldName',
-        '/Class_name': 'ClassName'
+        '/Class_name': 'ClassName',
+        '!old_version': 'old_version'
     };
     for(var base32 in samples) {
         var quant = base32.charAt(0), body = base32.substr(1);
@@ -45,6 +46,21 @@ function testNewId () {
         var now32 = meth.toString32();
         isEqual(now32,samples[base32]);
     }
+}
+
+function testNewSpec () {
+    var spec32 = ['/ClassName','#object_id','.fieldName','!new_version'];
+    var spec = [], back32=[];
+    for(var i=0; i<spec32.length; i++) {
+        var q = spec32[i].charAt(0), body=spec32[i].substr(1);
+        spec.push(ID.parse32(q,body));
+    }
+    var s = new Spec2(spec.join(''));
+    isEqual(s.oid,spec[1].cache);
+    for(var i=0; i<spec.length; i++)
+        back32.push(spec[i].q,spec[i].toString32());
+    isEqual(back32.join(''),spec32.join(''));
+    isEqual(s.toString32(),spec32.join(''));
 }
 
 /*var port = process.argv[2];
@@ -246,6 +262,7 @@ function testChaining () {
 testSpec();
 
 testNewId();
+testNewSpec();
 
 testBasicSetGet();
 
