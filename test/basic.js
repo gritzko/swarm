@@ -59,9 +59,10 @@ function testNewSpec () {
 function testEvents ( ) {
     var obj = new SimpleObject();
     var val = 0, fval;
-    obj.on('',function(spec,v){
+    function valpub(spec,v){
         val = v;
-    });
+    }
+    obj.on('',valpub);
     obj.setKey(1);
     isEqual(val,1);
     obj.set('key','test');
@@ -78,6 +79,10 @@ function testEvents ( ) {
     obj.set('key2','miss');
     isEqual(val,'miss');
     isEqual(fval,'hit');
+    obj.off('',valpub);
+    obj.set('key','off');
+    isEqual(val,'miss');
+    isEqual(fval,'off');
 }
 
 /*var port = process.argv[2];
