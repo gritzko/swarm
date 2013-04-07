@@ -17,6 +17,7 @@ function SimpleObject (id) {
     this._id = id;
     this.key = '';
     this._lstn = [];
+    this._vmap = '';
 }
 Peer.extend(SimpleObject);
 
@@ -61,6 +62,29 @@ function testNewSpec () {
         back32.push(spec[i].q,spec[i].toString32());
     isEqual(back32.join(''),spec32.join(''));
     isEqual(s.toString32(),spec32.join(''));
+}
+
+function testEvents ( ) {
+    var obj = new SimpleObject();
+    var val = 0, fval;
+    obj.on('',function(spec,v){
+        val = v;
+    });
+    obj.setKey(1);
+    isEqual(val,1);
+    obj.set('key','test');
+    isEqual(val,'test');
+    obj.set(ID.parse32('.','key'),'id');
+    isEqual(val,'id');
+    // filtered events
+    obj.on('key',{
+        set : function (spec,val) {
+            fval = val;
+        }
+    });
+    obj.set('key','filtered');
+    isEqual(val,'filtered');
+    isEqual(fval,'filtered');
 }
 
 /*var port = process.argv[2];
@@ -260,11 +284,13 @@ testSpec();
 testNewId();
 testNewSpec();
 
-testBasicSetGet();
+testEvents();
+
+/*testBasicSetGet();
 
 testOpenPull();
 testOpenPush();
 testUplinkPush();
 
 testMergeSync();
-testChaining();
+testChaining();*/
