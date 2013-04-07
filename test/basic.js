@@ -16,19 +16,11 @@ if (typeof(require)=='function') {
 function SimpleObject (id) {
     this._id = id;
     this.key = '';
+    this.key2 = '';
     this._lstn = [];
     this._vmap = '';
 }
 Peer.extend(SimpleObject);
-
-function testSpec () {
-    var spec = Spec.parse32('/222a-222a#222a!222a-222a');
-    var specf = Spec.filter(spec,'!');
-    isEqual(specf.toString(),'!060600');
-    var parsed = Spec.parseId(specf);
-    isEqual(parsed.seq,'0');
-    isEqual(parsed.ssn,'6');
-}
 
 function testNewId () {
     var id = new ID('!',16);
@@ -82,9 +74,10 @@ function testEvents ( ) {
             fval = val;
         }
     });
-    obj.set('key','filtered');
-    isEqual(val,'filtered');
-    isEqual(fval,'filtered');
+    obj.set('key','hit');
+    obj.set('key2','miss');
+    isEqual(val,'miss');
+    isEqual(fval,'hit');
 }
 
 /*var port = process.argv[2];
@@ -278,8 +271,6 @@ function testChaining () {
     peerD.close();
 }
 
-
-testSpec();
 
 testNewId();
 testNewSpec();
