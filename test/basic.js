@@ -48,7 +48,7 @@ function testNewSpec () {
         var q = spec32[i].charAt(0), body=spec32[i].substr(1);
         spec.push(ID.parse32(q,body));
     }
-    var s = new Spec2(spec.join(''));
+    var s = new Spec(spec.join(''));
     isEqual(s.oid,spec[1].cache);
     for(var i=0; i<spec.length; i++)
         back32.push(spec[i].q,spec[i].toString32());
@@ -95,6 +95,12 @@ function testShortCircuit () {
     objB.set('key2',2);
     isEqual(objA.key2,2);
     isEqual(objB.key,'1');
+    objA.set({
+        key: 'key',
+        key2: 'key2'
+    });
+    isEqual(objB.key,'key');
+    isEqual(objB.key2,'key2');
 }
 
 
