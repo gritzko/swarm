@@ -107,8 +107,8 @@ function testShortCircuit () {
 function testLocalObject () {
     var peer = new Peer(PEER_ID_A);
     var obj = peer.on(SimpleObject);
-    var objB = new SimpleObject(obj._id);
-    isEqual(peer.on(/*obj._id,*/objB), objB);
+    var objB = new SimpleObject();
+    isEqual(peer.on(obj._id,objB), objB);
     var val;
     peer.on(obj._id,function manual(spec,v) {
         val = v;
@@ -313,7 +313,7 @@ testEvents();
 
 testShortCircuit();
 
-//testLocalObject();
+testLocalObject();
 
 /*testBasicSetGet();
 
