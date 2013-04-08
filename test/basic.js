@@ -85,6 +85,34 @@ function testEvents ( ) {
     isEqual(fval,'off');
 }
 
+
+function testShortCircuit () {
+    var objA = new SimpleObject();
+    var objB = new SimpleObject();
+    objA.on('',objB);
+    objB.on(objA);
+    objA.setKey('1');
+    objB.set('key2',2);
+    isEqual(objA.key2,2);
+    isEqual(objB.key,'1');
+}
+
+
+function testLocalObject () {
+    var peer = new Peer(PEER_ID_A);
+    var obj = peer.on(SimpleObject);
+    var objB = new SimpleObject(obj._id);
+    isEqual(peer.on(/*obj._id,*/objB), objB);
+    var val;
+    peer.on(obj._id,function manual(spec,v) {
+        val = v;
+    });
+    obj.setKey(123);
+    isEqual(obj.key,123);
+    isEqual(objB.key,123);
+    isEqual(val,123);
+}
+
 /*var port = process.argv[2];
 var hubPort = process.argv[3];
 console.log('swarm peer starts at port',port);
@@ -110,14 +138,9 @@ var PEER_ID_A=new ID('*',0,1),
     PEER_ID_D=new ID('*',0,4);
 
 // redefine hash function
-Peer.hash = function (uni_id) {
-    var ii = uni_id.indexOf('#');
-    if (ii!==-1)
-        uni_id = uni_id.substr(ii);
-    var p = Spec.parseId(uni_id);
-    if (!p)
-        throw 'malf id';
-    return Spec._uni2int(p.src);
+Peer.hash = function (id) {
+    id = ID.as(id);
+    return id.ts;
 };
 
 function linkPeers (peer1,peer2) {
@@ -281,6 +304,10 @@ testNewId();
 testNewSpec();
 
 testEvents();
+
+testShortCircuit();
+
+//testLocalObject();
 
 /*testBasicSetGet();
 
