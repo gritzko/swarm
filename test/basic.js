@@ -108,14 +108,20 @@ function testLocalObject () {
     var peer = new Peer(PEER_ID_A);
     var obj = peer.on(SimpleObject);
     var objB = new SimpleObject();
-    isEqual(peer.on(obj._id,objB), objB);
+    isEqual(peer.on(obj._id,objB), obj);
     var val;
     peer.on(obj._id,function manual(spec,v) {
         val = v;
     });
+    // obj is listened to
     obj.setKey(123);
     isEqual(obj.key,123);
     isEqual(objB.key,123);
+    isEqual(val,123);
+    // ...objB is not
+    objB.setKey(321);
+    isEqual(objB.key,321);
+    isEqual(obj.key,123);
     isEqual(val,123);
 }
 
@@ -149,7 +155,7 @@ Peer.hash = function (id) {
     return id.ts;
 };
 
-function linkPeers (peer1,peer2) {
+/*function linkPeers (peer1,peer2) {
     var mock1 = {
         send : function (str) { mock2.cb(str) },
         on : function (evmsg, cb) {
@@ -180,7 +186,7 @@ function linkPeers (peer1,peer2) {
 function unlinkPeers (peer1,peer2) {
     peer1.removePeer(peer2);
     peer2.removePeer(peer1);
-}
+}*/
 
 function logChange (op,obj) {
 //    console.log(obj._host.id,obj._id,op);
@@ -190,9 +196,10 @@ function testBasicSetGet () {
     console.log('testBasicSetGet');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
-    linkPeers(peerA,peerB);
-    var objA = peerA.on(new SimpleObject(),logChange); // most natural form
-    var objB = peerB.on(new SimpleObject(objA._id),logChange);
+    peerA.addPeer(peerB);
+    peerB.addPeer(peerA);
+    var objA = peerA.on(SimpleObject,logChange); // most natural form
+    var objB = peerB.on(new SimpleObject(objA._id));
     isEqual(objA.key,'');
     objA.set('key','testA');
     isEqual(objA.key,'testA');
@@ -201,8 +208,8 @@ function testBasicSetGet () {
     isEqual(objB.key,'testB');
     isEqual(objA.key,'testB');
     peerB.off(objA._id,logChange);
-    isEqual(peerB.objects[objA._id],undefined);
-    unlinkPeers(peerA,peerB);
+    isEqual(peerB._lstn[objA._id],undefined);
+    //unlinkPeers(peerA,peerB);
     peerA.close();
     peerB.close();
 }
@@ -315,9 +322,9 @@ testShortCircuit();
 
 testLocalObject();
 
-/*testBasicSetGet();
+testBasicSetGet();
 
-testOpenPull();
+/*testOpenPull();
 testOpenPush();
 testUplinkPush();
 
