@@ -107,4 +107,37 @@ The usual convention is also supported:
 
 The bundled set call is even preferred as it generates one version while a sequence of set calls generates a sequence of versions.
 
+We generalize bundled calls as *diffs*. Diffs are used to bundle operations sent over the wire, to bootstrap newly created objects or simply to update several fields at once. A Diff is a {specifier:value} map. A Diff may have one special field named '_scope' storing a specifier. Every id of the scope specifier overrides respective ids of every other key in the map. Thus
+
+		{
+				_scope:   #oid!version,
+				.field1 : value1,
+				.field2 : value2
+		}
+
+is the same as
+
+		{
+				#oid!version.field1 : value1,
+				#oid!version.field2 : value2
+		}
+
+Given the variety forms to provide a specifier we encourage you to secure any specifier arguments using
+
+		Spec.as(specInSomeForm, defaultQuant, scope)
+
+Thus e.g.
+
+		Spec.as('#000000', '', '!111111').version === '!111111'
+		Spec.as('x', '.').field === ".00G000"
+		Spec.as('key', '.').field === ".00⣈000" //scary Unicode
+		Spec.as('fieldName', '.').field === ".0Øᆓ0=ƴ"
+		Spec.as('fieldName', '.').parse('.')
+				.field.toString32() === 'fieldName'
+		// single ids as well:
+		ID.as('fieldName', '.').toString32() === 'fieldName'
+
+Note that the Unicode string form of IDs can contain exotic characters.
+
 Swarm: sync`em all!
+

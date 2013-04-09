@@ -123,5 +123,41 @@ obj.getX() === obj.get('x');
 
 <p>The bundled set call is even preferred as it generates one version while a sequence of set calls generates a sequence of versions.</p>
 
+<p>We generalize bundled calls as <em>diffs</em>. Diffs are used to bundle operations sent over the wire, to bootstrap newly created objects or simply to update several fields at once. A Diff is a {specifier:value} map. A Diff may have one special field named '_scope' storing a specifier. Every id of the scope specifier overrides respective ids of every other key in the map. Thus</p>
+
+<pre><code>    {
+            _scope:   #oid!version,
+            .field1 : value1,
+            .field2 : value2
+    }
+</code></pre>
+
+<p>is the same as</p>
+
+<pre><code>    {
+            #oid!version.field1 : value1,
+            #oid!version.field2 : value2
+    }
+</code></pre>
+
+<p>Given the variety forms to provide a specifier we encourage you to secure any specifier arguments using</p>
+
+<pre><code>    Spec.as(specInSomeForm, defaultQuant, scope)
+</code></pre>
+
+<p>Thus e.g.</p>
+
+<pre><code>    Spec.as('#000000', '', '!111111').version === '!111111'
+    Spec.as('x', '.').field === ".00G000"
+    Spec.as('key', '.').field === ".00⣈000" //scary Unicode
+    Spec.as('fieldName', '.').field === ".0Øᆓ0=ƴ"
+    Spec.as('fieldName', '.').parse('.')
+            .field.toString32() === 'fieldName'
+    // single ids as well:
+    ID.as('fieldName', '.').toString32() === 'fieldName'
+</code></pre>
+
+<p>Note that the Unicode string form of IDs can contain exotic characters.</p>
+
 <p>Swarm: sync`em all!</p>
 </body></html>
