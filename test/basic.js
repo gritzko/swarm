@@ -231,9 +231,10 @@ function testOpenPull () {
     console.log('testOpenPull');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
-    var objA = peerA.on(new SimpleObject(),logChange);
+    var objA = peerA.on(SimpleObject,logChange);
     objA.set('key','A');
-    linkPeers(peerA,peerB);
+    peerA.addPeer(peerB);
+    peerB.addPeer(peerA);
     var objB = peerB.on(''+objA._tid+objA._id,logChange);
     isEqual(objB.key,'A');
     peerA.close();
@@ -324,8 +325,8 @@ testLocalObject();
 
 testBasicSetGet();
 
-/*testOpenPull();
-testOpenPush();
+testOpenPull();
+/*testOpenPush();
 testUplinkPush();
 
 testMergeSync();
