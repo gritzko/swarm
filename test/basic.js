@@ -21,6 +21,7 @@ function SimpleObject (id) {
     this._vmap = '';
 }
 Peer.extend(SimpleObject);
+SpecValEmitter._debug = true;
 
 function testNewId () {
     var id = new ID('!',16);
@@ -227,7 +228,7 @@ function testUplinkPush () {
     var peerC = new Peer(PEER_ID_C);
     var objA = peerA.on(SimpleObject,logChange);
     var idC = objA._id;
-    var objB = peerB.on(objA.toid(),logChange);
+    var objB = peerB.on(objA._tid+objA._id,logChange);
     objA.set('key','A');
     isEqual(objA.key,'A');
     isEqual(objB.key,'');
@@ -258,7 +259,7 @@ function testMergeSync () {
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on(SimpleObject,logChange);
-    var objB = peerB.on(objA.toid(),logChange);
+    var objB = peerB.on(objA._tid+objA._id,logChange);
     objA.set('key','A');
     objB.set('key2','B');
     linkPeers(peerA,peerB);
@@ -312,5 +313,5 @@ testOpenPull();
 testOpenPush();
 testUplinkPush();
 
-/*testMergeSync();
-testChaining();*/
+testMergeSync();
+/*testChaining();*/
