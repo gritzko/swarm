@@ -144,10 +144,10 @@ setInterval(function(){
 },1000);
 */	
 
-var PEER_ID_A=new ID('*',0,1),
-    PEER_ID_B=new ID('*',0,2),
-    PEER_ID_C=new ID('*',0,3),
-    PEER_ID_D=new ID('*',0,4);
+var PEER_ID_A=new ID('*',0,17),
+    PEER_ID_B=new ID('*',0,18),
+    PEER_ID_C=new ID('*',0,19),
+    PEER_ID_D=new ID('*',0,20);
 
 // redefine hash function
 Peer.hash = function (id) {
@@ -155,38 +155,6 @@ Peer.hash = function (id) {
     return id.ts;
 };
 
-/*function linkPeers (peer1,peer2) {
-    var mock1 = {
-        send : function (str) { mock2.cb(str) },
-        on : function (evmsg, cb) {
-            this.cb = cb;
-            this.q = this.q.reverse();
-            while (x=this.q.length)
-                cb.apply(this,this.q.pop());
-        },
-        q : [],
-        cb : function () { this.q.push(arguments); }
-    };
-    var mock2 = {
-        send : function (str) { mock1.cb(str) },
-        on : function (evmsg, cb) { this.cb = cb; },
-        on : function (evmsg, cb) {
-            this.cb = cb;
-            this.q = this.q.reverse();
-            while (x=this.q.length)
-                cb.apply(this,this.q.pop());
-        },
-        q : [],
-        cb : function () { this.q.push(arguments); }
-    };
-    new Peer.JsonSeDe( peer1, peer2.id, mock1 );
-    new Peer.JsonSeDe( peer2, peer1.id, mock2 );
-}
-
-function unlinkPeers (peer1,peer2) {
-    peer1.removePeer(peer2);
-    peer2.removePeer(peer1);
-}*/
 
 function logChange (op,obj) {
 //    console.log(obj._host.id,obj._id,op);
@@ -207,7 +175,8 @@ function testBasicSetGet () {
     objB.set('key','testB');
     isEqual(objB.key,'testB');
     isEqual(objA.key,'testB');
-    peerB.off(objA._id,logChange);
+    peerB.off(objB);
+    //peerB.gc();
     isEqual(peerB._lstn[objA._id],undefined);
     //unlinkPeers(peerA,peerB);
     peerA.close();
@@ -220,8 +189,9 @@ function testOpenPush () {
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on (SimpleObject, logChange);
     objA.set('key','A');
-    linkPeers(peerA,peerB);
-    var objB = peerB.objects[objA._id];
+    peerA.addPeer(peerB);
+    peerB.addPeer(peerA);
+    var objB = peerB.on(objA._tid+objA._id);
     isEqual(objB && objB.key,'A');
     peerA.close();
     peerB.close();
@@ -241,6 +211,15 @@ function testOpenPull () {
     peerB.close();
 }
 
+function linkPeers (a,b) {
+    a.addPeer(b);
+    b.addPeer(a);
+}
+function unlinkPeers (a,b) {
+    a.removePeer(b);
+    b.removePeer(a);
+}
+
 function testUplinkPush () {
     console.log('testUplinkPush');
     var peerA = new Peer(PEER_ID_A);
@@ -252,16 +231,20 @@ function testUplinkPush () {
     objA.set('key','A');
     isEqual(objA.key,'A');
     isEqual(objB.key,'');
-    linkPeers(peerA,peerB);
+    peerA.addPeer(peerB);
+    peerB.addPeer(peerA);
     isEqual(objB.key,'A');
-    linkPeers(peerC,peerA);
-    linkPeers(peerC,peerB);  // TODO immediate pex
+    peerA.addPeer(peerC);
+    peerC.addPeer(peerA);
+    peerC.addPeer(peerB);
+    peerB.addPeer(peerC);
     // must rebalance the tree, open the obj
-    var objC = peerC.objects[idC];
+    var objC = peerC.on(objA._tid+idC);
     isEqual(objC&&objC.key,'A');
     unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
     unlinkPeers(peerC,peerB);
-    isEqual(peerC.objects[idC],undefined);
+    //peerC.gc(); TODO
+    //isEqual(peerC._lstn[idC],undefined);
     // must readjust after the disconnection
     objB.set('key','B');
     isEqual(objA.key,'B');
@@ -326,8 +309,8 @@ testLocalObject();
 testBasicSetGet();
 
 testOpenPull();
-/*testOpenPush();
+testOpenPush();
 testUplinkPush();
 
-testMergeSync();
+/*testMergeSync();
 testChaining();*/
