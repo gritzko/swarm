@@ -278,9 +278,9 @@ function testChaining () {
     var peerC = new Peer(PEER_ID_C);
     var peerD = new Peer(PEER_ID_D);
     linkPeers(peerA,peerB);
-    linkPeers(peerC,peerB);
+    linkPeers(peerB,peerC);
     linkPeers(peerC,peerD);
-    var idC = SimpleObject.prototype._tid + peerC.createOid();
+    var idC = SimpleObject.prototype._tid + peerC.createId('#');
     var objA = peerA.on(idC,logChange);
     var objD = peerD.on(idC,logChange);
     objA.set('key','A');
@@ -314,4 +314,4 @@ testOpenPush();
 testUplinkPush();
 
 testMergeSync();
-/*testChaining();*/
+testChaining();
