@@ -14,7 +14,7 @@ if (typeof(require)=='function') {
 }
 
 function SimpleObject (id) {
-    this._id = id;
+    this._id = id||'';
     this.key = '';
     this.key2 = '';
     this._lstn = [];
@@ -157,9 +157,7 @@ Peer.hash = function (id) {
 };
 
 
-function logChange (op,obj) {
-//    console.log(obj._host.id,obj._id,op);
-}
+function logChange (op,obj) {}
 
 function testBasicSetGet () {
     console.log('testBasicSetGet');
@@ -213,12 +211,23 @@ function testOpenPull () {
 }
 
 function linkPeers (a,b) {
-    a.addPeer(b);
-    b.addPeer(a);
+    //a.addPeer(b);
+    //b.addPeer(a);
+    var pair = getTestSocketPair();
+    var pipea = new Pipe(a._id,pair[0],b);
+    var pipeb = new Pipe(b._id,pair[1],a);
+    pipea.timer = pipeb.timer = true; // block
+    b.addPeer(pipea);
+    a.addPeer(pipeb);
+    pipea.timer = pipeb.timer = undefined;
+    pipea.set();
+    pipeb.set();
 }
 function unlinkPeers (a,b) {
-    a.removePeer(b);
-    b.removePeer(a);
+    //a.removePeer(b);
+    //b.removePeer(a);
+    b.removePeer(a._id||a);
+    a.removePeer(b._id||b);
 }
 
 function testUplinkPush () {
@@ -255,7 +264,7 @@ function testUplinkPush () {
 }
 
 function testMergeSync () {
-    console.log('testMergeSync');
+    console.log('==== testMergeSync ====');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on(SimpleObject,logChange);
@@ -272,7 +281,7 @@ function testMergeSync () {
 }
 
 function testChaining () {
-    console.log('testChaining');
+    console.log('==== testChaining ====');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var peerC = new Peer(PEER_ID_C);
