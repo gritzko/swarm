@@ -1,0 +1,49 @@
+<html>
+    <head>
+        <style>
+            div#legend {
+                width: 916px;
+                margin: auto;
+            }
+            div#grid {
+                width: 916px;
+                height: 916px;
+                margin: auto;
+                background-color: #aaa;
+                padding: 8px;
+            }
+            div.stripe {
+                width: 100%;
+            }
+            iframe {
+                width: 300px;
+                height: 300px;
+                border: 1px solid #888;
+            }
+        </style>
+    </head>
+    <body>
+        <div id='legend'>
+            <h1>Swarm.js model sync test</h1>
+        </div>
+
+        <div id='grid'>
+            <div class='stripe'>
+                <iframe src='cell.html#8000'></iframe>
+                <iframe src='cell.html#8001'></iframe>
+                <iframe src='cell.html#8002'></iframe>
+            </div>
+            <div class='stripe'>
+                <iframe src='cell.html#8010'></iframe>
+                <iframe src='cell.html#8011'></iframe>
+                <iframe src='cell.html#8012'></iframe>
+            </div>
+            <div class='stripe'>
+                <iframe src='cell.html#8020'></iframe>
+                <iframe src='cell.html#8021'></iframe>
+                <iframe src='cell.html#8022'></iframe>
+            </div>
+        </div>
+
+    </body>
+</html>
