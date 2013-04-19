@@ -50,7 +50,7 @@ function testNewSpec () {
         spec.push(ID.parse32(q,body));
     }
     var s = new Spec(spec.join(''));
-    isEqual(s.oid,spec[1].cache);
+    isEqual(s.id,spec[1].cache);
     for(var i=0; i<spec.length; i++)
         back32.push(spec[i].q,spec[i].toString32());
     isEqual(back32.join(''),spec32.join(''));
