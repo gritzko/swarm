@@ -55,6 +55,45 @@ function testNewSpec () {
         back32.push(spec[i].q,spec[i].toString32());
     isEqual(back32.join(''),spec32.join(''));
     isEqual(s.toString32(),spec32.join(''));
+
+    var id = 'Mouse';
+    var vocab = {
+        'Mouse': '/_Mouse'
+    };
+    var mickey = new Spec('Mouse','','.',vocab);
+    isEqual(mickey.toString(),'/_Mouse');
+}
+
+function Mouse () {
+    this.x = this.y = 0;
+};
+
+function testSigs () {    
+    Peer.extend (Mouse, {
+        x: '.coordx',
+        y: '.coordy',
+        Mouse: '/_Mouse'
+    });
+    isEqual(Mouse.prototype._type.toString(),'/_Mouse');
+    var peer = new Peer(PEER_ID_A);
+    var x;
+    var specPref = '/_Mouse#mickey';
+    var mickey = peer.on('/_Mouse#mickey');
+    mickey.on('',function inc(spec,val){
+        isEqual(spec.toString().substr(0,specPref.length), specPref);
+        isEqual(val['.coordx'],x);
+    });
+    // move Mickey!
+    mickey.set('x', x=10);
+    // TODO default peer(FIXME _host)  Mouse.set('#mickey.coordx', 11);
+    mickey.set({x: x=12}); 
+    mickey.set('x',x=13);
+    mickey.setX(x=14); 
+    peer.set("#mickey", {x: x=15});
+        // #mickey should be open already, otherwise:
+    peer.set('/_Mouse#mickey.coordx', x=16);
+        // that was a blind write
+    mickey.set({'.coordx': x=17});
 }
 
 function testEvents ( ) {
@@ -190,7 +229,7 @@ function testOpenPush () {
     objA.set('key','A');
     peerA.addPeer(peerB);
     peerB.addPeer(peerA);
-    var objB = peerB.on(objA._tid+objA._id);
+    var objB = peerB.on(objA._type+objA._id);
     isEqual(objB && objB.key,'A');
     peerA.close();
     peerB.close();
@@ -204,7 +243,7 @@ function testOpenPull () {
     objA.set('key','A');
     peerA.addPeer(peerB);
     peerB.addPeer(peerA);
-    var objB = peerB.on(''+objA._tid+objA._id,logChange);
+    var objB = peerB.on(''+objA._type+objA._id,logChange);
     isEqual(objB.key,'A');
     peerA.close();
     peerB.close();
@@ -237,7 +276,7 @@ function testUplinkPush () {
     var peerC = new Peer(PEER_ID_C);
     var objA = peerA.on(SimpleObject,logChange);
     var idC = objA._id;
-    var objB = peerB.on(objA._tid+objA._id,logChange);
+    var objB = peerB.on(objA._type+objA._id,logChange);
     objA.set('key','A');
     isEqual(objA.key,'A');
     isEqual(objB.key,'');
@@ -249,7 +288,7 @@ function testUplinkPush () {
     peerC.addPeer(peerB);
     peerB.addPeer(peerC);
     // must rebalance the tree, open the obj
-    var objC = peerC.on(objA._tid+idC);
+    var objC = peerC.on(objA._type+idC);
     isEqual(objC&&objC.key,'A');
     unlinkPeers(peerC,peerA); // TODO dead trigger;  peerC.close() instead
     unlinkPeers(peerC,peerB);
@@ -268,7 +307,7 @@ function testMergeSync () {
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on(SimpleObject,logChange);
-    var objB = peerB.on(objA._tid+objA._id,logChange);
+    var objB = peerB.on(objA._type+objA._id,logChange);
     objA.set('key','A');
     objB.set('key2','B');
     linkPeers(peerA,peerB);
@@ -289,7 +328,7 @@ function testChaining () {
     linkPeers(peerA,peerB);
     linkPeers(peerB,peerC);
     linkPeers(peerC,peerD);
-    var idC = SimpleObject.prototype._tid + peerC.createId('#');
+    var idC = SimpleObject.prototype._type + peerC.createId('#');
     var objA = peerA.on(idC,logChange);
     var objD = peerD.on(idC,logChange);
     objA.set('key','A');
@@ -309,6 +348,8 @@ function testChaining () {
 
 testNewId();
 testNewSpec();
+
+testSigs();
 
 testEvents();
 
