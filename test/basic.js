@@ -102,8 +102,8 @@ function testEvents ( ) {
     obj.on('',valpub);
     obj.setKey(1);
     isEqual(val.key,1);
-    obj.set('key','\u00a7\ttest');
-    isEqual(val.key,'\u00a7\ttest');
+    obj.set('key','%c \u00a7\ttest');
+    isEqual(val.key,'%c \u00a7\ttest');
     obj.set('.===key','id');
     isEqual(val.key,'id');
     // filtered events
@@ -203,12 +203,12 @@ function testBasicSetGet () {
     var objA = peerA.on(SimpleObject,logChange); // most natural form
     var objB = peerB.on(new SimpleObject(objA._id));
     isEqual(objA.key,'');
-    objA.set('key','\u00a7\ttestA');
-    isEqual(objA.key,'\u00a7\ttestA');
-    isEqual(objB.key,'\u00a7\ttestA');
-    objB.set('key','\u00a7\ttestB');
-    isEqual(objB.key,'\u00a7\ttestB');
-    isEqual(objA.key,'\u00a7\ttestB');
+    objA.set('key','%c \u00a7\ttestA');
+    isEqual(objA.key,'%c \u00a7\ttestA');
+    isEqual(objB.key,'%c \u00a7\ttestA');
+    objB.set('key','%c \u00a7\ttestB');
+    isEqual(objB.key,'%c \u00a7\ttestB');
+    isEqual(objA.key,'%c \u00a7\ttestB');
     peerB.off(objB);
     //peerB.gc();
     isEqual(peerB._lstn[objA._id],undefined);
@@ -336,31 +336,27 @@ function testChaining () {
     peerD.close();
 }
 
+function runTest (fn) {
+    console.log('%c\u00a7\t'+fn.name,'font-weight: bold; color: #004; font-size: 140%; ');
+    fn();
+}
 
-testNewId();
-testNewSpec();
+runTest(testNewId);
+runTest(testNewSpec); 
 
-testSigs();
+runTest(testSigs);
 
-testEvents();
+runTest(testEvents); 
 
-console.log('\u00a7\ttestShortCircuit');
-testShortCircuit();
+runTest(testShortCircuit); 
 
-console.log('\u00a7\ttestLocalObject');
-testLocalObject();
+runTest(testLocalObject); 
 
-console.log('\u00a7\ttestBasicSetGet');
-testBasicSetGet();
+runTest(testBasicSetGet);
 
-console.log('\u00a7\ttestOpenPull');
-testOpenPull();
-console.log('\u00a7\ttestOpenPush');
-testOpenPush();
-console.log('\u00a7\ttestUplinkPush');
-testUplinkPush();
+runTest(testOpenPull);
+runTest(testOpenPush);
+runTest(testUplinkPush);
 
-console.log('\u00a7\ttestMergeSync');
-testMergeSync();
-console.log('\u00a7\ttestChaining');
-testChaining();
+runTest(testMergeSync);
+runTest(testChaining);
