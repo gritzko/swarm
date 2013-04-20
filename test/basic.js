@@ -20,7 +20,7 @@ function SimpleObject (id) {
     this._lstn = [];
     this._vmap = '';
 }
-Peer.extend(SimpleObject);
+Peer.extend(SimpleObject,'/SmpObj');
 SpecValEmitter._debug = true;
 
 function testNewId () {
@@ -56,11 +56,9 @@ function testNewSpec () {
     isEqual(back32.join(''),spec32.join(''));
     isEqual(s.toString32(),spec32.join(''));
 
-    var id = 'Mouse';
-    var vocab = {
-        'Mouse': '/_Mouse'
-    };
-    var mickey = new Spec('Mouse','','.',vocab);
+    
+    Spec.addWireName('Mouse','/_Mouse');
+    var mickey = new Spec('Mouse');
     isEqual(mickey.toString(),'/_Mouse');
 }
 
@@ -69,10 +67,9 @@ function Mouse () {
 };
 
 function testSigs () {    
-    Peer.extend (Mouse, {
+    Peer.extend (Mouse, '/_Mouse', {
         x: '.coordx',
-        y: '.coordy',
-        Mouse: '/_Mouse'
+        y: '.coordy'
     });
     isEqual(Mouse.prototype._type.toString(),'/_Mouse');
     var peer = new Peer(PEER_ID_A);
@@ -104,24 +101,24 @@ function testEvents ( ) {
     }
     obj.on('',valpub);
     obj.setKey(1);
-    isEqual(val,1);
-    obj.set('key','test');
-    isEqual(val,'test');
-    obj.set(ID.parse32('.','key'),'id');
-    isEqual(val,'id');
+    isEqual(val.key,1);
+    obj.set('key','\u00a7\ttest');
+    isEqual(val.key,'\u00a7\ttest');
+    obj.set('.===key','id');
+    isEqual(val.key,'id');
     // filtered events
     obj.on('key',{
         set : function (spec,val) {
-            fval = val;
+            fval = val.key;
         }
     });
     obj.set('key','hit');
     obj.set('key2','miss');
-    isEqual(val,'miss');
+    isEqual(val.key2,'miss');
     isEqual(fval,'hit');
     obj.off('',valpub);
     obj.set('key','off');
-    isEqual(val,'miss');
+    isEqual(val.key2,'miss');
     isEqual(fval,'off');
 }
 
@@ -146,7 +143,7 @@ function testShortCircuit () {
 
 function testLocalObject () {
     var peer = new Peer(PEER_ID_A);
-    var obj = peer.on(SimpleObject);
+    var obj = peer.on('/SmpObj'); //SimpleObject);
     var objB = new SimpleObject();
     isEqual(peer.on(obj._id,objB), obj);
     var val;
@@ -157,12 +154,12 @@ function testLocalObject () {
     obj.setKey(123);
     isEqual(obj.key,123);
     isEqual(objB.key,123);
-    isEqual(val,123);
+    isEqual(val.key,123);
     // ...objB is not
     objB.setKey(321);
     isEqual(objB.key,321);
     isEqual(obj.key,123);
-    isEqual(val,123);
+    isEqual(val.key,123);
 }
 
 /*var port = process.argv[2];
@@ -199,7 +196,6 @@ Peer.hash = function (id) {
 function logChange (op,obj) {}
 
 function testBasicSetGet () {
-    console.log('testBasicSetGet');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     peerA.addPeer(peerB);
@@ -207,12 +203,12 @@ function testBasicSetGet () {
     var objA = peerA.on(SimpleObject,logChange); // most natural form
     var objB = peerB.on(new SimpleObject(objA._id));
     isEqual(objA.key,'');
-    objA.set('key','testA');
-    isEqual(objA.key,'testA');
-    isEqual(objB.key,'testA');
-    objB.set('key','testB');
-    isEqual(objB.key,'testB');
-    isEqual(objA.key,'testB');
+    objA.set('key','\u00a7\ttestA');
+    isEqual(objA.key,'\u00a7\ttestA');
+    isEqual(objB.key,'\u00a7\ttestA');
+    objB.set('key','\u00a7\ttestB');
+    isEqual(objB.key,'\u00a7\ttestB');
+    isEqual(objA.key,'\u00a7\ttestB');
     peerB.off(objB);
     //peerB.gc();
     isEqual(peerB._lstn[objA._id],undefined);
@@ -222,7 +218,6 @@ function testBasicSetGet () {
 }
 
 function testOpenPush () {
-    console.log('testOpenPush');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on (SimpleObject, logChange);
@@ -236,7 +231,6 @@ function testOpenPush () {
 }
 
 function testOpenPull () {
-    console.log('testOpenPull');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on(SimpleObject,logChange);
@@ -270,7 +264,6 @@ function unlinkPeers (a,b) {
 }
 
 function testUplinkPush () {
-    console.log('testUplinkPush');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var peerC = new Peer(PEER_ID_C);
@@ -303,7 +296,6 @@ function testUplinkPush () {
 }
 
 function testMergeSync () {
-    console.log('==== testMergeSync ====');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var objA = peerA.on(SimpleObject,logChange);
@@ -320,7 +312,6 @@ function testMergeSync () {
 }
 
 function testChaining () {
-    console.log('==== testChaining ====');
     var peerA = new Peer(PEER_ID_A);
     var peerB = new Peer(PEER_ID_B);
     var peerC = new Peer(PEER_ID_C);
@@ -353,15 +344,23 @@ testSigs();
 
 testEvents();
 
+console.log('\u00a7\ttestShortCircuit');
 testShortCircuit();
 
+console.log('\u00a7\ttestLocalObject');
 testLocalObject();
 
+console.log('\u00a7\ttestBasicSetGet');
 testBasicSetGet();
 
+console.log('\u00a7\ttestOpenPull');
 testOpenPull();
+console.log('\u00a7\ttestOpenPush');
 testOpenPush();
+console.log('\u00a7\ttestUplinkPush');
 testUplinkPush();
 
+console.log('\u00a7\ttestMergeSync');
 testMergeSync();
+console.log('\u00a7\ttestChaining');
 testChaining();
