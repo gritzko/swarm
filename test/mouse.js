@@ -1,11 +1,3 @@
-function Mouse() {
-    this.x = 0;
-    this.y = 0;
-    this.ms = 0;
-}
-
-Peer.extend(Mouse,'/=Mouse');
-
 svdebug = function(){}
 var port = parseInt(window.location.hash.replace(/[^\d]/g,'')||'8000');
 
@@ -62,7 +54,7 @@ window.onload = function () {
             var ms = new Date().getTime() - mouse.ms;
             rtt.innerHTML = 'rtt '+ms+'ms';
         } else
-            rtt.innerHTML = 'rtt: navail';
+            rtt.innerHTML = 'rtt: n/a';
     });
 
 };

@@ -1,14 +1,7 @@
 var url = require('url');
 var swarm = require('../lib/swarm.js');
 var ws = require('ws');
-
-function Mouse() { // FIXME model.js
-    this.x = 0;
-    this.y = 0;
-    this.ms = 0;
-}
-
-swarm.Peer.extend(Mouse,'/=Mouse');
+var model = require('./mouse_model.js');
 
 // process args  cfg default
 var cfg = {};
