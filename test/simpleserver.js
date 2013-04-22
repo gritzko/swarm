@@ -7,7 +7,7 @@ function Mouse() {
     this.y = 0;
 }
 
-swarm.Peer.extend(Mouse);
+swarm.Peer.extend(Mouse,'/=Mouse');
 
 // process args  cfg default
 var cfg = {};
@@ -16,7 +16,7 @@ var wss = new ws.Server({
     port: cfg.port||8000
 });
 
-var peer = new swarm.Peer(new swarm.ID('*',0,cfg.ssn||0));
+var peer = new swarm.Peer(new swarm.ID('#',0,cfg.ssn||0));
 
 wss.on('connection', function(ws) {
     var params = url.parse(ws.upgradeReq.url,true);
@@ -26,7 +26,7 @@ wss.on('connection', function(ws) {
     // maybe grant ssn
     //ws.send({ssn:xx});
     var id = (new swarm.ID('*',src,17));
-    var pipe = new swarm.Pipe(id,ws,peer,cfg);
-    peer.addPeer(pipe);
+    var pipe = new swarm.Pipe(ws,peer,cfg);
+    //peer.addPeer(pipe);
     // in Peer: kick out prev pipe
 });

@@ -3,21 +3,22 @@ function Mouse() {
     this.y = 0;
 }
 
-Peer.extend(Mouse);
+Peer.extend(Mouse,'/=Mouse');
 
 //svdebug = function(){}
+var port = parseInt(window.location.hash||'8000');
 
-var peer = new Peer(new ID('*',3,17));
+var peer = new Peer(new ID('#',3,port-8000));
 
-var id = Mouse.prototype._tid + '#000000';
+var id = Mouse.prototype._type + '#mickey';
 
 var mouse = peer.on(id);
 
 var ws = new WebSocket('ws://localhost:8000/client?src=3&ssn=17');
 ws.on = ws.addEventListener;
 ws.onopen = function() {
-    var pipe = new Pipe(new ID('*',0,0),ws,peer);
-    peer.addPeer(pipe);
+    var pipe = new Pipe(ws,peer);
+    //peer.addPeer(pipe);
     console.log('connected');
 };
 
