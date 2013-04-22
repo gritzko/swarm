@@ -181,10 +181,10 @@ setInterval(function(){
 },1000);
 */	
 
-var PEER_ID_A=new ID('*',0,17),
-    PEER_ID_B=new ID('*',0,18),
-    PEER_ID_C=new ID('*',0,19),
-    PEER_ID_D=new ID('*',0,20);
+var PEER_ID_A=new ID('#',0,17),
+    PEER_ID_B=new ID('#',0,18),
+    PEER_ID_C=new ID('#',0,19),
+    PEER_ID_D=new ID('#',0,20);
 
 // redefine hash function
 Peer.hash = function (id) {
@@ -247,14 +247,14 @@ function linkPeers (a,b) {
     //a.addPeer(b);
     //b.addPeer(a);
     var pair = getTestSocketPair();
-    var pipea = new Pipe(a._id,pair[0],b);
-    var pipeb = new Pipe(b._id,pair[1],a);
-    pipea.timer = pipeb.timer = true; // block
-    b.addPeer(pipea);
-    a.addPeer(pipeb);
-    pipea.timer = pipeb.timer = undefined;
-    pipea.set();
-    pipeb.set();
+    var pipea = new Pipe(pair[0],b);
+    var pipeb = new Pipe(pair[1],a);
+    //pipea.timer = pipeb.timer = true; // block
+    //b.addPeer(pipea);
+    //a.addPeer(pipeb);
+    //pipea.timer = pipeb.timer = undefined;
+    //pipea.set();
+    //pipeb.set();
 }
 function unlinkPeers (a,b) {
     //a.removePeer(b);
@@ -336,6 +336,37 @@ function testChaining () {
     peerD.close();
 }
 
+function Mice () {
+}
+Peer.extendSet(Mice);
+
+function testSet () {
+    var peerA = new Peer(PEER_ID_A);
+    var peerB = new Peer(PEER_ID_B);
+
+    var listA = peerA.on(Mice);
+    var listB = peerB.on(listA.spec());
+
+    listA.set('.mickey',true);
+    listB.set('.mighty',true);
+    isEqual( listA['.mickey'], true );
+    isEqual( listB['.mighty'], true );
+
+    linkPeers(peerA,peerB);
+
+    isEqual( listB['.mickey'], true );
+    isEqual( listA['.mighty'], true );
+
+    listA.set('.fatrat','is here by mistake');
+    isEqual(listB['.fatrat'],'is here by mistake');
+
+    listA.set('.mickey',null);  // TODO garbage accumulation - both in the set and its vmap
+
+    peerA.close();
+    peerB.close();
+    
+}
+
 function runTest (fn) {
     console.log('%c\u00a7\t'+fn.name,'font-weight: bold; color: #004; font-size: 140%; ');
     fn();
@@ -360,3 +391,4 @@ runTest(testUplinkPush);
 
 runTest(testMergeSync);
 runTest(testChaining);
+runTest(testSet);
