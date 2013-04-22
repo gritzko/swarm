@@ -238,9 +238,9 @@ The best form of a lesson is an example, so:
     mickey.set({x: 10}); 
     mickey.set('x',10);
     mickey.setX(10); 
-    swarm.set("#mickey", {x: 10});
+    peer.set("#mickey", {x: 10});
         // #mickey should be open already, otherwise:
-    swarm.set('/_Mouse#mickey.coordx', 10);
+    peer.set('/_Mouse#mickey.coordx', 10);
         // that was a blind write
     mickey.set({'.coordx': 10});
 

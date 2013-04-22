@@ -21,6 +21,14 @@
                 border: 1px solid #888;
             }
         </style>
+        <script type='text/javascript'>
+            window.onload = function () {
+                var src = (Math.random()*(1<<30))|0, ssn=1;
+                var frames = document.getElementsByTagName('iframe');
+                for(var i=0; i<frames.length; i++)
+                    frames.item(i).setAttribute('src','cell.html#src='+src+',ssn='+(ssn++));
+            }
+        </script>
     </head>
     <body>
         <div id='legend'>
@@ -29,19 +37,19 @@
 
         <div id='grid'>
             <div class='stripe'>
-                <iframe src='cell.html#8001'></iframe>
-                <iframe src='cell.html#8002'></iframe>
-                <iframe src='cell.html#8003'></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
             </div>
             <div class='stripe'>
-                <iframe src='cell.html#8004'></iframe>
-                <iframe src='cell.html#8005'></iframe>
-                <iframe src='cell.html#8006'></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
             </div>
             <div class='stripe'>
-                <iframe src='cell.html#8007'></iframe>
-                <iframe src='cell.html#8008'></iframe>
-                <iframe src='cell.html#8009'></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
+                <iframe src=''></iframe>
             </div>
         </div>
 

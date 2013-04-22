@@ -37,7 +37,7 @@ function fork(port) {
         console.warn('exited',port);
         setTimeout(function(){
             fork(port);
-        },4000);
+        },8000);
     });
 }
 
@@ -58,4 +58,4 @@ var plumber = new swarm.Plumber(peer,urls);
 if (PORT!==BASE_PORT)
     setTimeout(function(){
         process.exit(0);
-    }, (180 + Math.random()*120)*1000 );
+    }, (30 + Math.random()*30)*1000 );

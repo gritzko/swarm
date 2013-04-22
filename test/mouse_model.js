@@ -6,4 +6,10 @@ function Mouse() { // FIXME model.js
     this.y = 0;
     this.ms = 0;
 }
+
 swarm.Peer.extend(Mouse,'/=Mouse');
+
+function Mice () {
+}
+
+swarm.Peer.extendSet(Mice);
