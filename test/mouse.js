@@ -5,7 +5,7 @@ function Mouse() {
 
 Peer.extend(Mouse,'/=Mouse');
 
-//svdebug = function(){}
+svdebug = function(){}
 var port = parseInt(window.location.hash||'8000');
 
 var peer = new Peer(new ID('#',3,port-8000));
@@ -14,13 +14,21 @@ var id = Mouse.prototype._type + '#mickey';
 
 var mouse = peer.on(id);
 
-var ws = new WebSocket('ws://localhost:8000/client?src=3&ssn=17');
+var plumber = new Plumber(peer,'ws://localhost:8000/client');
+
+peer._on('/=Peer=',function(spec,val){
+    window.document.body.setAttribute('connected',plumber.host.getPeerCount()>0?true:false);
+    console.log('repeer',spec,val);
+});
+
+/*var ws = new WebSocket('ws://localhost:8000/client');
+
 ws.on = ws.addEventListener;
 ws.onopen = function() {
     var pipe = new Pipe(ws,peer);
     //peer.addPeer(pipe);
     console.log('connected');
-};
+};*/
 
 window.onload = function () {
 
