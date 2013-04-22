@@ -13,7 +13,7 @@ var id = Mouse.prototype._type + '#mickey';
 
 var mouse = peer.on(id);
 
-var wsServerUri = 'ws://localhost:8000/client';
+var wsServerUri = 'ws://localhost:'+port+'/client';
 
 var plumber = new Plumber(peer,wsServerUri);
 
