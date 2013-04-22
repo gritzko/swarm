@@ -1,14 +1,21 @@
 function Mouse() {
     this.x = 0;
     this.y = 0;
+    this.ms = 0;
 }
 
 Peer.extend(Mouse,'/=Mouse');
 
 svdebug = function(){}
-var port = parseInt(window.location.hash||'8000');
+var port = parseInt(window.location.hash.replace(/[^\d]/g,'')||'8000');
 
-var peer = new Peer(new ID('#',3,port-8000));
+var userSymbols = '\u2665\u2666\u2663\u2660';
+var userColors = ['#a55','#5a5','#55a'];
+
+var SRC = 3; //(Math.random()*(1<<30))|1;
+var SSN = port-8000;
+
+var peer = new Peer(new ID('#',SRC,SSN));
 
 var id = Mouse.prototype._type + '#mickey';
 
@@ -32,17 +39,30 @@ ws.onopen = function() {
 
 window.onload = function () {
 
-    document.body.innerHTML = '<span id="x" style="position:absolute; width:10px; height:10px; background: red;"></span>';
     var x = document.getElementById('x');
+    var rtt = document.getElementById('rtt');
+    var sample = document.getElementById('sample');
+
+    x.style.color = userColors[SRC%userColors.length];
+    x.innerHTML = userSymbols.charAt(SRC%userSymbols.length);
+    //sample.style.color = userColors[SRC%userColors.length];
+    //sample.innerHTML = userSymbols.charAt(SRC%userSymbols.length);
 
     document.body.onmousemove = function (event) {
         mouse.setX(event.clientX);
         mouse.setY(event.clientY);
+        mouse.setMs(new Date().getTime()); // TODO bundle
     };
 
     mouse.on('',function(spec,val){
-        x.style.left = mouse.x-10;
-        x.style.top = mouse.y-10;
+        x.style.left = mouse.x-x.clientWidth/2;
+        x.style.top = mouse.y-x.clientHeight/2;
+        spec.parse('!');
+        if (spec.version.src==SRC && spec.version.ssn==SSN) {
+            var ms = new Date().getTime() - mouse.ms;
+            rtt.innerHTML = 'rtt '+ms+'ms';
+        } else
+            rtt.innerHTML = 'rtt: navail';
     });
 
 };

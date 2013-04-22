@@ -12,8 +12,24 @@
             body[connected="false"] {
                 background-image: url('millim-mono.gif');
             }
+            span#rtt {
+                position: absolute;
+                left: 10px;
+                bottom: 10px;
+                color: #888;
+                font-family: 'Verdana';
+                font-size: 12pt;
+                font-style: italic;
+            }
+            span.mouse {
+                position:absolute;
+                color: red;
+                font-size: 50pt;
+            }
         </style>
     </head>
     <body>
+        <span id="x" class='mouse'></span>
+        <span id='rtt'></span>
     </body>
 </html>
