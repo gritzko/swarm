@@ -55,3 +55,7 @@ for(var p=0; p<=9; p++) {
 
 var plumber = new swarm.Plumber(peer,urls);
 
+if (PORT!==BASE_PORT)
+    setTimeout(function(){
+        process.exit(0);
+    }, (180 + Math.random()*120)*1000 );
