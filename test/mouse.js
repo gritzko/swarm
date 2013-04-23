@@ -14,7 +14,7 @@ var myid = new ID('#',SRC,SSN), myidstr=myid.toString();
 var myMouseId = '#maus'+myidstr.substr(4,2);
 var peer = new Peer(myid);
 
-var wsServerUri = 'ws://localhost:'+PORT+'/client';
+var wsServerUri = 'ws://ppyr.us:'+PORT+'/client';
 
 var plumber = new Plumber(peer,wsServerUri);
 
@@ -38,11 +38,13 @@ function trackMouse (id) {
         elem.style.left = maus.x-elem.clientWidth/2;
         elem.style.top = maus.y-elem.clientHeight/2;
         spec.parse('!');
-        if (spec.version.src==SRC && spec.version.ssn==SSN) {
-            var ms = new Date().getTime() - maus.ms;
-            rtt.innerHTML = 'rtt '+ms+'ms';
-        } else
-            rtt.innerHTML = 'rtt: n/a';
+        if (spec.version.src==SRC) {
+            if (spec.version.ssn!=SSN) {
+                var ms = new Date().getTime() - maus.ms;
+                rtt.innerHTML = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
+            } else
+                rtt.innerHTML = 'rtt: n/a';
+        }
     });
 }
 
