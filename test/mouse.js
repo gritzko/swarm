@@ -1,7 +1,12 @@
 svdebug = function(){}
 
 var userSymbols = '\u2665\u2666\u2663\u2660';
-var userColors = ['#a55','#5a5','#55a'];
+var userColors = []; //['#a55','#5a5','#55a','#758','#785','#857','#875','#578','#587'];
+
+for(var r=40; r<=200; r+=40)
+    for(var g=40; g<=200; g+=40)
+        for(var b=40; b<=200; b+=40)
+            userColors.push('rgb('+r+','+g+','+b+')');
 
 var hash = window.location.hash.toString();
 var m = hash.match(/src=(\d+)/);
