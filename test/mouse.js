@@ -14,7 +14,7 @@ var myid = new ID('#',SRC,SSN), myidstr=myid.toString();
 var myMouseId = '#maus'+myidstr.substr(4,2);
 var peer = new Peer(myid);
 
-var wsServerUri = 'ws://ppyr.us:'+PORT+'/client';
+var wsServerUri = 'ws://'+(window.location.hostname||'localhost')+':'+PORT+'/client';
 
 var plumber = new Plumber(peer,wsServerUri);
 
@@ -24,6 +24,7 @@ peer._on('/=Peer=',function(spec,val){
 });
 
 var rtt, sample, uriSpan;
+var RTT, rttto;
 
 function trackMouse (id) {
     var elem = document.createElement('span');
@@ -33,6 +34,8 @@ function trackMouse (id) {
     elem.style.color = userColors[src%userColors.length];
     elem.innerHTML = userSymbols.charAt(src%userSymbols.length);
     document.body.appendChild(elem);
+    if (id==myMouseId)
+        elem.style.fontSize = '50pt';
 
     var maus = peer.on(Mouse._type+id,function(spec,val){
         elem.style.left = maus.x-elem.clientWidth/2;
@@ -41,9 +44,14 @@ function trackMouse (id) {
         if (spec.version.src==SRC) {
             if (spec.version.ssn!=SSN) {
                 var ms = new Date().getTime() - maus.ms;
-                rtt.innerHTML = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
+                RTT = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
             } else
-                rtt.innerHTML = 'rtt: n/a';
+                RTT = 'rtt: n/a';
+            if (!rttto)
+                rttto = setTimeout(function(){
+                    rttto = null;
+                    rtt.innerHTML = RTT;
+                },100);
         }
     });
 }
