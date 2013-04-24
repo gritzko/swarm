@@ -46,7 +46,7 @@ if (PORT==BASE_PORT)
         fork(BASE_PORT+i);
 
 setInterval(function(){
-    swarm.Spec.ANCIENT_TS = swarm.ID.int3uni(swarm.ID.getTime()-60*60);
+    //swarm.Spec.ANCIENT_TS = swarm.ID.int3uni(swarm.ID.getTime()-60*60);
 },1000);
 
 var urls = [];
@@ -59,11 +59,31 @@ for(var p=0; p<=9; p++) {
 
 var plumber = new swarm.Plumber(peer,urls);
 
-/*if (PORT!==BASE_PORT)
+/*
+// (scheduled) server restart
+if (PORT!==BASE_PORT)
     setTimeout(function(){
         process.exit(0);
     }, (30 + Math.random()*30)*1000 );
 */
+
+var mice = peer.on('/=Mice=#=mice=');
+function cleanOfflineUsers () { // temp hack
+    for(var mid in mice)
+        if (mice[mid]) {
+            var oid = mid.replace('.','#');
+            if (!peer._lstn[oid]) continue;
+            var obj = peer.findObject(oid);
+            if (!obj) continue; // ???
+            if (obj.ms < new Date().getTime()-60*1000) { // likely disconnected
+                mice.set(mid,null);
+                console.error(''+peer._id+' KILLS '+mid+': '+obj.ms+' < '+
+                        (new Date().getTime()-60*1000) );
+            }
+        }
+}
+setInterval(cleanOfflineUsers,20*1000);
+
 /*peer._on('/=Room=', function (spec,val) {
     spec = swarm.Spec.as(spec);
     console.error('ROOM '+spec+'\t'+JSON.stringify(val));

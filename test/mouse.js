@@ -17,7 +17,7 @@ var PORT = SSN+8000;
 
 var myid = new ID('#',SRC,SSN), myidstr=myid.toString();
 var myMouseId = '#maus'+myidstr.substr(4,2);
-var myMouseElem;
+var myMouseElem, myMouse;
 var peer = new Peer(myid);
 
 var wsServerUri = 'ws://'+(window.location.hostname||'localhost')+':'+PORT+'/client';
@@ -32,8 +32,30 @@ peer._on('/=Peer=',function(spec,val){
 var rtt, sample, uriSpan;
 var RTT, rttto, noTrack=false;
 
+function moveMouse (spec,val){
+    var maus = peer.findObject(spec.id);
+    var elem = document.getElementById(spec.id);
+    elem.style.left = maus.x-elem.clientWidth/2;
+    elem.style.top = maus.y-elem.clientHeight/2;
+    spec.parse('!');
+    if (spec.version.src==SRC) {
+        if (spec.version.ssn!=SSN) {
+            var ms = new Date().getTime() - maus.ms;
+            RTT = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
+        } else
+            RTT = 'rtt: n/a';
+        if (!rttto)
+            rttto = setTimeout(function(){
+                rttto = null;
+                rtt.innerHTML = RTT + (noTrack ? ' (automated)' : '');
+            },100);
+    }
+};
+
 function trackMouse (id) {
-    var elem = document.createElement('span');
+    var elem = document.getElementById(id);
+    if (elem) return;
+    elem = document.createElement('span');
     elem.setAttribute('class','mouse');
     elem.setAttribute('id',id);
     var src = ID.as(id).src;
@@ -45,27 +67,13 @@ function trackMouse (id) {
         myMouseElem = elem;
     }
 
-    var maus = peer.on(Mouse._type+id,function(spec,val){
-        elem.style.left = maus.x-elem.clientWidth/2;
-        elem.style.top = maus.y-elem.clientHeight/2;
-        spec.parse('!');
-        if (spec.version.src==SRC) {
-            if (spec.version.ssn!=SSN) {
-                var ms = new Date().getTime() - maus.ms;
-                RTT = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
-            } else
-                RTT = 'rtt: n/a';
-            if (!rttto)
-                rttto = setTimeout(function(){
-                    rttto = null;
-                    rtt.innerHTML = RTT + (noTrack ? ' (automated)' : '');
-                },100);
-        }
-    });
+    var maus = peer.on(Mouse._type+id,moveMouse);
 }
 
 function untrackMouse (id) {
-    console.error('untrack not impl');
+    peer.off(id,moveMouse);
+    var elem = document.getElementById(id);
+    elem && elem.parentNode.removeChild(elem);
 }
 
 window.onload = function () {
@@ -125,6 +133,10 @@ window.onload = function () {
             ms: new Date().getTime()
         });
     }
+
+    setInterval(function keepalive(){
+        mouse.setMs(new Date().getTime());
+    },1000*10);
 
     document.body.onclick = function (ev) {
         if (ev.altKey) {
