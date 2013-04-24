@@ -61,6 +61,10 @@ function trackMouse (id) {
     });
 }
 
+function untrackMouse (id) {
+    console.error('untrack not impl');
+}
+
 window.onload = function () {
 
     rtt = document.getElementById('rtt');
@@ -73,19 +77,21 @@ window.onload = function () {
 
     var id = Mouse.prototype._type + myMouseId;
     var mouse = peer.on(id);
-    var mice = peer.on(Mice._type+'#=mice=',function(spec,val){
+    var mice = peer.on('/=Mice=#=mice=',function(spec,val){
         console.log('Mice:\t'+spec,val);
         for(var key in val) {
             var keysp = Spec.as(key);
-            trackMouse(keysp.field.toString().replace('.','#')); // TODO ugly
+            var mid = keysp.field.toString().replace('.','#'); // TODO ugly
+            if (val[key])
+                trackMouse(mid);
+            else
+                untrackMouse(mid);
         }
     });
     mice.set(myMouseId.replace('#','.'),true); // FIXME ugly
 
     document.body.onmousemove = function (event) {
-        /*mouse.setX(event.clientX);
-        mouse.setY(event.clientY);
-        mouse.setMs(new Date().getTime()); // TODO bundle*/
+        if (noTrack) return;
         mouse.set({
             x: event.clientX,
             y: event.clientY,
@@ -93,5 +99,43 @@ window.onload = function () {
         });
     };
 
+    var autoMoveInterval, noTrack=false;
+
+    function autoMove () {
+        var width = document.body.clientWidth;
+        var height = document.body.clientHeight;
+        var midx = width>>1, midy = height>>1;
+        var cos = mouse.x-midx, sin = mouse.y-midy;
+        var r = Math.sqrt(cos*cos+sin*sin);
+        cos /= r; sin /= r;
+        var a = Math.acos(cos);
+        if (sin<0)
+            a+=(Math.PI-a)*2;
+        var newa = a+0.1;
+        if (newa>Math.PI*2)
+            newa -= Math.PI*2;
+        var newx = midx + r * Math.cos(newa);
+        var newy = midy + r * Math.sin(newa);
+        mouse.set({
+            x: newx,
+            y: newy,
+            ms: new Date().getTime()
+        });
+    }
+
+    document.body.onclick = function (ev) {
+        if (ev.altKey) {
+            if (autoMoveInterval) {
+                clearInterval(autoMoveInterval);
+                autoMoveInterval = null;
+                noTrack = false;
+            } else {
+                autoMoveInterval = setInterval(autoMove,200);
+                noTrack = true;
+            }
+        }
+    };
+
 
 };
+
