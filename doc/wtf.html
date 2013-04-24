@@ -1,74 +1,5 @@
-<html>
-    <head>
-        <link href="../doc/foghorn.css" rel="stylesheet"></link>
-        <style>
-            body {
-                width: 100%;
-                max-width: 100%;
-            }
-            h1 {
-                font-size: 38px; 
-            }
-            div#legend {
-                width: 30em;
-                max-width: 30em;
-                margin: auto;
-            }
-            div#grid {
-                min-width: 640px;
-                width: 100%;
-                height: 640px;
-                margin: auto;
-                padding: 20px;
-            }
-            div.stripe {
-                width: 640px;
-                margin: auto;
-            }
-            iframe {
-                width: 200px;
-                height: 200px;
-                border: 1px solid #888;
-            }
-            a#hint {
-                font-family: 'Verdana';
-                font-size: 10pt;
-                color: #aaa;
-                font-style: italic;
-            }
-        </style>
-        <script type='text/javascript'>
-            window.onload = function () {
-                var src = (Math.random()*(1<<30))|0, ssn=1;
-                var frames = document.getElementsByTagName('iframe');
-                for(var i=0; i<frames.length; i++)
-                    frames.item(i).setAttribute('src','cell.html#src='+src+',ssn='+(ssn++));
-            }
-        </script>
-    </head>
-    <body>
-        <a href='#h1' id=hint>move your mouse over frames; explanation is below &darr;</a>
-        <div id='grid'>
-            <div class='stripe'>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-            </div>
-            <div class='stripe'>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-            </div>
-            <div class='stripe'>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-                <iframe src=''></iframe>
-            </div>
-        </div>
-
-        <div id='legend'>
-
-<h1 id=h1>Swarm: real-time model sync library</h1>
+<html><head><link href="foghorn.css" rel="stylesheet"></link></head><body>
+<h1>Swarm: real-time model sync library</h1>
 
 <h2>What is it?</h2>
 
@@ -77,8 +8,6 @@
 <p>In the demo above, 9 onscreen iframes are connected to 9 different servers. The position of the big card suit sign is synchronized between iframes using the Swarm library. Try hovering a mouse over some iframe. The suit sign must follow.</p>
 
 <p>It also syncronizes positions of other people's mouse pointers. In case somebody else is playing with the page right now, you should see their suit signs moving. Those are smaller.</p>
-
-<p>Servers go offline randomly to test how other servers reconfigure the topology. Then they go back online pulling the state from other servers.</p>
 
 <h2>Why did you make it?</h2>
 
@@ -102,7 +31,7 @@
 
 <p>No.</p>
 
-<h2>How does it differ from X?</h2>
+<h2>How does it differ from Meteor/Backbone/Firebase/Derby?</h2>
 
 <p>Meteor took the general approach of proxying MongoDB to the client side. We do it the other way around: we deliver JavaScript objects to and fro the backend.</p>
 
@@ -111,5 +40,4 @@
 <p>Differently from Firebase, Swarm is an open library you may run inside your own setup. No lock-in.</p>
 
 <p>Backbone is an MVC framework assuming an HTTP/JSON API behind it. Swarm only replaces the HTTP/JSON part. Well, it also emits change events. Swarm is the M. Probably, we should spell it swarM.</p>
-</div>
 </body></html>

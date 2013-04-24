@@ -75,10 +75,12 @@ function cleanOfflineUsers () { // temp hack
             if (!peer._lstn[oid]) continue;
             var obj = peer.findObject(oid);
             if (!obj) continue; // ???
-            if (obj.ms < new Date().getTime()-60*1000) { // likely disconnected
+            if (!obj.ms) continue; // a new one; FIXME
+            var minuteAgo = new Date().getTime()-60*1000;
+            if (obj.ms < minuteAgo) { // likely disconnected
                 mice.set(mid,null);
                 console.error(''+peer._id+' KILLS '+mid+': '+obj.ms+' < '+
-                        (new Date().getTime()-60*1000) );
+                        minuteAgo );
             }
         }
 }
