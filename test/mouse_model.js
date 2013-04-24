@@ -12,4 +12,12 @@ swarm.Peer.extend(Mouse,'/=Mouse');
 function Mice () {
 }
 
-swarm.Peer.extendSet(Mice);
+swarm.Peer.extendSet(Mice,'/=Mice=');
+
+function PeerData () {
+    this.timeToRestart = 1<<30;
+    this.objectsTracked = 0;
+}
+
+swarm.Peer.extend(PeerData);
+

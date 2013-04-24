@@ -17,6 +17,7 @@ var PORT = SSN+8000;
 
 var myid = new ID('#',SRC,SSN), myidstr=myid.toString();
 var myMouseId = '#maus'+myidstr.substr(4,2);
+var myMouseElem;
 var peer = new Peer(myid);
 
 var wsServerUri = 'ws://'+(window.location.hostname||'localhost')+':'+PORT+'/client';
@@ -29,7 +30,7 @@ peer._on('/=Peer=',function(spec,val){
 });
 
 var rtt, sample, uriSpan;
-var RTT, rttto;
+var RTT, rttto, noTrack=false;
 
 function trackMouse (id) {
     var elem = document.createElement('span');
@@ -39,8 +40,10 @@ function trackMouse (id) {
     elem.style.color = userColors[src%userColors.length];
     elem.innerHTML = userSymbols.charAt(src%userSymbols.length);
     document.body.appendChild(elem);
-    if (id==myMouseId)
+    if (id==myMouseId) {
         elem.style.fontSize = '50pt';
+        myMouseElem = elem;
+    }
 
     var maus = peer.on(Mouse._type+id,function(spec,val){
         elem.style.left = maus.x-elem.clientWidth/2;
@@ -55,7 +58,7 @@ function trackMouse (id) {
             if (!rttto)
                 rttto = setTimeout(function(){
                     rttto = null;
-                    rtt.innerHTML = RTT;
+                    rtt.innerHTML = RTT + (noTrack ? ' (automated)' : '');
                 },100);
         }
     });
@@ -99,7 +102,7 @@ window.onload = function () {
         });
     };
 
-    var autoMoveInterval, noTrack=false;
+    var autoMoveInterval;
 
     function autoMove () {
         var width = document.body.clientWidth;

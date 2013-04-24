@@ -45,6 +45,10 @@ if (PORT==BASE_PORT)
     for(var i=1; i<=9; i++) 
         fork(BASE_PORT+i);
 
+setInterval(function(){
+    swarm.Spec.ANCIENT_TS = swarm.ID.int3uni(swarm.ID.getTime()-60*60);
+},1000);
+
 var urls = [];
 
 for(var p=0; p<=9; p++) {
@@ -55,7 +59,37 @@ for(var p=0; p<=9; p++) {
 
 var plumber = new swarm.Plumber(peer,urls);
 
-if (PORT!==BASE_PORT)
+/*if (PORT!==BASE_PORT)
     setTimeout(function(){
         process.exit(0);
     }, (30 + Math.random()*30)*1000 );
+*/
+/*peer._on('/=Room=', function (spec,val) {
+    spec = swarm.Spec.as(spec);
+    console.error('ROOM '+spec+'\t'+JSON.stringify(val));
+    for(var client in val) {
+        var clientId = client.replace('.','#');
+        if (client in peer.peers) {
+            var c = peer.peers[client];
+            c.rooms = c.rooms || {};
+            c.rooms[spec.id] = true;
+            console.error('peer '+clientId+' joined room '+spec.id);
+        }
+    }
+});
+
+
+peer._on('/=Peer=',function(spec,isConnected){
+    spec = swarm.Spec.as(spec);
+    var id = spec.id, fid = id.toString().replace('#','.');
+    console.error('!!! '+peer._id+' '+(isConnected?'':'dis')+'connects: '+id);
+    if (!isConnected) {
+        var p = peer.peers[id];
+        if (p.rooms)
+            for (var roomid in p.rooms) {
+                var room = peer.findObject(roomid);
+                room.set(fid,false);
+                console.error('### kicked '+fid+' out of '+roomid);
+            }
+    }
+}); */
