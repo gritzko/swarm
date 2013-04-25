@@ -1,50 +1,72 @@
-Warning: this doc s slightly outdated. Check doc/Specifiers.html, doc/wtf.html instead.
+# Swarm: a JavaScript object sync library
 
-# Swarm: a node.js data sync library
+Swarm is a minimal library that magically synchronizes JavaScript
+objects between all your clients and servers, in real-time. All
+instances of an object will form a dynamic graph, exchanging deltas
+the most efficient way and merging changes.  Swarm needs Node.js and
+[einaros ws][ws] on the server side and HTML5 WebSocket in the browser.
 
-Swarm is a minimal M(VC) library that focuses on synchronozed models,
-i.e. JavaScript classes that magically synchronize between all your
-clients and servers using WebSocket connections. All instances of an
-object will form a dynamic spanning tree, of sorts, sending deltas to
-each other and merging changes.
-Regarding V and C parts of the MVC, you may either attach your own
-View and Controller or insert Swarm into your MVC framework of choice
-(like backbone.js).
-The vision behind Swarm is to get back to the good old days: program
-a real-time multiuser multiserver app like a local app, let things
-automatically synchronize in the background.
+The vision behind Swarm is to get back to the good old days: program a
+real-time multiuser multiserver app like a local MVC app, let things
+automatically synchronize in the background. Ideally, once view
+rendering is model event driven, there is barely any difference
+in reacting to either local or remote changes.
+
+The Swarm is the M of MVC. Regarding V and C parts, you may either
+attach your own View or Controller components (like [Handlebars][hb])
+or insert Swarm into your MVC framework of choice (like
+[Backbone.js][bb]).
+
+[ws]: https://github.com/einaros/ws "Einar O. Stangvik WebSocket lib"
+[hb]: http://handlebarsjs.com/ "Handlebars templating lib"
+[bb]: http://backbonejs.org/ "Backbone.js MVC lib"
 
 ## Architecture
 
 We target an objective described by some as the Holy Grail of
-JavaScript real-time apps[?].  With HTML5 and node.js, a server looks
-more and more like a client: both run JavaScript, both have their own
-storage.  Instead of synchronizing clients using stateless server-side
-CRUD API layer or (even more antique) rendering all the stuff at the
-server, we borrow some pages from peer-to-peer design books.  Servers
+JavaScript real-time apps.  With HTML5 and node.js, server and client
+sides converge: both run JavaScript, both have their own storage
+and there is a continous two-way WebSocket connection between them.
+The Holy Grail idea is to run the same codebase as needed either on
+the server or on the client. In particular, we'd like to serve static
+HTML from the server to make our site indexable. Further on, we'd like
+to update HTML incrementally on the client. Once a user initiates an
+event, we often need to relay that event to other users.  In bigger
+setups, we also need to synchronize our multiple servers. Even at a
+single server, multiple node.js worker processes often need some sort
+of synchronization.
+
+There are various ways of resolving those matters, which mostly boil
+down to retrofitting the classic HTTP request-response architecture
+which dates back to the epoch of Apache CGI, Perl scripts and RDBMS
+backends. Instead, Swarm takes a fresh look at the problem, partially
+by borrowing some pages from peer-to-peer design books.  Servers
 and clients form a single network to synchronize changes and serve
 events without relying too much on the (database) backend.
 
-In more general terms, when facing the specifics of real-time
-applications we have two options.  Either serve update events from the
-database layer (that is either pubsub and/or cache invalidation
-techniques) or shift replica synchronization from the database upwards
-to the application layer. We chose the latter. Again, our browser and
-server processes form a single network to relay changes/events/rpc
-calls to each other.
+We assume that server processes and clients are unreliable alike.
+Server processes connect to each other in P2P fashion, forming a full
+mesh.  Servers may routinely join and depart, but dusruptions to the
+mesh are temporary. A client connects to a server of his choice by
+WebSocket.
 
-Our layer interaction model is like this:
-  browser storage <=> browser <=> server <=> resp server <=> database
+Once a client opens an object, the request comes to the server.  The
+server contacts another server which is the 'root' for that object.
+The 'root' is assigned algorithmically, using consistent hashing.  The
+root server conducts all DB reads and writes for the object to
+minimize DB access concurrency.  Further on, all replicas of the
+object at different servers will have to synchronize. Every change
+will be serialized as a "diff" object. Diffs will propagate to all
+replicas by a spanning tree where the root server will serve as the
+root (tautology, right) and clients will be the leaves.
+In case of topology disruptions, the spanning tree may temporarily
+have more tiers.  Once some clients stop listening to an object, the
+spanning tree contracts to the necessary minimum in a process that is
+reminiscent of garbage collection, albeit at the swarm level.
 
-Our idea is to scale quick&dirty JavaScript logic (which is supposed
-to be inherently unreliable) to larger setups using swarms of single
-threaded node.js processes.
+***
 
-Our guiding principles:
-
-* massive parallelism,
-* reasonable redundancy and
-* self-organization.
+*the remainder of the file is somewhat outdated*
 
 ## Signatures
 
