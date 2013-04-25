@@ -74,7 +74,7 @@
 
 <p>It is a Swarm demo. Swarm is a JavaScript real-time model sync library. It synchronizes JavaScript objects for clients and servers alike. Swarm solves the M in MVC.</p>
 
-<p>In the demo above, 9 onscreen iframes are connected to 9 different servers. The position of the big card suit sign is synchronized between iframes using the Swarm library. Try hovering a mouse over some iframe. The suit sign must follow.</p>
+<p>In the demo above, 9 onscreen iframes are connected to 9 different servers. Servers are connected to each other. The position of every card suit sign is synchronized between iframes using WebSocket connections. Try hovering a mouse over some iframe. All nine copies of your sign must follow.</p>
 
 <p>It also syncronizes positions of other people's mouse pointers. In case somebody else is playing with the page right now, you should see their suit signs moving. Those are smaller.</p>
 
@@ -88,7 +88,7 @@
 
 <p>Mapping the old model to the new reality is a really painful experience: fetch some model from the database in several steps of asynchronous logic, and then you need another one. Synchronizing multiple clients is even worse. Meanwhile, the problem is really basic and easy to formalize: just keep those objects synchronized.</p>
 
-<p>So, we are scrathing our own itch. Or more precisely, putting bandages on our own wounds :)</p>
+<p>So, we are scratching our own itch. Or more precisely, putting bandages on our own wounds :)</p>
 
 <h2>How does it work?</h2>
 
@@ -112,4 +112,7 @@
 
 <p>Backbone is an MVC framework assuming an HTTP/JSON API behind it. Swarm only replaces the HTTP/JSON part. Well, it also emits change events. Swarm is the M. Probably, we should spell it swarM.</p>
 </div>
+
+<a href="https://github.com/gritzko/swarm"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+
 </body></html>
