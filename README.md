@@ -1,3 +1,5 @@
+Warning: this doc s slightly outdated. Check doc/Specifiers.html, doc/wtf.html instead.
+
 # Swarm: a node.js data sync library
 
 Swarm is a minimal M(VC) library that focuses on synchronozed models,
