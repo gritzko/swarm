@@ -63,7 +63,7 @@ function trackMouse (id) {
     elem.innerHTML = userSymbols.charAt(src%userSymbols.length);
     document.body.appendChild(elem);
     if (id==myMouseId) {
-        elem.style.fontSize = '50pt';
+        elem.style.fontSize = '30pt';
         myMouseElem = elem;
     }
 
@@ -88,6 +88,11 @@ window.onload = function () {
 
     var id = Mouse.prototype._type + myMouseId;
     var mouse = peer.on(id);
+    mouse.set ({
+            ms: new Date().getTime(),
+            x: (Math.random()*100)|0,
+            y: (Math.random()*100)|0
+    });
     var mice = peer.on('/=Mice=#=mice=',function(spec,val){
         console.log('Mice:\t'+spec,val);
         for(var key in val) {
