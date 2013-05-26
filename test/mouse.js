@@ -4,14 +4,16 @@ svdebug = function(){}
 var userSymbols = '\u2665\u2666\u2663\u2660';
 var userColors = [];
 
-var myClientId,         //
-    myClient,           //
-    wsServerUri,        //
-    myMouseId,          //
-    myMouseElem,        //
-    myMouseObject,      //
-    miceList,           //
-    plumber;            // WebSocket connection manager
+var myClientId,         // id of the client/peer/session
+    myClient,           // the client/peer (well, it is connected to the server, but may connect elsewhere)
+    wsServerUri,        // WebSocket URI to connect to
+    myMouseId,          // id of my object (which is a mouse tracking card suit sign)
+    myMouseElem,        // the DOM element for my suit sign (no Views, so we do it all manually)
+    myMouseObject,      // my js object (has .x, .y and .ms for timestamps)
+    miceList,           // all mice currently alive (on the basis of keepalives)
+    plumber,            // WebSocket connection manager
+    portStr,
+    peerData;
 
 var RTT, rttto, noTrack=false;
 
@@ -29,10 +31,12 @@ function init () {
     var m = hash.match(/ssn=(\d+)/);
     var SSN = (m&&parseInt(m[1])) || 0;
     var PORT = SSN+8000;
+    portStr = ''+PORT;
+    while (portStr.length<6) portStr = '0'+portStr;
     // derive my ids
     myClientId = new ID('#',SRC,SSN);
     var myidstr=myClientId.toString();
-    myMouseId = '#maus'+myidstr.substr(4,2);
+    myMouseId = '#mous'+myidstr.substr(4,2);
     // WebSocket URI to connect the peer to
     wsServerUri = 'ws://'+(window.location.hostname||'localhost')+':'+PORT+'/client';
     var uriSpan = document.getElementById('uri');
@@ -52,6 +56,7 @@ function subscribe () {
 
     // open "my" mouse object
     myMouseObject = myClient.on( Mouse.prototype._type + myMouseId );
+    myMouseObject.setMs(new Date().getTime());
 
     // open the singleton collection listing all mice currently alive
     miceList = myClient.on('/=Mice=#=mice=',function(spec,val){
@@ -59,15 +64,20 @@ function subscribe () {
         for(var key in val) {
             var keysp = Spec.as(key);
             var mid = keysp.field.toString().replace('.','#'); // TODO ugly
-            if (val[key])
+            if (val[key]) {
                 trackMouse(mid);
-            else
-                untrackMouse(mid);
+            } else {
+                if (mid!=myMouseId)
+                    untrackMouse(mid);
+                else
+                    miceList.set(key,true); // return of the jedi
+            }
         }
     });
     // mention our mouse in the list
-    miceList.set(myMouseId.replace('#','.'),true); // FIXME ugly
+    miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
 
+    peerData = myClient.on('/=Peer=#'+portStr, showCountDown);
 }
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
@@ -90,6 +100,13 @@ function showRtt (spec,val) {
     } else
         rttText = 'rtt: n/a';
     rttSpan.innerHTML = rttText + (noTrack ? ' (automated)' : '');
+}
+
+function showCountDown (spec,val) {
+    var countSpan = document.getElementById('count');
+    if (!countSpan) return;
+    countSpan.innerHTML = peerData.timeToRestart ? 
+        (0|(peerData.timeToRestart/1000)) + 's till restart' : 'will not restart';
 }
 
 /** Debugging: move the mouse in circles */
@@ -163,6 +180,7 @@ window.onload = function () {
     /** Update the timestamp to avoid being kicked out by the server */
     setInterval(function keepalive(){
         myMouseObject && myMouseObject.setMs(new Date().getTime());
+        miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
     },1000*10);
 
     var autoMoveInterval;
