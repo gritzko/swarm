@@ -145,7 +145,7 @@ function trackMouse (id) {
     elem.innerHTML = userSymbols.charAt(src%userSymbols.length);
     document.body.appendChild(elem);
     if (id==myMouseId) {
-        elem.style.fontSize = '50pt'; // mine is bigger than yours
+        elem.style.fontSize = '30pt';
         myMouseElem = elem;
     }
     // create the actual object, open a subscription
