@@ -51,7 +51,6 @@ function subscribe () {
     // listen for disconnects/connects; that tells us the online/offline status
     myClient._on('/=Peer=',function(spec,val){
         window.document.body.setAttribute('connected',plumber.host.getPeerCount()>0?true:false);
-        console.log('repeer',spec,val);
     });
 
     // open "my" mouse object
@@ -60,7 +59,7 @@ function subscribe () {
 
     // open the singleton collection listing all mice currently alive
     miceList = myClient.on('/=Mice=#=mice=',function(spec,val){
-        console.log('Mice:\t'+spec,val);
+        //console.log('Mice:\t'+spec,val);
         for(var key in val) {
             var keysp = Spec.as(key);
             var mid = keysp.field.toString().replace('.','#'); // TODO ugly
