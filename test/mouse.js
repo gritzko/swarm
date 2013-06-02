@@ -1,5 +1,3 @@
-svdebug = function(){}
-
 // card suits
 var userSymbols = '\u2665\u2666\u2663\u2660';
 var userColors = [];
@@ -76,7 +74,7 @@ function subscribe () {
     // mention our mouse in the list
     miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
 
-    peerData = myClient.on('/=Peer=#'+portStr, showCountDown);
+    peerData = myClient.on('/PeerDt#'+portStr, showCountDown);
 }
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */

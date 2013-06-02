@@ -27,7 +27,7 @@ var peer = new swarm.Peer(new swarm.ID('#',0,PORT-BASE_PORT+17));
 
 var portStr = ''+PORT;
 while (portStr.length<6) portStr = '0'+portStr;
-var peerData = peer.on('/=Peer=#'+portStr);
+var peerData = peer.on('/PeerDt#'+portStr);
 
 wss.on('connection', function(ws) {
     var params = url.parse(ws.upgradeReq.url,true);
@@ -80,7 +80,7 @@ var plumber = new swarm.Plumber(peer,urls);
 
 // (scheduled) server restart
 if (PORT!==BASE_PORT) {
-    var waitMs = (30 + Math.random()*30)*1000;
+    var waitMs = (60 + Math.random()*60)*1000;
     RESTART_TS = new Date().getTime() + waitMs;
     setTimeout(function(){
         process.exit(0);

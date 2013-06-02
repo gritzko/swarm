@@ -24,5 +24,5 @@ function PeerData () {
     this.objectsTracked = 0;
 }
 
-swarm.Peer.extend(PeerData,'/=Peer=');
+swarm.Peer.extend(PeerData,'/PeerDt');
 
