@@ -1,0 +1,15 @@
+{
+    "name": "swarm",
+    "version": "0.0.2",
+    "homepage": "http://github.com/gritzko/swarm",
+    "email": "victor.grishchenko@gmail.com",
+    "license": "MIT",
+    "files": [
+        "lib/swarm2.js",
+        "test/testSpec.js"
+        ],
+    "devDependencies": {
+        "nodeunit" : "",
+        "underscore": ""
+    }
+}
