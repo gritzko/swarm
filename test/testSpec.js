@@ -56,9 +56,9 @@ exports.testBase = function (test) {
     };
     var base = Spec.getBase(obj);
     test.deepEqual(base,{
-            '&_':'!20130811182021',
-            '&gritzko+iO':'!20130811192021',
-            '&aleksisha':'!20130811192021+222'
+            '_':'20130811182021',
+            'gritzko+iO':'20130811192021',
+            'aleksisha':'20130811192021+222'
     });
     obj.smth = 4;
     var nts = '!20130811192028&gritzko+iO';
