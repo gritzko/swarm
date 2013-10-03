@@ -11,9 +11,9 @@ if (require) {
 }
 
 exports.testTs = function (test) {
-    var ts1 = Spec.ts(), ts2, i=0;
+    var ts1 = Spec.timestamp(), ts2, i=0;
     var iv = setInterval(function(){
-        ts2 = Spec.ts();
+        ts2 = Spec.timestamp();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
         test.ok(ts2>ts1);
@@ -26,14 +26,15 @@ exports.testTs = function (test) {
 }
 
 exports.testSpec = function (test) {
-    var testSpec = '/Class#ID.field!130811192632&gritzko+1111';
+    var testSpec = '/Class#ID.field!20130811192632&gritzko+1111';
     var spec = new Spec(testSpec);
-    test.equal(spec.time,'130811192632');
-    test.equal(spec.ssn,'1111');
+    test.equal(spec.time,'20130811192632');
+    test.equal(spec.author,'gritzko+1111');
+    test.equal(Spec.ext(spec.author),'1111');
     var rev = spec.toString();
     test.equal(rev,testSpec);
-    var time = '130811192020';
-    var iso = Spec.digits2iso(time);
+    var time = '20130811192020';
+    var iso = Spec.timestamp2iso(time);
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
     test.equal(date.getSeconds(),20);
@@ -43,10 +44,10 @@ exports.testSpec = function (test) {
 exports.testBase = function (test) {
     var obj = {
         '_vid': {
-            text:   '!130811192020&gritzko+iO',
-            number: '!130811192021&gritzko+iO',
-            obj:    '!130811192021222&aleksisha',
-            smth:   '!130810192021999&oldmf'
+            text:   '!20130811192020&gritzko+iO',
+            number: '!20130811192021&gritzko+iO',
+            obj:    '!20130811192021+222&aleksisha',
+            smth:   '!2013081019202+999&oldmf'
         },
         text: 'test',
         number: 123,
@@ -55,12 +56,12 @@ exports.testBase = function (test) {
     };
     var base = Spec.getBase(obj);
     test.deepEqual(base,{
-            '&_':'!130811182021',
-            '&gritzko+iO':'!130811192021',
-            '&aleksisha':'!130811192021222'
+            '&_':'!20130811182021',
+            '&gritzko+iO':'!20130811192021',
+            '&aleksisha':'!20130811192021+222'
     });
     obj.smth = 4;
-    var nts = '!130811192028&gritzko+iO';
+    var nts = '!20130811192028&gritzko+iO';
     obj['_vid'].smth = nts;
     var diff = Spec.getDiff(base,obj);
     test.equal(diff.smth,4);
