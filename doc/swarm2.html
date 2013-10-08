@@ -1,0 +1,666 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+        <head>
+                    <title>ppyrus</title>
+                            <link rel="stylesheet" type="text/css" href="http://bouillon.math.usu.ru/files/zerox.css"/>
+                            <style type="text/css">
+
+            body {
+                text-align:center;
+            }
+            div#body {
+                margin: auto;
+                margin-top: 4em;
+                margin-bottom: 4em;
+                text-align: left;
+                font-size: 14pt;
+                width: 70ex;
+            }
+            div#photodiv {
+                width: 25em; 
+                margin-left: 2em;
+                margin-bottom: 1em;
+                float: right;
+                background-color: #222;
+            }
+            div#photodiv > p {
+                color: #aaa;
+                font-size: 8pt;
+                font-family: "Monaco" monospace;
+                margin: 4px;
+            }
+            img#photo {
+                width: 99%;
+            }
+            p, ul, blockquote {
+                text-align: justify;
+                font-family: "Georgia";
+                font-size: 14pt;
+                line-height: 120%;
+                color: #222;
+                width: auto;
+            }
+            ul {
+                padding-left: 5ex;
+            }
+            ul ul {
+                font-size: 13.5pt;
+                padding-top: 4px;
+                padding-bottom: 4px;
+            }
+            blockquote {
+                font-style: italic;
+                color: #444;
+                width: 62ex;
+                margin-left: 5ex;
+                border-left: 0;
+            }
+            p > em, li > em {
+                color: #246;
+		        font-style: italic;
+            }
+            a.url {
+                font-family: monospace;
+                font-size: 14pt;
+            }
+            p.signature {
+                margin-top: 4em;
+                margin-left: 20ex;
+                font-style: italic;
+            }
+            p.signature:before {
+                content: "-- ";
+            }
+            a {
+                color: #225;
+		        text-decoration: none;
+		        border-bottom: 1px dotted;
+            }
+            a:visited {
+                color: #223;
+            }
+            code {
+                font-size: 90%;
+            }
+        </style>
+                                        </head>
+                                            <body>
+                                                        <div id='body'>
+<h1>Swarm: an object sync library</h1>
+
+<p>Swarm is a compact MVC library providing real-time syncable, cacheable
+JavaScript objects for the new world of WebSocket, WebStorage and
+WebRTC. All client/server replicas of an object form a dynamic
+graph, exchanging deltas and merging changes the most efficient way.
+Swarm is relativistic at its heart fully embracing the fact that
+events originate at various points and spread asynchronously.  It
+provides the minimal set of primitives that feel natural and close to
+plain JavaScript but have rich syncing behaviour under the hood.</p>
+
+<p>The vision behind Swarm is to get back to the good old days: program a
+real-time multiuser multiserver app like a local MVC app, let things
+automatically synchronize in the background. Ideally, once view
+rendering is model event driven, there is hardly any difference in
+reacting to either local or remote changes.</p>
+
+<p>Generally, the combination of real-time sync over persistent
+connections, client-to-client sync and client-side storage leads to
+client/server logic convergence. That demands more than just
+retrofitting.  We assume that the server runs some version of Swarm as
+well. We also assume that the DB backend keeps records with their
+version ids attached.</p>
+
+<p>Swarm targets the broad class of applications that score high on the
+following checklist:</p>
+
+<ul>
+<li>benefit from multiuser collaboration or multidevice syncing,</li>
+<li>benefit from offline work and direct device-to-device syncing,</li>
+<li>need realtime syncing, probably peer-to-peer (WebRTC),</li>
+<li>where users interact with objects repeatedly, as opposed to
+read-and-goodbye Web sites.</li>
+</ul>
+
+<p>Two biggest classes are team collaboration apps and online games.</p>
+
+<h3>Swarm and Backbone</h3>
+
+<p>Swarm is a breed of <a href="http://backbonejs.org/">Backbone</a> and a real-time peer-to-peer object
+synchronization algorithm. Originally, our intention was to develop an
+extension for Backbone, but the assumption of HTTP request-response
+synchronization was rooted too deeply in the framework's code.</p>
+
+<p>Real-time synchronization assumes a continuous flow of updates, so
+a client talks to a server in terms of "subscriptions" which are
+highly similar to client-side change events. So, we generalize both
+into a single two-way subscription primitive. Those subscriptions
+build distributed graphs of object replicas that continuously exchange
+updates. In turn, maintaining those graphs necessitates a distributed
+garbage collection algorithm.</p>
+
+<p>Another issue was supporting Backbone collections which are arrays
+essentially.  Unfortunately, sequential structures cause a lot of
+<a href="http://en.wikipedia.org/wiki/Operational_transformation">trouble</a> in a concurrent system so Swarm employs <code>{key:object}</code>
+Sets instead. Collection sorting might be performed later in Views.</p>
+
+<p>Some issues, to the contrary, got easily resolved. For example,
+Backbone does not assume reliable object ids while Swarm objects get
+lifetime ids at creation. Thus, <code>model.cid</code> and <code>view.el</code> logic became
+unnecessary. Similarly, all the caching and dirty-marking logic was
+replaced by explicit version numbering which is way more robust.</p>
+
+<h2>Architecture</h2>
+
+<p>The hourglass waist of the Swarm architectire is the sync protocol
+based on formally precise and unique identifiers assigned to every
+event in the system.  Above the waist, there might be various
+server/client logic implementations synchronizing by the protocol and
+forming heterogenous "swarms" (e.g. see full vs stateless server
+discussion).  Below the waist, there are various possible
+transport/storage technologies, such as:</p>
+
+<ul>
+<li>WebSocket as the default browser-to-server transport,</li>
+<li>TCP as a minimal-overhead server-to-server transport,</li>
+<li>WebRTC as a minimal-RTT client-to-client transport,</li>
+<li>postMessage as a iframe-to-iframe transport,</li>
+<li>WebStorage as a tab-to-tab transport,</li>
+<li>WebStorage as the default client-side key-value storage,</li>
+<li>leveldb as a minimalistic server-side storage,</li>
+<li>MySQL as a relational server-side storage,</li>
+<li>MongoDB as as a NoSQL server-side storage,</li>
+<li>and so on and so forth.</li>
+</ul>
+
+<p>As an example of flexibility "above the waist", imagine a virtual
+"class" having some methods implemented in JavaScript and others in
+Java. As long as calls are correctly forwarded to a JavaScript or Java
+process respectively, it should work.</p>
+
+<p>Swarm employs <em>specifiers</em> to formally describe any event in the system.
+Specifier is a compound identifier consisting of tokens, such as:</p>
+
+<ul>
+<li>object id, </li>
+<li>class of the object,</li>
+<li>field or method within the object,</li>
+<li>timestamp of the event,</li>
+<li>author of the event.</li>
+</ul>
+
+<p>Note that the <code>(timestamp,author)</code> pair forms a classic <em>logical
+clock</em> defining a partial ordering (and an arbitrary total order) for
+all events related to a given atom (field or method). Such an order is
+used to merge changes in distributed replicas without resorting to
+Dark Arts, a.k.a. <a href="http://en.wikipedia.org/wiki/Operational_transformation">Operational Transformation</a>. That is especially
+valuable as we allow for heterogenous servers and client-to-client
+direct synchronization.</p>
+
+<p>A serialized specifier is a plain ASCII string which looks like:</p>
+
+<pre><code>/Class#objectID.field!timestamp&amp;author
+</code></pre>
+
+<p>Apart from change serialization and storage, specifiers are used for
+various support missions like e.g. assigning ids to DOM elements to
+avoid direct links from objects to DOM (way better for gc).</p>
+
+<h3>Sync protocol</h3>
+
+<p>Wire protocol talks in <code>{specifier: json_value}</code> pairs aka specvals.
+A typical spec-value pair for a field change looks like:</p>
+
+<pre><code>/TodoItem#milk.text!20130923100022&amp;gritzko   "buy some milk"
+</code></pre>
+
+<p>Note that the timestamp <code>!20130923100022</code> means 2013 Sep 23 10:00:22.
+A typical remote method invocation may look like:</p>
+
+<pre><code>TodoItem#milk:share!20130923100025&amp;gritzko  {
+    "email":    "milk@shop.com"
+}
+</code></pre>
+
+<p>It is assumed that specvals spread to replicas without reordering.
+The actual serialization format is a point-to-point convention, most
+straightforward option being JSON. Storage/caching implementations may
+employ the same specval format as well.</p>
+
+<p>An object's replicas form a spanning tree by forming bidirectional
+subscriptions.  A downlink replica initiates a subscription to its
+uplink and the uplink replica subscribes back. Unsubscription proceeds
+the same way. Once a change is received, a replica sends it to every
+subscriber but the source. RPC method calls are sent to the uplink
+only to reach the tree root where they are executed.</p>
+
+<p>When subscribing to an object, an initiator forwards versions of
+recentmost changes it already knows. The responder sends back any
+later changes if known. A simple one-way subscribe exchange may look
+like:</p>
+
+<pre><code>&gt;&gt;&gt; /TodoItem#milk*on   {"&amp;gritzko": "!20130923090020"}
+&lt;&lt;&lt; /TodoItem#milk.text!20130923100022&amp;gritzko   "buy some milk"
+</code></pre>
+
+<h3>Swarms</h3>
+
+<p>The swarm is organized in a way so all the replicas of a given object
+should form a spanning tree. Updates (diffs and method calls) are
+forwarded along the edges. Normally, the database storing the object
+is the root of the tree. The simplest topology of the kind is:</p>
+
+<ul>
+<li>every server process being connected to every other server,</li>
+<li>every client being connected to some server,</li>
+<li>every server being responsible for a fraction of objects according
+to a <a href="http://en.wikipedia.org/wiki/Consistent_hashing">consistent hashing</a> scheme.</li>
+</ul>
+
+<p>Then, replicas of the same object may form a spanning tree using the
+responsible server as the root and a kind of a rendez-vouz point.
+Only the responsible server talks to the database to minimize
+concurrency.  A spanning tree is optimal in terms of messages sent to
+synchronize all the replicas.  This kind of topology is rather robust
+to temporary disruptions that cause the server mesh to become
+incomplete. Temporarily, some spanning trees become fragmented or
+suboptimal, then it settles back.  Once leaf nodes (e.g.  clientside
+JavaScript) create new replicas, the spanning tree grows. Once clients
+disappear or release replicas, the tree shrinks.</p>
+
+<h3>Full vs stateless sync servers</h3>
+
+<p>Swarm server implementations can be of three broad categories:</p>
+
+<ul>
+<li>stateless servers forward updates without caching any data,</li>
+<li>caching servers keep the state of all the replicas listened to so
+they can boot new replicas without a DB read,</li>
+<li>full servers keep objects in RAM so all the methods may be called.</li>
+</ul>
+
+<p>In principle, all three types are transparently interoperable. Caching
+servers may store JSON as plain strings, stateless servers would
+repeatedly subscribe to the same object to fetch-and-forward the
+state, but generally all the differences are hidden behind the
+interface.</p>
+
+<p>Obviously, non-full servers cannot execute any methods. There are two
+options here: either to forward all the calls to a separate group of
+"RPC servers" or (not always possible) simply store call log in the
+storage so a client may catch up with the log once the object is
+fetched. Swarm clients are by definition full except for remote
+methods that are proxied to servers. See further discussion on RPC vs
+logged methods below.</p>
+
+<p>Obviously, stateless servers scale better than caching, caching better
+than full. A full server in Java likely scales better than a JavaScript
+implementation.</p>
+
+<h2>Swarm objects</h2>
+
+<p>Swarms extends JavaScript objects more or less the same way as
+Backbone does.  Objects of a class may be either versioned as a solid
+piece or use fine-grained per-field versioning. The latter is
+preferred for bigger objects. All version metadata is kept in the
+<code>_vid</code> field. It is either a <code>String</code> containing the object's version
+specifier or an <code>Object</code> containing a <code>{field: specifier}</code> map. A
+version specifier (vid) looks like <code>!20130923100022&amp;gritzko</code>.</p>
+
+<h3>Synced vs unsynced fields</h3>
+
+<p>A class may have synced and unsynced fields. Synced
+fields are assigned using <code>set</code> methods, e.g. <code>set("field",true)</code> or
+<code>setField(true)</code>. Every change to a synced field generates a <em>version</em>
+that propagates to other replicas in real time. A typical sequence of
+events is like:</p>
+
+<ul>
+<li>a user clicks the checkbox</li>
+<li>a jQuery event fires that invokes <code>milk.setDone(true)</code></li>
+<li>that turns into <code>this.set('done',true)</code></li>
+<li>that creates a version <code>!20130923100022&amp;gritzko</code> for the object</li>
+<li>which change serializes as <br />
+<code>/TodoItem#milk.done!20130923100022&amp;gritzko    true</code></li>
+<li>the specval pair is sent by a WebSocket connection to a server</li>
+<li>the server forwards the change to other clients</li>
+<li>the server turns the change into an SQL update <br />
+<code>UPDATE TODOITEMS <br />
+  SET DONE=TRUE, VID="!20130923100022&amp;gritzko" <br />
+  WHERE ID="milk"</code></li>
+</ul>
+
+<p>That way, todo items get cheap last-writer-wins real-time
+synchronization without any merge of concurrent changes, which are
+unlikely in this particular app. The per-field versioning option may
+enable merges but SQL storage overhead will become significant then.</p>
+
+<p>Unsynced fields are not synchronized in real time. Those are supposed
+to be a function of synced fields, sort of a cache.  Unsynced fields
+are copied on replica initialization. Later, they are updated in
+reaction to changes of synced fields (being a cache of some
+calculation, essentially) or modified by logged methods (see below).
+Generally, unsynced fields are rather volatile, correctness being
+responsibility of the implementation. Their role is like UDP in the
+TCP-UDP duo; merely an option to implement your own behavior.</p>
+
+<h3>Set vs Object</h3>
+
+<p>Like in general JavaScript, Swarm keeps differences of regular objects
+and sets/maps rather subtle. Essentially, that is a flag
+<code>Constructor.prototype.isSet</code> that switches between two modes. While
+objects have a list of synced fields, every field of a set gets
+synchronized. Sets are suposed to contain <code>{key: object_id}</code> pairs,
+although that is not mandatory.  On the wire, set synchronization
+proceeds exactly the same way by sending specval pairs.</p>
+
+<p>The special trick about a Set is to use it as a container of objects.
+The <code>fill()</code> method scans all the fields, picks values that are valid
+specifiers (like <code>/TodoItem#milk</code>), loads corresponding objects
+asynchronously and puts them as values into the set. Although,
+<code>fill("field")</code> may be invoked on objects in exactly the same fashion.
+Generally, objects and their ids are used interchangeably.</p>
+
+<p>The semantics of a sorted collection is implemented by sorting
+key-object pairs based on their keys.</p>
+
+<h3>Methods: RPC, logged, local</h3>
+
+<p>The section on synchronizing fields was a no-brainer: those are either
+synchronized or not. Syncronizing and remotely invoking methods allows
+for plethora of behaviors:</p>
+
+<ul>
+<li><em>local</em> methods need no replication,</li>
+<li><em>RPC</em> methods execute on the server side,</li>
+<li><em>logged</em> methods need to be executed on every replica,</li>
+<li><em>self-listeners</em> react on changes of synced fields. </li>
+</ul>
+
+<p>Logged methods and self-listeners are more of an advanced topic as
+their access to synced/unsynced fields needs to obey some rules.  As
+well, they are sensitive to operation order issues. They need either
+to be order-agnostic (within limits of the partial order), or handle
+reorderings manually.  Local and RPC methods are simpler concepts
+having straightforward effects.  By default, a method is considered
+local. RPC, logged methods and self-listeners are either listed in
+<code>Swarm.Model.extend()</code> or later registered with <code>Swarm.Model.addMethod()</code>.</p>
+
+<p>All method calls are serialized exactly the same way as field mutations</p>
+
+<pre><code>/TodoItem#milk:share!20130923100025&amp;gritzko  {
+    "email":   "milk@shop.com"
+}
+</code></pre>
+
+<p>storing call log  by the same machinery</p>
+
+<h3>Logged methods</h3>
+
+<p>Synchronization is not necessarily performed on a field-by-field
+basis. Logged methods implement the operational approach:</p>
+
+<ul>
+<li>every replica is booted with JSON state,</li>
+<li>every replica is delivered operations that were later performed on
+that state,</li>
+<li>operations may arrive reordered, still obeying some partial order,</li>
+<li>once all the operations are distributed to all the replicas, states
+of replicas must be identical.</li>
+</ul>
+
+<p>Convergence of replicas depends entirely on the implementation. Swarm
+only provides logging and distribution of operations. The operation
+log is essential as it guarantees that every replica will be replayed
+all the operations eventually. Logged method calls are stored, queued,
+distributed and invoked in a manner that is more similar to field
+synchronization than to RPC calls.</p>
+
+<p>Logged methods are useful for implementing collaborative text editing,
+for example. Every major collaborative editing approach (diff-patch,
+OT, WOOT/CT) represents a text as a stream of edit operations replayed
+on every replica.</p>
+
+<h3>Self-listeners and derived fields</h3>
+
+<p>As replica states are supposed to stay in sync, unsynced fields are
+generally expected to be functions of synced fields and logged
+methods. One may react to changes in synced fields by adding static
+self-listener methods; those are similar to regular <code>on('field',fn)</code>
+listeners except they are methods added to every object of a class.
+As an example:</p>
+
+<pre><code>Bar.on('height width depth', function () {
+    this.volume = this.getHeight()*this.getWidth()*this.getDepth();
+    this.mass = this.getDensity() * this.volume;
+});
+</code></pre>
+
+<p>While dimentions and density values get synced, volume and mass are
+calculated.</p>
+
+<p>An advanced usage pattern is to use compound specifiers when adding a
+static listener. A specifier filters events in a more complex way than
+simply by an event name (i.e. field or method).</p>
+
+<pre><code>TodoItem.on('&amp;joe', function (key,val,spec) {
+    console.log("Joe changed something");
+});
+
+var milk = TodoItem.objects['#milk'];
+milk.on('.toggle', function (key,value) {
+    console.log('milk is '+(value?'done':'undone'));
+});
+
+Swarm.on('/TodoItem.toggle&amp;joe', function(key,val,spec){
+    val &amp;&amp; console.log('Joe did '+Spec.as(spec).id);
+});
+</code></pre>
+
+<p>That generalizes the well-known practice of semicolon based event name
+scoping used in jQuery, Backbone and others. Differently from other
+libraries, Swarm event buses are interconnected. Attaching a listener
+to an object is the same as attaching it to the Swarm singleton while
+specifying the class and the object id; attaching to a class object is
+the same as specifying the class. The following examples are
+equivalent:</p>
+
+<pre><code>milk.on('done', fn);
+milk.on('.done', fn);
+TodoItem.on('#milk.done', fn);
+Swarm.on('/TodoItem#milk.done', fn);
+</code></pre>
+
+<p>The same applies to the <code>set</code> method. The following examples are all
+equivalent:</p>
+
+<pre><code>milk.setDone(true);
+milk.set('done',true);
+milk.set('.done',true);
+TodoItems.set('#milk.done', true);
+Swarm.set('/TodoItems#milk.done', true);
+// we assume it is 30 Sep 2013 12:01:49
+Swarm.set('/TodoItems#milk.done!20130930120149&amp;gritzko', true);
+</code></pre>
+
+<p>As an opposite example, an empty event name subscribes to every event
+in the context. <code>Swarm.on('',fn)</code> will make <code>fn()</code> invoked on every
+event. That is good as a last-resort debugging technique.</p>
+
+<h3>Views and cache</h3>
+
+<p>Swarm's top requirement for the View is the ability to render HTML on
+the client and server side alike. Thus, it employs Backbone-like
+fine-grained templates, not annotations or declarative bindings.  The
+default implementation uses Underscore templates with some additional
+features to facilitate recursive templating.  An important upside of
+the approach is that rendered views are easily cached as HTML.  Still,
+that simple 20/80 default implementation can always be overriden.</p>
+
+<p>Every rendered template is wrapped into a container <code>DIV</code> that has the
+respective specifier as its id, e.g. <code>/TodoItemView#milk</code>. Generally,
+handling HTML in uniform containers is much handier. Also, that way we
+avoid direct links from model to DOM that hinder garbage collection.
+Decoupling of View and DOM is also good for server-side rendering.</p>
+
+<p>The most simple view implementation is instantiated as <br />
+<code>var TodoItemView = Swarm.View.extend(TodoItem,templateString)</code>.</p>
+
+<h3>Access control</h3>
+
+<p>In the land of access control, an inevitable paradigm shift is caused
+by the fact we allow client-to-client communication. A straightforward
+consequence is that we need in-depth defence policies enforced by
+every peer, which is way beyond typical check-on-submit validation.
+Hence, every replica must check access rules when applying any change,
+be it received from a server or another client or picked up from a
+stored log.</p>
+
+<p>The default access mode is to allow read access to everyone who knows
+the id, while write rights are restricted to the object's creator.
+Explicit access policies are stored in the <code>_acl</code> field of an object.
+The default implementation expects it to be a space-separated list of
+user ids and rights, like <code>"admin:a joe:w default:r"</code>. 
+More sophisticated policies might be implemeted by overloading
+<code>Swarm.getPermissions(id|object, user_id)</code> which is expected to
+return one of:</p>
+
+<ul>
+<li><code>a</code> - admin rights, i.e. read-write access to any field, incuding
+dot-fields,</li>
+<li><code>w</code> - write rights to regular fields,</li>
+<li><code>r</code> - read rights to regular fields,</li>
+<li><code>''</code> - no rights.</li>
+</ul>
+
+<h2>API</h2>
+
+<p>Either spec,val or {spec:val}</p>
+
+<h3>Swarm singleton object</h3>
+
+<ul>
+<li><code>connect([uri])</code></li>
+<li><code>getUplink(spec)</code></li>
+<li><code>getPermissions(spec, user_id)</code></li>
+</ul>
+
+<h4>Swarm.Model</h4>
+
+<ul>
+<li><code>extend(prototype|constructor)</code></li>
+<li><code>addField(constructor,name)</code></li>
+<li><code>addMethod(constructor,name,type[,function])</code></li>
+<li><code>addRPCMethod(constructor,name[,function])</code></li>
+<li><code>addLoggedMethod(constructor,name[,function])</code></li>
+</ul>
+
+<h4>Swarm.View</h4>
+
+<ul>
+<li><code>extend(prototype|constructor)</code></li>
+</ul>
+
+<h3>Object mixin</h3>
+
+<ul>
+<li>Methods
+<ul>
+<li><code>on(field|method, handler)</code> or <code>addListener(field,handler)</code>, also
+<code>one()</code>, <code>once()</code>; invokes <code>handler(field,value,spec)</code> when
+<code>field</code> changes or <code>method</code> is invoked; <code>one</code>/<code>once</code> work once</li>
+<li><code>off(event,handler)</code></li>
+<li><code>set(field,value)</code></li>
+<li><code>get(field)</code></li>
+<li><code>fill(field)</code></li>
+<li><code>spec(field?)</code> returns the specifier for the object/field</li>
+</ul></li>
+<li>Per-field convenience methods
+<ul>
+<li><code>setField(value)</code> equals <code>set('field',value)</code></li>
+<li><code>getField()</code>, equals <code>get('field')</code></li>
+<li><code>onFieldChange(handler)</code> equals <code>on('field',handler)</code></li>
+<li><code>offFieldChange(handler)</code></li>
+</ul></li>
+<li>Static functions (TodoItem.xxx)
+<ul>
+<li><code>on</code></li>
+<li><code>off</code></li>
+<li><code>getUplink(id)</code> defaults to <code>Swarm.getUplink(spec)</code></li>
+<li><code>getPermissions(spec, user_id)</code> defaults to <code>Swarm.getPermissions(spec,uid)</code></li>
+</ul></li>
+<li>Special fields
+<ul>
+<li><code>_id</code></li>
+<li><code>_lstn</code>  <code>_lstn[0]</code> is always the uplink</li>
+<li><code>_acl</code></li>
+</ul></li>
+</ul>
+
+<h3>Overriding behavior</h3>
+
+<p>Note that WebStorage is a transport, not storage :)</p>
+
+<ul>
+<li>Storage
+<ul>
+<li><code>get([spec])</code> semantics may vary for partial specifiers</li>
+<li><code>set(spec,value)</code></li>
+</ul></li>
+<li>Transport
+<ul>
+<li><code>constructor(uri)</code></li>
+<li><code>send()</code></li>
+<li><code>on('message',fn)</code></li>
+<li><code>Swarm.openXXXChannel(uri,callback)</code> - special cases</li>
+</ul></li>
+<li>Load distribution
+<ul>
+<li><code>Swarm.getUplink(spec)</code></li>
+</ul></li>
+<li>Access control
+<ul>
+<li><code>Swarm.getPermissions(id|object, user_id)</code></li>
+<li>TODO transport filtering</li>
+</ul></li>
+</ul>
+
+<h3>Examples</h3>
+
+<pre><code>TodoItem = Swarm.Model.extend({
+    syncedFields: {
+        title: '',
+        completed: false
+    },
+    loggedMethods: {
+        toggle: function () {
+            this.setCompleted(!this.getCompleted());
+        }
+    }
+});
+TodoItemView = Swarm.View.Extend({
+    model:          TodoItem,
+    template:       some_html,
+    events: {
+        'click .todo_toggle': 'toggle'
+    }
+});
+
+TodoList = Swarm.Set.extend(TodoItem);
+TodoListView = Swarm.View.extend(TodoList);
+
+
+// Browser
+// recommend auth cookies
+Swarm.connect();
+var view = new TodoListView('#login');
+view.plant(document.body);
+
+var todos = Swarm.once('/TodoList#login', function(keyval,spec) {
+    // this===todos
+    todos.fill();
+});
+</code></pre>
+</div>
+</body>
+</html>

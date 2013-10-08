@@ -39,6 +39,8 @@ exports.testSpec = function (test) {
     test.equal(date.getMonth(),7); // zero based
     test.equal(date.getSeconds(),20);
     test.done();
+    var spec2 = new Spec(spec);
+    test.equal(spec.toString(),spec2.toString());
 }
 
 exports.testBase = function (test) {

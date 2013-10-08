@@ -15,23 +15,10 @@ automatically synchronize in the background. Ideally, once view
 rendering is model event driven, there is hardly any difference in
 reacting to either local or remote changes.
 
-### Swarm and Backbone
-
-Swarm is a breed of [Backbone][bb] and a real-time peer-to-peer object
-synchronization algorithm. Our intent was to depart from the Backbone
-way iff only strictly necessary to ensure sync correctness.  Some
-problems, such as garbage collection, became way more complicated in a
-distributed setting so we introduced more structure to the
-architecture to counter that. Another issue was supporting Backbone
-collections which are essentially arrays.  Unfortunately, sequential
-structures cause a lot of trouble in a concurrent system so Swarm
-employs `{key:object}` Sets instead. Some issues, to the contrary, got
-easily resolved. For example, Backbone does not assume reliable object
-ids. Swarm objects have permanent lifetime ids provided by the
-synchronization model so `model.cid` and `view.el` became unnecessary.
-The option of client-to-client synchronization and
-client-server-server-client operation relay led to client/server logic
-convergence. We assume that the server runs some version of Swarm as
+Generally, the combination of real-time sync over persistent
+connections, client-to-client sync and client-side storage leads to
+client/server logic convergence. That demands more than just
+retrofitting.  We assume that the server runs some version of Swarm as
 well. We also assume that the DB backend keeps records with their
 version ids attached.
 
@@ -45,6 +32,32 @@ following checklist:
   read-and-goodbye Web sites.
 
 Two biggest classes are team collaboration apps and online games.
+
+### Swarm and Backbone
+
+Swarm is a breed of [Backbone][bb] and a real-time peer-to-peer object
+synchronization algorithm. Originally, our intention was to develop an
+extension for Backbone, but the assumption of HTTP request-response
+synchronization was rooted too deeply in the framework's code.
+
+Real-time synchronization assumes a continuous flow of updates, so
+a client talks to a server in terms of "subscriptions" which are
+highly similar to client-side change events. So, we generalize both
+into a single two-way subscription primitive. Those subscriptions
+build distributed graphs of object replicas that continuously exchange
+updates. In turn, maintaining those graphs necessitates a distributed
+garbage collection algorithm.
+
+Another issue was supporting Backbone collections which are arrays
+essentially.  Unfortunately, sequential structures cause a lot of
+[trouble][ot] in a concurrent system so Swarm employs `{key:object}`
+Sets instead. Collection sorting might be performed later in Views.
+
+Some issues, to the contrary, got easily resolved. For example,
+Backbone does not assume reliable object ids while Swarm objects get
+lifetime ids at creation. Thus, `model.cid` and `view.el` logic became
+unnecessary. Similarly, all the caching and dirty-marking logic was
+replaced by explicit version numbering which is way more robust.
 
 [bb]: http://backbonejs.org/
 

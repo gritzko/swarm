@@ -3,6 +3,10 @@
 echo Python? Ruby? node.js? No way!
 echo bash and perl just made my day!
 
+if [ -d doc ]; then
+    cd doc;
+fi
+
 if [ ! -f Markdown.pl ]; then
     (   \
         wget http://daringfireball.net/projects/downloads/Markdown_1.0.1.zip && \
