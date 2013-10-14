@@ -1,37 +1,45 @@
 # Swarm: an object sync library
 
 Swarm is a compact MVC library providing real-time syncable, cacheable
-JavaScript objects for the new world of WebSocket, WebStorage and
-WebRTC. All client/server replicas of an object form a dynamic
-graph, exchanging deltas and merging changes the most efficient way.
-Swarm is relativistic at its heart fully embracing the fact that
-events originate at various points and spread asynchronously.  It
-provides the minimal set of primitives that feel natural and close to
-plain JavaScript but have rich syncing behaviour under the hood.
+JavaScript objects for the new world of WebSocket, WebStorage and WebRTC.
 
 The vision behind Swarm is to get back to the good old days: program a
 real-time multiuser multiserver app like a local MVC app, let things
-automatically synchronize in the background. Ideally, once view
-rendering is model event driven, there is hardly any difference in
-reacting to either local or remote changes.
+automatically synchronize in the background. View rendering is model event
+driven, hence there is hardly any difference in reacting to either local or
+remote changes. Access control policies are embedded into an object, so
+there is no difference in synchronizing by WebSocket (client-server-client)
+or WebRTC (client-client).  Entities and their properties are clearly
+defined and APIs are asynchronous, so data storage and synchronization
+happens incrementally in the background and intermittent connectivity
+causes no interruptions or data loss.
 
-Generally, the combination of real-time sync over persistent
-connections, client-to-client sync and client-side storage leads to
-client/server logic convergence. That demands more than just
-retrofitting.  We assume that the server runs some version of Swarm as
-well. We also assume that the DB backend keeps records with their
-version ids attached.
+Essentially, Swarm is a cross breed of Backbone-style MVC and the classic
+[Lamport's model][lamport] of events in a distributed system. Swarm fully
+embraces the fact that events originate at various points and spread
+asynchronously. All client/server replicas of an object form a dynamic
+graph exchanging deltas and merging changes the most efficient way. Every
+event is uniquely identified by its persistent id named *specifier* that
+includes a variant of Lamport timestamp. By default, Swarm only implements
+incremental last-writer-wins synchroniation. Still, various sophisticated
+synchronization algorithms can be built on the same foundation.
 
-Swarm targets the broad class of applications that score high on the
-following checklist:
+Lamport timestamps as ids and Backbone-like MVC are the only two strong
+assumptions made. The former defines the synchronization protocol; the
+latter shapes the client-side app structure. The code has numerous hook
+points that let you define access rights, validate values or implement
+logic that goes further than regular read/write properties. Although the
+default assumption is to have the same Swarm implementation on the server
+side, that is far from required. As long as the sync protocol is supported,
+any server-side implementation is good.
 
-* benefit from multiuser collaboration or multidevice syncing,
-* benefit from offline work and direct device-to-device syncing,
-* need realtime syncing, probably peer-to-peer (WebRTC),
-* where users interact with objects repeatedly, as opposed to
-  read-and-goodbye Web sites.
+Swarm targets the broad class of applications that benefit from multiuser
+collaboration or multidevice syncing, offline work, real time and direct
+client-to-client communication. Those are apps where users interact with
+objects and each other repeatedly, as opposed to read-and-goodbye Web
+sites.
 
-Two biggest classes are team collaboration apps and online games.
+[lamport]: http://en.wikipedia.org/wiki/Lamport_timestamps
 
 ### Swarm and Backbone
 
