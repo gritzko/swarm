@@ -8,12 +8,18 @@
 if (require) {
     var swarm = require('../lib/swarm2.js');
     Spec = swarm.Spec;
+    Swarm = swarm.Swarm;
 }
 
+exports.setUp = function (cb) {
+    Swarm.author = 'gritzko';
+    cb();
+};
+
 exports.testTs = function (test) {
-    var ts1 = Spec.timestamp(), ts2, i=0;
+    var ts1 = Spec.newVersion(), ts2, i=0;
     var iv = setInterval(function(){
-        ts2 = Spec.timestamp();
+        ts2 = Spec.newVersion();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
         test.ok(ts2>ts1);
@@ -26,24 +32,23 @@ exports.testTs = function (test) {
 }
 
 exports.testSpec = function (test) {
-    var testSpec = '/Class#ID.field!20130811192632&gritzko+1111';
+    var testSpec = '/Class#ID.field!20130811192632+gritzko';
     var spec = new Spec(testSpec);
-    test.equal(spec.time,'20130811192632');
-    test.equal(spec.author,'gritzko+1111');
-    test.equal(Spec.ext(spec.author),'1111');
+    test.equal(spec.version,'20130811192632+gritzko');
+    test.equal(Spec.ext(spec.version),'gritzko');
     var rev = spec.toString();
     test.equal(rev,testSpec);
-    var time = '20130811192020';
+    /*var time = '20130811192020';
     var iso = Spec.timestamp2iso(time);
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
-    test.equal(date.getSeconds(),20);
+    test.equal(date.getSeconds(),20);*/
     test.done();
     var spec2 = new Spec(spec);
     test.equal(spec.toString(),spec2.toString());
 }
 
-exports.testBase = function (test) {
+/*exports.testBase = function (test) {
     var obj = {
         '_vid': {
             text:   '!20130811192020&gritzko+iO',
@@ -69,5 +74,5 @@ exports.testBase = function (test) {
     test.equal(diff.smth,4);
     test.equal(diff['_vid'].smth, nts);
     test.done();
-}
+}*/
 
