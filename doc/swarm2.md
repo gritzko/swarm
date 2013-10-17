@@ -21,7 +21,7 @@ asynchronously. All client/server replicas of an object form a dynamic
 graph exchanging deltas and merging changes the most efficient way. Every
 event is uniquely identified by its persistent id named *specifier* that
 includes a variant of Lamport timestamp. By default, Swarm only implements
-incremental last-writer-wins synchroniation. Still, various sophisticated
+incremental last-writer-wins synchronization. Still, various sophisticated
 synchronization algorithms can be built on the same foundation.
 
 Lamport timestamps as ids and Backbone-like MVC are the only two strong

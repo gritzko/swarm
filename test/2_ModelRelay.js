@@ -16,7 +16,7 @@ if (typeof require == 'function') {
 }
 
 // BACK TO SANITY
-//   0 write the test for tracked props/logged methods/serial/etc : the API end
+// V 0 write a test for tracked props/logged methods/serial/etc : the API end
 // V 1 nice stacks, extend only, constructors, no surrogates
 // X 2 introspection back NO use addXXX() instead
 //   3 trace it all along; get an intuition
@@ -25,6 +25,27 @@ if (typeof require == 'function') {
 //
 // USABILITY TODOs
 //   1 new Model(id) OR new Model(values)
+//
+// CASCADE OPEN QUESTIONS
+// V 1 which swarm an obj belongs to? (finding the parent)
+//      new Swarm() becomes THE swarm, invoking .close() for the previous
+//      testing swarms: they are asynchronously connected, right? :)
+// V 2 should we put Views into the cascade or not?
+//      NO, the cascade is for models (sets, stubs)
+//      YES, if we want to cache/store Views
+//      YES, for uniformity, as Views are EventRelays
+//      YES, if we want to subscribe to Views (bare clients have no models)
+//
+// STORAGE/TRANSPORT OPEN QUESTIONS
+// V 1 should we add store/relay() method to model/views or use root.relay() ?
+//    x ROOT   as the server knows storage and uplink, downlinks are in _lstn
+//    v METHOD as we want to overload it for classes (what do we need the
+//             cascade for?)
+//             then, load() is part of init()?
+//    x ROOT   when using this.store() we need access to the root anyway
+//    v METHOD Model.store = function () { sql.update() }
+// V 2 there is nothing bad in caching everything you get
+// V 3 stubs only have _lstn[], right?
 
 function NumberField (id) {
     this.init(id);
@@ -52,15 +73,14 @@ Field.extend(MetricLengthField,{
 // Duck is our core testing class :)
 function Duck (id) {
     this.init(id);
+    // mood is mutated by a logged method
     this.mood = 'neutral';
+    //this.height = 30;
 };
 
+// Simply a regular convenience method
 Duck.prototype.canDrink = function () {
     return this.age() >= 18;
-};
-
-Duck.prototype.mood = function (moodStr) {
-    this.mood = moodStr;
 };
 
 Model.extend(Duck);
@@ -74,41 +94,41 @@ Duck.addCall('reportAge');
 
 
 exports.setUp = function (cb) {
-    swarm = new Swarm('gritzko');
-    //Swarm.author = 'gritzko';
+    // only make it a local variable; it installs itself as THE swarm
+    // anyway; setups with multiple swarm objects need additional care
+    var swarm = new Swarm('gritzko');
     cb();
 };
 
 exports.testListener = function (test) {
+    // construct an object with an id provided; it will try to fetch
+    // previously saved state for the id (which is none)
     var huey = new Duck('Huey');
+    // listen to a field
     huey.on('age',function(spec,val){
         test.equal(val,1);
+        // spec is a compund identifier;
+        // field name is mentioned as 'member'
         test.equal(spec.member,'age');
+        test.equal(spec.toString(),'/Duck#dewey.age');
+        test.equal(Spec.ext(spec.vid),'gritzko');
         test.done();
     });
     huey.age(1);
 };
 
 exports.testCreate = function (test) {
+    // there is 1:1 spec-to-object correspondence;
+    // an attempt of creating a second copy of a model object
+    // will throw an exception
     var dewey1 = new Duck('dewey');
-    var dewey2 = DuckModel.child('dewey');
+    // that's we resort to obtain() doing find-or-create
+    var dewey2 = Duck.obtain('dewey');
+    // must be the same object
     test.strictEqual(dewey1,dewey2);
-    test.equal(dewey1.type,DuckModel);
+    test.equal(dewey1.spec().type,'Duck');
 };
 
-exports.testRelay = function (test) {
-    var dewey = new Duck('dewey');
-    dewey.on('age',{
-        set : function (args) {
-            test.equal(args.spec.toString(),'/Duck#dewey.age');
-            test.equal(args.value,2);
-            var so = new Spec(spec);
-            test.equal(Spec.ext(args.spec.vid),'gritzko');
-            test.done();
-        }
-    });
-    dewey.set('age',2);
-};
 
 exports.testVids = function (test) {
     var louie = new Duck('louie');
@@ -123,29 +143,32 @@ exports.testVids = function (test) {
 };
 
 exports.testJSON = function (test) {
+    var dewey = new Duck('dewey');
+    var json = dewey.toJSON();
     var duckJSON = {
-        mood: 'merry',
-        properties: {
-            age: 0
-        }
+        mood: "neutral", 
+        age: 0
     };
-
+    test.deepEqual(json,duckJSON);
+    test.done();
 };
 
 exports.testStaticCallbacks = function (test) {
     var huey = new Duck('huey');
     test.expect(2);
-    Duck.prototype.onto ('age', function (spec,value) {
+    var handle = Duck.addReaction('age', function(spec,val) {
+        console.log('yupee im growing');
         test.equal(value,1);
     });
     var vid = Spec.vid();
     huey.set('/Duck#huey.age!'+vid,1);
     test.equal(huey.properties.age.version,vid);
     test.done();
+    Duck.removeReaction('age',handle);
 };
 
 exports.testOnce = function (test) {
-    var huey = DuckModel.child('huey');
+    var huey = Duck.obtain('huey');
     test.expect(1);
     huey.once('age',function(spec,value){
         test.equal(value,4);
