@@ -46,6 +46,19 @@ if (typeof require == 'function') {
 //    v METHOD Model.store = function () { sql.update() }
 // V 2 there is nothing bad in caching everything you get
 // V 3 stubs only have _lstn[], right?
+//
+// IMPLEMENTATION/TESTING PIPELINE
+//   1 field set
+//      huey.age(1);
+//   1' parent tree
+//    a duck.parent===duckType
+//    b root.obtain('/Duck#huey')
+//   2 batch field set
+//      huey.set({age:1,height:"30cm"})
+//   3 init(id) vs init(value), frozen vid
+//   4 three-position signature
+//      Spec.normalize(arguments);
+//      var spec=arguments[0], value=arguments[1], listener=arguments[2];
 
 function NumberField (id) {
     this.init(id);
@@ -83,6 +96,7 @@ Duck.prototype.canDrink = function () {
     return this.age() >= 18;
 };
 
+
 Model.extend(Duck);
 Swarm.addType(Duck);  // Model by default 
 
@@ -96,7 +110,7 @@ Duck.addCall('reportAge');
 exports.setUp = function (cb) {
     // only make it a local variable; it installs itself as THE swarm
     // anyway; setups with multiple swarm objects need additional care
-    var swarm = new Swarm('gritzko');
+    var root = new Swarm('gritzko');
     cb();
 };
 
@@ -132,9 +146,9 @@ exports.testCreate = function (test) {
 
 exports.testVids = function (test) {
     var louie = new Duck('louie');
-    var ts1 = Spec.vid();
+    var ts1 = Spec.newVersion();
     louie.age(3);
-    var ts2 = Spec.vid();
+    var ts2 = Spec.newVersion();
     test.ok(ts2>ts1);
     var vid = louie.properties.age.version;
     test.ok(ts1<vid);
@@ -160,7 +174,7 @@ exports.testStaticCallbacks = function (test) {
         console.log('yupee im growing');
         test.equal(value,1);
     });
-    var vid = Spec.vid();
+    var vid = Spec.newVersion();
     huey.set('/Duck#huey.age!'+vid,1);
     test.equal(huey.properties.age.version,vid);
     test.done();

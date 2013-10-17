@@ -12,7 +12,12 @@ if (require) {
 }
 
 exports.setUp = function (cb) {
-    Swarm.author = 'gritzko';
+    var root = new Swarm('gritzko');
+    cb();
+};
+
+exports.tearDown = function (cb) {
+    Swarm.root.close();
     cb();
 };
 
