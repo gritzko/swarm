@@ -64,8 +64,9 @@ function NumberField (id) {
     this.init(id);
 }
 Field.extend(NumberField,{
-    validate: function (args) {
-        return typeof(args.value)==='number';
+    validate: function (spec,val) {
+        console.error(typeof(val),typeof(val)==='number');
+        return typeof(val)==='number';
     }
 });
 
@@ -76,8 +77,8 @@ Field.extend(MetricLengthField,{
     apply: function (args) {
         // convert mm cm m km
     },
-    validate: function (args) {
-        return typeof(args.value)==='number';
+    validate: function (spec,val) {
+        return typeof(val)==='number';
     },
     toString: function () {
     }
@@ -114,6 +115,11 @@ exports.setUp = function (cb) {
     cb();
 };
 
+exports.tearDown = function (cb) {
+    Swarm.root.close();
+    cb();
+};
+
 exports.testListener = function (test) {
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
@@ -124,7 +130,7 @@ exports.testListener = function (test) {
         // spec is a compund identifier;
         // field name is mentioned as 'member'
         test.equal(spec.member,'age');
-        test.equal(spec.toString(),'/Duck#dewey.age');
+        test.equal(spec.toString(),'/Duck#Huey.age');
         test.equal(Spec.ext(spec.vid),'gritzko');
         test.done();
     });
