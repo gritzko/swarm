@@ -56,7 +56,8 @@ if (typeof require == 'function') {
 //   2 batch field set
 //      huey.set({age:1,height:"30cm"})
 //      // including replica bootup
-//   3 init(id) vs init(value), frozen vid
+// ? 3 init(id) vs init(value)
+//    v frozen vid
 // V 4 three-position signature
 //      Spec.normalize(arguments);
 //      var spec=arguments[0], value=arguments[1], listener=arguments[2];
@@ -138,15 +139,16 @@ exports.tearDown = function (cb) {
 exports.testListener = function (test) {
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = new Duck('Huey');
+    var huey = new Duck('huey');
     // listen to a field
-    huey.on('age',function(spec,val){
+    huey.on('age',function lsfn(spec,val){
         test.equal(val,1);
         // spec is a compund identifier;
         // field name is mentioned as 'member'
         test.equal(spec.member,'age');
-        test.equal(spec.toString(),'/Duck#Huey.age!'+spec.version);
+        test.equal(spec.toString(),'/Duck#huey.age!'+spec.version);
         test.equal(Spec.ext(spec.version),'gritzko');
+        huey.off('age',lsfn);
         test.done();
     });
     huey.age(1);
@@ -193,7 +195,7 @@ exports.testJSON = function (test) {
 };*/
 
 exports.testStaticCallbacks = function (test) {
-    var huey = new Duck('huey');
+    var huey = Duck.obtain('huey');
     test.expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
         console.log('yupee im growing');
@@ -223,5 +225,7 @@ exports.testApply = function (test) {
     var huey = Duck.obtain('huey');
     huey.height('32cm');
     test.ok(Math.abs(huey.height()-0.32)<0.0001);
+    Swarm.root.set('/Duck#huey.height','35cm');
+    test.ok(Math.abs(huey.height()-0.35)<0.0001);
     test.done();
 };
