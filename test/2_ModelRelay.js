@@ -19,7 +19,7 @@ if (typeof require == 'function') {
 // V 0 write a test for tracked props/logged methods/serial/etc : the API end
 // V 1 nice stacks, extend only, constructors, no surrogates
 // X 2 introspection back NO use addXXX() instead
-//   3 trace it all along; get an intuition
+// V 3 trace it all along; get an intuition
 // V 4 init(): parent.children[id] = this;   (no create();
 //     new>init>children call chain instead)
 //
@@ -60,7 +60,7 @@ if (typeof require == 'function') {
 // V 4 three-position signature
 //      Spec.normalize(arguments);
 //      var spec=arguments[0], value=arguments[1], listener=arguments[2];
-//   5 fieldTypes - ???
+// V 5 fieldTypes - ???
 
 function NumberField (id) {
     this.init(id);
@@ -75,11 +75,25 @@ function MetricLengthField (id) {
     this.init(id);
 }
 Field.extend(MetricLengthField,{
-    apply: function (args) {
+    metricRe: /(\d+)(mm|cm|m|km)?/g,
+    scale: { m:1, cm:0.01, mm:0.001, km:1000 },
+    apply: function (spec,value) {
         // convert mm cm m km
+        if (typeof(value)==='number') {
+            this.value = value;
+        } else {
+            value = value.toString();
+            var m=[], meters=0;
+            while (m=this.metricRe.exec(value)) {
+                var unit = m[2] ? this.scale[m[2]] : 1;
+                meters += parseInt(m[1]) * unit;
+            }
+            this.value = meters;
+        }
     },
     validate: function (spec,val) {
-        return typeof(val)==='number';
+        return typeof(val)==='number' || 
+            !val.toString().replace(this.metricRe,'');
     },
     toString: function () {
     }
@@ -181,7 +195,7 @@ exports.testJSON = function (test) {
 exports.testStaticCallbacks = function (test) {
     var huey = new Duck('huey');
     test.expect(2);
-    var handle = Duck.addReaction('age', function(spec,val) {
+    var handle = Duck.addReaction('age', function reaction(spec,val) {
         console.log('yupee im growing');
         test.equal(val,1);
     });
@@ -202,5 +216,12 @@ exports.testOnce = function (test) {
     });
     huey.age(4);
     huey.age(5);
+    test.done();
+};
+
+exports.testApply = function (test) {
+    var huey = Duck.obtain('huey');
+    huey.height('32cm');
+    test.ok(Math.abs(huey.height()-0.32)<0.0001);
     test.done();
 };
