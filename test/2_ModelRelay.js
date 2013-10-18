@@ -62,6 +62,8 @@ if (typeof require == 'function') {
 //      Spec.normalize(arguments);
 //      var spec=arguments[0], value=arguments[1], listener=arguments[2];
 // V 5 fieldTypes - ???
+//   6 Set
+//   7 View (default templated)
 
 function NumberField (id) {
     this.init(id);
@@ -101,11 +103,10 @@ Field.extend(MetricLengthField,{
 });
 
 // Duck is our core testing class :)
-function Duck (id) {
-    this.init(id);
+function Duck (id,vals) {
+    this.init(id,vals);
     // mood is mutated by a logged method
-    this.mood = 'neutral';
-    //this.height = 30;
+    this.mood = this.mood||'neutral'; // TODO nicer
 };
 
 // Simply a regular convenience method
@@ -227,5 +228,15 @@ exports.testApply = function (test) {
     test.ok(Math.abs(huey.height()-0.32)<0.0001);
     Swarm.root.set('/Duck#huey.height','35cm');
     test.ok(Math.abs(huey.height()-0.35)<0.0001);
+    test.done();
+};
+
+exports.testInitBundle = function (test) {
+    Spec.freeze();
+    var factoryBorn = new Duck({age:0,height:'4cm'});
+    test.equal(factoryBorn._id,Spec.frozen);
+    Spec.thaw();
+    test.ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
+    test.equal(factoryBorn.age(),0);
     test.done();
 };

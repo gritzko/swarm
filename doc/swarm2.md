@@ -538,3 +538,7 @@ Note that WebStorage is a transport, not storage :)
         todos.fill();
     });
 
+## ACKNOWLEDGEMENTS
+
+* Yuri Petrov
+
