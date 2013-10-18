@@ -65,7 +65,6 @@ function NumberField (id) {
 }
 Field.extend(NumberField,{
     validate: function (spec,val) {
-        console.error(typeof(val),typeof(val)==='number');
         return typeof(val)==='number';
     }
 });
@@ -111,12 +110,12 @@ Duck.addCall('reportAge');
 exports.setUp = function (cb) {
     // only make it a local variable; it installs itself as THE swarm
     // anyway; setups with multiple swarm objects need additional care
-    var root = new Swarm('gritzko');
     cb();
 };
+    var root = new Swarm('gritzko');
 
 exports.tearDown = function (cb) {
-    Swarm.root.close();
+    //Swarm.root.close();
     cb();
 };
 
@@ -130,8 +129,8 @@ exports.testListener = function (test) {
         // spec is a compund identifier;
         // field name is mentioned as 'member'
         test.equal(spec.member,'age');
-        test.equal(spec.toString(),'/Duck#Huey.age');
-        test.equal(Spec.ext(spec.vid),'gritzko');
+        test.equal(spec.toString(),'/Duck#Huey.age!'+spec.version);
+        test.equal(Spec.ext(spec.version),'gritzko');
         test.done();
     });
     huey.age(1);
@@ -146,7 +145,8 @@ exports.testCreate = function (test) {
     var dewey2 = Duck.obtain('dewey');
     // must be the same object
     test.strictEqual(dewey1,dewey2);
-    test.equal(dewey1.spec().type,'Duck');
+    test.equal(dewey1.scope().type,'Duck');
+    test.done();
 };
 
 
@@ -156,7 +156,7 @@ exports.testVids = function (test) {
     louie.age(3);
     var ts2 = Spec.newVersion();
     test.ok(ts2>ts1);
-    var vid = louie.properties.age.version;
+    var vid = louie._children.age.version;
     test.ok(ts1<vid);
     test.ok(ts2>vid);
     test.done();
@@ -182,7 +182,7 @@ exports.testStaticCallbacks = function (test) {
     });
     var vid = Spec.newVersion();
     huey.set('/Duck#huey.age!'+vid,1);
-    test.equal(huey.properties.age.version,vid);
+    test.equal(huey._children.age.version,vid);
     test.done();
     Duck.removeReaction('age',handle);
 };
