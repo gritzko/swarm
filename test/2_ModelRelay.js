@@ -50,13 +50,13 @@ if (typeof require == 'function') {
 // IMPLEMENTATION/TESTING PIPELINE
 // V 1 field set
 //      huey.age(1);
-//   1' parent tree
-//    a duck.parent===duckType
-//    b root.obtain('/Duck#huey')
-//   2 batch field set
+// V 1' parent tree
+//     x a duck.parent===duckType
+//     v b root.obtain('/Duck#huey')
+// ? 2 batch field set
 //      huey.set({age:1,height:"30cm"})
 //      // including replica bootup
-// ? 3 init(id) vs init(value)
+// V 3 init(id) vs init(value)
 //    v frozen vid
 // V 4 three-position signature
 //      Spec.normalize(arguments);
@@ -93,6 +93,7 @@ Field.extend(MetricLengthField,{
             }
             this.value = meters;
         }
+        this.version = spec.version;
     },
     validate: function (spec,val) {
         return typeof(val)==='number' || 
@@ -238,5 +239,17 @@ exports.testInitBundle = function (test) {
     Spec.thaw();
     test.ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
     test.equal(factoryBorn.age(),0);
+    test.done();
+};
+
+exports.testBundledSet = function (test) {
+    var nameless = new Duck();
+    nameless.set({
+        age:1,
+        height: '60cm'
+    });
+    test.ok(Math.abs(nameless.height()-0.6)<0.0001);
+    test.equal(nameless.age(),1);
+    test.equal(nameless._children.age.version,nameless._children.height.version);
     test.done();
 };
