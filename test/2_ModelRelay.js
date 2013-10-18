@@ -48,17 +48,19 @@ if (typeof require == 'function') {
 // V 3 stubs only have _lstn[], right?
 //
 // IMPLEMENTATION/TESTING PIPELINE
-//   1 field set
+// V 1 field set
 //      huey.age(1);
 //   1' parent tree
 //    a duck.parent===duckType
 //    b root.obtain('/Duck#huey')
 //   2 batch field set
 //      huey.set({age:1,height:"30cm"})
+//      // including replica bootup
 //   3 init(id) vs init(value), frozen vid
-//   4 three-position signature
+// V 4 three-position signature
 //      Spec.normalize(arguments);
 //      var spec=arguments[0], value=arguments[1], listener=arguments[2];
+//   5 fieldTypes - ???
 
 function NumberField (id) {
     this.init(id);
@@ -162,27 +164,32 @@ exports.testVids = function (test) {
     test.done();
 };
 
+/* TODO replica boot is the key usecase
 exports.testJSON = function (test) {
-    var dewey = new Duck('dewey');
+    var dewey = Duck.obtain('dewey');
     var json = dewey.toJSON();
     var duckJSON = {
         mood: "neutral", 
-        age: 0
+        properties: {
+            age: 0
+        }
     };
     test.deepEqual(json,duckJSON);
     test.done();
-};
+};*/
 
 exports.testStaticCallbacks = function (test) {
     var huey = new Duck('huey');
     test.expect(2);
     var handle = Duck.addReaction('age', function(spec,val) {
         console.log('yupee im growing');
-        test.equal(value,1);
+        test.equal(val,1);
     });
+    Spec.freeze();
     var vid = Spec.newVersion();
     huey.set('/Duck#huey.age!'+vid,1);
     test.equal(huey._children.age.version,vid);
+    Spec.thaw();
     test.done();
     Duck.removeReaction('age',handle);
 };
