@@ -11,8 +11,9 @@ if (typeof require == 'function') {
     Swarm = swrm.Swarm;
     Model = swrm.Model;
     Field = swrm.Field;
+    Set = swrm.Set;
 } else {
-    exports = this.testModelRelay = {};
+    exports = this.testEventRelay = {};
 }
 
 // BACK TO SANITY
@@ -53,7 +54,7 @@ if (typeof require == 'function') {
 // V 1' parent tree
 //     x a duck.parent===duckType
 //     v b root.obtain('/Duck#huey')
-// ? 2 batch field set
+// V 2 batch field set
 //      huey.set({age:1,height:"30cm"})
 //      // including replica bootup
 // V 3 init(id) vs init(value)
@@ -62,8 +63,10 @@ if (typeof require == 'function') {
 //      Spec.normalize(arguments);
 //      var spec=arguments[0], value=arguments[1], listener=arguments[2];
 // V 5 fieldTypes - ???
-//   6 Set
+// ? 6 Set
+//      a string-to-spec key
 //   7 View (default templated)
+//   8 RPC calls
 
 function NumberField (id) {
     this.init(id);
@@ -124,6 +127,14 @@ Duck.addProperty('height','5cm',MetricLengthField);
 Duck.addMethod(function grow(cm){});
 Duck.addCall(function reportAge(){});
 Duck.addCall('reportAge');
+
+function Nest (id,vals) {
+    this.init(id,vals);
+}
+
+Set.extend(Nest);
+Swarm.addType(Nest);
+Nest.setEntryType(Duck);
 
 
 exports.setUp = function (cb) {
@@ -196,7 +207,7 @@ exports.testJSON = function (test) {
     test.done();
 };*/
 
-exports.testStaticCallbacks = function (test) {
+/*exports.testStaticCallbacks = function (test) {
     var huey = Duck.obtain('huey');
     test.expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
@@ -210,7 +221,7 @@ exports.testStaticCallbacks = function (test) {
     Spec.thaw();
     test.done();
     Duck.removeReaction('age',handle);
-};
+};*/
 
 exports.testOnce = function (test) {
     var huey = Duck.obtain('huey');
@@ -251,5 +262,21 @@ exports.testBundledSet = function (test) {
     test.ok(Math.abs(nameless.height()-0.6)<0.0001);
     test.equal(nameless.age(),1);
     test.equal(nameless._children.age.version,nameless._children.height.version);
+    test.ok(!nameless.canDrink());
+    test.done();
+};
+
+exports.testSetBasics = function (test) {
+    var hueyClone = new Duck({age:2});
+    var deweyClone = new Duck({age:1});
+    var louieClone = new Duck({age:3});
+    var donalds = new Nest('donalds',{1:deweyClone._id,2:hueyClone._id});
+    var dewey2 = donalds.get(1);
+    test.ok(deweyClone===dewey2);
+    test.equal(dewey2.age(),1);
+    donalds.set('3',louieClone._id);
+    var l2 = donalds.get(3);
+    //test.equal(l2.get('age'),3); TODO
+    test.equal(l2.age(),3);
     test.done();
 };
