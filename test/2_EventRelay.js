@@ -128,11 +128,11 @@ Duck.addMethod(function grow(cm){});
 Duck.addCall(function reportAge(){});
 Duck.addCall('reportAge');
 
-function Nest (id,vals) {
+/*function Nest (id,vals) {
     this.init(id,vals);
-}
+}*/
 
-Set.extend(Nest);
+var Nest = Set.extend('Nest');//Nest);
 Swarm.addType(Nest);
 Nest.setEntryType(Duck);
 
@@ -270,12 +270,12 @@ exports.testSetBasics = function (test) {
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
-    var donalds = new Nest('donalds',{1:deweyClone._id,2:hueyClone._id});
-    var dewey2 = donalds.get(1);
+    var donalds = new Nest('donalds',{'3rd':deweyClone._id,'2nd':hueyClone._id});
+    var dewey2 = donalds.get('3rd');
     test.ok(deweyClone===dewey2);
     test.equal(dewey2.age(),1);
-    donalds.set('3',louieClone._id);
-    var l2 = donalds.get(3);
+    donalds.set('1st',louieClone._id);
+    var l2 = donalds.get('1st');
     //test.equal(l2.get('age'),3); TODO
     test.equal(l2.age(),3);
     test.done();
