@@ -110,7 +110,7 @@ asynchronously. All client/server replicas of an object form a dynamic
 graph exchanging deltas and merging changes the most efficient way. Every
 event is uniquely identified by its persistent id named <em>specifier</em> that
 includes a variant of Lamport timestamp. By default, Swarm only implements
-incremental last-writer-wins synchroniation. Still, various sophisticated
+incremental last-writer-wins synchronization. Still, various sophisticated
 synchronization algorithms can be built on the same foundation.</p>
 
 <p>Lamport timestamps as ids and Backbone-like MVC are the only two strong
@@ -122,10 +122,10 @@ default assumption is to have the same Swarm implementation on the server
 side, that is far from required. As long as the sync protocol is supported,
 any server-side implementation is good.</p>
 
-<p>Swarm targets the broad class of applications that benefit from from
-multiuser collaboration or multidevice syncing, offline work, real time and
-direct client-to-client communication. Those are apps where users interact
-with objects and each other repeatedly, as opposed to read-and-goodbye Web
+<p>Swarm targets the broad class of applications that benefit from multiuser
+collaboration or multidevice syncing, offline work, real time and direct
+client-to-client communication. Those are apps where users interact with
+objects and each other repeatedly, as opposed to read-and-goodbye Web
 sites.</p>
 
 <h3>Swarm and Backbone</h3>
@@ -665,6 +665,12 @@ var todos = Swarm.once('/TodoList#login', function(keyval,spec) {
     todos.fill();
 });
 </code></pre>
+
+<h2>ACKNOWLEDGEMENTS</h2>
+
+<ul>
+<li>Yuri Petrov</li>
+</ul>
 </div>
 </body>
 </html>
