@@ -65,8 +65,9 @@ if (typeof require == 'function') {
 // V 5 fieldTypes - ???
 // ? 6 Set
 //      a string-to-spec key
-//   7 View (default templated)
+// > 7 View (default templated)  see 3_view.js
 //   8 RPC calls
+//   9 Rework EventRelayNode.set (see notes)
 
 function NumberField (id) {
     this.init(id);

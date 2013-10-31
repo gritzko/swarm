@@ -37,11 +37,17 @@ A handshake is what a connection starts with. Functions of a handshake are:
 * clock synchronization (for client nodes) 
 * receiving a session number (for new client processes)
 
-It is useful to clarify the difference between a "connection", a "process", a "session" and a "user". A *user* is an end user that has data, access rights, and so on. A *session* is some storage for object replicas that a user accumulates on some device. It may be an in-memory JavaScript object storage, a WebStorage or a database of any sort. A "process" is a non-interrupted control thread that runs on that storage. A "connection" is a network connection from one process to another, e.g. a WebSocket connection. The relation is one-to-many-to-many-to-many. One user may have many devices and thus sessions, many processes (eg browser tabs) may continue working with the same session (eg a WebStorage cached dataset). Due to intermittent internet connection, the same process may start many connections one after another.
+It is useful to clarify the difference between a "connection", a "process", a "session" and a "user". A *user* is an end user that has data, access rights, and so on. A *session* is some storage for object replicas that a user accumulates on some device. It may be an in-memory JavaScript object storage, a WebStorage or a database of any sort. A *process* is a non-interrupted control thread that runs on that storage. A *connection* is a network connection from one process to another, e.g. a WebSocket connection. The relation is one-to-many-to-many-to-many. One user may have many devices and thus sessions, many processes (eg browser tabs) may continue working with the same session (eg a WebStorage cached dataset). Due to intermittent internet connection, the same process may start many connections one after another.
 
 The Swarm protocol does not perform authentication. In the case of WebSocket, that is normally done by a cookie. Swarm handshake is a "forced" subscription by the initiating process to its process metadata object:
 
     {"/Swarm#procTime+gritzko~ssnTime.on": "clientTime"} 
+
+---
+
+    {"/Swarm#time+author" : "connTime"}
+
+---
 
 The process object id mentions the user owning the process, the session id (a timestamp, normally) and a process id (also a timestamp). The process id has the same structure as standard Swarm version/obejct ids: `timestamp+author~session`.
 
