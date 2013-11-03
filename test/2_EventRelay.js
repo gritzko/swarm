@@ -84,7 +84,7 @@ function MetricLengthField (id) {
 Field.extend(MetricLengthField,{
     metricRe: /(\d+)(mm|cm|m|km)?/g,
     scale: { m:1, cm:0.01, mm:0.001, km:1000 },
-    apply: function (spec,value) {
+    set: function (spec,value) {
         // convert mm cm m km
         if (typeof(value)==='number') {
             this.value = value;
@@ -138,17 +138,17 @@ Swarm.addType(Nest);
 Nest.setEntryType(Duck);
 
 
-exports.setUp = function (cb) {
+/*exports.setUp = function (cb) {
     // only make it a local variable; it installs itself as THE swarm
     // anyway; setups with multiple swarm objects need additional care
     cb();
-};
+};*/
     var root = new Swarm('gritzko');
 
-exports.tearDown = function (cb) {
+/*exports.tearDown = function (cb) {
     //Swarm.root.close();
     cb();
-};
+};*/
 
 exports.testListener = function (test) {
     // construct an object with an id provided; it will try to fetch

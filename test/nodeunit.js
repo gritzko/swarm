@@ -1702,6 +1702,7 @@ exports.runTest = function (name, fn, opt, callback) {
         fn(test);
     }
     catch (e) {
+        console.error(e.message,e.stack);
         test.done(e);
     }
 };
