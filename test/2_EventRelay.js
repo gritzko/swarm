@@ -138,37 +138,31 @@ Swarm.addType(Nest);
 Nest.setEntryType(Duck);
 
 
-/*exports.setUp = function (cb) {
-    // only make it a local variable; it installs itself as THE swarm
-    // anyway; setups with multiple swarm objects need additional care
-    cb();
-};*/
-    var root = new Swarm('gritzko');
+if (Swarm.root)
+    Swarm.root.close();
 
-/*exports.tearDown = function (cb) {
-    //Swarm.root.close();
-    cb();
-};*/
+var root = new Swarm('gritzko');
 
-exports.testListener = function (test) {
+
+test('basic listener func', function (test) {
+    expect(4);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = new Duck('huey');
     // listen to a field
     huey.on('age',function lsfn(spec,val){
-        test.equal(val,1);
+        equal(val,1);
         // spec is a compund identifier;
         // field name is mentioned as 'member'
-        test.equal(spec.member,'age');
-        test.equal(spec.toString(),'/Duck#huey.age!'+spec.version);
-        test.equal(Spec.ext(spec.version),'gritzko');
+        equal(spec.member,'age');
+        equal(spec.toString(),'/Duck#huey.age!'+spec.version);
+        equal(Spec.ext(spec.version),'gritzko');
         huey.off('age',lsfn);
-        test.done();
     });
     huey.age(1);
-};
+});
 
-exports.testCreate = function (test) {
+test('create-by-id', function (test) {
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
     // will throw an exception
@@ -176,26 +170,24 @@ exports.testCreate = function (test) {
     // that's we resort to obtain() doing find-or-create
     var dewey2 = Duck.obtain('dewey');
     // must be the same object
-    test.strictEqual(dewey1,dewey2);
-    test.equal(dewey1.scope().type,'Duck');
-    test.done();
-};
+    strictEqual(dewey1,dewey2);
+    equal(dewey1.scope().type,'Duck');
+});
 
 
-exports.testVids = function (test) {
+test('version ids', function (test) {
     var louie = new Duck('louie');
     var ts1 = Spec.newVersion();
     louie.age(3);
     var ts2 = Spec.newVersion();
-    test.ok(ts2>ts1);
+    ok(ts2>ts1);
     var vid = louie._children.age.version;
-    test.ok(ts1<vid);
-    test.ok(ts2>vid);
-    test.done();
-};
+    ok(ts1<vid);
+    ok(ts2>vid);
+});
 
 /* TODO replica boot is the key usecase
-exports.testJSON = function (test) {
+test('',function (test) {
     var dewey = Duck.obtain('dewey');
     var json = dewey.toJSON();
     var duckJSON = {
@@ -204,80 +196,79 @@ exports.testJSON = function (test) {
             age: 0
         }
     };
-    test.deepEqual(json,duckJSON);
-    test.done();
-};*/
+    deepEqual(json,duckJSON);
+    
+});*/
 
-/*exports.testStaticCallbacks = function (test) {
+/*test('',function (test) {
     var huey = Duck.obtain('huey');
-    test.expect(2);
+    expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
         console.log('yupee im growing');
-        test.equal(val,1);
+        equal(val,1);
     });
     Spec.freeze();
     var vid = Spec.newVersion();
     huey.set('/Duck#huey.age!'+vid,1);
-    test.equal(huey._children.age.version,vid);
+    equal(huey._children.age.version,vid);
     Spec.thaw();
-    test.done();
+    
     Duck.removeReaction('age',handle);
-};*/
+});*/
 
-exports.testOnce = function (test) {
+test('once',function (test) {
     var huey = Duck.obtain('huey');
-    test.expect(1);
+    expect(1);
     huey.once('age',function(spec,value){
-        test.equal(value,4);
+        equal(value,4);
     });
     huey.age(4);
     huey.age(5);
-    test.done();
-};
+});
 
-exports.testApply = function (test) {
+test('custom field type',function (test) {
     var huey = Duck.obtain('huey');
     huey.height('32cm');
-    test.ok(Math.abs(huey.height()-0.32)<0.0001);
+    ok(Math.abs(huey.height()-0.32)<0.0001);
     Swarm.root.set('/Duck#huey.height','35cm');
-    test.ok(Math.abs(huey.height()-0.35)<0.0001);
-    test.done();
-};
+    ok(Math.abs(huey.height()-0.35)<0.0001);
+    
+});
 
-exports.testInitBundle = function (test) {
+test('vid freeze',function (test) {
     Spec.freeze();
     var factoryBorn = new Duck({age:0,height:'4cm'});
-    test.equal(factoryBorn._id,Spec.frozen);
+    equal(factoryBorn._id,Spec.frozen);
     Spec.thaw();
-    test.ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
-    test.equal(factoryBorn.age(),0);
-    test.done();
-};
+    ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
+    equal(factoryBorn.age(),0);
+    
+});
 
-exports.testBundledSet = function (test) {
+test('batched set',function (test) {
     var nameless = new Duck();
     nameless.set({
         age:1,
         height: '60cm'
     });
-    test.ok(Math.abs(nameless.height()-0.6)<0.0001);
-    test.equal(nameless.age(),1);
-    test.equal(nameless._children.age.version,nameless._children.height.version);
-    test.ok(!nameless.canDrink());
-    test.done();
-};
+    ok(Math.abs(nameless.height()-0.6)<0.0001);
+    equal(nameless.age(),1);
+    equal(nameless._children.age.version,nameless._children.height.version);
+    ok(!nameless.canDrink());
+    
+});
 
-exports.testSetBasics = function (test) {
+test('basic Set func',function (test) {
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
     var donalds = new Nest('donalds',{'3rd':deweyClone._id,'2nd':hueyClone._id});
     var dewey2 = donalds.get('3rd');
-    test.ok(deweyClone===dewey2);
-    test.equal(dewey2.age(),1);
+    ok(deweyClone===dewey2);
+    equal(dewey2.age(),1);
     donalds.set('1st',louieClone._id);
     var l2 = donalds.get('1st');
-    //test.equal(l2.get('age'),3); TODO
-    test.equal(l2.age(),3);
-    test.done();
-};
+    //equal(l2.get('age'),3); TODO
+    equal(l2.age(),3);
+    
+});

@@ -5,53 +5,46 @@
  * Time: 6:21 PM
  * To change this template use File | Settings | File Templates.
  */
-if (require) {
+if (typeof(require)==='function') {
     var swarm = require('../lib/swarm2.js');
     Spec = swarm.Spec;
     Swarm = swarm.Swarm;
 }
 
-exports.setUp = function (cb) {
-    var root = new Swarm('gritzko');
-    cb();
-};
+new Swarm('gritzko');
 
-exports.tearDown = function (cb) {
-    Swarm.root.close();
-    cb();
-};
-
-exports.testTs = function (test) {
+asyncTest('timestamp sequence test', function () {
+    expect(1000);
     var ts1 = Spec.newVersion(), ts2, i=0;
     var iv = setInterval(function(){
         ts2 = Spec.newVersion();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
-        test.ok(ts2>ts1);
+        ok(ts2>ts1);
         ts1 = ts2;
         if (++i==1000) {
-            test.done();
+            start();
             clearInterval(iv);
         }
-    }, 1);
-}
+    }, 0);
+});
 
-exports.testSpec = function (test) {
+test('basic specifier syntax', function (test) {
     var testSpec = '/Class#ID.field!20130811192632+gritzko';
     var spec = new Spec(testSpec);
-    test.equal(spec.version,'20130811192632+gritzko');
-    test.equal(Spec.ext(spec.version),'gritzko');
+    equal(spec.version,'20130811192632+gritzko');
+    equal(Spec.ext(spec.version),'gritzko');
     var rev = spec.toString();
-    test.equal(rev,testSpec);
+    equal(rev,testSpec);
     /*var time = '20130811192020';
     var iso = Spec.timestamp2iso(time);
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
     test.equal(date.getSeconds(),20);*/
-    test.done();
     var spec2 = new Spec(spec);
-    test.equal(spec.toString(),spec2.toString());
-}
+    equal(spec.toString(),spec2.toString());
+});
+
 
 /*exports.testBase = function (test) {
     var obj = {
