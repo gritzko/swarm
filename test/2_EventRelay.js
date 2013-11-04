@@ -148,7 +148,7 @@ test('basic listener func', function (test) {
     expect(4);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = new Duck('huey');
+    var huey = Swarm.root.obtain('/Duck#huey');
     // listen to a field
     huey.on('age',function lsfn(spec,val){
         equal(val,1);

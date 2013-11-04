@@ -14,7 +14,7 @@ if (typeof(require)==='function') {
 new Swarm('gritzko');
 
 asyncTest('timestamp sequence test', function () {
-    expect(1000);
+    expect(100);
     var ts1 = Spec.newVersion(), ts2, i=0;
     var iv = setInterval(function(){
         ts2 = Spec.newVersion();
@@ -22,7 +22,7 @@ asyncTest('timestamp sequence test', function () {
             console.error(ts2,'<=',ts1);
         ok(ts2>ts1);
         ts1 = ts2;
-        if (++i==1000) {
+        if (++i==100) {
             start();
             clearInterval(iv);
         }
