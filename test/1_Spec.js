@@ -46,17 +46,17 @@ test('basic specifier syntax', function (test) {
 });
 
 test('corner cases', function () {
-	var empty = new Spec('');
-	equal(empty.type||empty.id||empty.member||empty.version||empty.action,null);
-	equal(empty.toString(),'');
-	var action = new Spec('*on+re');
-	equal(action.action,'on+re');
-	var fieldSet = new Spec('/TodoItem#7AM0f+gritzko.done!7AMTc+gritzko*set');
-	equal(fieldSet.type,'TodoItem');
-	equal(fieldSet.id,'7AM0f+gritzko');
-	equal(fieldSet.member,'done');
-	equal(fieldSet.version,'7AMTc+gritzko');
-	equal(fieldSet.action,'set');
+    var empty = new Spec('');
+    equal(empty.type||empty.id||empty.member||empty.version||empty.action,null);
+    equal(empty.toString(),'');
+    var action = new Spec('*on+re');
+    equal(action.action,'on+re');
+    var fieldSet = new Spec('/TodoItem#7AM0f+gritzko.done!7AMTc+gritzko*set');
+    equal(fieldSet.type,'TodoItem');
+    equal(fieldSet.id,'7AM0f+gritzko');
+    equal(fieldSet.member,'done');
+    equal(fieldSet.version,'7AMTc+gritzko');
+    equal(fieldSet.action,'set');
 });
 
 /*exports.testBase = function (test) {
