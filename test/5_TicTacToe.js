@@ -103,6 +103,9 @@ TicTacToe.addLoggedMethod(function makeMove(pos,sign){
 	}
 });
 
+TicTacToe.addProperty('xPlayer');
+TicTacToe.addProperty('oPlayer');
+
 /*function Player (id) {this.init(id)}
 
 Model.extend(Player);
@@ -136,6 +139,60 @@ test('trivial game',function(){
 	game.makeMove(7,'x');
 });
 
+
+var TicTacToePreView = View.extend('TicTacToePreView',{
+	modelType : 'TicTacToe',
+	render : function () {
+		var ret = [];
+		ret.push('<pre>\n');
+		for(var i=0; i<9; i++) {
+			ret.push(this.model.field[i]);
+			if (i%3===2)
+				ret.push('\n');
+		}
+		ret.push('</pre>');
+		return ret.join('');
+	}
+});
+
+Swarm.addType(TicTacToePreView);
+
+test('trivial view',function(){
+	var game = new TicTacToe('diagonal');
+	var view = new TicTacToePreView('diagonal');
+	game.makeMove(0,'x');
+	equal(view.html,'<pre>\nx  \n   \n   \n</pre>');
+	game.makeMove(4,'x');
+	equal(view.html,'<pre>\nx  \n x \n   \n</pre>');
+	game.makeMove(8,'x');
+	equal(view.html,'<pre>\nx  \n x \n  x\n</pre>');	
+});
+
+var TicTacToeTemplatedView = View.extend('TicTacToeTemplatedView',{
+	modelType : 'TicTacToe',
+	template : 
+		'<h2>Tic Tac Toe</h2>\n'+
+		'<div class="players">\n'+
+			'<p>playing for x : <%.xPlayer%>\n'+
+			'<p>playing for o : <%.oPlayer%>\n'+
+		'</div>'
+});
+
+Swarm.addType(TicTacToeTemplatedView);  // FIXME no type error
+
+test('simple templated view',function(){
+	var game = new TicTacToe('cross');
+	game.xPlayer('gritzko');
+	game.oPlayer('aleksisha');
+	var view = new TicTacToeTemplatedView('cross');
+	var html = '<h2>Tic Tac Toe</h2>\n'+
+		'<div class="players">\n'+
+			'<p>playing for x : gritzko\n'+
+			'<p>playing for o : aleksisha\n'+
+		'</div>';
+	html = html.replace(/\s+/g,' ');
+	equal(view.html,html);
+});
 
 /*test('simple templates', function (test) {
     var joe = new Player('joe');
