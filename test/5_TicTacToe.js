@@ -11,23 +11,30 @@ if (typeof require == 'function') {
 
 //   OPEN QUESTIONS
 //
-//   1 methods on fields; eg inc for numbers
-//   2 vitalizing DOM; same-model ids
+// v 1 methods on fields; eg inc for numbers
+// v 2 vitalizing DOM; same-model ids
 //   3 vids in the DOM
+//
 //
 //   IMPLEMENTATION PIPELINE
 //
-//   1 microtemplate compilation
-//   2 HTMLViewBuilder, DOMViewBuilder: parsing&(re)vitalization
-//      a duplicate id detection
+// v 1 microtemplate compilation
+//   2 HTML View, DOM View: parsing&(re)vitalization
+//    v a duplicate id detection
 //      b view lifecycle: instantiation, gc
-//      c HTMLViewBuilder: walker (recursive, matcher, html.push)
+//    > c HTMLViewBuilder: walker (recursive, matcher, html.push)
 //      d ready-not-ready state for HTMLVB
 //   3 client-side only: view.apply? seeks a DOM element, updates, vitalizes
 //      a server-side: set .html, fire an event
 //      b loop detection: cyclic html vitalization
-//   4 EntryView: double enveloping?
-//   5 NumberBoundView - two-way binding
+//   4 Nested Views
+//      a field view, syntax
+//      b reference view (target HTML, my envelope, listen&redraw)
+//      c parent redraw skip
+//      d DOM element preservation magic
+//      e DOM gc (listener!!!)
+//   5 EntryView: double enveloping?
+//   6 NumberBoundView - two-way binding
 
 
 function NumberField (id) {
@@ -103,25 +110,6 @@ TicTacToe.addLoggedMethod(function makeMove(pos,sign){
     }
 });
 
-TicTacToe.addProperty('xPlayer');
-TicTacToe.addProperty('oPlayer');
-
-/*function Player (id) {this.init(id)}
-
-Model.extend(Player);
-
-Player.addField('wins',NumberField);
-Player.addField('losses',NumberField);
-
-// TODO  Entry (like in Sets)
-TicTacToe.addField('player1');
-TicTacToe.addField('player2');
-
-View.extend("PlayerView", {
-    type: Player,
-    template: "<b><%=_id%></b><br/> wins: <%.wins%><br/> losses: <%.losses%><br/>"
-});*/
-
 if (Swarm.root)
     Swarm.root.close();
 var root = new Swarm('gritzko');
@@ -161,37 +149,70 @@ test('trivial view',function(){
     var game = new TicTacToe('diagonal');
     var view = new TicTacToePreView('diagonal');
     game.makeMove(0,'x');
-    equal(view.html,'<pre>\nx  \n   \n   \n</pre>');
+    equal(view._html,'<pre>\nx  \n   \n   \n</pre>');
     game.makeMove(4,'x');
-    equal(view.html,'<pre>\nx  \n x \n   \n</pre>');
+    equal(view._html,'<pre>\nx  \n x \n   \n</pre>');
     game.makeMove(8,'x');
-    equal(view.html,'<pre>\nx  \n x \n  x\n</pre>');    
+    equal(view._html,'<pre>\nx  \n x \n  x\n</pre>');    
 });
+
+function Player (id) {this.init(id)}
+Model.extend(Player);
+Player.addProperty('name');
+Swarm.addType(Player);
+
+var PlayerRef = Reference.extend('PlayerRef',{
+    modelType: 'Player'
+});
+
+TicTacToe.addProperty('xPlayer','',PlayerRef);
+TicTacToe.addProperty('oPlayer','',PlayerRef);
+
+//Player.addField('wins',NumberField);
+//Player.addField('losses',NumberField);
+
+var PlayerView = View.extend("PlayerView", {
+    modelType: Player,
+    tagName: 'span',
+    template: "<%.name%>"
+    //template: "<b><%=_id%></b><br/> wins: <%.wins%><br/> losses: <%.losses%><br/>"
+});
+Swarm.addType(PlayerView, "PlayerView");
+
 
 var TicTacToeTemplatedView = View.extend('TicTacToeTemplatedView',{
     modelType : 'TicTacToe',
     template : 
         '<h2>Tic Tac Toe</h2>\n'+
         '<div class="players">\n'+
-            '<p>playing for x : <%.xPlayer%>\n'+
-            '<p>playing for o : <%.oPlayer%>\n'+
+            '<p>playing for x : <%/PlayerView.xPlayer%>\n'+
+            '<p>playing for o : <%/PlayerView.oPlayer%>\n'+
         '</div>'
+        //'<% this.renderCount++ %>'
 });
 
 Swarm.addType(TicTacToeTemplatedView);  // FIXME no type error
 
 test('simple templated view',function(){
+    var gritzko = new Player('gritzko',{name:'Victor Grishchenko'});
+    var aleksisha = new Player('aleksisha',{name:'Aleksei Balandin'});
+    // FIXME EEEE
+    gritzko.name('Victor Grishchenko');
+    aleksisha.name('Aleksei Balandin');
     var game = new TicTacToe('cross');
     game.xPlayer('gritzko');
     game.oPlayer('aleksisha');
     var view = new TicTacToeTemplatedView('cross');
-    var html = '<h2>Tic Tac Toe</h2>\n'+
-        '<div class="players">\n'+
-            '<p>playing for x : gritzko\n'+
-            '<p>playing for o : aleksisha\n'+
+    var html = 
+        '<div id="/TicTacToeTemplatedView#cross">'+
+            '<h2>Tic Tac Toe</h2>\n'+
+            '<div class="players">\n'+
+                '<p>playing for x : <span id="/PlayerView#gritzko">Victor Grishchenko</span>\n'+
+                '<p>playing for o : <span id="/PlayerView#aleksisha">Aleksei Balandin</span>\n'+
+            '</div>'+
         '</div>';
     html = html.replace(/\s+/g,' ');
-    equal(view.html,html);
+    equal(view.html(),html);
 });
 
 /*test('simple templates', function (test) {

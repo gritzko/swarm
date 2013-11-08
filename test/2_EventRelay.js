@@ -135,7 +135,7 @@ Duck.addCall('reportAge');
 
 var Nest = Set.extend('Nest');//Nest);
 Swarm.addType(Nest);
-Nest.setEntryType(Duck);
+Nest.setReferenceType(Duck);
 
 
 if (Swarm.root)
