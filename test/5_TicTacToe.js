@@ -145,7 +145,7 @@ var TicTacToePreView = View.extend('TicTacToePreView',{
 
 Swarm.addType(TicTacToePreView);
 
-test('trivial view',function(){
+test('simple view',function(){
     var game = new TicTacToe('diagonal');
     var view = new TicTacToePreView('diagonal');
     game.makeMove(0,'x');
@@ -180,39 +180,65 @@ var PlayerView = View.extend("PlayerView", {
 Swarm.addType(PlayerView, "PlayerView");
 
 
-var TicTacToeTemplatedView = View.extend('TicTacToeTemplatedView',{
+function TicTacToeTemplatedView (id,val) {
+    this.init(id,val);
+}
+View.extend(TicTacToeTemplatedView,{
     modelType : 'TicTacToe',
+    preHtml: TicTacToePreView.prototype.render, // see above
     template : 
         '<h2>Tic Tac Toe</h2>\n'+
         '<div class="players">\n'+
             '<p>playing for x : <%/PlayerView.xPlayer%>\n'+
             '<p>playing for o : <%/PlayerView.oPlayer%>\n'+
+            '<%=this.preHtml()%>'+
         '</div>'
         //'<% this.renderCount++ %>'
 });
 
 Swarm.addType(TicTacToeTemplatedView);  // FIXME no type error
 
-test('simple templated view',function(){
-    var gritzko = new Player('gritzko',{name:'Victor Grishchenko'});
-    var aleksisha = new Player('aleksisha',{name:'Aleksei Balandin'});
-    // FIXME EEEE
-    gritzko.name('Victor Grishchenko');
-    aleksisha.name('Aleksei Balandin');
-    var game = new TicTacToe('cross');
-    game.xPlayer('gritzko');
+var gritzko = new Player('gritzko',{name:'Victor Grishchenko'});
+var aleksisha = new Player('aleksisha',{name:'Aleksei Balandin'});
+// FIXME EEEE
+gritzko.name('Victor Grishchenko');
+aleksisha.name('Aleksei Balandin');
+
+test('simple templated view + nested views',function(){
+    var game = new TicTacToe('clear');
+    game.xPlayer('gritzko'); // FIXME also spec
     game.oPlayer('aleksisha');
-    var view = new TicTacToeTemplatedView('cross');
+    var view = new TicTacToeTemplatedView('clear');
     var html = 
-        '<div id="/TicTacToeTemplatedView#cross">'+
+        '<div id="/TicTacToeTemplatedView#clear">'+
             '<h2>Tic Tac Toe</h2>\n'+
             '<div class="players">\n'+
                 '<p>playing for x : <span id="/PlayerView#gritzko">Victor Grishchenko</span>\n'+
                 '<p>playing for o : <span id="/PlayerView#aleksisha">Aleksei Balandin</span>\n'+
+                '<pre>\n   \n   \n   \n</pre>'+
             '</div>'+
         '</div>';
-    html = html.replace(/\s+/g,' ');
-    equal(view.html(),html);
+    equal(view.html().replace(/\s+/g,' '),html.replace(/\s+/g,' '));
+});
+
+test('revitalizing DOM', function (){
+    var game = new TicTacToe('st_andrew_cross');
+    game.xPlayer('gritzko');
+    game.oPlayer('aleksisha');
+    game.makeMove(0,'x');
+    game.makeMove(2,'x');
+    game.makeMove(4,'x');
+    game.makeMove(6,'x');
+    game.makeMove(8,'x');
+    var div = document.createElement('div');
+    document.body.appendChild(div);
+    var view = new TicTacToeTemplatedView('st_andrew_cross');
+    div.innerHTML = view.html();
+    View.revitalize(document.body);
+    gritzko.name('Victor S Grishchenko');
+    ok(div.innerHTML.indexOf('S G')!==-1);
+    gritzko.name('Victor Grishchenko');
+    ok(div.innerHTML.indexOf('S G')===-1);
 });
 
 /*test('simple templates', function (test) {
