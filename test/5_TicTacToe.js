@@ -23,17 +23,17 @@ if (typeof require == 'function') {
 //    v a duplicate id detection
 //      b view lifecycle: instantiation, gc
 //    > c HTMLViewBuilder: walker (recursive, matcher, html.push)
-//      d ready-not-ready state for HTMLVB
+//      d ready-not-ready state for HTMLVB (.version()!==undefined)
 //   3 client-side only: view.apply? seeks a DOM element, updates, vitalizes
 //      a server-side: set .html, fire an event
 //      b loop detection: cyclic html vitalization
 //   4 Nested Views
-//      a field view, syntax
-//      b reference view (target HTML, my envelope, listen&redraw)
+//    v a field view, syntax
+//    x b reference view (target HTML, my envelope, listen&redraw)
 //      c parent redraw skip
-//      d DOM element preservation magic
+//    v d DOM element preservation magic
 //      e DOM gc (listener!!!)
-//   5 EntryView: double enveloping?
+// v 5 EntryView: double enveloping?
 //   6 NumberBoundView - two-way binding
 
 

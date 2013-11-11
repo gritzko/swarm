@@ -155,7 +155,7 @@ test('basic listener func', function (test) {
         // spec is a compund identifier;
         // field name is mentioned as 'member'
         equal(spec.member,'age');
-        equal(spec.toString(),'/Duck#huey.age!'+spec.version);
+        equal(spec.toString(),'/Duck#huey.age!'+spec.version+'*set');
         equal(Spec.ext(spec.version),'gritzko');
         huey.off('age',lsfn);
     });
