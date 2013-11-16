@@ -180,8 +180,8 @@ var PlayerView = View.extend("PlayerView", {
 Swarm.addType(PlayerView, "PlayerView");
 
 
-function TicTacToeTemplatedView (id,val) {
-    this.init(id,val);
+function TicTacToeTemplatedView (id,val,parent) {
+    this.init(id,val,parent);
 }
 View.extend(TicTacToeTemplatedView,{
     modelType : 'TicTacToe',
@@ -239,6 +239,10 @@ test('revitalizing DOM', function (){
     ok(div.innerHTML.indexOf('S G')!==-1);
     gritzko.name('Victor Grishchenko');
     ok(div.innerHTML.indexOf('S G')===-1);
+    document.body.removeChild(div);
+    equal(game._lstn.length,1);
+    view.gc();
+    equal(game._lstn.length,0);
 });
 
 /*test('simple templates', function (test) {

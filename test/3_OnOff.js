@@ -11,7 +11,7 @@ if (typeof require == 'function') {
 
 //   IMPLEMENTATION PIPELINE
 //
-//   1 bare objects: on/off, version, diff
+// v 1 bare objects: on/off, version, diff
 //   2 
 
 

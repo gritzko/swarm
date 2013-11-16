@@ -53,7 +53,7 @@ if (typeof require == 'function') {
 //      huey.age(1);
 // V 1' parent tree
 //     x a duck.parent===duckType
-//     v b root.obtain('/Duck#huey')
+//     v b root.descendant('/Duck#huey')
 // V 2 batch field set
 //      huey.set({age:1,height:"30cm"})
 //      // including replica bootup
@@ -68,9 +68,12 @@ if (typeof require == 'function') {
 // > 7 View (default templated)  see 3_view.js
 //   8 RPC calls
 //   9 Rework EventRelayNode.set (see notes)
+//   A EventRelay.get (action *get, async)
+// X B specifier as a label stack (_parent, spec.push/pop/unshift/shift)
+//    v a this._parent
 
-function NumberField (id) {
-    this.init(id);
+function NumberField (id,v,p) {
+    this.init(id,v,p);
 }
 Field.extend(NumberField,{
     validate: function (spec,val) {
@@ -78,8 +81,8 @@ Field.extend(NumberField,{
     }
 });
 
-function MetricLengthField (id) {
-    this.init(id);
+function MetricLengthField (id,v,p) {
+    this.init(id,v,p);
 }
 Field.extend(MetricLengthField,{
     metricRe: /(\d+)(mm|cm|m|km)?/g,
@@ -108,8 +111,8 @@ Field.extend(MetricLengthField,{
 });
 
 // Duck is our core testing class :)
-function Duck (id,vals) {
-    this.init(id,vals);
+function Duck (id,vals,parent) {
+    this.init(id,vals,parent);
     // mood is mutated by a logged method
     this.mood = this.mood||'neutral'; // TODO nicer
 };
@@ -148,7 +151,7 @@ test('basic listener func', function (test) {
     expect(4);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = Swarm.root.obtain('/Duck#huey');
+    var huey = Swarm.root.descendant('/Duck#huey');
     // listen to a field
     huey.on('age',function lsfn(spec,val){
         equal(val,1);
@@ -167,8 +170,8 @@ test('create-by-id', function (test) {
     // an attempt of creating a second copy of a model object
     // will throw an exception
     var dewey1 = new Duck('dewey');
-    // that's we resort to obtain() doing find-or-create
-    var dewey2 = Duck.obtain('dewey');
+    // that's we resort to descendant() doing find-or-create
+    var dewey2 = Swarm.root.descendant('/Duck#dewey');
     // must be the same object
     strictEqual(dewey1,dewey2);
     equal(dewey1.scope().type,'Duck');
@@ -188,7 +191,7 @@ test('version ids', function (test) {
 
 /* TODO replica boot is the key usecase
 test('',function (test) {
-    var dewey = Duck.obtain('dewey');
+    var dewey = Duck.descendant('dewey');
     var json = dewey.toJSON();
     var duckJSON = {
         mood: "neutral", 
@@ -201,7 +204,7 @@ test('',function (test) {
 });*/
 
 /*test('',function (test) {
-    var huey = Duck.obtain('huey');
+    var huey = Duck.descendant('huey');
     expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
         console.log('yupee im growing');
@@ -217,7 +220,7 @@ test('',function (test) {
 });*/
 
 test('once',function (test) {
-    var huey = Duck.obtain('huey');
+    var huey = Swarm.root.descendant('/Duck#huey');
     expect(1);
     huey.once('age',function(spec,value){
         equal(value,4);
@@ -227,7 +230,7 @@ test('once',function (test) {
 });
 
 test('custom field type',function (test) {
-    var huey = Duck.obtain('huey');
+    var huey = Swarm.root.descendant('/Duck#huey');
     huey.height('32cm');
     ok(Math.abs(huey.height()-0.32)<0.0001);
     Swarm.root.set('/Duck#huey.height','35cm');
