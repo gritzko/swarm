@@ -90,7 +90,7 @@ Field.extend(MetricLengthField,{
     set: function (spec,value) {
         // convert mm cm m km
         if (typeof(value)==='number') {
-            this.value = value;
+            this._value = value;
         } else {
             value = value.toString();
             var m=[], meters=0;
@@ -98,9 +98,9 @@ Field.extend(MetricLengthField,{
                 var unit = m[2] ? this.scale[m[2]] : 1;
                 meters += parseInt(m[1]) * unit;
             }
-            this.value = meters;
+            this._value = meters;
         }
-        this.version = spec.version;
+        this._version = spec.version;
     },
     validate: function (spec,val) {
         return typeof(val)==='number' || 
@@ -184,7 +184,7 @@ test('version ids', function (test) {
     louie.age(3);
     var ts2 = Spec.newVersion();
     ok(ts2>ts1);
-    var vid = louie._children.age.version;
+    var vid = louie._children.age._version;
     ok(ts1<vid);
     ok(ts2>vid);
 });
@@ -240,7 +240,7 @@ test('custom field type',function (test) {
 
 test('vid freeze',function (test) {
     Spec.freeze();
-    var factoryBorn = new Duck({age:0,height:'4cm'});
+    var factoryBorn = new Duck({'.age':0,'.height':'4cm'});
     equal(factoryBorn._id,Spec.frozen);
     Spec.thaw();
     ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
@@ -248,11 +248,11 @@ test('vid freeze',function (test) {
     
 });
 
-test('batched set',function (test) {
+test('batched property set',function (test) {
     var nameless = new Duck();
     nameless.set({
-        age:1,
-        height: '60cm'
+        '.age':1,
+        '.height': '60cm'
     });
     ok(Math.abs(nameless.height()-0.6)<0.0001);
     equal(nameless.age(),1);
@@ -262,10 +262,10 @@ test('batched set',function (test) {
 });
 
 test('basic Set func',function (test) {
-    var hueyClone = new Duck({age:2});
-    var deweyClone = new Duck({age:1});
-    var louieClone = new Duck({age:3});
-    var donalds = new Nest('donalds',{'3rd':deweyClone._id,'2nd':hueyClone._id});
+    var hueyClone = new Duck({'.age':2});
+    var deweyClone = new Duck({'.age':1});
+    var louieClone = new Duck({'.age':3});
+    var donalds = new Nest('donalds',{'.3rd':deweyClone._id,'.2nd':hueyClone._id});
     var dewey2 = donalds.get('3rd');
     ok(deweyClone===dewey2);
     equal(dewey2.age(),1);
