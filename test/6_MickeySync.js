@@ -21,8 +21,10 @@ var Mouse = Model.extend('Mouse', {
     }
 });
 
+Swarm.debug = true;
 
 test('Mickey the Mouse on/off', function(){
+    console.warn('Mickey the Mouse on/off');
 
     var aleksisha = new Host('#aleksisha');
     var gritzko = new Host('#gritzko');
@@ -56,19 +58,43 @@ test('Mickey the Mouse on/off', function(){
 
 
 
+test('Reconciliation', function () {
+    console.warn('Reconciliation');
+    var aleksisha = new Host('#aleksisha');
+    var gritzko = new Host('#gritzko');
+    aleksisha.on(gritzko);
+    Swarm.localhost = gritzko;
+
+    var mickey = new Mouse();
+    var other = aleksisha.on(mickey.spec());
+
+    mickey.move({x:1,y:1});
+    
+    equal(mickey.x,1);
+    equal(mickey.y,1);
+    equal(other.x,1);
+    equal(other.y,1);
+    
+    aleksisha.off(gritzko);
+
+    other.move({x:-1,y:1});
+    equal(other.x,0);
+    equal(other.y,2);
+
+    mickey.init = null;
+    aleksisha.on(gritzko);
+    delete mickey.init;
+    
+    equal(other.x,0);
+    equal(other.y,2);
+    equal(mickey.x,0);
+    equal(mickey.y,2);
+    
+    gritzko.close();
+    aleksisha.close();
+});
+
 /*
-// Reconciliation
-mickey.move();
-equal();
-aleksisha.off(gritzko);
-other.move();
-equal();
-mickey.init = null;
-aleksisha.on(gritzko);
-delete mickey.init;
-equal();
-gritzko.close();
-aleksisha.close();
 
 // Storage
 gritzko.storage = new MemStorage();

@@ -4,20 +4,20 @@
  * Date: 8/24/13
  * Time: 6:21 PM
  * To change this template use File | Settings | File Templates.
- */
+ *
 if (typeof(require)==='function') {
     var swarm = require('../lib/swarm2.js');
     Spec = swarm.Spec;
     Swarm = swarm.Swarm;
-}
+}*/
 
-new Swarm('gritzko');
 
 asyncTest('timestamp sequence test', function () {
+    var swarm = Swarm.localhost = new Host('gritzko');
     expect(100);
-    var ts1 = Spec.newVersion(), ts2, i=0;
+    var ts1 = swarm.version(), ts2, i=0;
     var iv = setInterval(function(){
-        ts2 = Spec.newVersion();
+        ts2 = swarm.version();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
         ok(ts2>ts1);
@@ -27,9 +27,10 @@ asyncTest('timestamp sequence test', function () {
             clearInterval(iv);
         }
     }, 0);
+    swarm.close();
 });
 
-test('basic specifier syntax', function (test) {
+/*test('basic specifier syntax', function (test) {
     var testSpec = '/Class#ID.field!20130811192632+gritzko';
     var spec = new Spec(testSpec);
     equal(spec.version,'20130811192632+gritzko');
@@ -40,7 +41,7 @@ test('basic specifier syntax', function (test) {
     var iso = Spec.timestamp2iso(time);
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
-    test.equal(date.getSeconds(),20);*/
+    test.equal(date.getSeconds(),20);* /
     var spec2 = new Spec(spec);
     equal(spec.toString(),spec2.toString());
 });
