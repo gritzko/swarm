@@ -30,34 +30,33 @@ asyncTest('timestamp sequence test', function () {
     swarm.close();
 });
 
-/*test('basic specifier syntax', function (test) {
-    var testSpec = '/Class#ID.field!20130811192632+gritzko';
+test('basic specifier syntax', function (test) {
+    var testSpec = '/Class#ID!7Umum+gritzko.event';
     var spec = new Spec(testSpec);
-    equal(spec.version,'20130811192632+gritzko');
-    equal(Spec.ext(spec.version),'gritzko');
+    equal(spec.version(),'7Umum+gritzko');
+    equal(Spec.ext(spec.version()),'gritzko');
     var rev = spec.toString();
     equal(rev,testSpec);
     /*var time = '20130811192020';
     var iso = Spec.timestamp2iso(time);
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
-    test.equal(date.getSeconds(),20);* /
+    test.equal(date.getSeconds(),20);*/
     var spec2 = new Spec(spec);
     equal(spec.toString(),spec2.toString());
 });
 
 test('corner cases', function () {
     var empty = new Spec('');
-    equal(empty.type||empty.id||empty.member||empty.version||empty.action,null);
+    equal(empty.type()||empty.id()||empty.method()||empty.version(),'');
     equal(empty.toString(),'');
-    var action = new Spec('*on+re');
-    equal(action.action,'on+re');
-    var fieldSet = new Spec('/TodoItem#7AM0f+gritzko.done!7AMTc+gritzko*set');
-    equal(fieldSet.type,'TodoItem');
-    equal(fieldSet.id,'7AM0f+gritzko');
-    equal(fieldSet.member,'done');
-    equal(fieldSet.version,'7AMTc+gritzko');
-    equal(fieldSet.action,'set');
+    var action = new Spec('.on+re');
+    equal(action.method(),'on+re');
+    var fieldSet = new Spec('/TodoItem#7AM0f+gritzko!7AMTc+gritzko.set');
+    equal(fieldSet.type(),'TodoItem');
+    equal(fieldSet.id(),'7AM0f+gritzko');
+    equal(fieldSet.version(),'7AMTc+gritzko');
+    equal(fieldSet.method(),'set');
 });
 
 /*exports.testBase = function (test) {
