@@ -38,7 +38,9 @@ test('Mickey the Mouse on/off', function(){
     equal(mickey.x,1);
     equal(mickey.y,1);
 
-    var other = aleksisha.on(mickey.spec()); // FIXME what listener???
+    // once you supply no listener, the object is only
+    // guaranteed to exist till the next Swarm.gc() run
+    var other = aleksisha.on(mickey.spec());
 
     equal(other.x,1);
     equal(other.y,1);
@@ -80,6 +82,8 @@ test('Reconciliation', function () {
     other.move({x:-1,y:1});
     equal(other.x,0);
     equal(other.y,2);
+    equal(mickey.x,1);
+    equal(mickey.y,1);
 
     mickey.init = null;
     aleksisha.on(gritzko);
