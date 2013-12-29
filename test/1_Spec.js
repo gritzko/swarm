@@ -46,6 +46,17 @@ test('basic specifier syntax', function (test) {
     equal(spec.toString(),spec2.toString());
 });
 
+test('version vector', function (){
+    var vec = '!7AM0f+gritzko!7AMTc+aleksisha';
+    var map = new Spec.Map(vec);
+    ok(map.covers('!7AM0f+gritzko'));
+    //ok(map.covers('gritzko','7AM0f'));
+    ok(!map.covers('!7AMTd+aleksisha'));
+    //ok(!map.covers('aleksisha','7AMTd'));
+    ok(!map.covers('!6AMTd+maxmaxmax'));
+    //ok(!map.covers('maxmaxmax','6AMTd'));
+});
+
 test('corner cases', function () {
     var empty = new Spec('');
     equal(empty.type()||empty.id()||empty.method()||empty.version(),'');

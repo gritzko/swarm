@@ -12,8 +12,8 @@ FullName.prototype.toString = function () {
 var Mouse = Model.extend('Mouse', {
     default: {
         x: 0,
-        y: 0,
-        name: FullName
+        y: 0
+        //name: FullName
     },
     $$move: function (spec,d) {
         this.x += d.x||0;
@@ -31,19 +31,18 @@ test('Mickey the Mouse on/off', function(){
     aleksisha.on(gritzko);
     Swarm.localhost = gritzko;
 
-    var mickey = new Mouse();
+    var mickey = new Mouse('',{x:0,y:0}); // TODO normalize sig
 
     mickey.move({x:1,y:1});
 
     equal(mickey.x,1);
     equal(mickey.y,1);
 
-    // once you supply no listener, the object is only
-    // guaranteed to exist till the next Swarm.gc() run
-    var other = aleksisha.on(mickey.spec());
+    var other = aleksisha.on(mickey.spec()); // FIXME RELINKING!!!!!
 
     equal(other.x,1);
     equal(other.y,1);
+    ok(other._oplog['!'+mickey._version+'.move']);
     equal(other._lstn[0],mickey);
     equal(mickey._lstn[0],other);
     equal(other._host,aleksisha);
