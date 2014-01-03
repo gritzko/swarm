@@ -11,6 +11,7 @@ if (typeof(require)==='function') {
     Swarm = swarm.Swarm;
 }*/
 
+Swarm.debug = true;
 
 asyncTest('timestamp sequence test', function () {
     var swarm = Swarm.localhost = new Host('gritzko');
@@ -20,14 +21,14 @@ asyncTest('timestamp sequence test', function () {
         ts2 = swarm.version();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
-        ok(ts2>ts1);
-        ts1 = ts2;
-        if (++i==100) {
+        if (i++==100) {
             start();
             clearInterval(iv);
-        }
+        } else
+            ok(ts2>ts1);
+        ts1 = ts2;
     }, 0);
-    swarm.close();
+    //swarm.close();
 });
 
 test('basic specifier syntax', function (test) {
@@ -68,6 +69,32 @@ test('corner cases', function () {
     equal(fieldSet.id(),'7AM0f+gritzko');
     equal(fieldSet.version(),'7AMTc+gritzko');
     equal(fieldSet.method(),'set');
+});
+
+var Empty = Syncable.extend('Empty',{});
+
+test('dry handshake', function () {
+    var v = 0;
+    var host = {
+        _id: 'DummyHost',
+        version: function () {
+            return Spec.int2base(++v);
+        },
+        register: function () {
+        },
+        availableUplinks: function (spec) {
+            return spec.toString().indexOf('down')!==-1?[up]:[this];
+        },
+        on: function (stub,stub,caller) {
+            caller.reon(stub,'',this);
+        }
+    };
+    var up = new Empty('up',{},host);
+    var down = new Empty('down',{},host);
+    up.on('','!0',down);
+    equal(up._lstn[0],host);
+    equal(up._lstn[1],down);
+    equal(down._lstn[0],up);
 });
 
 /*exports.testBase = function (test) {

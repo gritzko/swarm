@@ -21,10 +21,170 @@ var Mouse = Model.extend('Mouse', {
     }
 });
 
+function DummyStorage() {
+    this.store = {};
+};
+DummyStorage.prototype.deliver = function (spec,value,src) {
+    var ti = spec.filter('/#');
+    var obj = this.store[ti] || (this.store[ti]={_oplog:{}});
+    var vm = spec.filter('!.');
+    obj._oplog[vm] = value;
+};
+DummyStorage.prototype.on = function (spec,version,src) {
+    var ti = spec.filter('/#');
+    if (ti in this.store)
+        src.init(ti,this.store[ti],this);
+    src.reon(ti,null,this);
+};
+DummyStorage.prototype.off = function (spec,value,src) {
+};
+
 Swarm.debug = true;
 
+asyncTest('Handshake - K pattern', function () {
+    console.warn('K pattern');
+
+    var uplink = new Host('uplink~K');
+    var storage = new DummyStorage(uplink);
+    var downlink = new Host('downlink~K');
+    uplink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [uplink]};
+    uplink.on(downlink);
+    Swarm.localhost = downlink;
+
+    var uprepl = uplink.on(Mouse,{x:3,y:3});
+    var dlrepl = downlink.on(uprepl.spec(),'',function(){
+        equal(dlrepl.x,3);
+        equal(dlrepl.y,3);
+        equal(dlrepl._version,uprepl._version);
+        start();
+    });
+
+    equal(dlrepl.x,3);
+    equal(dlrepl.y,3);
+
+});
+
+
+asyncTest('Handshake - D pattern', function () {
+    console.warn('D pattern');
+
+    var uplink = new Host('uplink~D');
+    var downlink = new Host('downlink~D');
+    uplink.availableUplinks = function () {return ''};
+    downlink.availableUplinks = function () {return 'uplink~D'};
+    uplink.on(downlink);
+    Swarm.localhost = downlink;
+
+    uplink.storage.db['/Mouse#Mickey'] = {
+        x:7,
+        y:7,
+        _oplog:{
+            '!aeonago.set': {x:7,y:7}
+        }
+    };
+
+    var dlrepl = downlink.on('/Mouse#Mickey',function(){
+        equal(dlrepl.x,7);
+        equal(dlrepl.y,7);
+        equal(dlrepl._version,'!aeonago');
+        start();
+    });
+
+    // storage is async, waits a tick
+    ok(!dlrepl.x);
+    ok(!dlrepl.y);
+
+});
+
+
+asyncTest('Handshake - Z pattern', function () {
+    console.warn('Z pattern');
+
+    var uplink = new Host('uplink~Z');
+    var downlink = new Host('downlink~Z');
+    uplink.availableUplinks = function () {return ''};
+    downlink.availableUplinks = function () {return 'uplink~Z'};
+
+    var oldMickeyState = {
+        x:7,
+        y:7,
+        _oplog:{
+            '!aeonago.set': {x:10,y:10}
+        }
+    };
+    // ...
+    uplink.storage.db['/Mouse#Mickey'] = oldMickeyState;
+    var dlrepl = downlink.on('/Mouse#Mickey',oldMickeyState);
+
+    uprepl.move({x:1,y:1});
+    downrepl.move({x:1,y:1});
+
+    uplink.on(downlink);
+
+    // must add moves
+    equal(uprepl.x,12);
+    equal(downrepl.x,12);
+
+    start();
+
+});
+
+
+asyncTest('Handshake - R pattern', function () {
+    console.warn('R pattern');
+
+    var uplink = new Host('uplink~R');
+    var downlink = new Host('downlink~R');
+    uplink.availableUplinks = function () {return ''};
+    downlink.availableUplinks = function () {return 'uplink~R'};
+    uplink.on(downlink);
+    Swarm.localhost = downlink;
+
+    var dlrepl = downlink.on('/Mouse#Mickey',function(){
+        // there is no state in the uplink, dl provided none as well
+        ok(!dlrepl.x);
+        ok(!dlrepl.y);
+        ok(!dlrepl._version);
+
+        dlrepl.set({x:18,y:18});
+        uprepl = uplink.on('/Mouse#Mickey');
+        equal(uprepl.x,18);
+
+        start();
+    });
+
+});
+
+
+asyncTest('Handshake - A pattern', function () {
+    console.warn('A pattern');
+
+    var uplink = new Host('uplink~A');
+    var downlink = new Host('downlink~A');
+    uplink.availableUplinks = function () {return ''};
+    downlink.availableUplinks = function () {return 'uplink~A'};
+    uplink.on(downlink);
+    Swarm.localhost = downlink;
+
+    var mickey = new Mouse('Mickey',{x:20,y:20});
+    var uprepl = uplink.on('/Mouse#Mickey');
+    var dlrepl = downlink.on('/Mouse#Mickey');
+
+    equal(uprepl.x,20);
+    equal(uprepl.y,20);
+    equal(dlrepl.x,20);
+    equal(dlrepl.y,20);
+
+    start();
+
+});
+
+
+/*
 test('Mickey the Mouse on/off', function(){
     console.warn('Mickey the Mouse on/off');
+    // TODO tmp substitute hash function: uplink==author
 
     var aleksisha = new Host('#aleksisha');
     var gritzko = new Host('#gritzko');
@@ -96,7 +256,7 @@ test('Reconciliation', function () {
     gritzko.close();
     aleksisha.close();
 });
-
+*/
 /*
 
 // Storage
