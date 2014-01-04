@@ -80,18 +80,20 @@ test('dry handshake', function () {
         version: function () {
             return Spec.int2base(++v);
         },
-        register: function () {
+        register: function (obj) {
+            return obj;
         },
         availableUplinks: function (spec) {
             return spec.toString().indexOf('down')!==-1?[up]:[this];
         },
         on: function (stub,stub2,caller) {
             caller.reon(stub,'',this);
-        }
+        },
+        constructor: Host
     };
     var up = new Empty('up',{},host);
     var down = new Empty('down',{},host);
-    up.on('','!0',down);
+    // up.on('','!0',down);
     equal(up._lstn[0],host);
     equal(up._lstn[1],down);
     equal(down._lstn[0],up);
