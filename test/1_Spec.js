@@ -85,7 +85,7 @@ test('dry handshake', function () {
         availableUplinks: function (spec) {
             return spec.toString().indexOf('down')!==-1?[up]:[this];
         },
-        on: function (stub,stub,caller) {
+        on: function (stub,stub2,caller) {
             caller.reon(stub,'',this);
         }
     };

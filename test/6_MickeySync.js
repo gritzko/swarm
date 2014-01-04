@@ -50,18 +50,24 @@ asyncTest('Handshake - K pattern', function () {
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
-    Swarm.localhost = downlink;
 
-    var uprepl = uplink.on(Mouse,{x:3,y:3});
-    var dlrepl = downlink.on(uprepl.spec(),'',function(){
+    Swarm.localhost = uplink;
+    var uprepl = new Mouse({x:3,y:3});
+    downlink.on(uprepl.spec(),'',function(){
+        // FIXME init() happens before on()
         equal(dlrepl.x,3);
         equal(dlrepl.y,3);
         equal(dlrepl._version,uprepl._version);
         start();
     });
+    // FIXME
+    var dlrepl = downlink.objects[uprepl.spec()];
 
     equal(dlrepl.x,3);
     equal(dlrepl.y,3);
+    equal(dlrepl._version,dlrepl._id);
+
+    start(); // FIXME
 
 });
 
