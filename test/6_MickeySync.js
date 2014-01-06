@@ -30,16 +30,23 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
     var vm = spec.filter('!.');
     obj._oplog[vm] = value;
 };
-DummyStorage.prototype.on = function (spec,version,src) {
+DummyStorage.prototype.on = function () {
+    var spec, replica;
+    if (arguments.length===2) {
+        spec = new Spec(arguments[0]);
+        replica = arguments[1];
+    } else
+        throw 'xxx';
     var ti = spec.filter('/#'), self=this;
-    if (ti in self.store)
-        setTimeout(function(){
-            src.init(ti,self.store[ti],self);
-        },1);
-    src.reon(ti,null,this);
+    setTimeout(function(){
+        if (ti in self.store)
+            replica.init(ti,self.store[ti],self);
+        replica.reon(ti,null,this); // FIXME pull in the state
+    },1);
 };
 DummyStorage.prototype.off = function (spec,value,src) {
 };
+DummyStorage.prototype.normalizeSignature = Syncable.prototype.normalizeSignature;
 
 Swarm.debug = true;
 
@@ -58,7 +65,7 @@ asyncTest('Handshake 1 K pattern', function () {
 
     Swarm.localhost = uplink;
     var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec()+'.init',function(){
+    downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
         // FIXME init() happens before on()
         //  ? register ~ on ?
         //  missing sig - 1st param is the spec or spec filter
@@ -78,21 +85,18 @@ asyncTest('Handshake 1 K pattern', function () {
         //    /Mouse#Mickey!now.on   !since.event   callback
         //  host's completely specd filter
         //    /Host#local!now.on   /Mouse#Mickey!since.event   callback
-        equal(dlrepl.x,3);
-        equal(dlrepl.y,3);
-        equal(dlrepl._version,uprepl._version);
+        equal(obj.x,3);
+        equal(obj.y,3);
+        equal(obj._version,uprepl._version);
+        ok(storage.store[uprepl.spec()]);
         start();
     });
-    // FIXME
     var dlrepl = downlink.objects[uprepl.spec()];
-
-    equal(dlrepl.x,3);
-    equal(dlrepl.y,3);
-    equal(dlrepl._version,dlrepl._id);
-    ok(storage.store[uprepl.spec()]);
-
-    start(); // FIXME
-
+    // here we have sync retrieval, so check it now
+    //equal(dlrepl.x,3);
+    //equal(dlrepl.y,3);
+    //equal(dlrepl._version,dlrepl._id);
+    // NO WAY, storage is async
 });
 
 
