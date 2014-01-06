@@ -14,7 +14,7 @@ if (typeof(require)==='function') {
 Swarm.debug = true;
 
 asyncTest('timestamp sequence test', function () {
-    var swarm = Swarm.localhost = new Host('gritzko');
+    var swarm = Swarm.localhost = new Host('gritzko',{},{on:function(){}});
     expect(100);
     var ts1 = swarm.version(), ts2, i=0;
     var iv = setInterval(function(){
@@ -73,7 +73,7 @@ test('corner cases', function () {
 
 var Empty = Syncable.extend('Empty',{});
 
-test('dry handshake', function () {
+/*test('dry handshake', function () {
     var v = 0;
     var host = {
         _id: 'DummyHost',
@@ -97,7 +97,7 @@ test('dry handshake', function () {
     equal(up._lstn[0],host);
     equal(up._lstn[1],down);
     equal(down._lstn[0],up);
-});
+});*/
 
 /*exports.testBase = function (test) {
     var obj = {

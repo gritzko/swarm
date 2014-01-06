@@ -31,9 +31,11 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
     obj._oplog[vm] = value;
 };
 DummyStorage.prototype.on = function (spec,version,src) {
-    var ti = spec.filter('/#');
-    if (ti in this.store)
-        src.init(ti,this.store[ti],this);
+    var ti = spec.filter('/#'), self=this;
+    if (ti in self.store)
+        setTimeout(function(){
+            src.init(ti,self.store[ti],self);
+        },1);
     src.reon(ti,null,this);
 };
 DummyStorage.prototype.off = function (spec,value,src) {
@@ -41,11 +43,14 @@ DummyStorage.prototype.off = function (spec,value,src) {
 
 Swarm.debug = true;
 
-asyncTest('Handshake - K pattern', function () {
+//    S O  I T  F I T S
+
+asyncTest('Handshake 1 K pattern', function () {
     console.warn('K pattern');
 
-    var uplink = new Host('uplink~K');
     var storage = new DummyStorage(uplink);
+    // FIXME pass storage to Host
+    var uplink = new Host('uplink~K',0,storage);
     var downlink = new Host('downlink~K');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
@@ -53,8 +58,26 @@ asyncTest('Handshake - K pattern', function () {
 
     Swarm.localhost = uplink;
     var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec(),'',function(){
+    downlink.on(uprepl.spec()+'.init',function(){
         // FIXME init() happens before on()
+        //  ? register ~ on ?
+        //  missing sig - 1st param is the spec or spec filter
+        //  host ~ event hub
+        //
+        //  host.on('/Mouse#Mickey.move',function(){})
+        //  Option: id mismatch => spec to val? yep, unless deliver()
+        //    '/Mouse#Mickey.on', 'move'
+        //    event filter is the value of on() !!!
+        //    sugg: retroactive init()
+        //    the missing signature: x.emit('event',value),
+        //      x.on('event',fn)
+        //    host.on(Mouse,fn)
+        //    host.on(Mouse) -- is actually a value
+        //
+        //  on() with a full filter:
+        //    /Mouse#Mickey!now.on   !since.event   callback
+        //  host's completely specd filter
+        //    /Host#local!now.on   /Mouse#Mickey!since.event   callback
         equal(dlrepl.x,3);
         equal(dlrepl.y,3);
         equal(dlrepl._version,uprepl._version);
@@ -66,27 +89,29 @@ asyncTest('Handshake - K pattern', function () {
     equal(dlrepl.x,3);
     equal(dlrepl.y,3);
     equal(dlrepl._version,dlrepl._id);
+    ok(storage.store[uprepl.spec()]);
 
     start(); // FIXME
 
 });
 
 
-asyncTest('Handshake - D pattern', function () {
+asyncTest('Handshake 2 D pattern', function () {
     console.warn('D pattern');
 
-    var uplink = new Host('uplink~D');
+    var storage = new DummyStorage();
+    var uplink = new Host('uplink~D',storage);
     var downlink = new Host('downlink~D');
-    uplink.availableUplinks = function () {return ''};
-    downlink.availableUplinks = function () {return 'uplink~D'};
+    uplink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
-    uplink.storage.db['/Mouse#Mickey'] = {
+    storage.store['/Mouse#Mickey'] = {
         x:7,
         y:7,
         _oplog:{
-            '!aeonago.set': {x:7,y:7}
+            '!0eonago.set': {x:7,y:7}
         }
     };
 
@@ -104,13 +129,14 @@ asyncTest('Handshake - D pattern', function () {
 });
 
 
-asyncTest('Handshake - Z pattern', function () {
+asyncTest('Handshake 3 Z pattern', function () {
     console.warn('Z pattern');
 
+    var storage = new DummyStorage();
     var uplink = new Host('uplink~Z');
     var downlink = new Host('downlink~Z');
-    uplink.availableUplinks = function () {return ''};
-    downlink.availableUplinks = function () {return 'uplink~Z'};
+    uplink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [uplink]};
 
     var oldMickeyState = {
         x:7,
@@ -120,7 +146,7 @@ asyncTest('Handshake - Z pattern', function () {
         }
     };
     // ...
-    uplink.storage.db['/Mouse#Mickey'] = oldMickeyState;
+    storage.store['/Mouse#Mickey'] = oldMickeyState;
     var dlrepl = downlink.on('/Mouse#Mickey',oldMickeyState);
 
     uprepl.move({x:1,y:1});
@@ -137,13 +163,14 @@ asyncTest('Handshake - Z pattern', function () {
 });
 
 
-asyncTest('Handshake - R pattern', function () {
+asyncTest('Handshake 4 R pattern', function () {
     console.warn('R pattern');
 
+    var storage = new DummyStorage();
     var uplink = new Host('uplink~R');
     var downlink = new Host('downlink~R');
-    uplink.availableUplinks = function () {return ''};
-    downlink.availableUplinks = function () {return 'uplink~R'};
+    uplink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
@@ -163,13 +190,14 @@ asyncTest('Handshake - R pattern', function () {
 });
 
 
-asyncTest('Handshake - A pattern', function () {
+asyncTest('Handshake 5 A pattern', function () {
     console.warn('A pattern');
 
+    var storage = new DummyStorage();
     var uplink = new Host('uplink~A');
     var downlink = new Host('downlink~A');
-    uplink.availableUplinks = function () {return ''};
-    downlink.availableUplinks = function () {return 'uplink~A'};
+    uplink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
