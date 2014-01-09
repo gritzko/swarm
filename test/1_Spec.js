@@ -48,14 +48,18 @@ test('basic specifier syntax', function (test) {
 });
 
 test('version vector', function (){
-    var vec = '!7AM0f+gritzko!7AMTc+aleksisha';
+    // the convention is: use "!version" for vectors and
+    // simply "version" for scalars
+    var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha';
     var map = new Spec.Map(vec);
-    ok(map.covers('!7AM0f+gritzko'));
+    ok(map.covers('7AM0f+gritzko'));
     //ok(map.covers('gritzko','7AM0f'));
-    ok(!map.covers('!7AMTd+aleksisha'));
+    ok(!map.covers('7AMTd+aleksisha'));
     //ok(!map.covers('aleksisha','7AMTd'));
-    ok(!map.covers('!6AMTd+maxmaxmax'));
+    ok(!map.covers('6AMTd+maxmaxmax'));
     //ok(!map.covers('maxmaxmax','6AMTd'));
+    equal(map.toString({rot:'6'}),'!7AMTc+aleksisha!7AM0f+gritzko');
+    equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha');
 });
 
 test('corner cases', function () {

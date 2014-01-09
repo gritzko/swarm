@@ -21,13 +21,16 @@ var Mouse = Model.extend('Mouse', {
     }
 });
 
-function DummyStorage() {
+function DummyStorage(async) {
+    this.async = !!async || false;
     this.store = {};
 };
 DummyStorage.prototype.deliver = function (spec,value,src) {
     var ti = spec.filter('/#');
     var obj = this.store[ti] || (this.store[ti]={_oplog:{}});
     var vm = spec.filter('!.');
+    if (vm in obj._oplog)
+        console.error('op replay @storage');
     obj._oplog[vm] = value;
 };
 DummyStorage.prototype.on = function () {
@@ -38,11 +41,12 @@ DummyStorage.prototype.on = function () {
     } else
         throw 'xxx';
     var ti = spec.filter('/#'), self=this;
-    setTimeout(function(){
-        if (ti in self.store)
-            replica.init(ti,self.store[ti],self);
-        replica.reon(ti,'!0',self); // FIXME pull in the state DIFF
-    },1);
+    function reply () {
+        var state = self.store[ti];
+        state && replica.init(ti+'!'+state._version+'.init',state,self);
+        replica.reon(ti,'!'+(state?state._version:'0'),self);
+    }
+    this.async ? setTimeout(reply,1) : reply();
 };
 DummyStorage.prototype.off = function (spec,value,src) {
 };
@@ -55,7 +59,7 @@ Swarm.debug = true;
 asyncTest('Handshake 1 K pattern', function () {
     console.warn('K pattern');
 
-    var storage = new DummyStorage(uplink);
+    var storage = new DummyStorage(true);
     // FIXME pass storage to Host
     var uplink = new Host('uplink~K',0,storage);
     var downlink = new Host('downlink~K');
@@ -66,21 +70,12 @@ asyncTest('Handshake 1 K pattern', function () {
     Swarm.localhost = uplink;
     var uprepl = new Mouse({x:3,y:3});
     downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
-        // FIXME init() happens before on()
         //  ? register ~ on ?
-        //  missing sig - 1st param is the spec or spec filter
         //  host ~ event hub
-        //
-        //  host.on('/Mouse#Mickey.move',function(){})
-        //  Option: id mismatch => spec to val? yep, unless deliver()
-        //    '/Mouse#Mickey.on', 'move'
-        //    event filter is the value of on() !!!
-        //    sugg: retroactive init()
         //    the missing signature: x.emit('event',value),
         //      x.on('event',fn)
         //    host.on(Mouse,fn)
         //    host.on(Mouse) -- is actually a value
-        //
         //  on() with a full filter:
         //    /Mouse#Mickey!now.on   !since.event   callback
         //  host's completely specd filter
@@ -103,7 +98,7 @@ asyncTest('Handshake 1 K pattern', function () {
 asyncTest('Handshake 2 D pattern', function () {
     console.warn('D pattern');
 
-    var storage = new DummyStorage();
+    var storage = new DummyStorage(true);
     var uplink = new Host('uplink~D',storage);
     var downlink = new Host('downlink~D');
     uplink.availableUplinks = function () {return [storage]};
@@ -114,17 +109,41 @@ asyncTest('Handshake 2 D pattern', function () {
     storage.store['/Mouse#Mickey'] = {
         x:7,
         y:7,
+        _version: '0eonago',
         _oplog:{
             '!0eonago.set': {x:7,y:7}
         }
     };
 
-    var dlrepl = downlink.on('/Mouse#Mickey',function(){
-        equal(dlrepl.x,7);
-        equal(dlrepl.y,7);
-        equal(dlrepl._version,'!aeonago');
+    // TODO
+    //  * _version: !v1!v2
+    //    v * add Spec.Map.toString(trim) {rot:ts,top:count}
+    //      * if new op !vid was trimmed => add manually
+    //      * if new op vid < _version => check the log (.indexOf(src))
+    //    v * sort'em
+    //  * clean $$set
+    //  * add testcase: Z-rotten
+    //      * old replica with no changes (no rot)
+    //      * old repl one-side changes
+    //      * old repl two-side changes (dl is rotten)
+    //  * document it
+    //  * "can't remember whether this was applied" situation
+    //      * high concurrency offline use
+    //
+    //  The underlying assumption: either less than 5 entities
+    //  touch it or they don't do it at once (if your case is
+    //  different consider RPC impl)
+    //  Model.ROTSPAN
+    //  Model.COAUTH
+
+    downlink.on('/Mouse#Mickey.init',function(spec,val,obj){
+        equal(obj._id,'Mickey');
+        equal(obj.x,7);
+        equal(obj.y,7);
+        equal(obj._version,'0eonago');
         start();
     });
+    var dlrepl = downlink.objects['/Mouse#Mickey'];
 
     // storage is async, waits a tick
     ok(!dlrepl.x);
@@ -136,8 +155,8 @@ asyncTest('Handshake 2 D pattern', function () {
 asyncTest('Handshake 3 Z pattern', function () {
     console.warn('Z pattern');
 
-    var storage = new DummyStorage();
-    var uplink = new Host('uplink~Z');
+    var storage = new DummyStorage(false);
+    var uplink = new Host('uplink~Z',0,storage);
     var downlink = new Host('downlink~Z');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
@@ -145,8 +164,9 @@ asyncTest('Handshake 3 Z pattern', function () {
     var oldMickeyState = {
         x:7,
         y:7,
+        _version: '!0eonago',
         _oplog:{
-            '!aeonago.set': {x:10,y:10}
+            '!1ail.set': {x:10,y:10}
         }
     };
     // ...
