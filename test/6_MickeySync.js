@@ -16,7 +16,7 @@ var Mouse = Model.extend('Mouse', {
         //name: FullName
     },
     // adapted to handle the $$move op
-    distillLog: function () {
+    TODO_distillLog: function () {
         // explain
         var sets = [], cumul = {}, heads = {};
         for(var spec in this._oplog)
@@ -62,11 +62,14 @@ function DummyStorage(async) {
 };
 DummyStorage.prototype.deliver = function (spec,value,src) {
     var ti = spec.filter('/#');
-    var obj = this.states[ti] || (this.states[ti]={_oplog:{},_logtail:{}});
+    //var obj = this.states[ti] || (this.states[ti]={_oplog:{},_logtail:{}});
+    var tail = this.tails[ti];
+    if (!tail)
+        this.tails[ti] = tail = {};
     var vm = spec.filter('!.');
-    if (vm in obj._oplog)
+    if (vm in tail)
         console.error('op replay @storage');
-    obj._logtail[vm] = value;
+    tail[vm] = value;
 };
 DummyStorage.prototype.on = function () {
     var spec, replica;
@@ -79,7 +82,16 @@ DummyStorage.prototype.on = function () {
     function reply () {
         var state = self.states[ti];
         // FIXME mimic diff; init has id, tail has it as well
-        state && replica.init(ti+'!'+state._version+'.init',state,self);
+        if (state) {
+            var response = {};
+            response['!'+state._version+'.init'] = state;
+            var tail = self.tails[ti];
+            if (tail)
+                for(var s in tail)
+                    response[s] = tail[s];
+            var clone = JSON.parse(JSON.stringify(response));
+            replica.deliver(ti,clone,self);
+        }
         replica.reon(ti,'!'+(state?state._version:'0'),self);
     }
     this.async ? setTimeout(reply,1) : reply();
@@ -195,36 +207,44 @@ asyncTest('Handshake 3 Z pattern', function () {
     var uplink = new Host('uplink~Z',0,storage);
     var downlink = new Host('downlink~Z');
     uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [uplink]};
+    downlink.availableUplinks = function () {return [storage]};
 
     var oldMickeyState = {
         x:7,
         y:7,
-        _version: '!0eonago',
+        _version: '0eonago',
         _oplog:{
         }
     };
     storage.states['/Mouse#Mickey'] = oldMickeyState;
     storage.tails['/Mouse#Mickey'] = 
         {
-            '!1ail.set': {x:10,y:10}
+            '!1ail.set': {y:10}
         };
 
     Swarm.localhost = downlink;
 
     var dlrepl = new Mouse('Mickey',oldMickeyState);
+    uplink.on('/Mouse#Mickey');
+    var uprepl = uplink.objects[dlrepl.spec()];
     // TODO additive op
     // start with set()
-    dlrepl.set({x:12,y:12});
+    dlrepl.set({x:12});
     //uprepl.move({x:1,y:1});
     //downrepl.move({x:1,y:1});
+    equal(uprepl.x,7);
+    equal(uprepl.y,10);
+    dlrepl.set({x:12});
 
+    downlink.availableUplinks = function () {return [uplink]};
+    console.warn('connect');
     uplink.on(downlink);
 
-    var uprepl = uplink.objects[dlrepl.spec()];
-    // must add moves
-    equal(uprepl.x,12);
+    // their respective changes must merge
     equal(dlrepl.x,12);
+    equal(dlrepl.y,10);
+    equal(uprepl.x,12);
+    equal(uprepl.y,10);
 
     start();
 
