@@ -15,7 +15,41 @@ var Mouse = Model.extend('Mouse', {
         y: 0
         //name: FullName
     },
+    // adapted to handle the $$move op
+    distillLog: function () {
+        // explain
+        var sets = [], cumul = {}, heads = {};
+        for(var spec in this._oplog)
+            if (Spec.get(spec,'.')==='.set')
+                sets.push(spec);
+        sets.sort();
+        for(var i=sets.length-1; i>=0; i--) {
+            var spec = sets[i], val = this._oplog[spec], notempty=false;
+            for(var key in val)
+                if (key in cumul)
+                    delete val[key];
+                else
+                    notempty = cumul[key] = true;
+            var source = new Spec(key).source();
+            notempty || (heads[source] && delete this._oplog[spec]);
+            heads[source] = true;
+        }
+        return cumul;
+    },
     $$move: function (spec,d) {
+        // To implement your own ops you must understand implications
+        // of partial order; in this case, if an op comes later than
+        // an op that overwrites it then we skip it.
+        var version = spec.version();
+        if (version<this._version) {
+            for(var opspec in this._oplog)
+                if (opspec>'!'+version) {
+                    var os = new Spec(opspec);
+                    if (os.method()==='set' && os.version()>version)
+                        return; // overwritten in the total order
+                }
+        }
+        // Q if set is late => move is overwritten!
         this.x += d.x||0;
         this.y += d.y||0;
     }
@@ -23,15 +57,16 @@ var Mouse = Model.extend('Mouse', {
 
 function DummyStorage(async) {
     this.async = !!async || false;
-    this.store = {};
+    this.states = {};
+    this.tails = {};
 };
 DummyStorage.prototype.deliver = function (spec,value,src) {
     var ti = spec.filter('/#');
-    var obj = this.store[ti] || (this.store[ti]={_oplog:{}});
+    var obj = this.states[ti] || (this.states[ti]={_oplog:{},_logtail:{}});
     var vm = spec.filter('!.');
     if (vm in obj._oplog)
         console.error('op replay @storage');
-    obj._oplog[vm] = value;
+    obj._logtail[vm] = value;
 };
 DummyStorage.prototype.on = function () {
     var spec, replica;
@@ -42,7 +77,8 @@ DummyStorage.prototype.on = function () {
         throw 'xxx';
     var ti = spec.filter('/#'), self=this;
     function reply () {
-        var state = self.store[ti];
+        var state = self.states[ti];
+        // FIXME mimic diff; init has id, tail has it as well
         state && replica.init(ti+'!'+state._version+'.init',state,self);
         replica.reon(ti,'!'+(state?state._version:'0'),self);
     }
@@ -83,7 +119,7 @@ asyncTest('Handshake 1 K pattern', function () {
         equal(obj.x,3);
         equal(obj.y,3);
         equal(obj._version,uprepl._version);
-        // TODO this happens later ok(storage.store[uprepl.spec()]);
+        // TODO this happens later ok(storage.states[uprepl.spec()]);
         start();
     });
     var dlrepl = downlink.objects[uprepl.spec()];
@@ -106,7 +142,7 @@ asyncTest('Handshake 2 D pattern', function () {
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
-    storage.store['/Mouse#Mickey'] = {
+    storage.states['/Mouse#Mickey'] = {
         x:7,
         y:7,
         _version: '0eonago',
@@ -166,21 +202,29 @@ asyncTest('Handshake 3 Z pattern', function () {
         y:7,
         _version: '!0eonago',
         _oplog:{
-            '!1ail.set': {x:10,y:10}
         }
     };
-    // ...
-    storage.store['/Mouse#Mickey'] = oldMickeyState;
-    var dlrepl = downlink.on('/Mouse#Mickey',oldMickeyState);
+    storage.states['/Mouse#Mickey'] = oldMickeyState;
+    storage.tails['/Mouse#Mickey'] = 
+        {
+            '!1ail.set': {x:10,y:10}
+        };
 
-    uprepl.move({x:1,y:1});
-    downrepl.move({x:1,y:1});
+    Swarm.localhost = downlink;
+
+    var dlrepl = new Mouse('Mickey',oldMickeyState);
+    // TODO additive op
+    // start with set()
+    dlrepl.set({x:12,y:12});
+    //uprepl.move({x:1,y:1});
+    //downrepl.move({x:1,y:1});
 
     uplink.on(downlink);
 
+    var uprepl = uplink.objects[dlrepl.spec()];
     // must add moves
     equal(uprepl.x,12);
-    equal(downrepl.x,12);
+    equal(dlrepl.x,12);
 
     start();
 
