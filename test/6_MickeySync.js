@@ -280,10 +280,10 @@ asyncTest('Handshake 4 R pattern', function () {
 });
 
 
-asyncTest('Handshake 5 A pattern', function () {
+test('Handshake 5 A pattern', function () {
     console.warn('A pattern');
 
-    var storage = new DummyStorage();
+    var storage = new DummyStorage(false);
     var uplink = new Host('uplink~A');
     var downlink = new Host('downlink~A');
     uplink.availableUplinks = function () {return [storage]};
@@ -291,16 +291,14 @@ asyncTest('Handshake 5 A pattern', function () {
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
-    var mickey = new Mouse('Mickey',{x:20,y:20});
-    var uprepl = uplink.on('/Mouse#Mickey');
-    var dlrepl = downlink.on('/Mouse#Mickey');
+    var mickey = new Mouse({x:20,y:20});
+    var uprepl = uplink.objects[mickey.spec()];
+    var dlrepl = downlink.objects[mickey.spec()];
 
     equal(uprepl.x,20);
     equal(uprepl.y,20);
     equal(dlrepl.x,20);
     equal(dlrepl.y,20);
-
-    start();
 
 });
 
