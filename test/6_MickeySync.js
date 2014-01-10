@@ -59,6 +59,7 @@ function DummyStorage(async) {
     this.async = !!async || false;
     this.states = {};
     this.tails = {};
+    this._id = 'dummy';
 };
 DummyStorage.prototype.deliver = function (spec,value,src) {
     var ti = spec.filter('/#');
@@ -96,6 +97,7 @@ DummyStorage.prototype.on = function () {
     }
     this.async ? setTimeout(reply,1) : reply();
 };
+
 DummyStorage.prototype.off = function (spec,value,src) {
 };
 DummyStorage.prototype.normalizeSignature = Syncable.prototype.normalizeSignature;
@@ -254,7 +256,7 @@ asyncTest('Handshake 3 Z pattern', function () {
 asyncTest('Handshake 4 R pattern', function () {
     console.warn('R pattern');
 
-    var storage = new DummyStorage();
+    var storage = new DummyStorage(false);
     var uplink = new Host('uplink~R');
     var downlink = new Host('downlink~R');
     uplink.availableUplinks = function () {return [storage]};
@@ -262,14 +264,14 @@ asyncTest('Handshake 4 R pattern', function () {
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
-    var dlrepl = downlink.on('/Mouse#Mickey',function(){
+    downlink.on('/Mouse#Mickey.init',function(spec,val,dlrepl){
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
         ok(!dlrepl._version);
 
         dlrepl.set({x:18,y:18});
-        uprepl = uplink.on('/Mouse#Mickey');
+        uprepl = uplink.objects['/Mouse#Mickey'];
         equal(uprepl.x,18);
 
         start();
