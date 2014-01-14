@@ -35,7 +35,7 @@ test('basic specifier syntax', function (test) {
     var testSpec = '/Class#ID!7Umum+gritzko.event';
     var spec = new Spec(testSpec);
     equal(spec.version(),'7Umum+gritzko');
-    equal(Spec.ext(spec.version()),'gritzko');
+    equal(spec.token('!').ext,'gritzko');
     var rev = spec.toString();
     equal(rev,testSpec);
     /*var time = '20130811192020';
@@ -50,17 +50,15 @@ test('basic specifier syntax', function (test) {
 test('version vector', function (){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
-    var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld';
+    var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
     var map = new Spec.Map(vec);
     ok(map.covers('7AM0f+gritzko'));
-    //ok(map.covers('gritzko','7AM0f'));
     ok(!map.covers('7AMTd+aleksisha'));
-    //ok(!map.covers('aleksisha','7AMTd'));
     ok(!map.covers('6AMTd+maxmaxmax'));
     ok(map.covers('0ld'));
     ok(!map.covers('0le'));
     equal(map.map['swarm'],'0ld');
-    //ok(!map.covers('maxmaxmax','6AMTd'));
+    ok(!('garbage' in map.map));
     equal(map.toString({rot:'6'}),'!7AMTc+aleksisha!7AM0f+gritzko');
     equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha');
 });
