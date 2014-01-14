@@ -206,23 +206,29 @@ asyncTest('Handshake 3 Z pattern', function () {
     console.warn('Z pattern');
 
     var storage = new DummyStorage(false);
+    var oldstorage = new DummyStorage(false);
     var uplink = new Host('uplink~Z',0,storage);
     var downlink = new Host('downlink~Z');
     uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [storage]};
+    downlink.availableUplinks = function () {return [oldstorage]};
 
     var oldMickeyState = {
         x:7,
         y:7,
         _version: '0eonago',
         _oplog:{
+            '!0eon+ago.set' : {y:7},
+            '!000ld+old.set': {x:7}
         }
     };
     storage.states['/Mouse#Mickey'] = oldMickeyState;
+    oldstorage.states['/Mouse#Mickey'] = oldMickeyState;
     storage.tails['/Mouse#Mickey'] = 
         {
-            '!1ail.set': {y:10}
+            '!1ail+old.set': {y:10}
         };
+    // TODO provide a vers vector to on()/reon(), test for it (3rd party in
+    // oplog?)
 
     Swarm.localhost = downlink;
 
@@ -236,7 +242,6 @@ asyncTest('Handshake 3 Z pattern', function () {
     //downrepl.move({x:1,y:1});
     equal(uprepl.x,7);
     equal(uprepl.y,10);
-    dlrepl.set({x:12});
 
     downlink.availableUplinks = function () {return [uplink]};
     console.warn('connect');
@@ -270,7 +275,7 @@ asyncTest('Handshake 4 R pattern', function () {
         ok(!dlrepl.y);
         ok(!dlrepl._version);
 
-        dlrepl.set({x:18,y:18});
+        dlrepl.set({x:18,y:18}); // FIXME this is not R
         uprepl = uplink.objects['/Mouse#Mickey'];
         equal(uprepl.x,18);
 
@@ -294,7 +299,7 @@ test('Handshake 5 A pattern', function () {
     var mickey = new Mouse({x:20,y:20});
     var uprepl = uplink.objects[mickey.spec()];
     var dlrepl = downlink.objects[mickey.spec()];
-
+    // FIXME no value push; this is R actually
     equal(uprepl.x,20);
     equal(uprepl.y,20);
     equal(dlrepl.x,20);
