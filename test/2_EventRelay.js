@@ -249,7 +249,7 @@ test('2.i batched set',function (test) {
         height: '60cm'
     });
     ok(Math.abs(nameless.height.meters-0.6)<0.0001);
-    equal(nameless.age(),1);
+    equal(nameless.age,1);
     ok(!nameless.canDrink());
     
 });
