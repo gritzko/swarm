@@ -230,7 +230,7 @@ test('2.g custom field type',function (test) {
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
     var vid = host.version();
-    host.deliver('/Duck#huey!'+vid+'.set',{height:'35cm'});
+    host.deliver(new Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
     ok(Math.abs(huey.height.meters-0.35)<0.0001);
 });
 
