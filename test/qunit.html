@@ -3,6 +3,7 @@
   <meta charset="utf-8">
   <title>QUnit basic example</title>
   <link rel="stylesheet" href="../node_modules/qunit/support/qunit/qunit/qunit.css">
+  <!--script src="../node_modules/underscore/underscore.js"></script-->
   <script src="../node_modules/qunit/support/qunit/qunit/qunit.js"></script>
   <script src="../lib/murmurhash3_gc.js"></script>
   <script src="../lib/swarm3.js"></script>
@@ -12,11 +13,13 @@
 <body>
   <div id="qunit"></div>
   <div id="qunit-fixture"></div>
+  <script src='0_routines.js'>
+  </script>
   <script src='1_Spec.js'>
   </script>
-  <!--script src='2_EventRelay.js'>
+  <script src='2_EventRelay.js'>
   </script>
-  <script src='3_OnOff.js'>
+  <!--script src='3_OnOff.js'>
   </script>
   <script src='4_handshake.js'>
   </script>

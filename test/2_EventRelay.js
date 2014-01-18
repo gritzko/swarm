@@ -6,7 +6,7 @@
  */
 
 if (typeof require == 'function') {
-    var swrm = require('../lib/swarm2.js');
+    var swrm = require('../lib/swarm3.js');
     Spec = swrm.Spec;
     Swarm = swrm.Swarm;
     Model = swrm.Model;
@@ -45,6 +45,7 @@ if (typeof require == 'function') {
 //             then, load() is part of init()?
 //    x ROOT   when using this.store() we need access to the root anyway
 //    v METHOD Model.store = function () { sql.update() }
+//    v METHOD listeners in model: better encapsulation
 // V 2 there is nothing bad in caching everything you get
 // V 3 stubs only have _lstn[], right?
 //
@@ -72,206 +73,191 @@ if (typeof require == 'function') {
 // X B specifier as a label stack (_parent, spec.push/pop/unshift/shift)
 //    v a this._parent
 
-function NumberField (id,v,p) {
-    this.init(id,v,p);
-}
-Field.extend(NumberField,{
-    validate: function (spec,val) {
-        return typeof(val)==='number';
-    }
-});
+MetricLengthField.metricRe = /(\d+)(mm|cm|m|km)?/g;  // "1m and 10cm"
+MetricLengthField.scale = { m:1, cm:0.01, mm:0.001, km:1000 };
 
-function MetricLengthField (id,v,p) {
-    this.init(id,v,p);
-}
-Field.extend(MetricLengthField,{
-    metricRe: /(\d+)(mm|cm|m|km)?/g,
-    scale: { m:1, cm:0.01, mm:0.001, km:1000 },
-    set: function (spec,value) {
-        // convert mm cm m km
-        if (typeof(value)==='number') {
-            this._value = value;
-        } else {
-            value = value.toString();
-            var m=[], meters=0;
-            while (m=this.metricRe.exec(value)) {
-                var unit = m[2] ? this.scale[m[2]] : 1;
-                meters += parseInt(m[1]) * unit;
-            }
-            this._value = meters;
+function MetricLengthField (value) {
+    // convert mm cm m km
+    if (typeof(value)==='number') {
+        this.meters = value;
+    } else {
+        value = value.toString();
+        this.meters=0;
+        var m=[], scale=MetricLengthField.scale;
+        MetricLengthField.metricRe.lastIndex = 0;
+        while (m=MetricLengthField.metricRe.exec(value)) {
+            var unit = m[2] ? scale[m[2]] : 1;
+            this.meters += parseInt(m[1]) * unit;
         }
-        this._version = spec.version;
-    },
-    validate: function (spec,val) {
-        return typeof(val)==='number' || 
-            !val.toString().replace(this.metricRe,'');
-    },
-    toString: function () {
     }
-});
+};
+MetricLengthField.prototype.add = function () {
+    
+};
+// .pojo() invokes (entry.toJSON&&entry.toJSON()) || entry.toString()
+MetricLengthField.prototype.toString = function () {
+    var m = this.meters, ret='';
+    for(var i=0; i<MetricLengthField.scaleArray.length; i++) {
+        var unit = MetricLengthField.scaleArray[i],
+            scale= MetricLengthField.scale[i];
+        var wholeUnits = Math.ceil(m/scale);
+        if (wholeUnits>=1)
+            ret += wholeUnits+unit;
+        m -= wholeUnits*scale;
+    }
+    return ret;
+};
+
 
 // Duck is our core testing class :)
-function Duck (id,vals,parent) {
-    this.init(id,vals,parent);
-    // mood is mutated by a logged method
-    this.mood = this.mood||'neutral'; // TODO nicer
-};
-
-// Simply a regular convenience method
-Duck.prototype.canDrink = function () {
-    return this.age() >= 18;
-};
-
-
-Model.extend(Duck);
-Swarm.addType(Duck);  // Model by default 
-
-Duck.addProperty('age',0,NumberField);
-Duck.addProperty('height','5cm',MetricLengthField);
-Duck.addMethod(function grow(cm){});
-Duck.addCall(function reportAge(){});
-Duck.addCall('reportAge');
-
-/*function Nest (id,vals) {
-    this.init(id,vals);
-}*/
-
-var Nest = Set.extend('Nest');//Nest);
-Swarm.addType(Nest);
-Nest.setReferenceType(Duck);
-
-
-if (Swarm.root)
-    Swarm.root.close();
-
-var root = new Swarm('gritzko');
-
-
-test('basic listener func', function (test) {
-    expect(4);
-    // construct an object with an id provided; it will try to fetch
-    // previously saved state for the id (which is none)
-    var huey = Swarm.root.descendant('/Duck#huey');
-    // listen to a field
-    huey.on('age',function lsfn(spec,val){
-        equal(val,1);
-        // spec is a compund identifier;
-        // field name is mentioned as 'member'
-        equal(spec.member,'age');
-        equal(spec.toString(),'/Duck#huey.age!'+spec.version+'*set');
-        equal(Spec.ext(spec.version),'gritzko');
-        huey.off('age',lsfn);
-    });
-    huey.age(1);
+var Duck = Swarm.Model.extend('Duck',{
+    dafaults: {
+        age: 0,
+        height: {type:MetricLengthField,value:'3cm'},
+        mood: 'neutral'
+    },
+    // Simply a regular convenience method
+    canDrink: function () {
+        return this.age >= 18; // Russia
+    },
+    validate: function (spec,val) {
+        if (spec.method()==='set' && val.height)
+        throw new Error("can't set height, may only grow");
+    },
+    $$grow: function (spec,by,src) {
+        this.height = this.height.add(by);
+    }
 });
 
-test('create-by-id', function (test) {
+var Nest = Swarm.Set.extend('Nest',{
+    entryType: Duck
+});
+
+var storage = new DummyStorage(false);
+var host = Swarm.localhost = new Host('gritzko',0,storage);
+host.availableUplinks = function () {return [storage]};
+
+test('2.a basic listener func', function (test) {
+    expect(5);
+    // construct an object with an id provided; it will try to fetch
+    // previously saved state for the id (which is none)
+    var huey = host.get('/Duck#huey');
+    // listen to a field
+    huey.on('age',function lsfn(spec,val){
+        equal(val.age,1);
+        equal(spec.method(),'set');
+        equal(spec.toString(),'/Duck#huey!'+spec.version()+'.set');
+        var version = spec.token('!');
+        equal(version.ext,'gritzko');
+        huey.off('age',lsfn);
+        equal(huey._lstn.length,1); // only the uplink remains
+    });
+    huey.set({age:1});
+});
+
+test('2.b create-by-id', function (test) {
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
     // will throw an exception
     var dewey1 = new Duck('dewey');
     // that's we resort to descendant() doing find-or-create
-    var dewey2 = Swarm.root.descendant('/Duck#dewey');
+    var dewey2 = host.get('/Duck#dewey');
     // must be the same object
     strictEqual(dewey1,dewey2);
-    equal(dewey1.scope().type,'Duck');
+    equal(dewey1.spec().type(),'Duck');
 });
 
 
-test('version ids', function (test) {
+test('2.c version ids', function (test) {
     var louie = new Duck('louie');
-    var ts1 = Spec.newVersion();
-    louie.age(3);
-    var ts2 = Spec.newVersion();
+    var ts1 = host.version();
+    louie.set({age:3});
+    var ts2 = host.version();
     ok(ts2>ts1);
-    var vid = louie._children.age._version;
+    var vid = louie._version;
     ok(ts1<vid);
     ok(ts2>vid);
 });
 
-/* TODO replica boot is the key usecase
-test('',function (test) {
-    var dewey = Duck.descendant('dewey');
-    var json = dewey.toJSON();
+test('2.d pojos',function (test) {
+    var dewey = host.get('/Duck#dewey');
+    var json = dewey.pojo();
     var duckJSON = {
         mood: "neutral", 
-        properties: {
-            age: 0
-        }
+        age: 0,
+        height: '3cm'
     };
     deepEqual(json,duckJSON);
-    
-});*/
+});
 
-/*test('',function (test) {
-    var huey = Duck.descendant('huey');
+test('2.e reactions',function (test) {
+    var huey = host.get('/Duck#huey');
     expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
         console.log('yupee im growing');
         equal(val,1);
     });
-    Spec.freeze();
-    var vid = Spec.newVersion();
-    huey.set('/Duck#huey.age!'+vid,1);
-    equal(huey._children.age.version,vid);
-    Spec.thaw();
-    
+    var version = host.version(), sp = '!'+version+'.set';
+    huey.deliver({sp:{age:1}}); // ~ set{}
     Duck.removeReaction('age',handle);
-});*/
+});
 
-test('once',function (test) {
-    var huey = Swarm.root.descendant('/Duck#huey');
+test('2.f once',function (test) {
+    var huey = host.get('/Duck#huey');
     expect(1);
     huey.once('age',function(spec,value){
-        equal(value,4);
+        equal(value.age,4);
     });
     huey.age(4);
     huey.age(5);
 });
 
-test('custom field type',function (test) {
-    var huey = Swarm.root.descendant('/Duck#huey');
-    huey.height('32cm');
-    ok(Math.abs(huey.height()-0.32)<0.0001);
-    Swarm.root.set('/Duck#huey.height','35cm');
-    ok(Math.abs(huey.height()-0.35)<0.0001);
-    
+test('2.g custom field type',function (test) {
+    var huey = host.get('/Duck#huey');
+    huey.set({height:'32cm'});
+    ok(Math.abs(huey.height.meters-0.32)<0.0001);
+    var vid = host.version();
+    host.deliver('/Duck#huey!'+vid+'.set',{height:'35cm'});
+    ok(Math.abs(huey.height.meters-0.35)<0.0001);
 });
 
-test('vid freeze',function (test) {
-    Spec.freeze();
-    var factoryBorn = new Duck({'.age':0,'.height':'4cm'});
-    equal(factoryBorn._id,Spec.frozen);
-    Spec.thaw();
-    ok(Math.abs(factoryBorn.height()-0.04)<0.0001);
-    equal(factoryBorn.age(),0);
-    
+test('2.h state init',function (test) {
+    var factoryBorn = new Duck({age:0,height:'4cm'});
+    ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
+    equal(factoryBorn.age,0);
 });
 
-test('batched property set',function (test) {
+test('2.i batched set',function (test) {
     var nameless = new Duck();
     nameless.set({
-        '.age':1,
-        '.height': '60cm'
+        age:1,
+        height: '60cm'
     });
-    ok(Math.abs(nameless.height()-0.6)<0.0001);
+    ok(Math.abs(nameless.height.meters-0.6)<0.0001);
     equal(nameless.age(),1);
-    equal(nameless._children.age.version,nameless._children.height.version);
     ok(!nameless.canDrink());
     
 });
 
-test('basic Set func',function (test) {
-    var hueyClone = new Duck({'.age':2});
-    var deweyClone = new Duck({'.age':1});
-    var louieClone = new Duck({'.age':3});
-    var donalds = new Nest('donalds',{'.3rd':deweyClone._id,'.2nd':hueyClone._id});
+test('2.j basic Set functions (string index)',function (test) {
+    var hueyClone = new Duck({age:2});
+    var deweyClone = new Duck({age:1});
+    var louieClone = new Duck({age:3});
+    var donalds = new Nest('donalds',{'3rd':deweyClone._id,'2nd':hueyClone._id});
     var dewey2 = donalds.get('3rd');
     ok(deweyClone===dewey2);
-    equal(dewey2.age(),1);
-    donalds.set('1st',louieClone._id);
+    equal(dewey2.age,1);
+    donalds.add('1st',louieClone._id);
     var l2 = donalds.get('1st');
-    //equal(l2.get('age'),3); TODO
-    equal(l2.age(),3);
-    
+    equal(l2.age,3);
+    donalds.add('louie');
+    var realLouie = donalds.get('louie'); // item type is fixed so not /Duck#louie
+    equal(realLouie._id,'louie');
+    donalds.remove('/Duck#louie'); // must resolve that
+    var collection = donalds.collection();
+    equal(collection.length,3);
+    equal(collection[0]._id, 'louie');
+    equal(collection[1]._id, 'huey');
+    equal(collection[2]._id, 'dewey');
 });
+
