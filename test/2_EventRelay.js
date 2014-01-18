@@ -217,11 +217,11 @@ test('2.f once',function (test) {
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(1);
-    huey.once('age',function(spec,value){
+    huey.once('age',function onceAgeCb(spec,value){
         equal(value.age,4);
     });
-    huey.age(4);
-    huey.age(5);
+    huey.set({age:4});
+    huey.set({age:5});
 });
 
 test('2.g custom field type',function (test) {
