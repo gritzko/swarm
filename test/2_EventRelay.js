@@ -75,6 +75,7 @@ if (typeof require == 'function') {
 
 MetricLengthField.metricRe = /(\d+)(mm|cm|m|km)?/g;  // "1m and 10cm"
 MetricLengthField.scale = { m:1, cm:0.01, mm:0.001, km:1000 };
+MetricLengthField.scaleArray = ['km','m','cm','mm'];
 
 function MetricLengthField (value) {
     // convert mm cm m km
@@ -96,11 +97,11 @@ MetricLengthField.prototype.add = function () {
 };
 // .pojo() invokes (entry.toJSON&&entry.toJSON()) || entry.toString()
 MetricLengthField.prototype.toString = function () {
-    var m = this.meters, ret='';
-    for(var i=0; i<MetricLengthField.scaleArray.length; i++) {
-        var unit = MetricLengthField.scaleArray[i],
-            scale= MetricLengthField.scale[i];
-        var wholeUnits = Math.ceil(m/scale);
+    var m = this.meters, ret='', scar = MetricLengthField.scaleArray;
+    for(var i=0; i<scar.length; i++) {
+        var unit = scar[i],
+            scale= MetricLengthField.scale[unit];
+        var wholeUnits = Math.floor(m/scale);
         if (wholeUnits>=1)
             ret += wholeUnits+unit;
         m -= wholeUnits*scale;
@@ -111,7 +112,7 @@ MetricLengthField.prototype.toString = function () {
 
 // Duck is our core testing class :)
 var Duck = Swarm.Model.extend('Duck',{
-    dafaults: {
+    defaults: {
         age: 0,
         height: {type:MetricLengthField,value:'3cm'},
         mood: 'neutral'
@@ -138,6 +139,7 @@ var host = Swarm.localhost = new Host('gritzko',0,storage);
 host.availableUplinks = function () {return [storage]};
 
 test('2.a basic listener func', function (test) {
+    Swarm.localhost = host;
     expect(5);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
@@ -156,6 +158,7 @@ test('2.a basic listener func', function (test) {
 });
 
 test('2.b create-by-id', function (test) {
+    Swarm.localhost = host;
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
     // will throw an exception
@@ -169,6 +172,7 @@ test('2.b create-by-id', function (test) {
 
 
 test('2.c version ids', function (test) {
+    Swarm.localhost = host;
     var louie = new Duck('louie');
     var ts1 = host.version();
     louie.set({age:3});
@@ -177,10 +181,12 @@ test('2.c version ids', function (test) {
     var vid = louie._version;
     ok(ts1<vid);
     ok(ts2>vid);
+    console.log(ts1,vid,ts2);
 });
 
 test('2.d pojos',function (test) {
-    var dewey = host.get('/Duck#dewey');
+    Swarm.localhost = host;
+    var dewey = new Duck({age:0});
     var json = dewey.pojo();
     var duckJSON = {
         mood: "neutral", 
@@ -191,6 +197,7 @@ test('2.d pojos',function (test) {
 });
 
 test('2.e reactions',function (test) {
+    Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(2);
     var handle = Duck.addReaction('age', function reaction(spec,val) {
@@ -203,6 +210,7 @@ test('2.e reactions',function (test) {
 });
 
 test('2.f once',function (test) {
+    Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(1);
     huey.once('age',function(spec,value){
@@ -213,6 +221,7 @@ test('2.f once',function (test) {
 });
 
 test('2.g custom field type',function (test) {
+    Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
@@ -222,12 +231,14 @@ test('2.g custom field type',function (test) {
 });
 
 test('2.h state init',function (test) {
+    Swarm.localhost = host;
     var factoryBorn = new Duck({age:0,height:'4cm'});
     ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
     equal(factoryBorn.age,0);
 });
 
 test('2.i batched set',function (test) {
+    Swarm.localhost = host;
     var nameless = new Duck();
     nameless.set({
         age:1,
@@ -240,6 +251,7 @@ test('2.i batched set',function (test) {
 });
 
 test('2.j basic Set functions (string index)',function (test) {
+    Swarm.localhost = host;
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});

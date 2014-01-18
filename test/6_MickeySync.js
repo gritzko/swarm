@@ -10,7 +10,7 @@ FullName.prototype.toString = function () {
 }
 
 var Mouse = Model.extend('Mouse', {
-    default: {
+    defaults: {
         x: 0,
         y: 0
         //name: FullName
