@@ -145,7 +145,7 @@ test('2.a basic listener func', function (test) {
     // previously saved state for the id (which is none)
     var huey = host.get('/Duck#huey');
     // listen to a field
-    huey.on('age',function lsfn(spec,val){
+    huey.on('age',function lsfn(spec,val){  // FIXME: filtered .set listener!!!
         equal(val.age,1);
         equal(spec.method(),'set');
         equal(spec.toString(),'/Duck#huey!'+spec.version()+'.set');
@@ -200,14 +200,18 @@ test('2.e reactions',function (test) {
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(2);
-    var handle = Duck.addReaction('age', function reaction(spec,val) {
+    var handle = Duck.addReaction('age', function reactionFn(spec,val) {
         console.log('yupee im growing');
-        equal(val,1);
+        equal(val.age,1);
     });
-    var version = host.version(), sp = '!'+version+'.set';
-    huey.deliver({sp:{age:1}}); // ~ set{}
-    Duck.removeReaction('age',handle);
+    var version = host.version(), sp = '!'+version+'.set', batch = {};
+    batch[sp] = {age:1};
+    huey.deliver(huey.spec(), batch); // ~ set{}
+    Duck.removeReaction(handle);
+    equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
 });
+
+// TODO $$event listener/reaction (Model.on: 'key' > .set && key check)
 
 test('2.f once',function (test) {
     Swarm.localhost = host;
