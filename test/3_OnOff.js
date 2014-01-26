@@ -44,4 +44,3 @@ asyncTest('3.a serialized on, reon', function (){
 
     Swarm.localhost = uplink;  
 });
-
