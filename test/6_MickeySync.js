@@ -57,8 +57,8 @@ var Mouse = Model.extend('Mouse', {
 
 //    S O  I T  F I T S
 
-asyncTest('Handshake 1 K pattern', function () {
-    console.warn('K pattern');
+asyncTest('6.a Handshake K pattern', function () {
+    console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(true);
     // FIXME pass storage to Host
@@ -96,8 +96,8 @@ asyncTest('Handshake 1 K pattern', function () {
 });
 
 
-asyncTest('Handshake 2 D pattern', function () {
-    console.warn('D pattern');
+asyncTest('6.b Handshake D pattern', function () {
+    console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(true);
     var uplink = new Host('uplink~D',storage);
@@ -153,8 +153,8 @@ asyncTest('Handshake 2 D pattern', function () {
 });
 
 
-asyncTest('Handshake 3 Z pattern', function () {
-    console.warn('Z pattern');
+asyncTest('6.c Handshake Z pattern', function () {
+    console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
     var oldstorage = new DummyStorage(false);
@@ -209,8 +209,8 @@ asyncTest('Handshake 3 Z pattern', function () {
 });
 
 
-asyncTest('Handshake 4 R pattern', function () {
-    console.warn('R pattern');
+asyncTest('6.d Handshake R pattern', function () {
+    console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
     var uplink = new Host('uplink~R');
@@ -236,8 +236,8 @@ asyncTest('Handshake 4 R pattern', function () {
 });
 
 
-test('Handshake 5 A pattern', function () {
-    console.warn('A pattern');
+test('6.e Handshake A pattern', function () {
+    console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
     var uplink = new Host('uplink~A');

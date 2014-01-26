@@ -18,10 +18,12 @@ var Thermometer = Model.extend('Thermometer',{
 });
 
 
-asyncTest('serialized on, reon', function (){
+asyncTest('3.a serialized on, reon', function (){
+    console.warn(QUnit.config.current.testName);
     var storage = new DummyStorage(false);
     var uplink = new Host('swarm~A',0,storage);
     var downlink = new Host('client~B');
+    uplink.availableUplinks = function () {return [storage]};
     
     var conn = new AsyncLoopbackConnection();
     
@@ -35,9 +37,10 @@ asyncTest('serialized on, reon', function (){
     
     setTimeout(function x(){
         var o = uplink.objects['/Thermometer#room'];
-        ok(o) && test(o.t,22);
+        ok(o);
+        o && equal(o.t,22);
         start();
-    },25);
+    },250);
 
     Swarm.localhost = uplink;  
 });

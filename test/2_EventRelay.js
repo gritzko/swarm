@@ -139,6 +139,7 @@ var host = Swarm.localhost = new Host('gritzko',0,storage);
 host.availableUplinks = function () {return [storage]};
 
 test('2.a basic listener func', function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     expect(5);
     // construct an object with an id provided; it will try to fetch
@@ -158,6 +159,7 @@ test('2.a basic listener func', function (test) {
 });
 
 test('2.b create-by-id', function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
@@ -172,6 +174,7 @@ test('2.b create-by-id', function (test) {
 
 
 test('2.c version ids', function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var louie = new Duck('louie');
     var ts1 = host.version();
@@ -185,6 +188,7 @@ test('2.c version ids', function (test) {
 });
 
 test('2.d pojos',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var dewey = new Duck({age:0});
     var json = dewey.pojo();
@@ -197,6 +201,7 @@ test('2.d pojos',function (test) {
 });
 
 test('2.e reactions',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(2);
@@ -214,6 +219,7 @@ test('2.e reactions',function (test) {
 // TODO $$event listener/reaction (Model.on: 'key' > .set && key check)
 
 test('2.f once',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     expect(1);
@@ -225,6 +231,7 @@ test('2.f once',function (test) {
 });
 
 test('2.g custom field type',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
     huey.set({height:'32cm'});
@@ -235,6 +242,7 @@ test('2.g custom field type',function (test) {
 });
 
 test('2.h state init',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var factoryBorn = new Duck({age:0,height:'4cm'});
     ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
@@ -242,6 +250,7 @@ test('2.h state init',function (test) {
 });
 
 test('2.i batched set',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var nameless = new Duck();
     nameless.set({
@@ -255,6 +264,7 @@ test('2.i batched set',function (test) {
 });
 
 test('2.j basic Set functions (string index)',function (test) {
+    console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
