@@ -9,80 +9,36 @@ if (typeof require == 'function') {
     exports = this.testEventRelay = {};
 }
 
-//   IMPLEMENTATION PIPELINE
-//
-// v 1 bare objects: on/off, version, diff
-//   2 
 
 
-function ShortPipe (a,b) {
-    this.a = a;
-    this.b = b;
-    this.on(b.scope(),b.version(),b);
-};
-
-ShortPipe.prototype.close = function () {
-    this.off(this.b.scope(),this.b.version(),this.b);
-};
-
-ShortPipe.prototype.deliver = function (spec,val,lstn) {
-    var dest = lstn===this.a?this.b:this.a;
-    spec.id = dest._id;
-    console.log('>'+dest._id,spec,val);
-    dest.deliver(spec,val,this);
-};
-
-ShortPipe.prototype.on  = function (spec,val,lstn) {
-    spec.action = 'on';
-    this.deliver(spec,val,lstn);
-};
-ShortPipe.prototype.reOn  = function (spec,val,lstn) {
-    spec.action = 'reOn';
-    this.deliver(spec,val,lstn);
-};
-ShortPipe.prototype.off  = function (spec,val,lstn) {
-    spec.action = 'off';
-    this.deliver(spec,val,lstn);
-};
-ShortPipe.prototype.reOff  = function (spec,val,lstn) {
-    spec.action = 'reOff';
-    this.deliver(spec,val,lstn);
-};
-ShortPipe.prototype.set  = function (spec,val,lstn) {
-    spec.action = 'set';
-    this.deliver(spec,val,lstn);
-};
+var Thermometer = Model.extend('Thermometer',{
+    defaults: {
+        t: -20 // Russia :)
+    }
+});
 
 
-if (Swarm.root)
-    Swarm.root.close();
-var root = new Swarm('gritzko');
+asyncTest('serialized on, reon', function (){
+    var storage = new DummyStorage(false);
+    var uplink = new Host('swarm~A',0,storage);
+    var downlink = new Host('client~B');
+    
+    var conn = new AsyncLoopbackConnection();
+    
+    var upperPipe = new Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+    var lowerPipe = new Pipe(downlink,conn,{});
+    downlink.connect(lowerPipe); // lowerPipe.on(this) basically
+    
+    downlink.on('/Thermometer#room.init',function i(spec,val,obj){
+        obj.set({t:22});
+    });
+    
+    setTimeout(function x(){
+        var o = uplink.objects['/Thermometer#room'];
+        ok(o) && test(o.t,22);
+        start();
+    },25);
 
-function Thermometer (id) {
-    this.init(id);
-};
-
-Model.extend(Thermometer);
-Thermometer.addProperty('t');
-Swarm.addType(Thermometer);
-
-test('on, reciprocal on', function () {
-    var a = new Thermometer('apartment');
-    var b = new Thermometer('balcony');
-    a.t(25);
-    b.t(15);
-    var pipe = new ShortPipe(a,b); // open the door :)
-    equal(a.t(),15);
-    equal(b.t(),15);
-    a.t(20);
-    equal(a.t(),20);
-    equal(b.t(),20);
-    b.t(21);
-    equal(a.t(),21);
-    equal(b.t(),21);
-    pipe.close();
-    a.t(22);
-    equal(a.t(),22);
-    equal(b.t(),21);
+    Swarm.localhost = uplink;  
 });
 

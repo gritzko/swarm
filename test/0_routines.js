@@ -46,3 +46,36 @@ DummyStorage.prototype.off = function (spec,value,src) {
 DummyStorage.prototype.normalizeSignature = Syncable.prototype.normalizeSignature;
 
 Swarm.debug = true;
+
+
+function AsyncLoopbackConnection (pair) {
+    this.pair = pair || new AsyncLoopbackConnection(this);
+    this.ln = null;
+    this.queue = [];
+};
+AsyncLoopbackConnection.prototype.on = function (event,ln) {
+    if (event==='data')
+        this.ln = ln;
+};
+AsyncLoopbackConnection.prototype.receive = function (string) {
+    this.ln(string);
+};
+AsyncLoopbackConnection.prototype.send = function (obj) {
+    var self = this;
+    /*if (this.queue)
+        this.queue.push(obj.toString());
+    else*/
+    setTimeout(function(){
+        self.pair.receive(obj.toString());
+    },1);
+};
+/*AsyncLoopbackConnection.prototype.release = function () {
+    while (this.queue.length)
+        this.pair.receive(this.queue.shift());
+    this.queue = null;
+}*/
+AsyncLoopbackConnection.prototype.close = function () {
+    var other = this.pair;
+    this.pair = null;
+    other&&other.close();
+};
