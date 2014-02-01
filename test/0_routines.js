@@ -51,31 +51,34 @@ Swarm.debug = true;
 function AsyncLoopbackConnection (pair) {
     this.pair = pair || new AsyncLoopbackConnection(this);
     this.ln = null;
+    this.cl = null;
     this.queue = [];
 };
+
 AsyncLoopbackConnection.prototype.on = function (event,ln) {
     if (event==='data')
         this.ln = ln;
+    else if (event==='close')
+        this.cl = ln;
 };
+
 AsyncLoopbackConnection.prototype.receive = function (string) {
     this.ln(string);
 };
+
 AsyncLoopbackConnection.prototype.send = function (obj) {
     var self = this;
     /*if (this.queue)
         this.queue.push(obj.toString());
     else*/
     setTimeout(function(){
-        self.pair.receive(obj.toString());
+        self.pair && self.pair.receive(obj.toString());
     },1);
 };
-/*AsyncLoopbackConnection.prototype.release = function () {
-    while (this.queue.length)
-        this.pair.receive(this.queue.shift());
-    this.queue = null;
-}*/
+
 AsyncLoopbackConnection.prototype.close = function () {
     var other = this.pair;
     this.pair = null;
-    other&&other.close();
+    other && other.close();
+    other && this.cl && this.cl();
 };
