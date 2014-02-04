@@ -290,3 +290,24 @@ test('2.j basic Set functions (string index)',function (test) {
     equal(collection[1]._id, hueyClone._id);
 });
 
+test('2.k distilled log', function (test) {
+    function logSize(obj) {
+        var log = obj._oplog, cnt=0;
+        for(var key in log) cnt++;
+        return cnt;
+    }
+    console.warn(QUnit.config.current.testName);
+    Swarm.localhost = host;
+    var duckling1 = host.get(Duck);
+    duckling1.set({age:1});
+    duckling1.set({age:2});
+    duckling1.distillLog();
+    equal(logSize(duckling1),1);
+    duckling1.set({height:'30cm',age:3});
+    duckling1.set({height:'40cm',age:4});
+    duckling1.distillLog();
+    equal(logSize(duckling1),1);
+    duckling1.set({age:5});
+    duckling1.distillLog();
+    equal(logSize(duckling1),2);
+});
