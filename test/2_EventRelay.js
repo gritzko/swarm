@@ -311,3 +311,11 @@ test('2.k distilled log', function (test) {
     duckling1.distillLog();
     equal(logSize(duckling1),2);
 });
+
+test('2.l partial order', function (test) {
+    Swarm.localhost = host;
+    var duckling = new Duck();
+    duckling.deliver(new Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
+    duckling.deliver(new Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
+    equal(duckling.height.toString(), '2cm');
+});
