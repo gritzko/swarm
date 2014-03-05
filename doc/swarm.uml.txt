@@ -1,0 +1,137 @@
+scale 1200 width
+left to right direction
+
+@startuml
+
+package util {
+
+class Spec {
+    + value
+    + index
+    --
+    filter(quants)
+    pattern()
+    sort()
+    get(quant)
+    has(quant)
+    ..
+    token(quant) : quant
+    version()
+    method()
+    type()
+    id()
+    source()
+    ..
+    add(spec,quant)
+    toString()
+}
+class "Spec.Map" {
+    + map: {}
+
+    + add(versionVector)
+    + covers(version)
+    + toString(trim)
+}
+
+class "(quant)" as qq {
+    +quant
+    +body
+    +bare
+    +ext
+}
+
+Spec .> qq
+
+}
+
+package model {
+
+interface Syncable {
+    - _lstn[]
+    - _id
+    - _version
+    - _host
+
+    + spec()
+    + version()
+    + deliver(spec,val,lstn)
+    + diff(base)
+    + apply(values)
+    + validateOrder()
+    + acl()
+    + validate()
+
+    + checkUplink()
+    + close()
+    + gc()
+    + log()
+
+    ~ init()
+    ~ default()
+    ~ err()
+
+    - emit(spec,val,src)
+    - on()
+    - reon()
+    - once()
+    - off()
+    - reoff()
+}
+
+class Model {
+    - _oplog
+
+    + diff()
+    + packState(state)
+    + unpackState(state)
+    + distillLog()
+    + pojo()
+    + fill()
+    + save()
+
+    ~ init()
+    # set()
+
+    - on()
+    - off()
+}
+
+class Set {
+    + get(key)
+    + add(key,spec)
+    + remove(key)
+    + fillAll()
+    + collection()
+}
+
+class Host {
+    + objects: {};
+    + lastTs;
+    + tsSeq;
+    + clockOffset;
+    + peers: {};
+
+    + connect(host)
+    + checkUplink(spec)
+
+    + version()
+    + deliver()
+    + availableUplinks(spec)
+    + get(spec)
+    + register(obj)
+    + unregister(obj)
+
+    - init()
+    - on()
+    - reon()
+    - off()
+    - reoff()
+}
+
+Model -up-|> Syncable
+Set -up|> Model
+Host -left|> Syncable
+
+}
+
+@enduml
