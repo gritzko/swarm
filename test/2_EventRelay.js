@@ -135,7 +135,7 @@ var Nest = Swarm.Set.extend('Nest',{
 });
 
 var storage = new DummyStorage(false);
-var host = Swarm.localhost = new Host('gritzko',0,storage);
+var host = Swarm.localhost = new Swarm.Host('gritzko',0,storage);
 host.availableUplinks = function () {return [storage]};
 
 test('2.a basic listener func', function (test) {
@@ -237,7 +237,7 @@ test('2.g custom field type',function (test) {
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
     var vid = host.version();
-    host.deliver(new Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
+    host.deliver(new Swarm.Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
     ok(Math.abs(huey.height.meters-0.35)<0.0001);
 });
 
@@ -315,7 +315,7 @@ test('2.k distilled log', function (test) {
 test('2.l partial order', function (test) {
     Swarm.localhost = host;
     var duckling = new Duck();
-    duckling.deliver(new Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
-    duckling.deliver(new Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
+    duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
+    duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
     equal(duckling.height.toString(), '2cm');
 });

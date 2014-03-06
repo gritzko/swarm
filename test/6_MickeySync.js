@@ -9,7 +9,7 @@ FullName.prototype.toString = function () {
     return this.first + ' ' + this.last;
 }
 
-var Mouse = Model.extend('Mouse', {
+var Mouse = Swarm.Model.extend('Mouse', {
     defaults: {
         x: 0,
         y: 0
@@ -30,7 +30,7 @@ var Mouse = Model.extend('Mouse', {
                     delete val[key];
                 else
                     notempty = cumul[key] = true;
-            var source = new Spec(key).source();
+            var source = new Swarm.Spec(key).source();
             notempty || (heads[source] && delete this._oplog[spec]);
             heads[source] = true;
         }
@@ -44,7 +44,7 @@ var Mouse = Model.extend('Mouse', {
         if (version<this._version) {
             for(var opspec in this._oplog)
                 if (opspec>'!'+version) {
-                    var os = new Spec(opspec);
+                    var os = new Swarm.Spec(opspec);
                     if (os.method()==='set' && os.version()>version)
                         return; // overwritten in the total order
                 }
@@ -61,9 +61,9 @@ asyncTest('6.a Handshake K pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(true);
-    // FIXME pass storage to Host
-    var uplink = new Host('uplink~K',0,storage);
-    var downlink = new Host('downlink~K');
+    // FIXME pass storage to Swarm.Host
+    var uplink = new Swarm.Host('uplink~K',0,storage);
+    var downlink = new Swarm.Host('downlink~K');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
@@ -100,8 +100,8 @@ asyncTest('6.b Handshake D pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(true);
-    var uplink = new Host('uplink~D',storage);
-    var downlink = new Host('downlink~D');
+    var uplink = new Swarm.Host('uplink~D',storage);
+    var downlink = new Swarm.Host('downlink~D');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
@@ -118,7 +118,7 @@ asyncTest('6.b Handshake D pattern', function () {
 
     // TODO
     //  * _version: !v1!v2
-    //    v * add Spec.Map.toString(trim) {rot:ts,top:count}
+    //    v * add Swarm.Spec.Map.toString(trim) {rot:ts,top:count}
     //      * if new op !vid was trimmed => add manually
     //      * if new op vid < _version => check the log (.indexOf(src))
     //    v * sort'em
@@ -158,8 +158,8 @@ asyncTest('6.c Handshake Z pattern', function () {
 
     var storage = new DummyStorage(false);
     var oldstorage = new DummyStorage(false);
-    var uplink = new Host('uplink~Z',0,storage);
-    var downlink = new Host('downlink~Z');
+    var uplink = new Swarm.Host('uplink~Z',0,storage);
+    var downlink = new Swarm.Host('downlink~Z');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [oldstorage]};
 
@@ -213,8 +213,8 @@ asyncTest('6.d Handshake R pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
-    var uplink = new Host('uplink~R');
-    var downlink = new Host('downlink~R');
+    var uplink = new Swarm.Host('uplink~R');
+    var downlink = new Swarm.Host('downlink~R');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
@@ -240,8 +240,8 @@ test('6.e Handshake A pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
-    var uplink = new Host('uplink~A');
-    var downlink = new Host('downlink~A');
+    var uplink = new Swarm.Host('uplink~A');
+    var downlink = new Swarm.Host('downlink~A');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {return [uplink]};
     uplink.on(downlink);
@@ -264,8 +264,8 @@ test('Mickey the Mouse on/off', function(){
     console.warn('Mickey the Mouse on/off');
     // TODO tmp substitute hash function: uplink==author
 
-    var aleksisha = new Host('#aleksisha');
-    var gritzko = new Host('#gritzko');
+    var aleksisha = new Swarm.Host('#aleksisha');
+    var gritzko = new Swarm.Host('#gritzko');
     aleksisha.on(gritzko);
     Swarm.localhost = gritzko;
 
@@ -299,8 +299,8 @@ test('Mickey the Mouse on/off', function(){
 
 test('Reconciliation', function () {
     console.warn('Reconciliation');
-    var aleksisha = new Host('#aleksisha');
-    var gritzko = new Host('#gritzko');
+    var aleksisha = new Swarm.Host('#aleksisha');
+    var gritzko = new Swarm.Host('#gritzko');
     aleksisha.on(gritzko);
     Swarm.localhost = gritzko;
 
@@ -370,11 +370,11 @@ equal(gritzkom.x,222);
 
 // 3-layer arch (client, edge, switch)
 
-new Host('root~switch');
-new Host('root+gritzko');
-new Host('root+maxmax');
-new Host('gritzko~1');
-new Host('maxmax~1');
+new Swarm.Host('root~switch');
+new Swarm.Host('root+gritzko');
+new Swarm.Host('root+maxmax');
+new Swarm.Host('gritzko~1');
+new Swarm.Host('maxmax~1');
 maxmaxm.set({x:321});
 equal(gritzkom.x,321);
 

@@ -1,6 +1,6 @@
 if (typeof require == 'function') {
     var swrm = require('../lib/swarm2.js');
-    Spec = swrm.Spec;
+    Swarm.Spec = swrm.Spec;
     Swarm = swrm.Swarm;
     Model = swrm.Model;
     Field = swrm.Field;
@@ -11,7 +11,7 @@ if (typeof require == 'function') {
 
 
 
-var Thermometer = Model.extend('Thermometer',{
+var Thermometer = Swarm.Model.extend('Thermometer',{
     defaults: {
         t: -20 // Russia :)
     }
@@ -21,14 +21,14 @@ var Thermometer = Model.extend('Thermometer',{
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new DummyStorage(false);
-    var uplink = new Host('swarm~3a',0,storage);
-    var downlink = new Host('client~3a');
+    var uplink = new Swarm.Host('swarm~3a',0,storage);
+    var downlink = new Swarm.Host('client~3a');
     uplink.availableUplinks = function () {return [storage]};
     
     var conn = new AsyncLoopbackConnection();
     
-    var upperPipe = new Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
-    var lowerPipe = new Pipe(downlink,conn,{});
+    var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+    var lowerPipe = new Swarm.Pipe(downlink,conn,{});
     
     downlink.availableUplinks = function () {return [lowerPipe]};
     downlink.connect(lowerPipe); // lowerPipe.on(this) basically
@@ -52,8 +52,8 @@ asyncTest('3.a serialized on, reon', function (){
 asyncTest('3.b pipe reconnect, backoff', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new DummyStorage(false);
-    var uplink = new Host('swarm~3b',0,storage);
-    var downlink = new Host('client~3b');
+    var uplink = new Swarm.Host('swarm~3b',0,storage);
+    var downlink = new Swarm.Host('client~3b');
     uplink.availableUplinks = function () {return [storage]};
     downlink.availableUplinks = function () {
         var ret = [];
@@ -63,11 +63,11 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     };
     var conn;
     
-    var lowerPipe = new Pipe(downlink,null,{
+    var lowerPipe = new Swarm.Pipe(downlink,null,{
         sink: function factory () {
             conn = new AsyncLoopbackConnection();
-            var upperPipe = new Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
-            //var lowerPipe = new Pipe(downlink,conn,{});
+            var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+            //var lowerPipe = new Swarm.Pipe(downlink,conn,{});
             return conn;
         },
         reconnectDelay: 1

@@ -18,7 +18,7 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
 DummyStorage.prototype.on = function () {
     var spec, replica;
     if (arguments.length===2) {
-        spec = new Spec(arguments[0]);
+        spec = new Swarm.Spec(arguments[0]);
         replica = arguments[1];
     } else
         throw 'xxx';
@@ -43,7 +43,7 @@ DummyStorage.prototype.on = function () {
 
 DummyStorage.prototype.off = function (spec,value,src) {
 };
-DummyStorage.prototype.normalizeSignature = Syncable.prototype.normalizeSignature;
+DummyStorage.prototype.normalizeSignature = Swarm.Syncable.prototype.normalizeSignature;
 
 Swarm.debug = true;
 

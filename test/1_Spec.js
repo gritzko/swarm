@@ -14,7 +14,7 @@ if (typeof(require)==='function') {
 Swarm.debug = true;
 
 asyncTest('timestamp sequence test', function () {
-    var swarm = Swarm.localhost = new Host('gritzko',{},{on:function(){}});
+    var swarm = Swarm.localhost = new Swarm.Host('gritzko',{},{on:function(){}});
     expect(100);
     var ts1 = swarm.version(), ts2, i=0;
     var iv = setInterval(function(){
@@ -33,7 +33,7 @@ asyncTest('timestamp sequence test', function () {
 
 test('basic specifier syntax', function (test) {
     var testSpec = '/Class#ID!7Umum+gritzko.event';
-    var spec = new Spec(testSpec);
+    var spec = new Swarm.Spec(testSpec);
     equal(spec.version(),'7Umum+gritzko');
     equal(spec.token('!').ext,'gritzko');
     var rev = spec.toString();
@@ -43,7 +43,7 @@ test('basic specifier syntax', function (test) {
     var date = new Date(iso);
     test.equal(date.getMonth(),7); // zero based
     test.equal(date.getSeconds(),20);*/
-    var spec2 = new Spec(spec);
+    var spec2 = new Swarm.Spec(spec);
     equal(spec.toString(),spec2.toString());
 });
 
@@ -51,7 +51,7 @@ test('version vector', function (){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
-    var map = new Spec.Map(vec);
+    var map = new Swarm.Spec.Map(vec);
     ok(map.covers('7AM0f+gritzko'));
     ok(!map.covers('7AMTd+aleksisha'));
     ok(!map.covers('6AMTd+maxmaxmax'));
@@ -64,19 +64,19 @@ test('version vector', function (){
 });
 
 test('corner cases', function () {
-    var empty = new Spec('');
+    var empty = new Swarm.Spec('');
     equal(empty.type()||empty.id()||empty.method()||empty.version(),'');
     equal(empty.toString(),'');
-    var action = new Spec('.on+re');
+    var action = new Swarm.Spec('.on+re');
     equal(action.method(),'on+re');
-    var fieldSet = new Spec('/TodoItem#7AM0f+gritzko!7AMTc+gritzko.set');
+    var fieldSet = new Swarm.Spec('/TodoItem#7AM0f+gritzko!7AMTc+gritzko.set');
     equal(fieldSet.type(),'TodoItem');
     equal(fieldSet.id(),'7AM0f+gritzko');
     equal(fieldSet.version(),'7AMTc+gritzko');
     equal(fieldSet.method(),'set');
 });
 
-var Empty = Syncable.extend('Empty',{});
+var Empty = Swarm.Syncable.extend('Empty',{});
 
 /*test('dry handshake', function () {
     var v = 0;
