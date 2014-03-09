@@ -12,8 +12,12 @@
         "lib/swarm3.js",
         "lib/pipe.js",
         "lib/ce.js",
-        "lib/murmurhash3_gc.js"
+        "lib/murmur.js"
     ],
+    "dependencies": {
+        "ws": "~0.4.31",
+        "context-logger": "git://github.com/abalandin/context-logger"
+    },
     "devDependencies": {
         "qunit" : "~0.5.18",
         "underscore": "~1.6.0"

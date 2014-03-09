@@ -9,7 +9,6 @@ var myClientId,         // id of the client/peer/session
     myMouseElem,        // the DOM element for my suit sign (no Views, so we do it all manually)
     myMouseObject,      // my js object (has .x, .y and .ms for timestamps)
     miceList,           // all mice currently alive (on the basis of keepalives)
-    plumber,            // WebSocket connection manager
     portStr,
     peerData;
 
@@ -28,12 +27,12 @@ function init () {
     var SRC = (m&&parseInt(m[1])) || 3;
     var m = hash.match(/ssn=(\d+)/);
     var SSN = (m&&parseInt(m[1])) || 0;
-    var PORT = SSN+8000;
+    var PORT = SSN + 8000;
     portStr = ''+PORT;
     while (portStr.length<6) portStr = '0'+portStr;
     // derive my ids
-    myClientId = new ID('#',SRC,SSN);
-    var myidstr=myClientId.toString();
+    myClientId = new Swarm.Spec('#' + SRC + '~' + SSN);
+    var myidstr = myClientId.toString();
     myMouseId = '#mous'+myidstr.substr(4,2);
     // WebSocket URI to connect the peer to
     wsServerUri = 'ws://'+(window.location.hostname||'localhost')+':'+PORT+'/client';
@@ -43,20 +42,39 @@ function init () {
 
 function subscribe () {
     // create the peer object
-    myClient = new Peer(myClientId);
+    myClient = new Swarm.Host(myClientId);
+    Swarm.localhost = myClient;
     // the plumber manages reconnects
-    plumber = new Plumber(myClient,wsServerUri);
-    // listen for disconnects/connects; that tells us the online/offline status
-    myClient._on('/=Peer=',function(spec,val){
-        window.document.body.setAttribute('connected',plumber.host.getPeerCount()>0?true:false);
-    });
+
+    var sink = {
+        ws: new WebSocket(wsServerUri),
+        on: function(event, cb) {
+            switch (event) {
+            case 'message':
+                sink.ws.onmessage = cb;
+                break;
+            case 'error':
+                sink.ws.onerror = cb;
+                break;
+            case 'open':
+                sink.ws.onopen = cb;
+                break;
+            case 'close':
+                sink.ws.onclose = cb;
+                break;
+            default:
+                console.error('unknown event: ', event);
+            }
+        }
+    };
+    var pipe = new Swarm.Pipe(myClient, sink, {messageEvent: 'message'});
 
     // open "my" mouse object
-    myMouseObject = myClient.on( Mouse.prototype._type + myMouseId );
-    myMouseObject.setMs(new Date().getTime());
+    myMouseObject = new Swarm.Mouse();
+    myMouseObject.set({'ms': new Date().getTime()});
 
     // open the singleton collection listing all mice currently alive
-    miceList = myClient.on('/=Mice=#=mice=',function(spec,val){
+    miceList = myClient.on('/Mice#mice', function(spec,val){
         //console.log('Mice:\t'+spec,val);
         for(var key in val) {
             var keysp = Spec.as(key);
@@ -72,9 +90,9 @@ function subscribe () {
         }
     });
     // mention our mouse in the list
-    miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
+    //miceList.set({myMouseId.toString().replace('#','.'),true); // FIXME ugly
 
-    peerData = myClient.on('/PeerDt#'+portStr, showCountDown);
+    peerData = myClient.on('/PeerData#'+portStr, showCountDown);
 }
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
@@ -176,8 +194,8 @@ window.onload = function () {
 
     /** Update the timestamp to avoid being kicked out by the server */
     setInterval(function keepalive(){
-        myMouseObject && myMouseObject.setMs(new Date().getTime());
-        miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
+        myMouseObject && myMouseObject.set({'ms': new Date().getTime()});
+        //TODO miceList.set(myMouseId.toString().replace('#','.'),true); // FIXME ugly
     },1000*10);
 
     var autoMoveInterval;
