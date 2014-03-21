@@ -263,6 +263,7 @@ test('2.i batched set',function (test) {
     
 });
 
+// FIXME:  spec - to - (order)
 test('2.j basic Set functions (string index)',function (test) {
     console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
