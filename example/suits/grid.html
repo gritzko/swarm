@@ -39,10 +39,13 @@
         </style>
         <script type='text/javascript'>
             window.onload = function () {
-                var src = (Math.random()*(1<<30))|0, ssn=1;
-                var frames = document.getElementsByTagName('iframe');
-                for(var i=0; i<frames.length; i++)
-                    frames.item(i).setAttribute('src','cell.html#src='+src+',ssn='+(ssn++));
+                var src = (Math.random()*(1<<30))|0,
+                    ssn = 1,
+                    frames = document.getElementsByTagName('iframe');
+
+                for(var i = 0; i < frames.length; i++) {
+                    frames.item(i).setAttribute('src', 'cell.html#src=' + src + ',ssn=' + (ssn++));
+                }
             }
         </script>
     </head>

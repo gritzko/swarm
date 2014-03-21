@@ -200,7 +200,7 @@ test('2.d pojos',function (test) {
     deepEqual(json,duckJSON);
 });
 
-test('2.e reactions',function (test) {
+asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var huey = host.get('/Duck#huey');
@@ -208,6 +208,7 @@ test('2.e reactions',function (test) {
     var handle = Duck.addReaction('age', function reactionFn(spec,val) {
         console.log('yupee im growing');
         equal(val.age,1);
+        start();
     });
     var version = host.version(), sp = '!'+version+'.set', batch = {};
     batch[sp] = {age:1};

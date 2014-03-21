@@ -28,7 +28,9 @@ asyncTest('3.a serialized on, reon', function (){
     var conn = new AsyncLoopbackConnection();
     
     var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+    upperPipe.connect();
     var lowerPipe = new Swarm.Pipe(downlink,conn,{});
+    lowerPipe.connect();
     
     downlink.availableUplinks = function () {return [lowerPipe]};
     downlink.connect(lowerPipe); // lowerPipe.on(this) basically
@@ -67,11 +69,13 @@ asyncTest('3.b pipe reconnect, backoff', function (){
         sink: function factory () {
             conn = new AsyncLoopbackConnection();
             var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+            upperPipe.connect();
             //var lowerPipe = new Swarm.Pipe(downlink,conn,{});
             return conn;
         },
         reconnectDelay: 1
     });
+    lowerPipe.connect();
 
     var t = uplink.get(Thermometer), i=0;
 
