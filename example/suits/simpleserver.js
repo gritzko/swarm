@@ -22,7 +22,7 @@ require('./mouse_model.js');
 Swarm.debug = false;
 Syncable.prototype.log = function(spec,value,replica) {
     var myspec = this.spec().toString(); //:(
-    topcon.log('@%s  %s %s  %s  %s@%s',
+    topcon.log('@%s  %s %s  %j  %s@%s',
             //"color: #888",
             this._host._id,
             //"color: #246",
