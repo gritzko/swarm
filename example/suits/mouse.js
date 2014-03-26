@@ -16,7 +16,7 @@ var RTT, rttto, noTrack=false;
 
 
 function init () {
-    Swarm.debug = true;
+    Swarm.debug = false;
     // fill in the palette array
     for(var r=40; r<=200; r+=40)
         for(var g=40; g<=200; g+=40)
@@ -34,7 +34,7 @@ function init () {
     // derive my ids
     myClientId = new Swarm.Spec('#' + SRC + '~' + SSN);
     var myidstr = myClientId.toString();
-    myMouseId = 'mouse+'+SRC;
+    myMouseId = '#mouse+'+SRC;
     // WebSocket URI to connect the peer to
 
     //FOR CLUSTER:
@@ -89,7 +89,7 @@ function subscribe () {
     pipe.connect();
 
     // open "my" mouse object
-    myClient.on('/Mouse#' + myMouseId + '.init', function (spec, mouse_pojo, mouse) {
+    myClient.on('/Mouse' + myMouseId + '.init', function (spec, mouse_pojo, mouse) {
         console.log('Mouse.init:\t', spec, mouse_pojo);
 
         myMouseObject = mouse;
@@ -103,12 +103,12 @@ function subscribe () {
         // open the singleton collection listing all mice currently alive
         myClient.on('/Mice#mice.init', function(spec, mice_pojo, mice) {
             console.log('Mice.init:\t', spec, mice_pojo);
-
+            miceList = mice;
             myClient.on('/Mice#mice.set', trackMice);
 
             function trackMice (spec, val) {
                 console.log('trackMice:\t', spec, val);
-                for(var key in val) if (val.hasOwnProperty(key)) {
+                for(var key in val) {
                     if (val[key]) {
                         trackMouse(key);
                     } else {
@@ -120,7 +120,9 @@ function subscribe () {
                 }
             }
 
-            mice.add(myMouseId, myMouseObject.spec().toString());
+            if (!mice_pojo.hasOwnProperty(myMouseId)) {
+                mice.add(myMouseId, myMouseObject.spec().toString());
+            }
 
             trackMice(spec, mice_pojo);
 
@@ -137,7 +139,7 @@ function subscribe () {
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
 function moveMouse (spec,val){
     var maus = myClient.get(spec);
-    var spec_id = new Swarm.Spec(spec).id();
+    var spec_id = '#' + maus._id;
     var elem = document.getElementById(spec_id);
     if (!elem) { return; }
     elem.style.left = maus.x-elem.clientWidth/2;
@@ -179,8 +181,8 @@ function autoMove () {
     var newa = a+0.1;
     if (newa>Math.PI*2)
         newa -= Math.PI*2;
-    var newx = midx + r * Math.cos(newa);
-    var newy = midy + r * Math.sin(newa);
+    var newx = Math.round(midx + r * Math.cos(newa));
+    var newy = Math.round(midy + r * Math.sin(newa));
     myMouseObject.set({
         x: newx,
         y: newy,
@@ -205,7 +207,7 @@ function trackMouse (id) {
         myMouseElem = elem;
     }
     // create the actual object, open a subscription
-    var maus = myClient.on('/Mouse#'+id, moveMouse );  // see moveMouse() above
+    var maus = myClient.on('/Mouse'+id, moveMouse );  // see moveMouse() above
 }
 
 /** Stop tracking somebody's mouse pointer */
