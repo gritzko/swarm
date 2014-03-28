@@ -48,3 +48,37 @@ postfix:
         "hili_" :        "on"                  // HTML class="hili_on"
     }
     //                                         @gritzko 6Mar14 MSK
+
+## Nesting and structurals
+
+    <p>line</p>
+    <ul>
+        <li>one</li>
+        <li>two
+            <ol>
+                <li>nested</li>
+                <li>.</li>
+            </ol>
+        </li>
+    </ul>
+    <table>
+        <tr><td>cell A1</td><td>cell A2</td></tr>
+        <tr><td>B1</td><td>B2</td></tr>
+    </table>
+
+    \nline
+    \n\tone
+    \n\ttwo
+    \n\t\tnested
+    \n\t\t.
+    \n\tcell A1\tcellA2
+    \n\tB1\tB2
+
+    line
+        one
+        two
+            nested
+            .
+        cell A1     cell A2
+        B1          B2
+
