@@ -6,7 +6,7 @@ var http = require('http');
 var childp = require('child_process');
 
 //other libs
-var ws = require('ws');
+var ws_lib = require('ws');
 var Console = require('context-logger');
 
 //Swarm
@@ -15,6 +15,8 @@ var Swarm = require('../../lib/swarm3.js'),
     Spec = Swarm.Spec,
     Pipe = Swarm.Pipe,
     Syncable = Swarm.Syncable;
+
+var WSWrapper = require('../../lib/wswrapper.js');
 
 //model
 require('./mouse_model.js');
@@ -85,7 +87,7 @@ httpServer.on('listening', function () {
 });
 httpServer.listen(PORT);
 
-var wss = new ws.Server({
+var wss = new ws_lib.Server({
     server: httpServer
 });
 
@@ -158,7 +160,6 @@ Swarm.localhost = peer;
 
 var portStr = ''+PORT;
 while (portStr.length<6) portStr = '0'+portStr;
-//var peerData = peer.on('/PeerData#'+portStr);
 
 wss.on('connection', function(ws) {
     var params = url_lib.parse(ws.upgradeReq.url,true);
@@ -169,7 +170,10 @@ wss.on('connection', function(ws) {
     // maybe grant ssn
     //ws.send({ssn:xx});
     //var id = (new Swarm.Spec('*',src,17));
-    var pipe = new Pipe(peer, ws, {messageEvent: 'message'});
+    var pipe = new Pipe({
+        host: peer,
+        sink: new WSWrapper(ws)
+    });
     pipe.console = topcon.grep(' in');
     pipe.connect();
     //peer.addPeer(pipe);
@@ -209,14 +213,13 @@ setInterval(function(){
 //connect to all previously started servers
 
 function openWebSocket(port) {
-    return new ws('ws://localhost:' + port + '/peer');
+    return new WSWrapper(new ws_lib('ws://localhost:' + port + '/peer'));
 }
 
 for(var p = BASE_PORT; p < PORT; p++) {
-    var pipe = new Pipe(peer, null, {
-        sink: openWebSocket.bind(this, p),
-        messageEvent: 'message',
-        openEvent: 'open',
+    var pipe = new Pipe({
+        host: peer,
+        transport: openWebSocket.bind(this, p),
         peerName: 'swarm:' + p
     });
     pipe.console = topcon.grep(' out');
@@ -233,24 +236,34 @@ if (PORT !== BASE_PORT) {
     }, waitMs );
 }
 */
+var mice = null;
 
-peer.on('/Mice#mice.init', function(spec, val, mice) {
+peer.on('/Mice#mice.init', function(spec, val, mice_inited) {
+    mice = mice_inited;
     console.log('Mice inited spec=%s val=%j', spec, val);
-    //TODO setInterval(cleanOfflineUsers, 20 * 1000);
+    setInterval(cleanOfflineUsers, 20 * 1000);
+});
+
+peer.on('/PeerData#' + portStr + '.init', function (spec, val, peerData) {
+    console.log('PeerData inited spec=%s val=%j', spec, val);
 });
 
 
 function cleanOfflineUsers() { // temp hack
-    var now = Spec.base2int(new Spec('!' + peer.version()).token('!').bare);
-    for(var mid in mice) if (mice.hasOwnProperty(mid)) {
-        if (mice[mid]) {
-            var mouse = mice[mid];
-            var version = mouse.version();
-            if (!version) continue;
-            var ts = Spec.base2int(new Spec('!' + version).token('!').bare);
+    var now = Spec.base2int(Spec.parseToken(peer.version()).bare);
+    var mice_pojo = mice.pojo();
+    for(var mid in mice_pojo) {
+        if (mice_pojo[mid]) {
+            var mouse = mice.get(mid);
+            var mouse_version_vector = mouse.version();
+            if (!mouse_version_vector) continue;
+
+            var mouse_version_ts = new Spec.Map(mouse_version_vector).maxTs().substr(0, 5);
+
+            var ts = Spec.base2int(mouse_version_ts);
             if (ts < now - 120) {
-                mice.set(mid, null);
-                console.error('' + peer._id + ' KILLS ' + mid + ' cause ' + vid.ts + '<' + now + '-120');
+                mice.remove(mid);
+                console.error('' + peer._id + ' KILLS ' + mid + ' cause ' + ts + '<' + now + '-120');
             }
         }
     }

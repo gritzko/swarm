@@ -53,38 +53,41 @@ function subscribe () {
     Swarm.localhost = myClient;
     // the plumber manages reconnects
 
-    var connectionFactory = function () {
-        var sink = {
-            ws: new WebSocket(wsServerUri),
-            on: function(event, cb) {
-                switch (event) {
-                case 'message':
-                    sink.ws.onmessage = cb;
-                    break;
-                case 'error':
-                    sink.ws.onerror = cb;
-                    break;
-                case 'open':
-                    sink.ws.onopen = cb;
-                    break;
-                case 'close':
-                    sink.ws.onclose = cb;
-                    break;
-                default:
-                    console.error('unknown event: ', event);
-                }
-            },
-            send: function (data) {
-                sink.ws.send(data);
-            }
-        };
-        return sink;
+    function WSWrapper(url) {
+        this.ws = new WebSocket(url);
+    }
+    WSWrapper.prototype.send = function (message) {
+        //console.log('<<', message);
+        this.ws.send(message);
     };
-    var pipe = new Swarm.Pipe(myClient, null, {
-        sink: connectionFactory,
-        messageEvent: 'message',
-        openEvent: 'open',
-        messageField: 'data'
+    WSWrapper.prototype.on = function (event, handler) {
+        switch (event) {
+        case 'data':
+            this.ws.onmessage = function (message) {
+                //console.log('>>', message.data);
+                handler(message.data);
+            }
+            break;
+        case 'error':
+            this.ws.onerror = handler;
+            break;
+        case 'open':
+            this.ws.onopen = handler;
+            break;
+        case 'close':
+            this.ws.onclose = handler;
+            break;
+        default:
+            console.error('unknown event: ', event);
+        }
+    };
+    WSWrapper.prototype.close = function () {
+        this.ws.close();
+    };
+
+    var pipe = new Swarm.Pipe({
+        host: myClient,
+        transport: function () { return new WSWrapper(wsServerUri); }
     });
     pipe.connect();
 
@@ -104,7 +107,6 @@ function subscribe () {
         myClient.on('/Mice#mice.init', function(spec, mice_pojo, mice) {
             console.log('Mice.init:\t', spec, mice_pojo);
             miceList = mice;
-            myClient.on('/Mice#mice.set', trackMice);
 
             function trackMice (spec, val) {
                 console.log('trackMice:\t', spec, val);
@@ -115,10 +117,12 @@ function subscribe () {
                         if (key != myMouseId)
                             untrackMouse(key);
                         else
-                            mice.set(key, key); // return of the jedi
+                            mice.set(key, myMouseObject.spec().toString()); // return of the jedi
                     }
                 }
             }
+
+            myClient.on('/Mice#mice.set', trackMice);
 
             if (!mice_pojo.hasOwnProperty(myMouseId)) {
                 mice.add(myMouseId, myMouseObject.spec().toString());
@@ -131,9 +135,7 @@ function subscribe () {
 
     });
 
-    /*
-        peerData = myClient.on('/PeerData#'+portStr, showCountDown);
-    */
+    myClient.on('/PeerData#' + portStr + '.init', showCountDown);
 }
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
@@ -161,10 +163,11 @@ function showRtt (spec,val) {
 }
 
 function showCountDown (spec,val) {
+    console.log('PeerData.init:', val);
     var countSpan = document.getElementById('count');
     if (!countSpan) return;
-    countSpan.innerHTML = peerData.timeToRestart ? 
-        (0|(peerData.timeToRestart/1000)) + 's till restart' : 'will not restart';
+    countSpan.innerHTML = val.timeToRestart ?
+        (0|(val.timeToRestart/1000)) + 's till restart' : 'will not restart';
 }
 
 /** Debugging: move the mouse in circles */
@@ -221,7 +224,7 @@ var FREQ = 10;
 var toSend = null;
 var timer = null;
 function trackUserMoves (event) {
-    if (noTrack) return;
+    if (noTrack || !myMouseObject) return;
     toSend = {
         x: event.clientX,
         y: event.clientY,

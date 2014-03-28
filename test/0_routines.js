@@ -53,17 +53,25 @@ function AsyncLoopbackConnection (pair) {
     this.ln = null;
     this.cl = null;
     this.queue = [];
+    if (!pair) { //emit open
+        var self = this;
+        setTimeout(function () {
+            self.op && self.op();
+        })
+    }
 };
 
 AsyncLoopbackConnection.prototype.on = function (event,ln) {
     if (event==='data')
         this.ln = ln;
+    else if (event==='open')
+        this.op = ln;
     else if (event==='close')
         this.cl = ln;
 };
 
 AsyncLoopbackConnection.prototype.receive = function (string) {
-    this.ln(string);
+    this.ln && this.ln(string);
 };
 
 AsyncLoopbackConnection.prototype.send = function (obj) {
@@ -71,14 +79,18 @@ AsyncLoopbackConnection.prototype.send = function (obj) {
     /*if (this.queue)
         this.queue.push(obj.toString());
     else*/
-    setTimeout(function(){
+    setTimeout(function () {
         self.pair && self.pair.receive(obj.toString());
-    },1);
+    }, 1);
 };
 
 AsyncLoopbackConnection.prototype.close = function () {
     var other = this.pair;
     this.pair = null;
-    other && other.close();
-    other && this.cl && this.cl();
+    this.op = null;
+    this.ln = null;
+    if (other) {
+        other.close();
+        this.cl && this.cl();
+    }
 };
