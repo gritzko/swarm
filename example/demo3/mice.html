@@ -1,0 +1,66 @@
+<html>
+    <head>
+        <script type="text/javascript" src="../../lib/murmur.js"></script>
+        <script type="text/javascript" src="../../lib/swarm3.js"></script>
+        <script type="text/javascript" src="./mouse_model.js"></script>
+        <script type="text/javascript" src="./mouse.js"></script>
+        </script>
+        <style type='text/css'>
+            body {
+                margin: 0px;
+                overflow: hidden;
+                background-image: url('millim-mono.gif');
+            }
+            body[connected="true"] {
+                background-image: url('millim.gif');
+            }
+            span#rtt {
+                position: fixed;
+                left: 10px;
+                bottom: 10px;
+                color: #888;
+                font-family: 'Verdana';
+                font-size: 10pt;
+                font-style: italic;
+            }
+            span#count {
+                position: fixed;
+                right: 10px;
+                bottom: 10px;
+                color: #888;
+                font-family: 'Verdana';
+                font-size: 10pt;
+                font-style: italic;
+            }
+            span.mouse {
+                position:fixed;
+                color: red;
+                font-size: 20pt;
+                /*text-shadow: 1px 1px 4px #888;  slow */
+            }
+            span#uri {
+                position: fixed;
+                left: 10px;
+                top: 10px;
+                color: #888;
+                font-family: 'Verdana';
+                font-size: 9pt;
+                font-style: italic;
+            }
+            p.online {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                margin: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <span id="x" class='mouse'></span>
+        <span id='rtt'></span>
+        <span id='count'></span>
+        <span id='uri'></span>
+        <p class='online'><input type='checkbox'
+        checked='true'/>online</p>
+    </body>
+</html>
