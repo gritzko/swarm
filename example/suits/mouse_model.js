@@ -44,7 +44,7 @@
 
     MouseModels.PeerData = Swarm.Model.extend('PeerData', {
         defaults: {
-            timeToRestart: 1<<30,
+            timeToRestart: 0,
             objectsTracked: 0
         }
     });

@@ -3,6 +3,8 @@ var userSymbols = '\u2665\u2666\u2663\u2660';
 var userColors = [];
 
 var myClientId,         // id of the client/peer/session
+    myClientId_seq,    //
+    myClientId_ssn,     //
     myClient,           // the client/peer (well, it is connected to the server, but may connect elsewhere)
     wsServerUri,        // WebSocket URI to connect to
     myMouseId,          // id of my object (which is a mouse tracking card suit sign)
@@ -25,16 +27,15 @@ function init () {
     // parse parameters
     var hash = window.location.hash.toString();
     var m = hash.match(/src=(\d+)/);
-    var SRC = Swarm.Spec.int2base((m&&parseInt(m[1])) || 3);
-    var m = hash.match(/ssn=(\d+)/);
-    var SSN = (m&&parseInt(m[1])) || 0;
-    var PORT = SSN + 8000;
+    myClientId_seq = Swarm.Spec.int2base((m&&parseInt(m[1])) || 3);
+    m = hash.match(/ssn=(\d+)/);
+    myClientId_ssn = (m&&parseInt(m[1])) || 0;
+    var PORT = myClientId_ssn + 8000;
     portStr = ''+PORT;
     while (portStr.length<6) portStr = '0'+portStr;
     // derive my ids
-    myClientId = new Swarm.Spec('#' + SRC + '~' + SSN);
-    var myidstr = myClientId.toString();
-    myMouseId = '#mouse+'+SRC;
+    myClientId = new Swarm.Spec('#' + myClientId_seq + '~' + myClientId_ssn);
+    myMouseId = '#mouse+' + myClientId_seq;
     // WebSocket URI to connect the peer to
 
     //FOR CLUSTER:
@@ -56,6 +57,7 @@ function subscribe () {
     function WSWrapper(url) {
         this.ws = new WebSocket(url);
     }
+
     WSWrapper.prototype.send = function (message) {
         //console.log('<<', message);
         this.ws.send(message);
@@ -66,7 +68,7 @@ function subscribe () {
             this.ws.onmessage = function (message) {
                 //console.log('>>', message.data);
                 handler(message.data);
-            }
+            };
             break;
         case 'error':
             this.ws.onerror = handler;
@@ -87,7 +89,9 @@ function subscribe () {
 
     var pipe = new Swarm.Pipe({
         host: myClient,
-        transport: function () { return new WSWrapper(wsServerUri); }
+        transport: function () {
+            return new WSWrapper(wsServerUri);
+        }
     });
     pipe.connect();
 
@@ -99,25 +103,28 @@ function subscribe () {
         myMouseObject.set({'ms': new Date().getTime()});
 
         /** Update the timestamp to avoid being kicked out by the server */
-        setInterval(function keepalive(){
+        setInterval(function keepalive() {
             myMouseObject.set({'ms': new Date().getTime()});
-        },1000*10);
+        }, 1000 * 10);
 
         // open the singleton collection listing all mice currently alive
-        myClient.on('/Mice#mice.init', function(spec, mice_pojo, mice) {
+        myClient.on('/Mice#mice.init', function (spec, mice_pojo, mice) {
             console.log('Mice.init:\t', spec, mice_pojo);
             miceList = mice;
 
-            function trackMice (spec, val) {
+            function trackMice(spec, val) {
                 console.log('trackMice:\t', spec, val);
-                for(var key in val) {
+                for (var key in val) {
                     if (val[key]) {
                         trackMouse(key);
                     } else {
-                        if (key != myMouseId)
+                        if (key != myMouseId) {
                             untrackMouse(key);
-                        else
-                            mice.set(key, myMouseObject.spec().toString()); // return of the jedi
+                        } else {
+                            var kv = {};
+                            kv[key] = myMouseObject.spec().toString();
+                            mice.set(kv); // return of the jedi
+                        }
                     }
                 }
             }
@@ -142,11 +149,12 @@ function subscribe () {
 function moveMouse (spec,val){
     var maus = myClient.get(spec);
     var spec_id = '#' + maus._id;
+    var changes_source = new Swarm.Spec(spec).token('!').ext;
     var elem = document.getElementById(spec_id);
     if (!elem) { return; }
     elem.style.left = maus.x-elem.clientWidth/2;
     elem.style.top = maus.y-elem.clientHeight/2;
-    if (spec_id == myClientId) {
+    if (changes_source.indexOf(myClientId_seq) === 0) {
         showRtt(spec, val);
     }
 }
@@ -154,7 +162,8 @@ function moveMouse (spec,val){
 function showRtt (spec,val) {
     var rttSpan = document.getElementById('rtt'), rttText;
     if (!val.ms || !rttSpan) return;
-    if (spec.version.ssn!=myClientId.ssn) {
+    var last_updater_ext = new Swarm.Spec(spec).token('!').ext;
+    if (last_updater_ext !== myClientId_seq + '~' + myClientId_ssn) {
         var ms = new Date().getTime() - val.ms;
         rttText = 'rtt '+(ms>1000?Math.floor(ms/1000)+'ms':(ms+'ms'));
     } else
@@ -210,12 +219,12 @@ function trackMouse (id) {
         myMouseElem = elem;
     }
     // create the actual object, open a subscription
-    var maus = myClient.on('/Mouse'+id, moveMouse );  // see moveMouse() above
+    myClient.on('/Mouse'+id, moveMouse);  // see moveMouse() above
 }
 
 /** Stop tracking somebody's mouse pointer */
 function untrackMouse (id) {
-    myClient.off(id,moveMouse);
+    myClient.off('/Mouse'+id, moveMouse);
     var elem = document.getElementById(id);
     elem && elem.parentNode.removeChild(elem);
 }
@@ -245,7 +254,7 @@ window.onload = function () {
     subscribe();
 
     // track the actual mouse pointer, change our object
-    document.body.onmousemove = trackUserMoves;
+    document.documentElement.onmousemove = trackUserMoves;
 
     var autoMoveInterval;
     /** Start/stop making circles */

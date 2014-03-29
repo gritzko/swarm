@@ -45,8 +45,8 @@ Syncable.prototype.log = function(spec,value,replica) {
     );
 };
 
-
 var CLUSTER_SIZE = 0;
+var CLEANOFF_INTERVAL = 20 * 1000;
 var BASE_PORT = 8000;
 var PORT = (process.env.PORT && parseInt(process.env.PORT, 10)) || BASE_PORT;
 
@@ -241,7 +241,7 @@ var mice = null;
 peer.on('/Mice#mice.init', function(spec, val, mice_inited) {
     mice = mice_inited;
     console.log('Mice inited spec=%s val=%j', spec, val);
-    setInterval(cleanOfflineUsers, 20 * 1000);
+    setInterval(cleanOfflineUsers, CLEANOFF_INTERVAL);
 });
 
 peer.on('/PeerData#' + portStr + '.init', function (spec, val, peerData) {
@@ -263,7 +263,7 @@ function cleanOfflineUsers() { // temp hack
             var ts = Spec.base2int(mouse_version_ts);
             if (ts < now - 120) {
                 mice.remove(mid);
-                console.error('' + peer._id + ' KILLS ' + mid + ' cause ' + ts + '<' + now + '-120');
+                topcon.warn('' + peer._id + ' KILLS ' + mid + ' cause ' + ts + '<' + now + '-120');
             }
         }
     }
