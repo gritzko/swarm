@@ -27,9 +27,9 @@ asyncTest('3.a serialized on, reon', function (){
     
     var conn = new AsyncLoopbackConnection();
     
-    var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+    var upperPipe = new Swarm.Pipe({host: uplink, sink: conn.pair, peerName: '3.a.upper'}); // waits for 'data'/'close'
     upperPipe.connect();
-    var lowerPipe = new Swarm.Pipe(downlink,conn,{});
+    var lowerPipe = new Swarm.Pipe({host: downlink, sink: conn, peerName: '3.a.lower'});
     lowerPipe.connect();
     
     downlink.availableUplinks = function () {return [lowerPipe]};
@@ -45,6 +45,7 @@ asyncTest('3.a serialized on, reon', function (){
         o && equal(o.t,22);
         //downlink.disconnect(lowerPipe);
         start();
+        upperPipe.close();
     },250);
 
     Swarm.localhost = uplink;  
@@ -65,15 +66,17 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     };
     var conn;
     
-    var lowerPipe = new Swarm.Pipe(downlink,null,{
-        sink: function factory () {
+    var lowerPipe = new Swarm.Pipe({
+        host: downlink,
+        transport: function factory () {
             conn = new AsyncLoopbackConnection();
-            var upperPipe = new Swarm.Pipe(uplink,conn.pair,{}); // waits for 'data'/'close'
+            var upperPipe = new Swarm.Pipe({ host: uplink, sink: conn.pair, peerName: '3.b.upper' }); // waits for 'data'/'close'
             upperPipe.connect();
-            //var lowerPipe = new Swarm.Pipe(downlink,conn,{});
+            //var lowerPipe = new Swarm.Pipe({ host: downlink, sink: conn });
             return conn;
         },
-        reconnectDelay: 1
+        reconnectDelay: 1,
+        peerName: '3.b.lower'
     });
     lowerPipe.connect();
 
@@ -89,10 +92,11 @@ asyncTest('3.b pipe reconnect, backoff', function (){
             ok(t._lstn.length<=2); // storage and maybe the client
             clearInterval(ih);
             start();
+            lowerPipe.close();
         }
     },100);
-    
-    downlink.on(t.spec(),function i(spec,val,obj){
+
+    downlink.on(t.spec().toString() + '.set', function i(spec,val,obj){
         console.log('YPA '+val);
         if (spec.method()==='set') {
             conn && conn.close(); // yeah; reconnect now

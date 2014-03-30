@@ -271,17 +271,17 @@ test('2.j basic Set functions (string index)',function (test) {
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
-    var donalds = new Nest({'third':deweyClone.spec(),'second':hueyClone.spec()}); // TODO dafault type
-    var dewey2 = donalds.get('third');
+    var donalds = new Nest({'#third':deweyClone.spec(),'#second':hueyClone.spec()}); // TODO dafault type
+    var dewey2 = donalds.get('#third');
     ok(deweyClone===dewey2);
     equal(dewey2.age,1);
-    donalds.add('first',louieClone.spec());
-    var l2 = donalds.get('first');
+    donalds.add('#first',louieClone.spec());
+    var l2 = donalds.get('#first');
     equal(l2.age,3);
     var realLouie = host.get('/Duck#louie'); // item type is fixed so not /Duck#louie but louie TODO
-    donalds.add('louie',realLouie); 
+    donalds.add('#louie',realLouie);
     equal(realLouie._id,'louie');
-    donalds.remove('louie'); 
+    donalds.remove('#louie');
     var collection = donalds.collection();
     equal(collection.length,3);
     equal(collection[0]._id, louieClone._id);
