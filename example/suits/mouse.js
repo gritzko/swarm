@@ -49,43 +49,17 @@ function init () {
 }
 
 function subscribe () {
+    Swarm.Host.addReaction('reon', function onConnect() {
+        document.body.setAttribute('connected', 'true');
+    });
+    Swarm.Host.addReaction('off', function onDisconnect() {
+        document.body.setAttribute('connected', 'false');
+    });
+
     // create the peer object
     myClient = new Swarm.Host(myClientId);
     Swarm.localhost = myClient;
     // the plumber manages reconnects
-
-    function WSWrapper(url) {
-        this.ws = new WebSocket(url);
-    }
-
-    WSWrapper.prototype.send = function (message) {
-        //console.log('<<', message);
-        this.ws.send(message);
-    };
-    WSWrapper.prototype.on = function (event, handler) {
-        switch (event) {
-        case 'data':
-            this.ws.onmessage = function (message) {
-                //console.log('>>', message.data);
-                handler(message.data);
-            };
-            break;
-        case 'error':
-            this.ws.onerror = handler;
-            break;
-        case 'open':
-            this.ws.onopen = handler;
-            break;
-        case 'close':
-            this.ws.onclose = handler;
-            break;
-        default:
-            console.error('unknown event: ', event);
-        }
-    };
-    WSWrapper.prototype.close = function () {
-        this.ws.close();
-    };
 
     var pipe = new Swarm.Pipe({
         host: myClient,
@@ -147,6 +121,7 @@ function subscribe () {
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
 function moveMouse (spec,val){
+    console.log('move: ', spec.toString());
     var maus = myClient.get(spec);
     var spec_id = '#' + maus._id;
     var changes_source = new Swarm.Spec(spec).token('!').ext;

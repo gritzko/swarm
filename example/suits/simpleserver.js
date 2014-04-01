@@ -65,6 +65,7 @@ var httpServer = http.createServer(function(req,res){
 
     case '/example/suits/mouse.js':
     case '/example/suits/mouse_model.js':
+    case '/example/suits/client_ws_wrapper.js':
     case '/lib/murmur.js':
     case '/lib/swarm3.js':
         res.setHeader('Content-Type', 'text/javascript');
