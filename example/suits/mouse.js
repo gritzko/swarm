@@ -121,7 +121,7 @@ function subscribe () {
 
 /** Reflect any changes to a Mouse object: move the card suit symbol on the screen, write RTT */
 function moveMouse (spec,val){
-    console.log('move: ', spec.toString());
+    //console.log('move: ', spec.toString());
     var maus = myClient.get(spec);
     var spec_id = '#' + maus._id;
     var changes_source = new Swarm.Spec(spec).token('!').ext;
@@ -194,6 +194,7 @@ function trackMouse (id) {
         myMouseElem = elem;
     }
     // create the actual object, open a subscription
+    myClient.on('/Mouse'+id + '.init', moveMouse);  // see moveMouse() above
     myClient.on('/Mouse'+id, moveMouse);  // see moveMouse() above
 }
 
