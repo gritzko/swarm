@@ -122,8 +122,9 @@ var Duck = Swarm.Model.extend('Duck',{
         return this.age >= 18; // Russia
     },
     validate: function (spec,val) {
-        if (spec.method()==='set' && val.height)
-        throw new Error("can't set height, may only grow");
+        return true; // :|
+        //return spec.method()!=='set' || !('height' in val);
+        //throw new Error("can't set height, may only grow");
     },
     $$grow: function (spec,by,src) {
         this.height = this.height.add(by);
@@ -141,15 +142,16 @@ host.availableUplinks = function () {return [storage]};
 test('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
-    expect(5);
+    expect(6);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = host.get('/Duck#huey');
+    var huey = host.get('/Duck#hueyA');
+    ok(huey._version); // storage is sync, must return empty init + storage timestamp
     // listen to a field
     huey.on('age',function lsfn(spec,val){  // FIXME: filtered .set listener!!!
         equal(val.age,1);
         equal(spec.method(),'set');
-        equal(spec.toString(),'/Duck#huey!'+spec.version()+'.set');
+        equal(spec.toString(),'/Duck#hueyA!'+spec.version()+'.set');
         var version = spec.token('!');
         equal(version.ext,'gritzko');
         huey.off('age',lsfn);
@@ -321,3 +323,19 @@ test('2.l partial order', function (test) {
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
     equal(duckling.height.toString(), '2cm');
 });
+
+/*  TODO
+ * test('2.m on/off sub', function (test) {
+    Swarm.localhost = host;
+    var duckling = new Duck();
+
+    expect(2);
+    duckling.on('on',function(spec){
+        ok(spec.method(),'on');
+    });
+    duckling.on('set',function(spec){
+        equal(spec.method(),'set');
+    });
+    duckling.set({age:1});
+
+});*/

@@ -4,9 +4,14 @@ function DummyStorage(async) {
     this.tails = {};
     this._id = 'dummy';
 };
+
+DummyStorage.prototype.version = Swarm.Host.prototype.version;
+
 DummyStorage.prototype.deliver = function (spec,value,src) {
+    if (spec.method()==='on')
+        return this.on(spec,value,src);
+    // stash the op
     var ti = spec.filter('/#');
-    //var obj = this.states[ti] || (this.states[ti]={_oplog:{},_logtail:{}});
     var tail = this.tails[ti];
     if (!tail)
         this.tails[ti] = tail = {};
@@ -15,28 +20,24 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
         console.error('op replay @storage');
     tail[vm] = value;
 };
-DummyStorage.prototype.on = function () {
-    var spec, replica;
-    if (arguments.length===2) {
-        spec = new Swarm.Spec(arguments[0]);
-        replica = arguments[1];
-    } else
-        throw 'xxx';
+
+DummyStorage.prototype.on = function (spec,base,replica) {
+    spec = new Swarm.Spec(spec);
     var ti = spec.filter('/#'), self=this;
     function reply () {
-        var state = self.states[ti];
+        // authoritative storage: no thing => return empty
+        var state = self.states[ti] || { _version: self.version() };
         // FIXME mimic diff; init has id, tail has it as well
-        if (state) {
-            var response = {};
-            response['!'+state._version+'.init'] = state;
-            var tail = self.tails[ti];
-            if (tail)
-                for(var s in tail)
-                    response[s] = tail[s];
-            var clone = JSON.parse(JSON.stringify(response));
-            replica.deliver(ti,clone,self);
-        }
-        replica.reon(ti,'!'+(state?state._version:'0'),self);
+        var response = {};
+        response['!'+state._version+'.init'] = state; // FIXME 2-tok version?
+        var tail = self.tails[ti];
+        if (tail)
+            for(var s in tail)
+                response[s] = tail[s];
+        var clone = JSON.parse(JSON.stringify(response));
+        replica.deliver(ti,clone,self); // bundle
+        replica.__reon( ti.add(spec.version(),'!').add('.reon'),
+                        '!'+(state?state._version:'0'), self );
     }
     this.async ? setTimeout(reply,1) : reply();
 };
