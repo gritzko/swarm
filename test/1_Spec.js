@@ -45,6 +45,9 @@ test('basic specifier syntax', function (test) {
     test.equal(date.getSeconds(),20);*/
     var spec2 = new Swarm.Spec(spec);
     equal(spec.toString(),spec2.toString());
+    var def = new Swarm.Spec('/Type#id!ver.method');
+    var over = def.set('#newid.newmethod');
+    equal(over,'/Type#newid!ver.newmethod');
 });
 
 test('version vector', function (){

@@ -23,16 +23,16 @@ asyncTest('3.a serialized on, reon', function (){
     var storage = new DummyStorage(false);
     var uplink = new Swarm.Host('swarm~3a',0,storage);
     var downlink = new Swarm.Host('client~3a');
-    uplink.availableUplinks = function () {return [storage]};
+    // that's the default uplink.getSources = function () {return [storage]};
     
     var conn = new AsyncLoopbackConnection();
     
-    var upperPipe = new Swarm.Pipe({host: uplink, sink: conn.pair, peerName: '3.a.upper'}); // waits for 'data'/'close'
-    upperPipe.connect();
-    var lowerPipe = new Swarm.Pipe({host: downlink, sink: conn, peerName: '3.a.lower'});
+    var upperPipe = new Swarm.Pipe({host: uplink, sink: conn.pair}); // waits for 'data'/'close'
+    upperPipe.connect(); // WTF???
+    var lowerPipe = new Swarm.Pipe({host: downlink, sink: conn});
     lowerPipe.connect();
     
-    downlink.availableUplinks = function () {return [lowerPipe]};
+    downlink.getSources = function () {return [lowerPipe]};
     downlink.connect(lowerPipe); // lowerPipe.on(this) basically
     
     downlink.on('/Thermometer#room.init',function i(spec,val,obj){
@@ -80,23 +80,23 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     });
     lowerPipe.connect();
 
-    var t = uplink.get(Thermometer), i=0;
+    var thermometer = uplink.get(Thermometer), i=0;
 
     // OK. The idea is to connect/disconnect it 100 times then
     // check that the state is OK, there are no zombie listeners
     // no objects/hosts, log is 1 record long (distilled) etc
 
     var ih = setInterval(function(){
-        t.set({t:i})
+        thermometer.set({t:i});
         if (i++==30) {
-            ok(t._lstn.length<=2); // storage and maybe the client
+            ok(thermometer._lstn.length<=2); // storage and maybe the client
             clearInterval(ih);
             start();
             lowerPipe.close();
         }
     },100);
 
-    downlink.on(t.spec().toString() + '.set', function i(spec,val,obj){
+    downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         console.log('YPA '+val);
         if (spec.method()==='set') {
             conn && conn.close(); // yeah; reconnect now

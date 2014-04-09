@@ -155,7 +155,7 @@ test('2.a basic listener func', function (test) {
         var version = spec.token('!');
         equal(version.ext,'gritzko');
         huey.off('age',lsfn);
-        equal(huey._lstn.length,1); // only the uplink remains
+        equal(huey._lstn.length,2); // only the uplink remains (and the comma)
     });
     huey.set({age:1});
 });
@@ -214,7 +214,7 @@ asyncTest('2.e reactions',function (test) {
     });
     var version = host.version(), sp = '!'+version+'.set', batch = {};
     batch[sp] = {age:1};
-    huey.deliver(huey.spec(), batch); // ~ set{}
+    huey.deliver(huey.newEventSpec('bundle'), batch); // ~ set{}
     Duck.removeReaction(handle);
     equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
 });
