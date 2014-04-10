@@ -20,7 +20,7 @@ var Thermometer = Swarm.Model.extend('Thermometer',{
 
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
-    var storage = new DummyStorage(false);
+    var storage = new DummyStorage(true);
     var uplink = new Swarm.Host('swarm~3a',0,storage);
     var downlink = new Swarm.Host('client~3a');
     // that's the default uplink.getSources = function () {return [storage]};

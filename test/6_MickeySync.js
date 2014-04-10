@@ -36,22 +36,24 @@ var Mouse = Swarm.Model.extend('Mouse', {
         }
         return cumul;
     },
-    $$move: function (spec,d) {
-        // To implement your own ops you must understand implications
-        // of partial order; in this case, if an op comes later than
-        // an op that overwrites it then we skip it.
-        var version = spec.version();
-        if (version<this._version) {
-            for(var opspec in this._oplog)
-                if (opspec>'!'+version) {
-                    var os = new Swarm.Spec(opspec);
-                    if (os.method()==='set' && os.version()>version)
-                        return; // overwritten in the total order
-                }
+    methods: {
+        move: function (spec,d) {
+            // To implement your own ops you must understand implications
+            // of partial order; in this case, if an op comes later than
+            // an op that overwrites it then we skip it.
+            var version = spec.version();
+            if (version<this._version) {
+                for(var opspec in this._oplog)
+                    if (opspec>'!'+version) {
+                        var os = new Swarm.Spec(opspec);
+                        if (os.method()==='set' && os.version()>version)
+                            return; // overwritten in the total order
+                    }
+            }
+            // Q if set is late => move is overwritten!
+            this.x += d.x||0;
+            this.y += d.y||0;
         }
-        // Q if set is late => move is overwritten!
-        this.x += d.x||0;
-        this.y += d.y||0;
     }
 });
 
@@ -64,8 +66,8 @@ asyncTest('6.a Handshake K pattern', function () {
     // FIXME pass storage to Swarm.Host
     var uplink = new Swarm.Host('uplink~K',0,storage);
     var downlink = new Swarm.Host('downlink~K');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [uplink]};
+    uplink.getSources = function () {return [storage]};
+    downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
 
     Swarm.localhost = uplink;
@@ -102,8 +104,8 @@ asyncTest('6.b Handshake D pattern', function () {
     var storage = new DummyStorage(true);
     var uplink = new Swarm.Host('uplink~D',storage);
     var downlink = new Swarm.Host('downlink~D');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [uplink]};
+    uplink.getSources = function () {return [storage]};
+    downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
@@ -152,7 +154,7 @@ asyncTest('6.b Handshake D pattern', function () {
 
 });
 
-
+// both uplink and downlink have unsynchronized changes
 asyncTest('6.c Handshake Z pattern', function () {
     console.warn(QUnit.config.current.testName);
 
@@ -160,8 +162,8 @@ asyncTest('6.c Handshake Z pattern', function () {
     var oldstorage = new DummyStorage(false);
     var uplink = new Swarm.Host('uplink~Z',0,storage);
     var downlink = new Swarm.Host('downlink~Z');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [oldstorage]};
+    uplink.getSources = function () {return [storage]};
+    downlink.getSources = function () {return [oldstorage]};
 
     var oldMickeyState = {
         x:7,
@@ -174,27 +176,26 @@ asyncTest('6.c Handshake Z pattern', function () {
     };
     storage.states['/Mouse#Mickey'] = oldMickeyState;
     oldstorage.states['/Mouse#Mickey'] = oldMickeyState;
+
+    // new ops at the uplink
     storage.tails['/Mouse#Mickey'] = 
         {
             '!1ail+old.set': {y:10}
         };
-    // TODO provide a vers vector to on()/reon(), test for it (3rd party in
-    // oplog?)
 
     Swarm.localhost = downlink;
 
     var dlrepl = new Mouse('Mickey',oldMickeyState);
     uplink.on('/Mouse#Mickey');
     var uprepl = uplink.objects[dlrepl.spec()];
-    // TODO additive op
-    // start with set()
+
+    // offline changes at the downlink
     dlrepl.set({x:12});
-    //uprepl.move({x:1,y:1});
-    //downrepl.move({x:1,y:1});
+
     equal(uprepl.x,7);
     equal(uprepl.y,10);
 
-    downlink.availableUplinks = function () {return [uplink]};
+    downlink.getSources = function () {return [oldstorage,uplink]};
     console.warn('connect');
     uplink.on(downlink);
 
@@ -215,8 +216,8 @@ asyncTest('6.d Handshake R pattern', function () {
     var storage = new DummyStorage(false);
     var uplink = new Swarm.Host('uplink~R');
     var downlink = new Swarm.Host('downlink~R');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [uplink]};
+    uplink.getSources = function () {return [storage]};
+    downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 
@@ -224,7 +225,7 @@ asyncTest('6.d Handshake R pattern', function () {
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
-        ok(!dlrepl._version);
+        equal(new Swarm.Spec(dlrepl._version,'!').token('!').ext,'dummy');
 
         dlrepl.set({x:18,y:18}); // FIXME this is not R
         uprepl = uplink.objects['/Mouse#Mickey'];
@@ -242,8 +243,8 @@ test('6.e Handshake A pattern', function () {
     var storage = new DummyStorage(false);
     var uplink = new Swarm.Host('uplink~A');
     var downlink = new Swarm.Host('downlink~A');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {return [uplink]};
+    uplink.getSources = function () {return [storage]};
+    downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
     Swarm.localhost = downlink;
 

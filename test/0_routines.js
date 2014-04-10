@@ -28,7 +28,12 @@ DummyStorage.prototype.on = function (spec,base,replica) {
         // authoritative storage: no thing => return empty
         var state = self.states[ti];
         if (!state && base==='!0' && !spec.token('#').ext) {
+            // the storage is authoritative for the object => may
+            // create it
             state={ _version: self.version() };
+        }
+        if (!state) {
+            state={ _version: '0' }; // I officially know nothing
         }
         // FIXME mimic diff; init has id, tail has it as well
         var response = {};
