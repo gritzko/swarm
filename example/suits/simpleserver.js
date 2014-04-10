@@ -99,11 +99,15 @@ function DummyStorage(async) {
     this.states = {};
     this.tails = {};
     this._id = 'dummy';
-}
+};
+
+DummyStorage.prototype.version = Swarm.Host.prototype.version;
 
 DummyStorage.prototype.deliver = function (spec,value,src) {
+    if (spec.method()==='on')
+        return this.on(spec,value,src);
+    // stash the op
     var ti = spec.filter('/#');
-    //var obj = this.states[ti] || (this.states[ti]={_oplog:{},_logtail:{}});
     var tail = this.tails[ti];
     if (!tail)
         this.tails[ti] = tail = {};
@@ -112,46 +116,34 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
         console.error('op replay @storage');
     tail[vm] = value;
 };
-DummyStorage.prototype.on = function () {
-    var spec, replica;
-    if (arguments.length===2) {
-        spec = new Swarm.Spec(arguments[0]);
-        replica = arguments[1];
-    } else
-        throw 'xxx';
+
+DummyStorage.prototype.on = function (spec,base,replica) {
+    spec = new Swarm.Spec(spec);
     var ti = spec.filter('/#'), self=this;
     function reply () {
+        // authoritative storage: no thing => return empty
         var state = self.states[ti];
-        // FIXME mimic diff; init has id, tail has it as well
-        if (state) {
-            var response = {};
-            response['!'+state._version+'.init'] = state;
-            var tail = self.tails[ti];
-            if (tail)
-                for(var s in tail)
-                    response[s] = tail[s];
-            var clone = JSON.parse(JSON.stringify(response));
-            replica.deliver(ti,clone,self);
+        if (!state && base==='!0' && !spec.token('#').ext) {
+            state={ _version: self.version() };
         }
-        replica.reon(ti,'!'+(state?state._version:'0'),self);
+        // FIXME mimic diff; init has id, tail has it as well
+        var response = {};
+        if (state)
+            response['!'+state._version+'.init'] = state;
+        var tail = self.tails[ti];
+        if (tail)
+            for(var s in tail)
+                response[s] = tail[s];
+        var clone = JSON.parse(JSON.stringify(response));
+        replica.deliver(spec.set('.bundle'),clone,self);
+        replica.__reon( ti.add(spec.version(),'!').add('.reon'),
+                        '!'+(state?state._version:'0'), self );
     }
     this.async ? setTimeout(reply,1) : reply();
 };
 
-DummyStorage.prototype.off = function () {
-    this.normalizeSignature(arguments,'off');
-    var self = this,
-        spec = new Swarm.Spec(arguments[0]),
-        replica = arguments[2],
-        ti = spec.filter('/#');
-
-    function reply () {
-        replica.reoff(ti,null,self);
-    }
-    this.async ? setTimeout(reply,1) : reply();
+DummyStorage.prototype.off = function (spec,value,src) {
 };
-
-DummyStorage.prototype.normalizeSignature = Swarm.Syncable.prototype.normalizeSignature;
 
 var storage = new DummyStorage(true);
 
