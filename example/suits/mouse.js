@@ -18,7 +18,7 @@ var RTT, rttto, noTrack=false;
 
 
 function init () {
-    Swarm.debug = false;
+    Swarm.debug = true;
     // fill in the palette array
     for(var r=40; r<=200; r+=40)
         for(var g=40; g<=200; g+=40)
@@ -57,7 +57,7 @@ function subscribe () {
     });
 
     // create the peer object
-    myClient = new Swarm.Host(myClientId);
+    myClient = new Swarm.Host(myClientId.id());
     Swarm.localhost = myClient;
     // the plumber manages reconnects
 
@@ -68,6 +68,7 @@ function subscribe () {
         }
     });
     pipe.connect();
+    myClient.connect(pipe);
 
     // open "my" mouse object
     myClient.on('/Mouse' + myMouseId + '.init', function (spec, mouse_pojo, mouse) {
@@ -103,7 +104,7 @@ function subscribe () {
                 }
             }
 
-            myClient.on('/Mice#mice.set', trackMice);
+            mice.on('set', trackMice);
 
             if (!mice_pojo.hasOwnProperty(myMouseId)) {
                 mice.add(myMouseId, myMouseObject.spec().toString());
