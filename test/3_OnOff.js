@@ -89,7 +89,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     var ih = setInterval(function(){
         thermometer.set({t:i});
         if (i++==30) {
-            ok(thermometer._lstn.length<=2); // storage and maybe the client
+            ok(thermometer._lstn.length<=3); // storage and maybe the client
             clearInterval(ih);
             start();
             lowerPipe.close();
