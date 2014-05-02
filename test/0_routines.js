@@ -58,49 +58,50 @@ DummyStorage.prototype.normalizeSignature = Swarm.Syncable.prototype.normalizeSi
 Swarm.debug = true;
 
 
-function AsyncLoopbackConnection (pair) {
-    this.pair = pair || new AsyncLoopbackConnection(this);
-    this.ln = null;
-    this.cl = null;
+function AsyncLoopbackConnection (url) {
+    var m = url.match(/loopback:(\w+)/);
+    if (!m) throw 'invalid url';
+    this.id = m[1];
+    this.lstn = {};
     this.queue = [];
-    if (!pair) { //emit open
-        var self = this;
-        setTimeout(function () {
-            self.op && self.op();
-        })
-    }
+    if (this.id in AsyncLoopbackConnection.pipes)
+        throw new Error('duplicate');
+    AsyncLoopbackConnection.pipes[this.id] = this;
+    var pair = this.pair();
+    if (pair && pair.queue.length) pair.write();
+};
+AsyncLoopbackConnection.pipes = {};
+
+Swarm.Pipe.streams.loopback = AsyncLoopbackConnection;
+
+AsyncLoopbackConnection.prototype.pair = function () {
+    var pairId = this.id.match(/./g).reverse().join('');
+    return AsyncLoopbackConnection.pipes[pairId];
 };
 
-AsyncLoopbackConnection.prototype.on = function (event,ln) {
-    if (event==='data')
-        this.ln = ln;
-    else if (event==='open')
-        this.op = ln;
-    else if (event==='close')
-        this.cl = ln;
+AsyncLoopbackConnection.prototype.on = function (evname,fn) {
+    if (evname in this.lstn) throw 'multiple listeners not supported';
+    this.lstn[evname] = fn;
 };
 
 AsyncLoopbackConnection.prototype.receive = function (string) {
-    this.ln && this.ln(string);
+    this.lstn.data && this.lstn.data(string);
 };
 
-AsyncLoopbackConnection.prototype.send = function (obj) {
+AsyncLoopbackConnection.prototype.write = function (obj) {
     var self = this;
-    self.queue.push(obj.toString());
+    obj && self.queue.push(obj.toString());
     setTimeout(function () {
-        if (self.pair)
-            while (self.queue.length)
-                self.pair.receive(self.queue.shift());
+        var pair = self.pair();
+        if (!pair) return;
+        while (self.queue.length)
+            pair.receive(self.queue.shift());
     }, 1);
 };
 
 AsyncLoopbackConnection.prototype.close = function () {
-    var other = this.pair;
-    this.pair = null;
-    this.op = null;
-    this.ln = null;
-    if (other) {
-        other.close();
-        this.cl && this.cl();
-    }
+    delete AsyncLoopbackConnection.pipes[this.id];
+    var pair = this.pair();
+    pair && pair.close();
+    this.lstn.close && this.lstn.close();
 };

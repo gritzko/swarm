@@ -25,15 +25,13 @@ asyncTest('3.a serialized on, reon', function (){
     var downlink = new Swarm.Host('client~3a');
     // that's the default uplink.getSources = function () {return [storage]};
     
-    var conn = new AsyncLoopbackConnection();
+    var conn = new AsyncLoopbackConnection('loopback:3a');
+    var nnoc = new AsyncLoopbackConnection('loopback:a3');
     
-    var upperPipe = new Swarm.Pipe({host: uplink, sink: conn.pair}); // waits for 'data'/'close'
-    upperPipe.connect(); // WTF???
-    var lowerPipe = new Swarm.Pipe({host: downlink, sink: conn});
-    lowerPipe.connect();
+    var upperPipe = new Swarm.Pipe(uplink, conn); // waits for 'data'/'close'
+    var lowerPipe = new Swarm.Pipe(downlink, nnoc);
     
     downlink.getSources = function () {return [lowerPipe]};
-    downlink.connect(lowerPipe); // lowerPipe.on(this) basically
     
     downlink.on('/Thermometer#room.init',function i(spec,val,obj){
         obj.set({t:22});
@@ -66,19 +64,8 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     };
     var conn;
     
-    var lowerPipe = new Swarm.Pipe({
-        host: downlink,
-        transport: function factory () {
-            conn = new AsyncLoopbackConnection();
-            var upperPipe = new Swarm.Pipe({ host: uplink, sink: conn.pair, peerName: '3.b.upper' }); // waits for 'data'/'close'
-            upperPipe.connect();
-            //var lowerPipe = new Swarm.Pipe({ host: downlink, sink: conn });
-            return conn;
-        },
-        reconnectDelay: 1,
-        peerName: '3.b.lower'
-    });
-    lowerPipe.connect();
+    var lowerPipe = new Swarm.Pipe(downlink,'loopback:3b');
+    var upperPipe = new Swarm.Pipe(uplink,'loopback:b3');
 
     var thermometer = uplink.get(Thermometer), i=0;
 
