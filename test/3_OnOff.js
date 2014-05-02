@@ -30,8 +30,9 @@ asyncTest('3.a serialized on, reon', function (){
     
     var upperPipe = new Swarm.Pipe(uplink, conn); // waits for 'data'/'close'
     var lowerPipe = new Swarm.Pipe(downlink, nnoc);
+    downlink.connect(lowerPipe); // TODO possible mismatch
     
-    downlink.getSources = function () {return [lowerPipe]};
+    //downlink.getSources = function () {return [lowerPipe]};
     
     downlink.on('/Thermometer#room.init',function i(spec,val,obj){
         obj.set({t:22});
@@ -46,7 +47,6 @@ asyncTest('3.a serialized on, reon', function (){
         upperPipe.close();
     },250);
 
-    Swarm.localhost = uplink;  
 });
 
 
@@ -55,17 +55,11 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     var storage = new DummyStorage(false);
     var uplink = new Swarm.Host('swarm~3b',0,storage);
     var downlink = new Swarm.Host('client~3b');
-    uplink.availableUplinks = function () {return [storage]};
-    downlink.availableUplinks = function () {
-        var ret = [];
-        for(var p in this.peers)
-            ret.push(this.peers[p]);
-        return ret;
-    };
-    var conn;
     
     var lowerPipe = new Swarm.Pipe(downlink,'loopback:3b');
     var upperPipe = new Swarm.Pipe(uplink,'loopback:b3');
+
+    downlink.connect(lowerPipe);
 
     var thermometer = uplink.get(Thermometer), i=0;
 
@@ -86,8 +80,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         console.log('YPA '+val);
         if (spec.method()==='set') {
-            conn && conn.close(); // yeah; reconnect now
-            conn = null;
+            lowerPipe.stream.close();
         }
     });
     
