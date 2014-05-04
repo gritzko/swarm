@@ -16,7 +16,8 @@
     ],
     "dependencies": {
         "ws": "~0.4.31",
-        "context-logger": "git://github.com/abalandin/context-logger"
+        "koa": "",
+        "koa-static-cache": ""
     },
     "devDependencies": {
         "qunit" : "~0.5.18",

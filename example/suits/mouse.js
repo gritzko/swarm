@@ -61,13 +61,8 @@ function subscribe () {
     Swarm.localhost = myClient;
     // the plumber manages reconnects
 
-    var pipe = new Swarm.Pipe({
-        host: myClient,
-        transport: function () {
-            return new WSWrapper(wsServerUri);
-        }
-    });
-    pipe.connect();
+    var pipe = new Swarm.Pipe(myClient,wsServerUri);
+    //pipe.connect();
     myClient.connect(pipe);
 
     // open "my" mouse object

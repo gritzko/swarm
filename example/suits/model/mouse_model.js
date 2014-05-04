@@ -1,4 +1,6 @@
-if (typeof exports !== 'undefined') Swarm = require('../../../lib/swarm3.js');
+if (typeof exports === 'object') {
+    Swarm = require('../../../lib/swarm3.js');
+}
 
 // Our key class: a mouse pointer :)
 var Mouse = Swarm.Model.extend('Mouse', {
@@ -25,8 +27,10 @@ var PeerData = Swarm.Model.extend('PeerData', {
     }
 });
 
-exports && (exports.Mouse=Mouse);
-exports && (exports.Mice=Mice);
-exports && (exports.PeerData=PeerData);
+if (typeof(exports)==='object') {
+    exports.Mouse=Mouse;
+    exports.Mice=Mice;
+    exports.PeerData=PeerData;
+}
 
 console.log('\tmouse models defined ok');
