@@ -40,7 +40,7 @@ while (modelFile=modelClasses.pop()) {
 var fileStorage = new swarmServ.FileStorage('.swarm');
 
 // create Swarm Host
-var swarmHost = new Swarm.Host('swarm~v',0,fileStorage);
+var swarmHost = new swarm.Host('swarm~v',0,fileStorage);
 
 // start the HTTP server
 var port = options.port || 8000;
