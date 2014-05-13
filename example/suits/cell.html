@@ -1,59 +1,28 @@
-<html>
+<!doctype html>
+<html lang="en" data-framework="react">
     <head>
-        <script type="text/javascript" src="../../lib/murmur.js"></script>
-        <script type="text/javascript" src="../../lib/swarm3.js"></script>
-        <script type="text/javascript" src="./model/mouse_model.js"></script>
-        <script type="text/javascript" src="../../lib/swarm3-client.js"></script>
-        <script type="text/javascript" src="./mouse.js"></script>
-
-        <style type='text/css'>
-            body {
-                margin: 0px;
-                overflow: hidden;
-                background-image: url('millim-mono.gif');
-            }
-            body[connected="true"] {
-                background-image: url('millim.gif');
-            }
-            span#rtt {
-                position: fixed;
-                left: 10px;
-                bottom: 10px;
-                color: #888;
-                font-family: 'Verdana';
-                font-size: 10pt;
-                font-style: italic;
-            }
-            span#count {
-                position: fixed;
-                right: 10px;
-                bottom: 10px;
-                color: #888;
-                font-family: 'Verdana';
-                font-size: 10pt;
-                font-style: italic;
-            }
-            span.mouse {
-                position:fixed;
-                color: red;
-                font-size: 20pt;
-                /*text-shadow: 1px 1px 4px #888;  slow */
-            }
-            span#uri {
-                position: fixed;
-                left: 10px;
-                top: 10px;
-                color: #888;
-                font-family: 'Verdana';
-                font-size: 9pt;
-                font-style: italic;
-            }
-        </style>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Swarm.js mouse tracking demo</title>
+        <link rel="stylesheet" href="mice.css">
     </head>
     <body>
-        <span id="x" class='mouse'></span>
+
+        <div id='mice'>
+        </div>
+
         <span id='rtt'></span>
         <span id='count'></span>
         <span id='uri'></span>
+
+        <script src="http://fb.me/react-0.10.0.js"></script>
+        <script src="../../lib/murmur.js"></script>
+        <script src="../../lib/swarm3.js"></script>
+        <script src="./model/mouse_model.js"></script>
+        <script src="../../lib/swarm3-client.js"></script>
+        <script src="./datalink.js"></script>
+        <script src="./app.js"></script>
+        <script src="./tracker.js"></script>
+
     </body>
 </html>

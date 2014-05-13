@@ -7,6 +7,7 @@ var Mouse = Swarm.Model.extend('Mouse', {
     defaults: {
         x: 0,
         y: 0,
+        symbol: '.',
         ms: 0// last activity timestamp
     }
 });
@@ -17,6 +18,7 @@ var Mouse = Swarm.Model.extend('Mouse', {
 var Mice = Swarm.Set.extend('Mice', {
 
 });
+// FIXME: server-side cleansing
 
 // server state tracking: TODO
 

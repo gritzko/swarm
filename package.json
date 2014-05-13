@@ -21,7 +21,7 @@
         "react" : ""
     },
     "devDependencies": {
-        "qunit" : "~0.5.18",
+        "qunit" : "~0.6",
         "underscore": "~1.6.0"
     }
 }
