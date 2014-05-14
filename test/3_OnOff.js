@@ -1,5 +1,5 @@
 if (typeof require == 'function') {
-    var swrm = require('../lib/swarm2.js');
+    var swrm = require('../lib/swarm3.js');
     Swarm.Spec = swrm.Spec;
     Swarm = swrm.Swarm;
     Model = swrm.Model;

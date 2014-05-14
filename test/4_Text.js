@@ -58,53 +58,58 @@ var Text = Swarm.Syncable.extend('Text',{
         text : '',
         _oplog : Object
     },
-    $_init: function (spec,text,src) {
-        console.log('what?');
+
+    neutrals: {
+        init: function (spec, text, src) {
+            console.log('what?');
+        }
     },
-    $$insert: function (spec,ins,src) {
-        var w1 = [], w4 = [];
-        var vt = spec.token('!'), v=vt.bare;
-        var ts = v.substr(0,5), seq = v.substr(5) || '00';
-        var seqi = Spec.base2int(seq);
-        for(var i=0; i<this.weave.length; i++) {
-            var id = this.ids[i];
-            w1.push(this.weave.charAt(i));
-            w4.push(id);
-            if (id in ins) {
-                var str = ins[id].toString();
-                for(var k=i+1; k<this.weave.length && this.ids[k]>vt.body; k++);
-                if (k>i+1) { // concurrent edits
-                    var newid = this.ids[k-1];
-                    ins[newid] = ins[id];
-                    delete ins[id];
-                } else {
-                    for(var j=0; j<str.length; j++) {
-                        w1.push(str.charAt(j)); // FIXME overfill
-                        w4.push(ts+(seqi?Spec.int2base(seqi++,2):'')+'+'+vt.ext);
+    methods: {
+        insert: function (spec, ins, src) {
+            var w1 = [], w4 = [];
+            var vt = spec.token('!'), v = vt.bare;
+            var ts = v.substr(0, 5), seq = v.substr(5) || '00';
+            var seqi = Spec.base2int(seq);
+            for (var i = 0; i < this.weave.length; i++) {
+                var id = this.ids[i];
+                w1.push(this.weave.charAt(i));
+                w4.push(id);
+                if (id in ins) {
+                    var str = ins[id].toString();
+                    for (var k = i + 1; k < this.weave.length && this.ids[k] > vt.body; k++);
+                    if (k > i + 1) { // concurrent edits
+                        var newid = this.ids[k - 1];
+                        ins[newid] = ins[id];
+                        delete ins[id];
+                    } else {
+                        for (var j = 0; j < str.length; j++) {
+                            w1.push(str.charAt(j)); // FIXME overfill
+                            w4.push(ts + (seqi ? Spec.int2base(seqi++, 2) : '') + '+' + vt.ext);
+                        }
                     }
                 }
             }
-        }
-        if (vt.ext===this._host._id)
-            this._host.tsSeq = seqi+1;
-        this.weave = w1.join('');
-        this.ids = w4;
-        this.rebuild();
-    },
-    $$remove: function (spec,rm,src) {
-        var w1 = [], w4 = [];
-        var v = spec.version();
-        for(var i=0; i<this.weave.length; i++) {
-            w1.push(this.weave.charAt(i));
-            w4.push(this.ids[i]);
-            if (this.ids[i] in rm) {
-                w1.push('\u0008');
-                w4.push(v);
+            if (vt.ext === this._host._id)
+                this._host.tsSeq = seqi + 1;
+            this.weave = w1.join('');
+            this.ids = w4;
+            this.rebuild();
+        },
+        remove: function (spec, rm, src) {
+            var w1 = [], w4 = [];
+            var v = spec.version();
+            for (var i = 0; i < this.weave.length; i++) {
+                w1.push(this.weave.charAt(i));
+                w4.push(this.ids[i]);
+                if (this.ids[i] in rm) {
+                    w1.push('\u0008');
+                    w4.push(v);
+                }
             }
+            this.weave = w1.join('');
+            this.ids = w4;
+            this.rebuild();
         }
-        this.weave = w1.join('');
-        this.ids = w4;
-        this.rebuild();
     },
     rebuild: function () {
         /*var re = /([^\u0008][\u0008]+)|([^\u0008])/g, m=[];
