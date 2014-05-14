@@ -57,6 +57,9 @@ var Mouse = Swarm.Model.extend('Mouse', {
     }
 });
 
+var Mice = Swarm.Set.extend('Mice', {
+});
+
 //    S O  I T  F I T S
 
 asyncTest('6.a Handshake K pattern', function () {
@@ -260,135 +263,45 @@ test('6.e Handshake A pattern', function () {
 });
 
 
-/*
-test('Mickey the Mouse on/off', function(){
-    console.warn('Mickey the Mouse on/off');
-    // TODO tmp substitute hash function: uplink==author
+test('6.f Handshake and sync', function () {
+    console.warn(QUnit.config.current.testName);
 
-    var aleksisha = new Swarm.Host('#aleksisha');
-    var gritzko = new Swarm.Host('#gritzko');
-    aleksisha.on(gritzko);
-    Swarm.localhost = gritzko;
+    var storage = new DummyStorage(false);
+    // FIXME pass storage to Swarm.Host
+    var uplink = new Swarm.Host('uplink~F',0,storage);
+    var downlinkA = new Swarm.Host('downlink~FA');
+    var downlinkB = new Swarm.Host('downlink~FB');
+    uplink.getSources = function () {return [storage]};
+    downlinkA.getSources = function () {return [uplink]};
+    downlinkB.getSources = function () {return [uplink]};
+    uplink.on(downlinkA);
+    uplink.on(downlinkB);
 
-    var mickey = new Mouse('',{x:0,y:0}); // TODO normalize sig
-
-    mickey.move({x:1,y:1});
-
-    equal(mickey.x,1);
-    equal(mickey.y,1);
-
-    var other = aleksisha.on(mickey.spec()); // FIXME RELINKING!!!!!
-
-    equal(other.x,1);
-    equal(other.y,1);
-    ok(other._oplog['!'+mickey._version+'.move']);
-    equal(other._lstn[0],mickey);
-    equal(mickey._lstn[0],other);
-    equal(other._host,aleksisha);
-    equal(mickey._host,gritzko);
-
-    //var mouseType = gritzko.on('/Mouse');
-    //equal(mouseType.$$move,Mouse.$$move);
-
-    aleksisha.close();
-    gritzko.close();
-    Swarm.localhost = null;
+    Swarm.localhost = downlinkA;
     
+    var miceA = downlinkA.get('/Mice#mice');
+    var miceB = downlinkB.get('/Mice#mice');
+    
+    var mickeyA = downlinkA.get('/Mouse');
+    var mickeyB = downlinkB.get('/Mouse');
+    miceA.addObject(mickeyA);
+    
+    var mickeyAatB = miceB.objects[mickeyA.spec()];
+    ok(miceA.objects[mickeyA.spec()]);
+    ok(mickeyAatB);
+    miceB.addObject(mickeyB);
+
+    var mickeyBatA = miceA.objects[mickeyB.spec()];
+    ok(miceB.objects[mickeyB.spec()]);
+    ok(mickeyBatA);
+
+    mickeyA.set({x:0xA});    
+    mickeyB.set({x:0xB});
+    equal(mickeyAatB.x,0xA);
+    equal(mickeyBatA.x,0xB);
+
+    mickeyAatB.set({y:0xA});    
+    mickeyBatA.set({y:0xB});
+    equal(mickeyA.y,0xA);
+    equal(mickeyB.y,0xB);
 });
-
-
-
-test('Reconciliation', function () {
-    console.warn('Reconciliation');
-    var aleksisha = new Swarm.Host('#aleksisha');
-    var gritzko = new Swarm.Host('#gritzko');
-    aleksisha.on(gritzko);
-    Swarm.localhost = gritzko;
-
-    var mickey = new Mouse();
-    var other = aleksisha.on(mickey.spec());
-
-    mickey.move({x:1,y:1});
-    
-    equal(mickey.x,1);
-    equal(mickey.y,1);
-    equal(other.x,1);
-    equal(other.y,1);
-    
-    aleksisha.off(gritzko);
-
-    other.move({x:-1,y:1});
-    equal(other.x,0);
-    equal(other.y,2);
-    equal(mickey.x,1);
-    equal(mickey.y,1);
-
-    mickey.init = null;
-    aleksisha.on(gritzko);
-    delete mickey.init;
-    
-    equal(other.x,0);
-    equal(other.y,2);
-    equal(mickey.x,0);
-    equal(mickey.y,2);
-    
-    gritzko.close();
-    aleksisha.close();
-});
-*/
-/*
-
-// Storage
-gritzko.storage = new MemStorage();
-gritzko.storage['/Mouse#Mickey'] = { x:5, y: 5, _version: '', _oplog: '' }; // + unapplied log!!!
-...
-var other = aleksisha.on('/Mouse#Mickey', track); // THINK anchor to prevent gc
-equal(other.x,5); // applied
-
-// Offline creation
-// gritzko, aleksisha, maxmax, root
-var other = new Mouse(aleksisha);
-other.set({x:42});
-gritzko.on(aleksisha);
-equal (gritzko.storage['/Mouse#Mickey'].x, 42);
-
-// Downlink propagation
-var maxm = maxmaxmax.on('/Mouse#Mickey');
-maxm.set({y:123});
-equal(gritzkom.y, 123);
-equal(aleksisham.y, 123);
-
-// Overwrite & merge
-
-maxmax.off(gritzko);
-gritzkom.set({x:111, y:111});
-maxmaxm.set({x: 222});
-maxmax.on(gritzko);
-equal(maxmaxm.y,111);
-equal(maxmaxm.x,222);
-equal(gritzkom.y,111);
-equal(gritzkom.x,222);
-
-// 3-layer arch (client, edge, switch)
-
-new Swarm.Host('root~switch');
-new Swarm.Host('root+gritzko');
-new Swarm.Host('root+maxmax');
-new Swarm.Host('gritzko~1');
-new Swarm.Host('maxmax~1');
-maxmaxm.set({x:321});
-equal(gritzkom.x,321);
-
-// mesh reconfiguration
-
-peers[4];
-
-for() {
-// close
-one.set({x,i});
-for()
-equal(j.x,i);
-// install back (random order reconnect)
-equal();
-}
-*/
