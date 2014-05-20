@@ -146,7 +146,7 @@ asyncTest('6.b Handshake D pattern', function () {
         equal(obj._id,'Mickey');
         equal(obj.x,7);
         equal(obj.y,7);
-        equal(obj._version,'0eonago');
+        equal(obj._version,'!0eonago');
         start();
     });
     var dlrepl = downlink.objects['/Mouse#Mickey'];
@@ -171,7 +171,7 @@ asyncTest('6.c Handshake Z pattern', function () {
     var oldMickeyState = {
         x:7,
         y:7,
-        _version: '0eonago',
+        _version: '!0eonago',
         _oplog:{
             '!0eon+ago.set' : {y:7},
             '!000ld+old.set': {x:7}
@@ -180,7 +180,7 @@ asyncTest('6.c Handshake Z pattern', function () {
     storage.states['/Mouse#Mickey'] = oldMickeyState;
     oldstorage.states['/Mouse#Mickey'] = oldMickeyState;
 
-    // new ops at the uplink
+    // new ops at the uplink' storage
     storage.tails['/Mouse#Mickey'] = 
         {
             '!1ail+old.set': {y:10}
@@ -195,9 +195,11 @@ asyncTest('6.c Handshake Z pattern', function () {
     // offline changes at the downlink
     dlrepl.set({x:12});
 
+    // ...we see the tail applied, downlink changes not here yet
     equal(uprepl.x,7);
     equal(uprepl.y,10);
 
+    // Two uplinks! The "server" and the "cache".
     downlink.getSources = function () {return [oldstorage,uplink]};
     console.warn('connect');
     uplink.on(downlink);
@@ -228,7 +230,7 @@ asyncTest('6.d Handshake R pattern', function () {
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
-        equal(new Swarm.Spec(dlrepl._version,'!').token('!').ext,'dummy');
+        equal(dlrepl._version,'!0');
 
         dlrepl.set({x:18,y:18}); // FIXME this is not R
         uprepl = uplink.objects['/Mouse#Mickey'];
@@ -275,7 +277,6 @@ test('6.f Handshake and sync', function () {
     downlinkA.getSources = function () {return [uplink]};
     downlinkB.getSources = function () {return [uplink]};
     uplink.on(downlinkA);
-    uplink.on(downlinkB);
 
     Swarm.localhost = downlinkA;
     
@@ -285,6 +286,8 @@ test('6.f Handshake and sync', function () {
     var mickeyA = downlinkA.get('/Mouse');
     var mickeyB = downlinkB.get('/Mouse');
     miceA.addObject(mickeyA);
+
+    uplink.on(downlinkB);
     
     var mickeyAatB = miceB.objects[mickeyA.spec()];
     ok(miceA.objects[mickeyA.spec()]);

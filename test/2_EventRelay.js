@@ -122,7 +122,7 @@ var Duck = Swarm.Model.extend('Duck',{
         return this.age >= 18; // Russia
     },
     validate: function (spec,val) {
-        return true; // :|
+        return ''; // :|
         //return spec.method()!=='set' || !('height' in val);
         //throw new Error("can't set height, may only grow");
     },
@@ -146,7 +146,7 @@ test('2.a basic listener func', function (test) {
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host.get('/Duck#hueyA');
-    ok(huey._version); // storage is sync, must return empty init + storage timestamp
+    ok(huey._version); //storage is sync, must return empty init + storage timestamp
     // listen to a field
     huey.on('age',function lsfn(spec,val){  // FIXME: filtered .set listener!!!
         equal(val.age,1);
@@ -179,11 +179,11 @@ test('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
     Swarm.localhost = host;
     var louie = new Duck('louie');
-    var ts1 = host.version();
+    var ts1 = host.time();
     louie.set({age:3});
-    var ts2 = host.version();
+    var ts2 = host.time();
     ok(ts2>ts1);
-    var vid = louie._version;
+    var vid = louie._version.substr(1);
     ok(ts1<vid);
     ok(ts2>vid);
     console.log(ts1,vid,ts2);
@@ -212,9 +212,8 @@ asyncTest('2.e reactions',function (test) {
         equal(val.age,1);
         start();
     });
-    var version = host.version(), sp = '!'+version+'.set', batch = {};
-    batch[sp] = {age:1};
-    huey.deliver(huey.newEventSpec('bundle'), batch); // ~ set{}
+    //var version = host.time(), sp = '!'+version+'.set';
+    huey.deliver(huey.newEventSpec('set'), {age:1});
     Duck.removeReaction(handle);
     equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
 });
@@ -239,7 +238,7 @@ test('2.g custom field type',function (test) {
     var huey = host.get('/Duck#huey');
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
-    var vid = host.version();
+    var vid = host.time();
     host.deliver(new Swarm.Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
     ok(Math.abs(huey.height.meters-0.35)<0.0001);
 });
@@ -318,6 +317,15 @@ test('2.l partial order', function (test) {
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
     equal(duckling.height.toString(), '2cm');
+});
+
+test('2.m init push', function (test) {
+    Swarm.localhost = host;
+    var scrooge = new Duck({age:105});
+    var tail = storage.tails[scrooge.spec()];
+    // FIXME equal(scrooge._version.substr(1), scrooge._id);
+    var op = tail && tail[scrooge._version+'.set'];
+    ok(tail) && ok(op) && equal(op.age,105);
 });
 
 /*  TODO

@@ -197,8 +197,8 @@ test('4.c concurrent insert', function (test) {
     var eid = text.ids[2];
     var spec = text.spec();
     text.deliver ( new Spec("/Text#ALE!00001+gritzko.insert"), { '00000+swarm': 'a' });
-    text.deliver ( new Spec("/Text#ALE!00003+gritzko.insert"), { '00001+gritzko' : 'l' });
-    text.deliver ( new Spec("/Text#ALE!00002+gritzko.insert"), { '00001+gritzko' : 'e' });
+    text.deliver ( new Spec("/Text#ALE!00003+gritzko~1.insert"), { '00001+gritzko' : 'l' });
+    text.deliver ( new Spec("/Text#ALE!00002+gritzko~2.insert"), { '00001+gritzko' : 'e' });
     equal(text.text,'ale');
 
 

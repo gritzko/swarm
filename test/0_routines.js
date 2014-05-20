@@ -5,49 +5,77 @@ function DummyStorage(async) {
     this._id = 'dummy';
 };
 
-DummyStorage.prototype.version = Swarm.Host.prototype.version;
+DummyStorage.prototype.time = Swarm.Host.prototype.time;
 
 DummyStorage.prototype.deliver = function (spec,value,src) {
     if (spec.method()==='on')
         return this.on(spec,value,src);
-    // stash the op
+    else if (spec.method()==='off')
+        return; // this imlpementation doesn't push changes
+    else if (spec.method()==='bundle')
+        console.error('?');
+    // A storage is always an "uplink" so it never receives reon, reoff.
     var ti = spec.filter('/#');
-    var tail = this.tails[ti];
-    if (!tail)
-        this.tails[ti] = tail = {};
-    var vm = spec.filter('!.');
-    if (vm in tail)
-        console.error('op replay @storage');
-    tail[vm] = value;
+    var tail = this.tails[ti] || (this.tails[ti] = {});
+    var count=0;
+    for(var s in tail) count++;
+    // The storage piggybacks on the object's state/log handling logic
+    // First, it adds an op to the log tail unless the log is too long...
+    if (count<3 || src._id!==spec.id()) {
+        var vm = spec.filter('!.');
+        if (vm in tail) console.error('op replay @storage');
+        tail[vm] = value;
+    } else { // ...otherwise it saves the state, zeroes the tail.
+        var state = src.pojo(true);
+        this.states[ti] = state;
+        this.tails[ti] = {};
+    }
+    // In a real storage implementation, state and log often go into
+    // different backends, e.g. the state is saved to SQL/NoSQL db,
+    // while the log may live in a key-value storage.
+    // As long as the state has sufficient versioning info saved with
+    // it (like a version vector), we may purge the log lazily, once
+    // we are sure that the state is reliably saved. So, the log may
+    // overlap with the state (some ops are already applied). That
+    // provides some necessary resilience to workaround the lack of
+    // transactions across backends.
+    // In case third parties may write to the state backend, figure
+    // some way to deal with it (e.g. make a retrofit operation).
 };
 
 DummyStorage.prototype.on = function (spec,base,replica) {
     spec = new Swarm.Spec(spec);
     var ti = spec.filter('/#'), self=this;
+
     function reply () {
-        // authoritative storage: no thing => return empty
         var state = self.states[ti];
-        if (!state && base==='!0' && !spec.token('#').ext) {
-            // the storage is authoritative for the object => may
-            // create it
-            state={ _version: self.version() };
-        }
-        if (!state) {
-            state={ _version: '0' }; // I officially know nothing
-        }
-        // FIXME mimic diff; init has id, tail has it as well
-        var response = {};
-        if (state)
-            response['!'+state._version+'.init'] = state;
         var tail = self.tails[ti];
-        if (tail)
-            for(var s in tail)
-                response[s] = tail[s];
-        var clone = JSON.parse(JSON.stringify(response));
-        replica.deliver(spec.set('.bundle'),clone,self);
+        var idtok = spec.token('#');
+        var vertok = spec.token('!');
+        if (state || tail) { // if we have something return it
+            state = state || {};
+            tail = tail || {};
+            // don't pass by reference
+            state = JSON.parse(JSON.stringify(state));
+            state._tail = JSON.parse(JSON.stringify(tail));
+        /*} else if (spec.id()===spec.version()) { // new object created
+            if (base && typeof(base)==='object') { // TODO impl this @Syncable
+                // TODO add sanity checks
+                state = JSON.parse(JSON.stringify(base));
+                state._version = '!'+spec.version();
+                self.states[ti] = state;
+            } may be a bad idea (offline creation) */
+        } else {
+            state = self.states[ti] = {_version:'!0'}; // no operations => !0
+        }
+        replica.deliver(spec.set('.patch'),state,self);
+        var ihave = new Swarm.Spec.Map(state._version);
+        for(var v in tail)
+            ihave.add(v);
         replica.__reon( ti.add(spec.version(),'!').add('.reon'),
-                        '!'+(state?state._version:'0'), self );
+                        ihave.toString(), self );
     }
+    
     this.async ? setTimeout(reply,1) : reply();
 };
 

@@ -16,9 +16,9 @@ Swarm.debug = true;
 asyncTest('timestamp sequence test', function () {
     var swarm = Swarm.localhost = new Swarm.Host('gritzko',{},{on:function(){}});
     expect(100);
-    var ts1 = swarm.version(), ts2, i=0;
+    var ts1 = swarm.time(), ts2, i=0;
     var iv = setInterval(function(){
-        ts2 = swarm.version();
+        ts2 = swarm.time();
         if (ts2<=ts1)
             console.error(ts2,'<=',ts1);
         if (i++==100) {
