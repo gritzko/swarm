@@ -26,7 +26,7 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
         if (vm in tail) console.error('op replay @storage');
         tail[vm] = value;
     } else { // ...otherwise it saves the state, zeroes the tail.
-        var state = src.pojo(true);
+        var state = src.diff();
         this.states[ti] = state;
         this.tails[ti] = {};
     }
@@ -72,7 +72,7 @@ DummyStorage.prototype.on = function (spec,base,replica) {
         var ihave = new Swarm.Spec.Map(state._version);
         for(var v in tail)
             ihave.add(v);
-        replica.__reon( ti.add(spec.version(),'!').add('.reon'),
+        replica.deliver( ti.add(spec.version(),'!').add('.reon'),
                         ihave.toString(), self );
     }
     
@@ -81,7 +81,6 @@ DummyStorage.prototype.on = function (spec,base,replica) {
 
 DummyStorage.prototype.off = function (spec,value,src) {
 };
-DummyStorage.prototype.normalizeSignature = Swarm.Syncable.prototype.normalizeSignature;
 
 
 function AsyncLoopbackConnection (url) {

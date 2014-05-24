@@ -5,7 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var http = require('http');
-var swarm = require('./lib/swarm3.js');
+var Swarm = require('./lib/swarm3.js');
 var swarmServ = require('./lib/swarm3-server.js');
 var nopt = require('nopt');
 var koa = require('koa');
@@ -31,7 +31,7 @@ while (modelFile=modelClasses.pop()) {
     for(var item in mod) {
         var fn = mod[item];
         if (fn.constructor!==Function) continue;
-        if (fn.extend!==swarm.Syncable.extend) continue;
+        if (fn.extend!==Swarm.Syncable.extend) continue;
         console.log('\tmodel class found:\t',item);
     }
 }
@@ -40,7 +40,7 @@ while (modelFile=modelClasses.pop()) {
 var fileStorage = new swarmServ.FileStorage('.swarm');
 
 // create Swarm Host
-var swarmHost = new swarm.Host('swarm~v',0,fileStorage);
+var swarmHost = new Swarm.Host('swarm~v',0,fileStorage);
 
 // start the HTTP server
 var port = options.port || 8000;
@@ -58,7 +58,7 @@ wsServer.on('connection', function(ws) {
     console.log('incomingWS %s', params.path);
     // check the secret
     // FIXME grant ssn
-    var pipe = new swarm.Pipe( swarmHost, new swarmServ.EinarosWSStream(ws) );
+    var pipe = new Swarm.Pipe( swarmHost, new swarmServ.EinarosWSStream(ws) );
 });
 
 // TODO pexing

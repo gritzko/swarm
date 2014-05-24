@@ -19,9 +19,9 @@ test('4._ diff', function (test){
     var eq = diff('same','same');
     deepEqual(eq,[['=','same']]);
     var ch = diff('was','now');
-    deepEqual(ch,[['-','was'],['+','now']]);
+    deepEqual(ch,[['+','now'],['-','was']]);
     var mid = diff('muddle','middle');
-    deepEqual(mid,[['=','m'],['-','u'],['+','i'],['=','ddle']]);
+    deepEqual(mid,[['=','m'],['+','i'],['-','u'],['=','ddle']]);
 });
 
 var storage = new DummyStorage(false);
@@ -49,6 +49,9 @@ test('4.b in rm', function (test) {
 
     equal(text.text,'text');
     equal(text.weave,'\ntexs\u0008t');
+    
+    text.set('terminator model t');
+    equal(text.text,'terminator model t');
 });
 
 test('4.c concurrent insert', function (test) {

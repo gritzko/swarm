@@ -40,3 +40,9 @@ span#uri {
     font-size: 9pt;
     font-style: italic;
 }
+p.online {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    margin: 0;
+}
