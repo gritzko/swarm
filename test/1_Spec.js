@@ -1,17 +1,10 @@
-/**
- * Created with JetBrains WebStorm.
- * User: gritzko
- * Date: 8/24/13
- * Time: 6:21 PM
- * To change this template use File | Settings | File Templates.
- *
 if (typeof(require)==='function') {
-    var swarm = require('../lib/swarm2.js');
-    Spec = swarm.Spec;
-    Swarm = swarm.Swarm;
-}*/
+    Swarm = require('../lib/swarm3.js');
+}
+Spec = Swarm.Spec;
 
 Swarm.debug = true;
+
 
 asyncTest('timestamp sequence test', function () {
     var swarm = Swarm.localhost = new Swarm.Host('gritzko',{},{on:function(){}});

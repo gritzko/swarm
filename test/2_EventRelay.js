@@ -5,16 +5,11 @@
  * Time: 6:21 PM
  */
 
-if (typeof require == 'function') {
-    var swrm = require('../lib/swarm3.js');
-    Spec = swrm.Spec;
-    Swarm = swrm.Swarm;
-    Model = swrm.Model;
-    Field = swrm.Field;
-    Set = swrm.Set;
-} else {
-    exports = this.testEventRelay = {};
-}
+if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
+Spec = Swarm.Spec;
+Model = Swarm.Model;
+Field = Swarm.Field;
+Set = Swarm.Set;
 
 // BACK TO SANITY
 // V 0 write a test for tracked props/logged methods/serial/etc : the API end

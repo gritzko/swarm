@@ -1,14 +1,8 @@
-if (typeof require == 'function') {
-    var swrm = require('../lib/swarm3.js');
-    Swarm.Spec = swrm.Spec;
-    Swarm = swrm.Swarm;
-    Model = swrm.Model;
-    Field = swrm.Field;
-    Set = swrm.Set;
-} else {
-    exports = this.testEventRelay = {};
-}
-
+if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
+Spec = Swarm.Spec;
+Model = Swarm.Model;
+Field = Swarm.Field;
+Set = Swarm.Set;
 
 
 var Thermometer = Swarm.Model.extend('Thermometer',{

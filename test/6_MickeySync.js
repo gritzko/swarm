@@ -1,3 +1,12 @@
+if (typeof require == 'function') {
+    Swarm = require('../lib/swarm3.js');
+}
+Spec = Swarm.Spec;
+Model = Swarm.Model;
+Field = Swarm.Field;
+Set = Swarm.Set;
+Text = Swarm.Text;
+
 /** Must be constructed from String, serialized into a String.
     JSON string is OK :) */
 function FullName (name) {

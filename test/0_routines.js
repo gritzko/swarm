@@ -83,8 +83,6 @@ DummyStorage.prototype.off = function (spec,value,src) {
 };
 DummyStorage.prototype.normalizeSignature = Swarm.Syncable.prototype.normalizeSignature;
 
-Swarm.debug = true;
-
 
 function AsyncLoopbackConnection (url) {
     var m = url.match(/loopback:(\w+)/);
