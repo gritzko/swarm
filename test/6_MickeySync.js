@@ -280,40 +280,41 @@ test('6.f Handshake and sync', function () {
     var storage = new DummyStorage(false);
     // FIXME pass storage to Swarm.Host
     var uplink = new Swarm.Host('uplink~F',0,storage);
-    var downlinkA = new Swarm.Host('downlink~FA');
-    var downlinkB = new Swarm.Host('downlink~FB');
+    var downlink1 = new Swarm.Host('downlink~F1');
+    var downlink2 = new Swarm.Host('downlink~F2');
     uplink.getSources = function () {return [storage]};
-    downlinkA.getSources = function () {return [uplink]};
-    downlinkB.getSources = function () {return [uplink]};
-    uplink.on(downlinkA);
-
-    Swarm.localhost = downlinkA;
+    downlink1.getSources = function () {return [uplink]};
+    downlink2.getSources = function () {return [uplink]};
     
-    var miceA = downlinkA.get('/Mice#mice');
-    var miceB = downlinkB.get('/Mice#mice');
+    uplink.on(downlink1);
+
+    Swarm.localhost = downlink1;
     
-    var mickeyA = downlinkA.get('/Mouse');
-    var mickeyB = downlinkB.get('/Mouse');
-    miceA.addObject(mickeyA);
-
-    uplink.on(downlinkB);
+    var miceA = downlink1.get('/Mice#mice');
+    var miceB = downlink2.get('/Mice#mice');
     
-    var mickeyAatB = miceB.objects[mickeyA.spec()];
-    ok(miceA.objects[mickeyA.spec()]);
-    ok(mickeyAatB);
-    miceB.addObject(mickeyB);
+    var mickey1 = downlink1.get('/Mouse');
+    var mickey2 = downlink2.get('/Mouse');
+    miceA.addObject(mickey1);
 
-    var mickeyBatA = miceA.objects[mickeyB.spec()];
-    ok(miceB.objects[mickeyB.spec()]);
-    ok(mickeyBatA);
+    uplink.on(downlink2);
+    
+    var mickey1at2 = miceB.objects[mickey1.spec()];
+    ok(miceA.objects[mickey1.spec()]);
+    ok(mickey1at2);
+    miceB.addObject(mickey2);
 
-    mickeyA.set({x:0xA});    
-    mickeyB.set({x:0xB});
-    equal(mickeyAatB.x,0xA);
-    equal(mickeyBatA.x,0xB);
+    var mickey2at1 = miceA.objects[mickey2.spec()];
+    ok(miceB.objects[mickey2.spec()]);
+    ok(mickey2at1);
 
-    mickeyAatB.set({y:0xA});    
-    mickeyBatA.set({y:0xB});
-    equal(mickeyA.y,0xA);
-    equal(mickeyB.y,0xB);
+    mickey1.set({x:0xA});    
+    mickey2.set({x:0xB});
+    equal(mickey1at2.x,0xA);
+    equal(mickey2at1.x,0xB);
+
+    mickey1at2.set({y:0xA});    
+    mickey2at1.set({y:0xB});
+    equal(mickey1.y,0xA);
+    equal(mickey2.y,0xB);
 });
