@@ -46,7 +46,7 @@ var app = app || {};
 
         render: function () {
 
-            var mice = app.host.get(this.props.spec);   // FIXME automatically
+            var mice = this.sync; //app.host.get(this.props.spec);
             var crowd = mice.list();
             var crowdView = crowd.map(
                 function (mouse) {
