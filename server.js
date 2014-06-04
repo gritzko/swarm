@@ -21,20 +21,22 @@ var koa_static = require('koa-static-cache');
 app.use(koa_static('.'));
 
 // boot model classes
-var modelPath = options.models||'model/';
-console.log(modelPath);
-var modelClasses = fs.readdirSync(modelPath), modelFile;
-while (modelFile=modelClasses.pop()) {
-    if (!/^\w+\.js$/.test(modelFile)) continue;
-    console.log('Loading model file',modelFile);
-    var mod = require(path.join(modelPath,modelFile));
-    for(var item in mod) {
-        var fn = mod[item];
-        if (fn.constructor!==Function) continue;
-        if (fn.extend!==Swarm.Syncable.extend) continue;
-        console.log('\tmodel class found:\t',item);
+var modelPathList = options.models||'model/';
+modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
+    console.log(modelPath);
+    var modelClasses = fs.readdirSync(modelPath), modelFile;
+    while (modelFile = modelClasses.pop()) {
+        if (!/^\w+\.js$/.test(modelFile)) continue;
+        console.log('Loading model file', modelFile);
+        var mod = require(path.join(modelPath, modelFile));
+        for (var item in mod) {
+            var fn = mod[item];
+            if (fn.constructor !== Function) continue;
+            if (fn.extend !== Swarm.Syncable.extend) continue;
+            console.log('\tmodel class found:\t', item);
+        }
     }
-}
+});
 
 // use file storage
 var fileStorage = new swarmServ.FileStorage('.swarm');
