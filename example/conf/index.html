@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <style>
+            body {
+                background: url(win95.gif);
+            }
+            p.online {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                margin: 0;
+            }
+            body {
+                margin: 0px;
+                padding: 0px;
+            }
+            table.program {
+                width: 300px;
+                height:300px;
+                margin: 0px;
+                border: 0px;
+                font-size: 8pt;
+                background: #aaa;
+                border-spacing: 2px;
+            }
+            td {
+                box-shadow: 1px 1px 1px 0px rgba(50, 50, 50, 0.75);
+                background: #eee;
+                width: 84px;
+                max-width: 84px;
+                min-width: 84px;
+            }
+            th {
+                background: #333;
+                color: white;
+                box-shadow: 1px 1px 1px 0px rgba(50, 50, 50, 0.75);
+            }
+            td.selected {
+                background: white;
+            }
+            td.time {
+                background: #555;
+                color: #eee;
+                width: 28px;
+                max-width: 28px;
+                min-width: 28px;
+            }
+            td.lunch {
+                text-align: center;
+                font-style: italic;
+            }
+            td.attend {
+                background: white;
+            }
+            td.skip {
+                background: #888;
+            }
+            span.title {
+            }
+            span.speakers {
+                font-style: italic;
+            }
+        </style>
+    </head>
+    <body>
+
+        <table id='agenda' class="program">
+            <tr>
+                <th>Time</th>
+                <th>Consistency</th>
+                <th>Availability</th>
+                <th>Partition tolerance</th>
+            </tr>
+            <tr>
+                <td class='time'>9:00</td>
+                <td>The promise and perils of NewSQL</td>
+                <td>Disconnected slaves, H. Beecher Stowe</td>
+                <td class='selected'>CouchDB and me, H.&nbsp;Simpson</td>
+            </tr>
+            <tr>
+                <td class='time'>10:30</td>
+                <td>Scaling MySQL way beyond reasonable limits.</td>
+                <td>Avoiding minority reports in Paxos, Tom Cruise</td>
+                <td>Bow-wow hood.ie, I.P.&nbsp;Pavlov</td>
+            </tr>
+            <tr>
+                <td class='time'>12:00</td>
+                <td colspan='3' class='lunch'>Lunch</td>
+            </tr>
+            <tr>
+                <td class='time'>13:30</td>
+                <td>Spanner: megalomaniac like everything we do,
+                    G.O.Ogler</td>
+                <td>Latency compensation in early modern Spain, Philip II of
+                    Spain</td>
+                <td>Offline ATMs</td>
+            </tr>
+            <tr>
+                <td class='time'>15:00</td>
+                <td>Resolving the Great Papal Schism, Holy Father Martin V</td>
+                <!--td>One nation, one race, one folk, one faith! No
+                    Remorse</td-->
+                <td></td>
+                <td>Splitting worms for fun and profit</td>
+            </tr>
+        </table>
+
+
+        <p class='online'><input type='checkbox'
+        checked='true'/>online</p>
+
+
+        <script src="http://fb.me/react-0.10.0.js"></script>
+        <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+        <script src="../../lib/swarm3.js"></script>
+        <script src="../../lib/swarm3-murmur.js"></script>
+        <script src="../../lib/swarm3-client.js"></script>
+        <script src="../../test/0_routines.js"></script>
+        <script src="./conf_model.js"></script>
+        <script src="./datalink.js"></script>
+        <script src="./conf_view.js"></script>
+        <script src="./conf_control.js"></script>
+
+    </body>
+
+</html>
+    

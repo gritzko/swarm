@@ -1,0 +1,45 @@
+
+body {
+    background: #ffe;
+}
+div.demo3 {
+    width: 1000px;
+    margin: auto;
+}
+div.preamble, div.story {
+    margin: 20px;
+    margin-left: 150px;
+    margin-right: 150px;
+    text-align: justify;
+    font-size: 18px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+p.summary {
+    font-size: 20px;
+}
+div.example {
+    display: table-row;
+    width: 1000px;
+}
+div.example.mice div.legend {
+    /**background: url('mice-scheme.png');
+    background-repeat: no-repeat;*/
+}
+iframe, div.legend {
+    display: table-cell;
+    width: 300px;
+    height: 300px;
+    margin: 15px;
+    vertical-align: middle;
+}
+iframe {
+    box-shadow: 4px 4px 5px 0px rgba(0,0,0,0.75);
+}
+ul {
+    font: "Verdana" 12px #224; 
+}
+h1, h2 {
+    width: 100%;
+    text-align: center;
+}
