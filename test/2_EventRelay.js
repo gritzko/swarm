@@ -336,12 +336,10 @@ test('2.n local listeners for on/off', function () {
         //console.log('>>> reon >>> spec: ', spec.toString(), ' val: ', val);
         equal(spec.method(), 'reon');
     });
-    /*FIXME: this cause Stack Overflow:
-      on -> wrapCall('on') -> [: Syncable.deliver -> _neutral['on'] -> hostOn -> Host.deliver -> :]
     host.on('/Host#gritzko.on', function (spec, val) {
-        console.log('>>> on >>> spec: ', spec.toString(), ' val: ', val);
+        //FIXME don't happen
+        console.log('>>> Host.on >>> spec: ', spec.toString(), ' val: ', val);
     });
-    */
 });
 
 /*  TODO
