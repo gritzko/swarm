@@ -323,6 +323,27 @@ test('2.m init push', function (test) {
     ok(tail) && ok(op) && equal(op.age,105);
 });
 
+test('2.n local listeners for on/off', function () {
+    console.warn(QUnit.config.current.testName);
+    expect(3);
+    Swarm.localhost = host;
+    var duck = new Duck();
+    duck.on('on', function (spec, val) {
+        //console.log('>>> on >>> spec: ', spec.toString(), ' val: ', val);
+        equal(spec.method(), 'on');
+    });
+    duck.on('reon', function (spec, val) {
+        //console.log('>>> reon >>> spec: ', spec.toString(), ' val: ', val);
+        equal(spec.method(), 'reon');
+    });
+    /*FIXME: this cause Stack Overflow:
+      on -> wrapCall('on') -> [: Syncable.deliver -> _neutral['on'] -> hostOn -> Host.deliver -> :]
+    host.on('/Host#gritzko.on', function (spec, val) {
+        console.log('>>> on >>> spec: ', spec.toString(), ' val: ', val);
+    });
+    */
+});
+
 /*  TODO
  * test('2.m on/off sub', function (test) {
     Swarm.localhost = host;
