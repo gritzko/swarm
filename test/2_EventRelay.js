@@ -325,7 +325,7 @@ test('2.m init push', function (test) {
 
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
-    expect(3);
+    expect(4);
     Swarm.localhost = host;
     var duck = new Duck();
     duck.on('on', function (spec, val) {
@@ -337,8 +337,8 @@ test('2.n local listeners for on/off', function () {
         equal(spec.method(), 'reon');
     });
     host.on('/Host#gritzko.on', function (spec, val) {
-        //FIXME don't happen
-        console.log('>>> Host.on >>> spec: ', spec.toString(), ' val: ', val);
+        //console.log('>>> Host.on >>> spec: ', spec.toString(), ' val: ', val);
+        equal(spec.method(), 'on');
     });
 });
 
