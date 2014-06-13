@@ -18,13 +18,9 @@ asyncTest('3.a serialized on, reon', function (){
     var uplink = new Swarm.Host('swarm~3a',0,storage);
     var downlink = new Swarm.Host('client~3a');
     // that's the default uplink.getSources = function () {return [storage]};
-    
-    var conn = new AsyncLoopbackConnection('loopback:3a');
-    var nnoc = new AsyncLoopbackConnection('loopback:a3');
-    
-    var upperPipe = new Swarm.Pipe(uplink, conn); // waits for 'data'/'close'
-    var lowerPipe = new Swarm.Pipe(downlink, nnoc);
-    downlink.connect(lowerPipe); // TODO possible mismatch
+
+    uplink.accept(new AsyncLoopbackConnection('loopback:3a'));
+    downlink.connect(new AsyncLoopbackConnection('loopback:a3')); // TODO possible mismatch
     
     //downlink.getSources = function () {return [lowerPipe]};
     
@@ -38,7 +34,7 @@ asyncTest('3.a serialized on, reon', function (){
         o && equal(o.t,22);
         //downlink.disconnect(lowerPipe);
         start();
-        upperPipe.close();
+        downlink.disconnect();
     },250);
 
 });
@@ -49,11 +45,10 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     var storage = new DummyStorage(false);
     var uplink = new Swarm.Host('swarm~3b',0,storage);
     var downlink = new Swarm.Host('client~3b');
-    
-    var lowerPipe = new Swarm.Pipe(downlink,'loopback:3b');
-    var upperPipe = new Swarm.Pipe(uplink,'loopback:b3');
 
-    downlink.connect(lowerPipe);
+
+    uplink.accept(new AsyncLoopbackConnection('loopback:3b'));
+    downlink.connect('loopback:b3'); // TODO possible mismatch
 
     var thermometer = uplink.get(Thermometer), i=0;
 
@@ -67,7 +62,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
             ok(thermometer._lstn.length<=3); // storage and maybe the client
             clearInterval(ih);
             start();
-            lowerPipe.close();
+            uplink.disconnect();
         }
     },100);
 
@@ -76,7 +71,8 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         console.log('YPA ',val);
         if (spec.op()==='set') {
-            lowerPipe.stream && lowerPipe.stream.close();
+            var stream = AsyncLoopbackConnection.pipes['b3'];
+            stream && stream.close();
         }
     });
     

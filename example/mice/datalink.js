@@ -18,9 +18,8 @@ var app = app || {};
         // TODO no need to wait, actually
         // ...bit writing to stateless objects is "bad"
     });
-    // create Pipe
-    var pipe = new Swarm.Pipe(app.host,app.wsServerUri);
-    app.host.connect(pipe);
+    // connect to server
+    app.host.connect(app.wsServerUri);
 
     window.onbeforeunload = function(e) {
         app.mice.removeObject(mickey);
@@ -31,8 +30,8 @@ var app = app || {};
         x:40,
         y:80,
         symbol: String.fromCharCode(((Math.random()*20)|0)+'a'.charCodeAt(0))
-        });
+    });
+
     app.mice.addObject(mickey);
-    
-    
+
 })();

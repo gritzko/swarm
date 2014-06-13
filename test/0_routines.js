@@ -94,10 +94,10 @@ function AsyncLoopbackConnection (url) {
     AsyncLoopbackConnection.pipes[this.id] = this;
     var pair = this.pair();
     if (pair && pair.queue.length) pair.write();
-};
+}
 AsyncLoopbackConnection.pipes = {};
 
-Swarm.Pipe.streams.loopback = AsyncLoopbackConnection;
+Swarm.streams.loopback = AsyncLoopbackConnection;
 
 AsyncLoopbackConnection.prototype.pair = function () {
     var pairId = this.id.match(/./g).reverse().join('');

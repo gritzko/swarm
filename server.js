@@ -60,7 +60,7 @@ wsServer.on('connection', function(ws) {
     console.log('incomingWS %s', params.path);
     // check the secret
     // FIXME grant ssn
-    var pipe = new Swarm.Pipe( swarmHost, new swarmServ.EinarosWSStream(ws) );
+    swarmHost.accept(new swarmServ.EinarosWSStream(ws));
 });
 
 // TODO pexing

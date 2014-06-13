@@ -7,8 +7,6 @@ var app = app || {};
     
     app.agendaSpec = '/Agenda#test';
     app.agenda = new Agenda(app.agendaSpec);
-    
-    var pipe = new Pipe(Swarm.localhost,'iframe:parent');
-    app.host.connect(pipe);
-    
+
+    app.host.connect('iframe:parent');
 } )();

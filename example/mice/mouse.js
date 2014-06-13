@@ -59,11 +59,8 @@ function subscribe () {
     // create the peer object
     myClient = new Swarm.Host(myClientId.id());
     Swarm.localhost = myClient;
-    // the plumber manages reconnects
 
-    var pipe = new Swarm.Pipe(myClient,wsServerUri);
-    //pipe.connect();
-    myClient.connect(pipe);
+    myClient.connect(wsServerUri);
 
     // open "my" mouse object
     myClient.on('/Mouse' + myMouseId + '.init', function (spec, mouse_pojo, mouse) {
