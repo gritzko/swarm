@@ -10,11 +10,11 @@ var app = app || {};
     // create Host
     app.host = Swarm.localhost = new Swarm.Host(app.id);
     // create a Mouse object
-    app.mouse = new Mouse();
+    var mickey = app.mouse = new Mouse();
+
     app.mice = app.host.get('/Mice#mice');
     // open #mice, list our object
     app.mice.on('.init', function (spec, mice_pojo, mice) {
-        mice.add(app.mouse);
         // TODO no need to wait, actually
         // ...bit writing to stateless objects is "bad"
     });
@@ -23,11 +23,10 @@ var app = app || {};
     app.host.connect(pipe);
 
     window.onbeforeunload = function(e) {
-        app.mice.remove(app.mouse);
+        app.mice.removeObject(mickey);
         app.host.close();
     };
     
-    var mickey = app.mouse = new Mouse();
     mickey.set({
         x:40,
         y:80,

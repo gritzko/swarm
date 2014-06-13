@@ -45,7 +45,7 @@ var Mouse = Swarm.Model.extend('Mouse', {
         }
         return cumul;
     },
-    methods: {
+    ops: {
         move: function (spec,d) {
             // To implement your own ops you must understand implications
             // of partial order; in this case, if an op comes later than
@@ -55,7 +55,7 @@ var Mouse = Swarm.Model.extend('Mouse', {
                 for(var opspec in this._oplog)
                     if (opspec>'!'+version) {
                         var os = new Swarm.Spec(opspec);
-                        if (os.method()==='set' && os.version()>version)
+                        if (os.op()==='set' && os.version()>version)
                             return; // overwritten in the total order
                     }
             }

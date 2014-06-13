@@ -18,6 +18,7 @@ var app = app || {};
     };
 
     var MouseView = React.createClass({
+        displayName: 'MouseView',
 
         mixins: [SwarmMixin],
 
@@ -37,6 +38,7 @@ var app = app || {};
     });
 
     var MiceView = React.createClass({
+        displayName: 'MiceView',
 
         mixins: [SwarmMixin],
 
@@ -50,7 +52,7 @@ var app = app || {};
             var crowd = mice.list();
             var crowdView = crowd.map(
                 function (mouse) {
-                    return MouseView({spec:mouse.stateSpec()});
+                    return MouseView({key: mouse.spec(), spec: mouse.stateSpec()});
                 }
             );
 
@@ -66,6 +68,7 @@ var app = app || {};
     });
 
     var MouseTrackApp = React.createClass({
+        displayName: 'MiceApp',
 
         getInitialState: function () {
             return {};

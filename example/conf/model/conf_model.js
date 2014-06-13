@@ -12,7 +12,7 @@ var Agenda = Swarm.Syncable.extend('Agenda', {
         agenda: Object
     },
 
-    methods : {
+    ops: {
         attend: function (spec,val,lstn) {
             // get author (strip ssn)
             

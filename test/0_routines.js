@@ -8,11 +8,11 @@ function DummyStorage(async) {
 DummyStorage.prototype.time = Swarm.Host.prototype.time;
 
 DummyStorage.prototype.deliver = function (spec,value,src) {
-    if (spec.method()==='on')
+    if (spec.op()==='on')
         return this.on(spec,value,src);
-    else if (spec.method()==='off')
+    else if (spec.op()==='off')
         return; // this imlpementation doesn't push changes
-    else if (spec.method()==='bundle')
+    else if (spec.op()==='bundle')
         console.error('?');
     // A storage is always an "uplink" so it never receives reon, reoff.
     var ti = spec.filter('/#');

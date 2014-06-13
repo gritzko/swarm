@@ -118,7 +118,7 @@ var Duck = Swarm.Model.extend('Duck',{
     },
     validate: function (spec,val) {
         return ''; // :|
-        //return spec.method()!=='set' || !('height' in val);
+        //return spec.op()!=='set' || !('height' in val);
         //throw new Error("can't set height, may only grow");
     },
     $$grow: function (spec,by,src) {
@@ -145,7 +145,7 @@ test('2.a basic listener func', function (test) {
     // listen to a field
     huey.on('age',function lsfn(spec,val){  // FIXME: filtered .set listener!!!
         equal(val.age,1);
-        equal(spec.method(),'set');
+        equal(spec.op(),'set');
         equal(spec.toString(),'/Duck#hueyA!'+spec.version()+'.set');
         var version = spec.token('!');
         equal(version.ext,'gritzko');
@@ -330,15 +330,15 @@ test('2.n local listeners for on/off', function () {
     var duck = new Duck();
     duck.on('on', function (spec, val) {
         //console.log('>>> on >>> spec: ', spec.toString(), ' val: ', val);
-        equal(spec.method(), 'on');
+        equal(spec.op(), 'on');
     });
     duck.on('reon', function (spec, val) {
         //console.log('>>> reon >>> spec: ', spec.toString(), ' val: ', val);
-        equal(spec.method(), 'reon');
+        equal(spec.op(), 'reon');
     });
     host.on('/Host#gritzko.on', function (spec, val) {
         //console.log('>>> Host.on >>> spec: ', spec.toString(), ' val: ', val);
-        equal(spec.method(), 'on');
+        equal(spec.op(), 'on');
     });
 });
 
@@ -349,10 +349,10 @@ test('2.n local listeners for on/off', function () {
 
     expect(2);
     duckling.on('on',function(spec){
-        ok(spec.method(),'on');
+        ok(spec.op(),'on');
     });
     duckling.on('set',function(spec){
-        equal(spec.method(),'set');
+        equal(spec.op(),'set');
     });
     duckling.set({age:1});
 

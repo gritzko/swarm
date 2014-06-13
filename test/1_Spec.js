@@ -61,15 +61,15 @@ test('version vector', function (){
 
 test('corner cases', function () {
     var empty = new Swarm.Spec('');
-    equal(empty.type()||empty.id()||empty.method()||empty.version(),'');
+    equal(empty.type()||empty.id()||empty.op()||empty.version(),'');
     equal(empty.toString(),'');
     var action = new Swarm.Spec('.on+re');
-    equal(action.method(),'on+re');
+    equal(action.op(),'on+re');
     var fieldSet = new Swarm.Spec('/TodoItem#7AM0f+gritzko!7AMTc+gritzko.set');
     equal(fieldSet.type(),'TodoItem');
     equal(fieldSet.id(),'7AM0f+gritzko');
     equal(fieldSet.version(),'7AMTc+gritzko');
-    equal(fieldSet.method(),'set');
+    equal(fieldSet.op(),'set');
 });
 
 var Empty = Swarm.Syncable.extend('Empty',{});

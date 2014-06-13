@@ -75,7 +75,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
 
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         console.log('YPA ',val);
-        if (spec.method()==='set') {
+        if (spec.op()==='set') {
             lowerPipe.stream && lowerPipe.stream.close();
         }
     });
