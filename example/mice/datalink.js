@@ -20,6 +20,12 @@ var app = app || {};
     });
     // connect to server
     app.host.connect(app.wsServerUri);
+    app.host.on('reon', function (spec, val) {
+        console.log('CONNECTED: ', spec.toString(), val);
+    });
+    app.host.on('off', function (spec, val) {
+        console.log('DISCONNECTED: ', spec.toString(), val);
+    });
 
     window.onbeforeunload = function(e) {
         app.mice.removeObject(mickey);
