@@ -39,10 +39,12 @@ modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
 });
 
 // use file storage
-var fileStorage = new swarmServ.FileStorage('.swarm');
+var fileStorage = new Swarm.FileStorage('.swarm');
 
 // create Swarm Host
-var swarmHost = new Swarm.Host('swarm~v',0,fileStorage);
+var swarmHost = new Swarm.Host('swarm~v', 0, fileStorage);
+
+fileStorage.host = swarmHost; //FIXME
 
 // start the HTTP server
 var port = options.port || 8000;
