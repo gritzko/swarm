@@ -1,7 +1,8 @@
-var storage = new Swarm.WebStorage(false);
+var storage = new Swarm.SharedWebStorage(false);
 var host = Swarm.localhost = new Swarm.Host('gritzko',0,storage);
 host.availableUplinks = function () {return [storage]};
 Swarm.localhost = host;
+Swarm.debug = true;
 var textarea = document.getElementById('text');
 
 var text = new Swarm.Text('/Text#note');

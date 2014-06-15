@@ -50,7 +50,7 @@ case 'write':
 
 case 'check':
 
-    setTimeout(function(){
+    setTimeout(function(){ // TODO collection onload()
         for (var i = 0; i < 100; i++) {
             if (!counters[i]._version) {
             } else if (i === counters[i].i) {
