@@ -1,9 +1,12 @@
 var app = app || {};
 
-(function () {
-    var FREQ = 30;
-    var toSend = null;
-    var timer = null;
+(function handleMouseMove() {
+    "use strict";
+
+    var FREQ = 30,
+        toSend = null,
+        timer = null;
+
     function trackUserMoves (event) {
         toSend = {
             x: Math.max(0,event.clientX-15),
@@ -16,4 +19,19 @@ var app = app || {};
         }, FREQ);
     }
     document.documentElement.onmousemove = trackUserMoves;
-})();
+}());
+
+(function handleOnlineToggle() {
+    "use strict";
+
+    var chk_online = document.getElementById('chk_online');
+    if (!chk_online) return;
+
+    chk_online.onclick = function () {
+        if (chk_online.checked) {
+            app.host && app.host.connect(app.wsServerUri);
+        } else {
+            app.host && app.host.disconnect();
+        }
+    };
+}());

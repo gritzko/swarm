@@ -20,12 +20,17 @@ var app = app || {};
     });
     // connect to server
     app.host.connect(app.wsServerUri);
-    app.host.on('reon', function (spec, val) {
-        console.log('CONNECTED: ', spec.toString(), val);
-    });
-    app.host.on('off', function (spec, val) {
-        console.log('DISCONNECTED: ', spec.toString(), val);
-    });
+
+    {//show online/offline status //TODO move it to mice-view
+        app.host.on('reon', function (spec, val) {
+            //console.log('CONNECTED: ', spec.toString(), val);
+            document.body.setAttribute('connected', 'true');
+        });
+        app.host.on('off', function (spec, val) {
+            //console.log('DISCONNECTED: ', spec.toString(), val);
+            document.body.setAttribute('connected', 'false');
+        });
+    }
 
     window.onbeforeunload = function(e) {
         app.mice.removeObject(mickey);
