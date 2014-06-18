@@ -1,11 +1,53 @@
 
 body {
-    background: #ffe;
+    background: #fff;
 }
-div.demo3 {
-    width: 1000px;
+
+table {
+    width: 930px;
     margin: auto;
 }
+
+tr {
+    width: 930px;
+    height: 300px;
+}
+
+td {
+    height: 300px;
+    width: 300px;
+    max-width: 300px;
+    padding-bottom: 10px;
+}
+
+iframe {
+    width: 300px;
+    height: 300px;
+    vertical-align: middle;
+    box-shadow: 2px 2px 5px 0px rgba(0,0,0,0.75);
+    border: 1px solid #eee;
+}
+
+td.preamble{
+    text-align: center;
+}
+
+p.subtitle {
+    font-family: "Georgia";
+    font-size: 24px;
+    /*padding-right: 100px;*/
+}
+
+td.legend {
+    vertical-align: top;
+}
+
+td.legend p {
+    margin: 10px;
+    font-family: "Georgia";
+    font-size: 15px;
+}
+
 div.preamble, div.story {
     margin: 20px;
     margin-left: 150px;
@@ -26,18 +68,8 @@ div.example.mice div.legend {
     /**background: url('mice-scheme.png');
     background-repeat: no-repeat;*/
 }
-iframe, div.legend {
-    display: table-cell;
-    width: 300px;
-    height: 300px;
-    margin: 15px;
-    vertical-align: middle;
-}
-iframe {
-    box-shadow: 4px 4px 5px 0px rgba(0,0,0,0.75);
-}
 ul {
-    font: "Verdana" 12px #224; 
+    font: "Verdana" 12px #224;
 }
 h1, h2 {
     width: 100%;

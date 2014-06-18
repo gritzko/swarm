@@ -5,23 +5,39 @@
     </head>
     <body>
 
-        <div class='demo3'>
+        <table>
 
-            <div class='preamble'>
-                <h1>Swarm.js: object sync library</h1>
+            <tr>
 
-                <p class='summary'>Swarm.js serves one purpose: it synchronizes model
-                replicas in real time: client to server, server to
-                server or client to client.
-                It is like Dropbox for objects inside your web app.
-                </p>
+                <td colspan='3' class='preamble'>
+                    <p class='head'>
+                        <img src='swarm.png' id='title'></img>
+                    </p>
+                    <p class='subtitle'>replicated model for your web app:
+                        reactive data sync lib
+                        served with React.js</p>
 
-            </div>
+                    <p class='summary'>
+                        Swarm.js serves one purpose: it synchronizes model
+                        replicas in real time: client to server, server to
+                        server or client to client.
+                        It is like Dropbox for objects inside your web app.
+                    </p>
 
-            <div class='example mice'>
-                <iframe src='../mice/index.html'></iframe>
-                <div class='legend'>
-                    <h2>Mice</h2>
+                </td>
+
+                <td>
+
+                </td>
+
+            </tr>
+
+            <tr class='example mice'>
+                <td>
+                    <iframe src='../mice/index.html'></iframe>
+                </td>
+                <td class='legend'>
+                    <!--h2>Mice</h2>
                     <ul>
                         <li>move your mouse over an IFRAME to see
                         pointers sync</li>
@@ -29,15 +45,27 @@
                         <li>synchronized by WebSocket to different
                         servers; servers sync to each other</li>
                         <li>shows all the currently connected users</li>
-                    </ul>
-                </div>
-                <iframe src='../mice/index.html'></iframe>
-            </div>
+                    </ul-->
+                    <img src='scheme1.png' width='300'>
+                    <p> In this example, mouse pointer positions are
+                        synchronized in real-time using WebSocket connections
+                        to a node.js server. <br/>
+                        Thus, you'll see mouse pointers
+                        of all the people currently playing with this demo.
+                        Just move your mouse over an iframe.
+                        </p>
+                </td>
+                <td>
+                    <iframe src='../mice/index.html'></iframe>
+                </td>
+            </tr>
 
-            <div class='example editor'>
-                <iframe src='../editor/index.html'></iframe>
-                <div class='legend'>
-                    <h2>Editor</h2>
+            <tr class='example editor'>
+                <td>
+                    <iframe src='../editor/index.html'></iframe>
+                </td>
+                <td class='legend'>
+                    <!--h2>Editor</h2>
                     <ul>
                         <li>edit the text to see it sync; disconnect
                         an IFRAME to create offline/consurrency cases</li>
@@ -45,25 +73,44 @@
                         <b>not</b> OT!)</li>
                         <li>synchronized by WebStorage</li>
                         <li>shows only your activity</li>
-                    </ul>
-                </div>
-                <iframe src='../editor/index.html'></iframe>
-            </div>
-              
-            <div class='example conference'>
-                <iframe src='../conf/index.html'></iframe>
-                <div class='legend'>
-                    <h2>Controls</h2>
+                    </ul-->
+                    <img src='scheme2.jpg' width='300'>
+                    <p> In this example, a text is synced in real time using
+                        a simplistic CT implementation (Causal Trees, a CRDT
+                        variety). Technically, frames sync using WebStorage,
+                        i.e. purely offline, no server connections used. The
+                        text survives <a href='index.html'>page refresh</a>. <br/>
+                        Just start typing!</p>
+                </td>
+                <td>
+                    <iframe src='../editor/index.html'></iframe>
+                </td>
+            </tr>
+
+            <tr class='example conference'>
+                <td><iframe src='../conf/index.html'></iframe></td>
+                <td class='legend'>
+                    <!--h2>Controls</h2>
                     <ul>
                         <li>play with the controls to see data sync</li>
                         <li>oplog-based consistency model</li>
                         <li>synchronized by postMessage channel via
                         the parent (this) IFRAME.</li>
                         <li>shows only your activity</li>
-                    </ul>
-                </div>
-                <iframe src='../conf/index.html'></iframe>
-            </div>
+                    </ul-->
+                    <img src='scheme3.png' width='300'>
+                    <p>
+                        Here, a user may plan his schedule at CAP'14 conference.
+                        Frames sync locally to a parent frame using postMessage.
+                        The parent frame syncs to the server to obtain
+                        attendance stats from other users.<br/>
+                        Just select talks you want to attend :)</p>
+                </td>
+
+                <td><iframe src='../conf/index.html'></iframe></td>
+            </tr>
+
+        </table>
 
             <div class=story>
                 <p>The problem of data synchronization is indeed purely
@@ -105,5 +152,6 @@
         <script src="../conf/model/conf_model.js"></script>
         <script src="./datalink.js"></script>
 
+        <a href="https://github.com/gritzko/swarm"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
     </body>
 </html>
