@@ -15,11 +15,10 @@ Counter = Swarm.Model.extend('Counter',{
 
 var store = './.store/',
     firstRun = !fs.existsSync(store),
-    storage = new Swarm.FileStorage(store, null),
+    storage = new Swarm.FileStorage(store),
     host = new Swarm.Host('swarm', 0, storage),
     i;
 
-storage.host = host; // FIXME once once
 Swarm.localhost = host;
 
 Swarm.debug = true;

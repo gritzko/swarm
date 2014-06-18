@@ -44,8 +44,6 @@ var fileStorage = new Swarm.FileStorage('.swarm');
 // create Swarm Host
 var swarmHost = new Swarm.Host('swarm~v', 0, fileStorage);
 
-fileStorage.host = swarmHost; //FIXME
-
 // start the HTTP server
 var port = options.port || 8000;
 var httpServer = http.createServer(app.callback()).listen(port);

@@ -112,37 +112,35 @@
 
         </table>
 
-            <div class=story>
-                <p>The problem of data synchronization is indeed purely
-                technical with no direct relation to your business
-                logic. Still, in a complex web app sync becomes an
-                issue. Just try to implement real-time sync,
-                supporting mobile devices and intermittent connectivity,
-                caching and soon you'll will find yourself on the toughest
-                pages in a CS textbook.
-                </p>
-                <p>Swarm employs op-based eventual consistency approach.
-                Based on a partially ordered operation log it
-                implements variety of consistency algorithms.
-                Swarm supports various sync channels: WebSocket for
-                browser-to-server sync, WebStorage for tab-to-tab,
-                postMessage for IFRAME-to-IFRAME sync, WebRTC for
-                browser-to-browser, Stream for process-to-process and
-                finally solid-fuel rockets for surface-to-air
-                synchronization.
-                </p>
-                <p>Swarm works well offline and under intermittent
-                connectivity; it may cache data and resync it later,
-                incuding the case of browser restart (if the data
-                stays in WebStorage).
-                </p>
-                <p>Our vision to write distributed apps like good old MVC apps.
-                Just write a proper MVC app then scale it to a
-                distributed environment by synchronizing your models
-                with Swarm.
-                </p>
-            </div>
-
+        <div class=story>
+            <p>The problem of data synchronization is indeed purely
+            technical with no direct relation to your business
+            logic. Still, in a complex web app sync becomes an
+            issue. Just try to implement real-time sync,
+            supporting mobile devices and intermittent connectivity,
+            caching and soon you'll will find yourself on the toughest
+            pages in a CS textbook.
+            </p>
+            <p>Swarm employs op-based eventual consistency approach.
+            Based on a partially ordered operation log it
+            implements variety of consistency algorithms.
+            Swarm supports various sync channels: WebSocket for
+            browser-to-server sync, WebStorage for tab-to-tab,
+            postMessage for IFRAME-to-IFRAME sync, WebRTC for
+            browser-to-browser, Stream for process-to-process and
+            finally solid-fuel rockets for surface-to-air
+            synchronization.
+            </p>
+            <p>Swarm works well offline and under intermittent
+            connectivity; it may cache data and resync it later,
+            incuding the case of browser restart (if the data
+            stays in WebStorage).
+            </p>
+            <p>Our vision to write distributed apps like good old MVC apps.
+            Just write a proper MVC app then scale it to a
+            distributed environment by synchronizing your models
+            with Swarm.
+            </p>
         </div>
 
         <script src="../../lib/swarm3.js"></script>
