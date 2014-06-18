@@ -12,3 +12,18 @@ $("body").on("click","td.talk",function onTalkSelected(ev){
         track: toAttend
     });
 });
+
+(function handleOnlineToggle() {
+    "use strict";
+
+    var chk_online = document.getElementById('chk_online');
+    if (!chk_online) return;
+
+    chk_online.onclick = function () {
+        if (chk_online.checked) {
+            app.host && app.host.connect(app.uplink_uri);
+        } else {
+            app.host && app.host.disconnect();
+        }
+    };
+}());
