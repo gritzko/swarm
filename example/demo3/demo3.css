@@ -28,6 +28,10 @@ iframe {
     border: 1px solid #eee;
 }
 
+p.head {
+    margin-top: 10px;
+}
+
 td.preamble{
     text-align: center;
 }
@@ -59,6 +63,9 @@ div.preamble, div.story {
 }
 p.summary {
     font-size: 20px;
+    width: 900px;
+    margin: auto;
+    text-align: justify
 }
 div.example {
     display: table-row;

@@ -18,10 +18,27 @@
                         served with React.js</p>
 
                     <p class='summary'>
-                        Swarm.js serves one purpose: it synchronizes model
+                        <!--Swarm.js serves one purpose: it synchronizes model
                         replicas in real time: client to server, server to
                         server or client to client.
-                        It is like Dropbox for objects inside your web app.
+                        It is like Dropbox for objects inside your web app.-->
+New opportunities bring new challenges; having all that smartphones and tablets
+on WiFi/3G, we now need handover (aka continuity), real time sync and offline work.
+
+Those requirements stressed classic architectures leading to fix-on-a-fix stacks
+that still can't fully exploit new HTML5 features such as WebSocket or WebStorage.
+
+<!--Several kinds of server-side and client-side storage, APIs, event pushers, you name it.-->
+
+CRDT is the only approach that allows to fully embrace the reality of distributed
+data: we deal with the same data no matter where it resides (see infocentricity).
+
+Our dream is to develop distributed applications the way we did good old local
+MVC apps, by fully delegating the data caching/sync magic to a dedicated layer.
+
+Swarm is a replicated model lib (M of MVC) that keeps your data correctly cached
+and synchronized in real time using any storage and transport available.
+
                     </p>
 
                 </td>
@@ -102,8 +119,8 @@
                     <p>
                         Here, a user may plan his schedule at CAP'14 conference.
                         Frames sync locally to a parent frame using postMessage.
-                        The parent frame syncs to the server to obtain
-                        attendance stats from other users.<br/>
+                        The parent frame syncs to the server to save data
+                        and calculate attendance stats.<br/>
                         Just select talks you want to attend :)</p>
                 </td>
 
