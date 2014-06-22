@@ -8,13 +8,28 @@ function DummyStorage(async) {
 DummyStorage.prototype.time = Swarm.Host.prototype.time;
 
 DummyStorage.prototype.deliver = function (spec,value,src) {
-    if (spec.op()==='on')
-        return this.on(spec,value,src);
-    else if (spec.op()==='off')
-        return; // this imlpementation doesn't push changes
-    else if (spec.op()==='bundle')
-        console.error('?');
+    switch (spec.op()) {
     // A storage is always an "uplink" so it never receives reon, reoff.
+    case 'on':    return this.on(spec, value, src);
+    case 'off':   return this.off(spec, value, src);
+    case 'patch': return this.patch(spec, value, src);
+    default:      return this.op(spec, value, src);
+    // A storage is always an "uplink" so it never receives reon, reoff.
+    }
+};
+
+DummyStorage.prototype.off = function (spec,value,src) {
+    // this imlpementation doesn't push changes
+    // so there are no listeners
+};
+
+DummyStorage.prototype.patch = function (spec,state,src) {
+    var ti = spec.filter('/#');
+    this.states[ti] = state;
+    this.tails[ti] = {};
+};
+
+DummyStorage.prototype.op = function (spec,value,src) {
     var ti = spec.filter('/#');
     var tail = this.tails[ti] || (this.tails[ti] = {});
     var count=0;
@@ -26,9 +41,7 @@ DummyStorage.prototype.deliver = function (spec,value,src) {
         if (vm in tail) console.error('op replay @storage');
         tail[vm] = value;
     } else { // ...otherwise it saves the state, zeroes the tail.
-        var state = src.diff();
-        this.states[ti] = state;
-        this.tails[ti] = {};
+        var state = src.deliver(spec.set('.on'),'.init',this);
     }
     // In a real storage implementation, state and log often go into
     // different backends, e.g. the state is saved to SQL/NoSQL db,
@@ -58,15 +71,10 @@ DummyStorage.prototype.on = function (spec,base,replica) {
             // don't pass by reference
             state = JSON.parse(JSON.stringify(state));
             state._tail = JSON.parse(JSON.stringify(tail));
-        /*} else if (spec.id()===spec.version()) { // new object created
-            if (base && typeof(base)==='object') { // TODO impl this @Syncable
-                // TODO add sanity checks
-                state = JSON.parse(JSON.stringify(base));
-                state._version = '!'+spec.version();
-                self.states[ti] = state;
-            } may be a bad idea (offline creation) */
+        } else if (!idtok.ext) {
+            state = self.states[ti] = {_version:'!0'}; // create global obj
         } else {
-            state = self.states[ti] = {_version:'!0'}; // no operations => !0
+            state = {}; // I know nothing, sorry
         }
         replica.deliver(spec.set('.patch'),state,self);
         var ihave = new Swarm.Spec.Map(state._version);
@@ -77,9 +85,6 @@ DummyStorage.prototype.on = function (spec,base,replica) {
     }
     
     this.async ? setTimeout(reply,1) : reply();
-};
-
-DummyStorage.prototype.off = function (spec,value,src) {
 };
 
 

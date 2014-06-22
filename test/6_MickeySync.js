@@ -124,7 +124,7 @@ asyncTest('6.b Handshake D pattern', function () {
     storage.states['/Mouse#Mickey'] = {
         x:7,
         y:7,
-        _version: '0eonago',
+        _version: '!0eonago',
         _oplog:{
             '!0eonago.set': {x:7,y:7}
         }
@@ -239,7 +239,7 @@ asyncTest('6.d Handshake R pattern', function () {
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
-        equal(dlrepl._version,'!0');
+        equal(dlrepl._version,'');
 
         dlrepl.set({x:18,y:18}); // FIXME this is not R
         uprepl = uplink.objects['/Mouse#Mickey'];
@@ -251,7 +251,7 @@ asyncTest('6.d Handshake R pattern', function () {
 });
 
 
-test('6.e Handshake A pattern', function () {
+asyncTest('6.e Handshake A pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
@@ -266,10 +266,13 @@ test('6.e Handshake A pattern', function () {
     var uprepl = uplink.objects[mickey.spec()];
     var dlrepl = downlink.objects[mickey.spec()];
     // FIXME no value push; this is R actually
-    equal(uprepl.x,20);
-    equal(uprepl.y,20);
-    equal(dlrepl.x,20);
-    equal(dlrepl.y,20);
+    setTimeout(function check(){    
+        equal(uprepl.x,20);
+        equal(uprepl.y,20);
+        equal(dlrepl.x,20);
+        equal(dlrepl.y,20);
+        start();
+    }, 100);
 
 });
 

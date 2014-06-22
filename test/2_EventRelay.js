@@ -130,40 +130,43 @@ var Nest = Swarm.Set.extend('Nest',{
     entryType: Duck
 });
 
-var storage = new DummyStorage(false);
-var host = Swarm.localhost = new Swarm.Host('gritzko',0,storage);
-host.availableUplinks = function () {return [storage]};
+var storage2 = new DummyStorage(false);
+var host2 = Swarm.localhost= new Swarm.Host('gritzko',0,storage2);
+host2.availableUplinks = function () {return [storage2]};
 
-test('2.a basic listener func', function (test) {
+asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
-    expect(6);
+    Swarm.localhost= host2;
+    expect(5);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = host.get('/Duck#hueyA');
-    ok(huey._version); //storage is sync, must return empty init + storage timestamp
+    var huey = host2.get('/Duck#hueyA');
+    //ok(!huey._version); //storage is a?sync
     // listen to a field
-    huey.on('age',function lsfn(spec,val){  // FIXME: filtered .set listener!!!
+    huey.on('age',function lsfn2a (spec,val){  // FIXME: filtered .set listener!!!
         equal(val.age,1);
         equal(spec.op(),'set');
         equal(spec.toString(),'/Duck#hueyA!'+spec.version()+'.set');
         var version = spec.token('!');
         equal(version.ext,'gritzko');
-        huey.off('age',lsfn);
+        huey.off('age',lsfn2a);
         equal(huey._lstn.length,2); // only the uplink remains (and the comma)
+        start();
     });
-    huey.set({age:1});
+    huey.on('.init', function init2a () {
+        huey.set({age:1});
+    });
 });
 
 test('2.b create-by-id', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2;
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
     // will throw an exception
     var dewey1 = new Duck('dewey');
     // that's we resort to descendant() doing find-or-create
-    var dewey2 = host.get('/Duck#dewey');
+    var dewey2 = host2.get('/Duck#dewey');
     // must be the same object
     strictEqual(dewey1,dewey2);
     equal(dewey1.spec().type(),'Duck');
@@ -172,11 +175,11 @@ test('2.b create-by-id', function (test) {
 
 test('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2;
     var louie = new Duck('louie');
-    var ts1 = host.time();
+    var ts1 = host2.time();
     louie.set({age:3});
-    var ts2 = host.time();
+    var ts2 = host2.time();
     ok(ts2>ts1);
     var vid = louie._version.substr(1);
     ok(ts1<vid);
@@ -186,7 +189,7 @@ test('2.c version ids', function (test) {
 
 test('2.d pojos',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2;
     var dewey = new Duck({age:0});
     var json = dewey.pojo();
     var duckJSON = {
@@ -199,15 +202,15 @@ test('2.d pojos',function (test) {
 
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
-    var huey = host.get('/Duck#huey');
+    Swarm.localhost= host2
+    var huey = host2.get('/Duck#huey');
     expect(2);
     var handle = Duck.addReaction('age', function reactionFn(spec,val) {
         console.log('yupee im growing');
         equal(val.age,1);
         start();
     });
-    //var version = host.time(), sp = '!'+version+'.set';
+    //var version = host2.time(), sp = '!'+version+'.set';
     huey.deliver(huey.newEventSpec('set'), {age:1});
     Duck.removeReaction(handle);
     equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
@@ -217,8 +220,8 @@ asyncTest('2.e reactions',function (test) {
 
 test('2.f once',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
-    var huey = host.get('/Duck#huey');
+    Swarm.localhost= host2
+    var huey = host2.get('/Duck#huey');
     expect(1);
     huey.once('age',function onceAgeCb(spec,value){
         equal(value.age,4);
@@ -229,18 +232,18 @@ test('2.f once',function (test) {
 
 test('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
-    var huey = host.get('/Duck#huey');
+    Swarm.localhost= host2
+    var huey = host2.get('/Duck#huey');
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
-    var vid = host.time();
-    host.deliver(new Swarm.Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
+    var vid = host2.time();
+    host2.deliver(new Swarm.Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
     ok(Math.abs(huey.height.meters-0.35)<0.0001);
 });
 
 test('2.h state init',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2
     var factoryBorn = new Duck({age:0,height:'4cm'});
     ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
     equal(factoryBorn.age,0);
@@ -248,7 +251,7 @@ test('2.h state init',function (test) {
 
 test('2.i batched set',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2
     var nameless = new Duck();
     nameless.set({
         age:1,
@@ -263,7 +266,7 @@ test('2.i batched set',function (test) {
 // FIXME:  spec - to - (order)
 test('2.j basic Set functions (string index)',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
+    Swarm.localhost= host2
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
@@ -291,8 +294,8 @@ test('2.k distilled log', function (test) {
         return cnt;
     }
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost = host;
-    var duckling1 = host.get(Duck);
+    Swarm.localhost= host2
+    var duckling1 = host2.get(Duck);
     duckling1.set({age:1});
     duckling1.set({age:2});
     duckling1.distillLog();
@@ -307,44 +310,50 @@ test('2.k distilled log', function (test) {
 });
 
 test('2.l partial order', function (test) {
-    Swarm.localhost = host;
+    Swarm.localhost= host2
     var duckling = new Duck();
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
     equal(duckling.height.toString(), '2cm');
 });
 
-test('2.m init push', function (test) {
-    Swarm.localhost = host;
+asyncTest('2.m init push', function (test) {
+    Swarm.localhost= host2
     var scrooge = new Duck({age:105});
-    var tail = storage.tails[scrooge.spec()];
-    // FIXME equal(scrooge._version.substr(1), scrooge._id);
-    var op = tail && tail[scrooge._version+'.set'];
-    ok(tail) && ok(op) && equal(op.age,105);
+    scrooge.on('.init', function check() {
+        var tail = storage2.tails[scrooge.spec()];
+        // FIXME equal(scrooge._version.substr(1), scrooge._id);
+        var op = tail && tail[scrooge._version+'.set'];
+        ok(tail) && ok(op) && equal(op.age,105);
+        start();
+    });
 });
 
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
-    expect(4);
-    Swarm.localhost = host;
+    expect(5);
+    Swarm.localhost= host2;
     var duck = new Duck();
-    duck.on('on', function (spec, val) {
-        //console.log('>>> on >>> spec: ', spec.toString(), ' val: ', val);
+    duck.on('.on', function (spec, val) {
+        //triggered by itself, on(init) and host2.on below
         equal(spec.op(), 'on');
     });
-    duck.on('reon', function (spec, val) {
-        //console.log('>>> reon >>> spec: ', spec.toString(), ' val: ', val);
+    duck.on('.init',function gotit(){
+        ok(duck._version);
+    });
+    duck.on('.reon', function (spec, val) {
+        // doesn't get triggered if the storage is sync
         equal(spec.op(), 'reon');
     });
-    host.on('/Host#gritzko.on', function (spec, val) {
-        //console.log('>>> Host.on >>> spec: ', spec.toString(), ' val: ', val);
+    host2.on('/Host#gritzko.on', function (spec, val) {
+        // this listener is triggered by this exact call :)
         equal(spec.op(), 'on');
     });
 });
 
 /*  TODO
  * test('2.m on/off sub', function (test) {
-    Swarm.localhost = host;
+    Swarm.localhost= host2
     var duckling = new Duck();
 
     expect(2);
