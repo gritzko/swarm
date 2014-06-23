@@ -12,6 +12,7 @@ var SwarmMixin = {
     componentWillMount: function () {
         var spec = this.props.spec;
         this.sync = Swarm.localhost.get(spec);
+        this.sync.on('.init',this);
         this.sync.on(this);
     },
     componentWillUnmount: function () {

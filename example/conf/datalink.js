@@ -5,7 +5,6 @@ var app = app || {};
         'anon'+Spec.int2base((Math.random()*10000)|0);
     window.localStorage.setItem('.localuser',app.id);
     Swarm.debug = true;
-    console.log('localhell');
     
     var hash = window.location.hash || '#0';
     // create Host
