@@ -1,13 +1,20 @@
 var app = app || {};
 
 ( function datalink() {
-    app.id = 'p'+((Math.random()*100)|0);  // FIXME
-    var wsServerUri = 'ws://localhost:8000'; // FIXME
+    // don't need OAuth for a demo, gen fake user account
+    app.id = window.localStorage.getItem('.localuser') || 
+        'anon'+Spec.int2base((Math.random()*10000)|0);
+    window.localStorage.setItem('.localuser',app.id);
+    app.wsServerUri = 'ws://localhost:8000'; // FIXME
+    Swarm.debug = true;
 
-    Swarm.localhost = new Swarm.Host ('swarm~local', 0, new DummyStorage(false));
+    app.host = Swarm.localhost = new Swarm.Host (app.id+'~local', 0, new DummyStorage(false));
 
     new Swarm.PostMessageServer();
     
     app.agendaSpec = '/Agenda#'+app.id;
     //app.agenda = new Agenda(app.agendaSpec);
+    
+    app.host.connect(app.wsServerUri);
+    
 } )();

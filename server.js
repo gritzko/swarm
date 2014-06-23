@@ -23,15 +23,19 @@ app.use(koa_static('.'));
 // boot model classes
 var modelPathList = options.models||'model/';
 modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
-    console.log(modelPath);
+    modelPath = path.resolve(modelPath);
+    console.log('scanning',modelPath);
     var modelClasses = fs.readdirSync(modelPath), modelFile;
     while (modelFile = modelClasses.pop()) {
         if (!/^\w+\.js$/.test(modelFile)) continue;
-        console.log('Loading model file', modelFile);
-        var mod = require(path.join(modelPath, modelFile));
+        var modpath = path.join(modelPath, modelFile);
+        console.log('Loading model file', modpath);
+        var mod = require(modpath);
         for (var item in mod) {
             var fn = mod[item];
+            console.log('checking',item);
             if (fn.constructor !== Function) continue;
+            console.log('...');
             if (fn.extend !== Swarm.Syncable.extend) continue;
             console.log('\tmodel class found:\t', item);
         }
@@ -42,7 +46,7 @@ modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
 var fileStorage = new Swarm.FileStorage('.swarm');
 
 // create Swarm Host
-var swarmHost = new Swarm.Host('swarm~v', 0, fileStorage);
+var swarmHost = new Swarm.Host('swarm~nodejs', 0, fileStorage);
 
 // start the HTTP server
 var port = options.port || 8000;

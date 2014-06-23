@@ -1,15 +1,24 @@
 var app = app || {};
 
 (function datalink() {
-    app.id = 'p'+((Math.random()*100)|0);  // FIXME
-    var wsServerUri = 'ws://localhost:8000'; // FIXME
-    app.host = Swarm.localhost = new Swarm.Host (app.id, 0, new DummyStorage(false));
+    app.id = window.localStorage.getItem('.localuser') || 
+        'anon'+Spec.int2base((Math.random()*10000)|0);
+    window.localStorage.setItem('.localuser',app.id);
+    Swarm.debug = true;
+    console.log('localhell');
+    
+    var hash = window.location.hash || '#0';
+    // create Host
+    app.host = Swarm.localhost = new Swarm.Host 
+        (app.id+hash.replace('#','~')+'agnd', 0, new DummyStorage(false));
+
+    app.uplink_uri = 'iframe:parent';
+    var pipe = app.host.connect(app.uplink_uri);
+    // never fails/reconnects :)
+    app.host.getSources = function () {return [pipe]};
     
     app.agendaSpec = '/Agenda#test';
     app.agenda = new Agenda(app.agendaSpec);
-
-    app.uplink_uri = 'iframe:parent';
-    app.host.connect(app.uplink_uri);
 
     {//show online/offline status //TODO move it to mice-view
         app.host.on('reon', function (spec, val) {

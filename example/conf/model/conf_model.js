@@ -55,6 +55,10 @@ var Agenda = Swarm.Syncable.extend('Agenda', {
    
 });
 
+if (typeof(exports)==='object') {
+    exports.Agenda=Agenda;
+}
+
 // Well, this should be in the model too, but let's simplify a bit
 Agenda.SLOTS = ['09:00','10:30','13:30','15:00'];
 Agenda.TRACKS = ['Consistency','Availability','Partition tolerance'];

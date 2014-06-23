@@ -4,13 +4,20 @@ var app = app || {};
 
 (function () {
     'use strict';
+    Swarm.debug = true;
 
-    app.id = 'p'+((Math.random()*100)|0);  // FIXME
+    app.id = window.localStorage.getItem('.localuser') || 
+        'anon'+Spec.int2base((Math.random()*10000)|0);
+    window.localStorage.setItem('.localuser',app.id);
+    
     app.wsServerUri = 'ws://localhost:8000'; // FIXME
+
+    var hash = window.location.hash || '#0';
     // create Host
-    app.host = Swarm.localhost = new Swarm.Host(app.id);
+    app.host = Swarm.localhost = new Swarm.Host(app.id+hash.replace('#','~'));
+    
     // create a Mouse object
-    var mickey = app.mouse = new Mouse();
+    var mickey = app.mouse = new Mouse(app.id);
 
     app.mice = app.host.get('/Mice#mice');
     // open #mice, list our object
@@ -37,10 +44,13 @@ var app = app || {};
         app.host.close();
     };
     
+    var ssn = app.id.match(/anon([\w~_]+)/)[1]; // FIXME ugly
+    var ssnInt = Spec.base2int(ssn);
+
     mickey.set({
         x:40,
         y:80,
-        symbol: String.fromCharCode(((Math.random()*20)|0)+'a'.charCodeAt(0))
+        symbol: String.fromCharCode(10000+ssnInt%60) // dingbats
     });
 
     app.mice.addObject(mickey);

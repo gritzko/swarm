@@ -26,9 +26,9 @@ span#count {
 }
 span.mouse {
     position:absolute;
-    color: #444;
-    font-size: 12pt;
-    text-shadow: 2px 2px 2px #aaa;
+    color: #002;
+    font-size: 25px;
+    /* text-shadow: 2px 2px 2px #aaa; */
     cursor: default;
 }
 span#uri {
