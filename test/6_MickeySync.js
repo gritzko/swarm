@@ -239,7 +239,7 @@ asyncTest('6.d Handshake R pattern', function () {
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
-        equal(dlrepl._version,'');
+        equal(dlrepl._version,'!0'); // auth storage has no state
 
         dlrepl.set({x:18,y:18}); // FIXME this is not R
         uprepl = uplink.objects['/Mouse#Mickey'];
@@ -263,10 +263,11 @@ asyncTest('6.e Handshake A pattern', function () {
     Swarm.localhost = downlink;
 
     var mickey = new Mouse({x:20,y:20});
-    var uprepl = uplink.objects[mickey.spec()];
-    var dlrepl = downlink.objects[mickey.spec()];
+    
     // FIXME no value push; this is R actually
     setTimeout(function check(){    
+        var uprepl = uplink.objects[mickey.spec()];
+        var dlrepl = downlink.objects[mickey.spec()];
         equal(uprepl.x,20);
         equal(uprepl.y,20);
         equal(dlrepl.x,20);
