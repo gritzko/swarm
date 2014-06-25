@@ -105,8 +105,8 @@ Agenda.PROGRAM = {
             speakers:'I.P. Pavlov'
         },
         '10:30': {
-            title:'Offline ATMs', 
-            speakers:''
+            title:'Maintaining offline-mode ATMs', 
+            speakers:'Elvis R. Rodriguez '
         },
         '13:30': {
             title:'Splitting worms for fun and profit', 
