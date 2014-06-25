@@ -16,8 +16,19 @@ var app = app || {};
     // create Host
     app.host = Swarm.localhost = new Swarm.Host(app.id+hash.replace('#','~'));
     
+    var ssn = app.id.match(/anon([\w~_]+)/)[1]; // FIXME ugly
+    var ssnInt = Spec.base2int(ssn);
+    
     // create a Mouse object
     var mickey = app.mouse = new Mouse(app.id);
+    mickey.on('.init',function(){
+        if (this._version!=='!0') return;
+        mickey.set({
+            x:100+(0|(Math.random()*100)),
+            y:100+(0|(Math.random()*100)),
+            symbol: String.fromCharCode(10000+ssnInt%60) // dingbats
+        });        
+    })
 
     app.mice = app.host.get('/Mice#mice');
     // open #mice, list our object
@@ -31,11 +42,11 @@ var app = app || {};
     {//show online/offline status //TODO move it to mice-view
         app.host.on('reon', function (spec, val) {
             //console.log('CONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', 'true');
+            document.body.setAttribute('connected', app.host.isUplinked());
         });
         app.host.on('off', function (spec, val) {
             //console.log('DISCONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', 'false');
+            document.body.setAttribute('connected', app.host.isUplinked());
         });
     }
 
@@ -43,15 +54,6 @@ var app = app || {};
         app.mice.removeObject(mickey);
         app.host.close();
     };
-    
-    var ssn = app.id.match(/anon([\w~_]+)/)[1]; // FIXME ugly
-    var ssnInt = Spec.base2int(ssn);
-
-    mickey.set({
-        x:40,
-        y:80,
-        symbol: String.fromCharCode(10000+ssnInt%60) // dingbats
-    });
 
     app.mice.addObject(mickey);
 

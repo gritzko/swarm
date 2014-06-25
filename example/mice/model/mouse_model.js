@@ -7,7 +7,7 @@ var Mouse = Swarm.Model.extend('Mouse', {
     defaults: {
         x: 0,
         y: 0,
-        symbol: '.',
+        symbol: '?',
         ms: 0// last activity timestamp
     }
 });

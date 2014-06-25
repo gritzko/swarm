@@ -3,6 +3,10 @@ body {
     background: #fff;
 }
 
+body[local='1'] {
+    background: #eef;
+}
+
 table {
     width: 930px;
     margin: auto;

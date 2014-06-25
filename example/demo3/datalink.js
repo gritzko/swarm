@@ -17,4 +17,8 @@ var app = app || {};
     
     app.host.connect(app.wsServerUri);
     
+    if (window.location.hostname==='localhost') {
+        document.body.setAttribute('local','1');
+    }
+    
 } )();
