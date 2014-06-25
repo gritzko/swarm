@@ -18,7 +18,9 @@
         "ws": "~0.4.31",
         "koa": "",
         "koa-static-cache": "",
-        "react" : ""
+        "react" : "",
+        "nopt": "",
+        "koa": ""
     },
     "devDependencies": {
         "qunit" : "~0.6",
