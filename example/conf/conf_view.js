@@ -26,6 +26,11 @@ var AgendaView = React.createClass({
 
     render: function () {
         var agenda = this.sync;
+        
+        var titles = [ '', 'Consistency', 'Availability', 'Partition tolerance' ];
+        var cols = titles.map(function(t){return React.DOM.th({},t)});
+        var header = React.DOM.tr({},cols);
+        
         var rows = Agenda.SLOTS.map(function(slot){
             var cells = Agenda.TRACKS.map(function(track){
                 var text = [];
@@ -50,6 +55,9 @@ var AgendaView = React.createClass({
                 cells
             );
         });
+        
+        rows.unshift(header);
+        
         return React.DOM.table({},rows);
     }
 

@@ -10,6 +10,7 @@ var app = app || {};
         componentWillMount: function () {
             var spec = this.props.spec;
             this.sync = app.host.get(spec);
+            this.sync.on('.init',this);
             this.sync.on(this);
         },
         componentWillUnmount: function () {
