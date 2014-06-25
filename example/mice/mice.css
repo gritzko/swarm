@@ -5,6 +5,8 @@ body {
 }
 body[connected="true"] {
     background-image: url('millim.gif');
+    height: 300px;
+    width: 300px;
 }
 span#rtt {
     position: fixed;

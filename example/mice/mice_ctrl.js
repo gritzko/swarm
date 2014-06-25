@@ -6,8 +6,11 @@ var app = app || {};
     var FREQ = 30,
         toSend = null,
         timer = null;
+    var online = document.getElementById('online');
 
     function trackUserMoves (event) {
+        if (online && event.clientY>online.offsetTop)
+            return;
         toSend = {
             x: Math.max(0,event.clientX-15),
             y: Math.max(0,event.clientY-15)

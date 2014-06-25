@@ -16,7 +16,7 @@ var app = app || {};
     // never fails/reconnects :)
     app.host.getSources = function () {return [pipe]};
     
-    app.agendaSpec = '/Agenda#test';
+    app.agendaSpec = '/Agenda#'+app.id;
     app.agenda = new Agenda(app.agendaSpec);
 
     {//show online/offline status //TODO move it to mice-view
