@@ -39,12 +39,15 @@ var app = app || {};
 
     {//show online/offline status //TODO move it to mice-view
         app.host.on('reon', function (spec, val) {
-            //console.log('CONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', app.host.isUplinked());
+            //FIXME ugly app.host._lstn contains no uplinks
+            setTimeout(function () {
+                console.log('CONNECTED: ', spec.toString(), val);
+                document.body.setAttribute('connected', app.mice.isUplinked());
+            }, 100);
         });
         app.host.on('off', function (spec, val) {
-            //console.log('DISCONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', app.host.isUplinked());
+            console.log('DISCONNECTED: ', spec.toString(), val);
+            document.body.setAttribute('connected', app.mice.isUplinked());
         });
     }
 
