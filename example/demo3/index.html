@@ -139,17 +139,17 @@ and synchronized in real time using any storage and transport available.
             </p>
             <p>Swarm employs op-based eventual consistency approach.
             Based on a partially ordered operation log it
-            implements variety of consistency algorithms.
+            implements a variety of consistency algorithms.
             Swarm supports various sync channels: WebSocket for
             browser-to-server sync, WebStorage for tab-to-tab,
             postMessage for IFRAME-to-IFRAME sync, WebRTC for
-            browser-to-browser, Stream for process-to-process and
+            browser-to-browser, POSIX pipes for process-to-process and
             finally solid-fuel rockets for surface-to-air
             synchronization.
             </p>
             <p>Swarm works well offline and under intermittent
             connectivity; it may cache data and resync it later,
-            incuding the case of browser restart (if the data
+            incuding the case of browser restart (assuming the data
             stays in WebStorage).
             </p>
             <p>Our vision to write distributed apps like good old MVC apps.
