@@ -55,6 +55,8 @@ var app = app || {};
         app.host.close();
     };
 
-    app.mice.addObject(mickey);
+    app.mice.on('.init',function(){
+        app.mice.addObject(mickey);
+    });
 
 })();

@@ -9,8 +9,8 @@ var app = app || {};
     var online = document.getElementById('online');
 
     function trackUserMoves (event) {
-        if (online && event.clientY>online.offsetTop)
-            return;
+        if (online && event.clientY>online.offsetTop) return;
+        if (!app.mouse._version) return;
         toSend = {
             x: Math.max(0,event.clientX-15),
             y: Math.max(0,event.clientY-15)
