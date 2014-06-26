@@ -47,6 +47,7 @@ var fileStorage = new Swarm.FileStorage('.swarm');
 
 // create Swarm Host
 var swarmHost = new Swarm.Host('swarm~nodejs', 0, fileStorage);
+Swarm.localhost = swarmHost;
 
 // start the HTTP server
 var port = options.port || 8000;
