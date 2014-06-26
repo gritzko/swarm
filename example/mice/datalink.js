@@ -30,11 +30,9 @@ var app = app || {};
         });        
     })
 
-    app.mice = app.host.get('/Mice#mice');
     // open #mice, list our object
-    app.mice.on('.init', function (spec, mice_pojo, mice) {
-        // TODO no need to wait, actually
-        // ...bit writing to stateless objects is "bad"
+    app.mice = app.host.get('/Mice#mice', function(){
+        app.mice.addObject(mickey);
     });
     // connect to server
     app.host.connect(app.wsServerUri);
@@ -55,8 +53,5 @@ var app = app || {};
         app.host.close();
     };
 
-    app.mice.on('.init',function(){
-        app.mice.addObject(mickey);
-    });
 
 })();
