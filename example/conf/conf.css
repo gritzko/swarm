@@ -56,4 +56,5 @@ span.title {
 }
 span.speakers {
     font-style: italic;
+    white-space: nowrap;
 }

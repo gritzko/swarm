@@ -66,7 +66,7 @@ Agenda.PROGRAM = {
     'Consistency': {
         '09:00': {
             title:'The promise and perils of NewSQL',
-            speakers:''
+            speakers:'N. Shamgunov'
         },
         '10:30': {
             title:'Scaling MySQL way beyond reasonable limits', 
@@ -83,7 +83,7 @@ Agenda.PROGRAM = {
     },
     'Availability': {
         '09:00': {
-            title: 'Dealing with dead slaves',
+            title: 'Dead slaves',
             speakers: 'H. Beecher Stowe'
         },
         '10:30': {

@@ -69,7 +69,6 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     // FIXME sets are NOT aggregated; make a test for that
 
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
-        console.log('YPA ',val);
         if (spec.op()==='set') {
             var stream = AsyncLoopbackConnection.pipes['b3'];
             stream && stream.close();

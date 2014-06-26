@@ -263,6 +263,7 @@ asyncTest('6.e Handshake A pattern', function () {
     Swarm.localhost = downlink;
 
     var mickey = new Mouse({x:20,y:20});
+    equal(mickey._id, mickey._version.substr(1));
     
     // FIXME no value push; this is R actually
     setTimeout(function check(){    

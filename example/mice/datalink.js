@@ -22,7 +22,7 @@ var app = app || {};
     // create a Mouse object
     var mickey = app.mouse = new Mouse(app.id);
     mickey.on('.init',function(){
-        if (this._version!=='!0') return;
+        if (this._version!=='!0') return; // FIXME default values
         mickey.set({
             x:100+(0|(Math.random()*100)),
             y:100+(0|(Math.random()*100)),
