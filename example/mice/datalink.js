@@ -48,6 +48,7 @@ var app = app || {};
     });
     app.host.on('off', function (spec, val) {
         document.body.setAttribute('connected', app.host.isUplinked());
+        // FIXME: Pipe does not reconnect after server-initiated disconnection
     });
 
     window.onbeforeunload = function(e) {
