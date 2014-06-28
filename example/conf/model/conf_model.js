@@ -16,17 +16,16 @@ var Agenda = Swarm.Syncable.extend('Agenda', {
         attend: function (spec,val,lstn) {
             // get author (strip ssn)
             
-            // cancel overlaps
-            //if (spec.version()<this._version.substr(1)) { // reordering
-                var myVer = '!' + spec.version();
-                for(var oldSpec in this._oplog) {
-                    if (oldSpec>myVer) {
-                        var oldVal = this._oplog[spec];
-                        if (oldVal.slot===val.slot)
-                            return; // rewritten already
-                    }
+            // sometimes, the newly arrived op is already overwritten
+            // by a preexisting concurrent op; let's detect that
+            var myVer = '!' + spec.version();
+            for(var oldSpec in this._oplog) {
+                if (oldSpec>myVer) {
+                    var oldVal = this._oplog[oldSpec];
+                    if (oldVal.slot===val.slot)
+                        return; // rewritten already
                 }
-            //}
+            }
             this.agenda[val.slot] = val.track;
         }
     },
@@ -73,12 +72,12 @@ Agenda.PROGRAM = {
             speakers:''
         },
         '13:30': {
-            title:'Spanner: megalomaniac like everything we do, G.O.Ogler', 
-            speakers:''
+            title:'Spanner: megalomaniac like everything we do', 
+            speakers:'G.O.Ogler'
         },
         '15:00': {
-            title:'Resolving the Great Papal Schism, Holy Father Martin V', 
-            speakers:''
+            title:'Resolving the Great Papal Schism using pen and paper', 
+            speakers:'Martin V Colonna'
         }
     },
     'Availability': {
