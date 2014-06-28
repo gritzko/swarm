@@ -283,7 +283,6 @@ test('6.f Handshake and sync', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new DummyStorage(false);
-    // FIXME pass storage to Swarm.Host
     var uplink = new Swarm.Host('uplink~F',0,storage);
     var downlink1 = new Swarm.Host('downlink~F1');
     var downlink2 = new Swarm.Host('downlink~F2');
@@ -323,3 +322,5 @@ test('6.f Handshake and sync', function () {
     equal(mickey1.y,0xA);
     equal(mickey2.y,0xB);
 });
+
+

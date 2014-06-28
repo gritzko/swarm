@@ -77,3 +77,40 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     
 });
 
+
+
+asyncTest('3.c Disconnection events', function () {
+    console.warn(QUnit.config.current.testName);
+
+    var storage = new DummyStorage(true);
+    var uplink = new Swarm.Host('uplink~C',0,storage);
+    var downlink1 = new Swarm.Host('downlink~C1');
+    //var downlink2 = new Swarm.Host('downlink~C2');
+    uplink.getSources = function () {return [storage]};
+    downlink1.getSources = function () {return [uplink]};
+    //downlink2.getSources = function () {return [uplink]};
+    
+    uplink.accept(new AsyncLoopbackConnection('loopback:3c'));
+    downlink1.connect('loopback:c3');
+
+    Swarm.localhost = downlink1;
+    
+    /*var miceA = downlink1.get('/Mice#mice');
+    var miceB = downlink2.get('/Mice#mice');
+    var mickey1 = downlink1.get('/Mouse');*/
+
+    expect(3);
+
+    downlink1.on('.reoff', function (spec,val,src) {
+        equal(src,downlink1);
+        ok(!src.isUplinked());
+        start();
+    });
+
+    downlink1.on('.reon', function (spec,val,src) {
+        equal(spec.id(),'downlink~C1');
+        setTimeout(function(){ //:)
+            downlink1.disconnect('uplink~C');
+        },100);
+    });
+});
