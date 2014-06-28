@@ -23,14 +23,10 @@ var app = app || {};
     app.agendaSpec = '/Agenda#'+app.id;
     app.agenda = new Agenda(app.agendaSpec);
 
-    {//show online/offline status //TODO move it to mice-view
-        app.host.on('reon', function (spec, val) {
-            //console.log('CONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', 'true');
-        });
-        app.host.on('off', function (spec, val) {
-            //console.log('DISCONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', 'false');
-        });
-    }
+    app.host.on('reon', function (spec, val) {
+        document.body.setAttribute('connected', app.host.isUplinked());
+    });
+    app.host.on('off', function (spec, val) {
+        document.body.setAttribute('connected', app.host.isUplinked());
+    });
 }());
