@@ -37,19 +37,15 @@ var app = app || {};
     // connect to server
     app.host.connect(app.wsServerUri);
 
-    {//show online/offline status //TODO move it to mice-view
-        app.host.on('reon', function (spec, val) {
-            //FIXME ugly app.host._lstn contains no uplinks
-            setTimeout(function () {
-                console.log('CONNECTED: ', spec.toString(), val);
-                document.body.setAttribute('connected', app.mice.isUplinked());
-            }, 100);
-        });
-        app.host.on('off', function (spec, val) {
-            console.log('DISCONNECTED: ', spec.toString(), val);
-            document.body.setAttribute('connected', app.mice.isUplinked());
-        });
-    }
+    //show online/offline status
+    app.host.on('reon', function (spec, val) {
+        document.body.setAttribute('connected', app.host.isUplinked());
+        app.mice._version && app.mice.addObject(mickey); // reinsert mickey
+        // TODO this _version check is annoying
+    });
+    app.host.on('reoff', function (spec, val) {
+        document.body.setAttribute('connected', app.host.isUplinked());
+    });
 
     window.onbeforeunload = function(e) {
         app.mice.removeObject(mickey);
