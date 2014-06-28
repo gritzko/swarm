@@ -10,7 +10,8 @@ var app = app || {};
         'anon'+Spec.int2base((Math.random()*10000)|0);
     window.localStorage.setItem('.localuser',app.id);
     
-    app.wsServerUri = window.location.origin.replace(/^http/,'ws');
+
+    app.wsServerUri = 'ws://'+window.location.host;
 
     var hash = window.location.hash || '#0';
     // create Host

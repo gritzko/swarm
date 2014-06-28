@@ -5,7 +5,7 @@ var app = app || {};
     app.id = window.localStorage.getItem('.localuser') || 
         'anon'+Spec.int2base((Math.random()*10000)|0);
     window.localStorage.setItem('.localuser',app.id);
-    app.wsServerUri = window.location.origin.replace(/^http/,'ws');
+    app.wsServerUri = 'ws://'+window.location.host;
     Swarm.debug = true;
 
     app.host = Swarm.localhost = new Swarm.Host (app.id+'~local', 0, new DummyStorage(false));
