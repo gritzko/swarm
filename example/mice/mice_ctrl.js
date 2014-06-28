@@ -17,7 +17,6 @@ var app = app || {};
         };
         timer = timer || setTimeout(function () {
             app.mouse && app.mouse.set(toSend);
-            console.log(toSend);
             timer = null;
         }, FREQ);
     }

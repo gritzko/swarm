@@ -46,6 +46,9 @@ var app = app || {};
     app.host.on('reoff', function (spec, val) {
         document.body.setAttribute('connected', app.host.isUplinked());
     });
+    app.host.on('off', function (spec, val) {
+        document.body.setAttribute('connected', app.host.isUplinked());
+    });
 
     window.onbeforeunload = function(e) {
         app.mice.removeObject(mickey);

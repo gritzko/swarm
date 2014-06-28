@@ -90,7 +90,7 @@ Agenda.PROGRAM = {
             speakers:'Tom Cruise'
         },
         '13:30': {
-            title:'Latency compensation in early modern Spain', 
+            title:'RTT of 1 year: latency compensation in 16th cent. Spain', 
             speakers:'Philip II of Spain'
         },
         '15:00': {
