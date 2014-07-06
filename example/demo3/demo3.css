@@ -62,7 +62,7 @@ td.legend p {
     font-size: 15px;
 }
 
-div.preamble, div.story {
+div.preamble, div.story, ul.links {
     margin: auto;
     text-align: justify;
     font-size: 20px;
@@ -70,8 +70,16 @@ div.preamble, div.story {
     text-overflow: ellipsis;
     max-width: 700px;
 }
+div#disqus_thread {
+    margin: auto;
+    font-size: 20px;
+    max-width: 700px;
+}
+div#disqus_thread iframe {
+    box-shadow: none;
+}
 p.cta {
-    font-size: 24px;
+    /*font-size: 24px;*/
     margin-top: 20px;
     margin-bottom: 20px;
 }
@@ -92,7 +100,14 @@ div.example.mice div.legend {
 ul {
     font: "Verdana" 12px #224;
 }
-h1, h2 {
-    width: 100%;
+h1, h2, h3 {
+    width: 700px;
+    margins: auto;
     text-align: center;
+}
+h3 {
+    font-size: 22px;
+    text-align: left;
+}
+ul.links {
 }

@@ -220,7 +220,7 @@ i.e. purely offline, no server connections used. The text survives <a
             Speaking of Swarm API, the best option at this moment is to
             learn by example and by reading
             <a href='/lib/swarm3.js'>the code</a>.
-            Swarm implements M of MVC, so key objects are:
+            Swarm implements M of MVC, so key classes are:
 
             <ul class='classes'>
             <li><tt>Model</tt> is a Backbone-like synced JavaScript object
@@ -266,10 +266,28 @@ i.e. purely offline, no server connections used. The text survives <a
             connectivity; it may cache data and resync it later,
             incuding the case of browser restart. <br/>
 
-            So, play with it, provide feedback, report bugs, add feature
-            requests, contribute. You are welcome!
+            Please, feel free to:
+            <ul>
+                <li><a href='https://github.com/gritzko/swarm/'>play</a> with it,
+                <li>provide <a href='https://github.com/gritzko/swarm/issues/new'>feedback</a>,
+                <li><a href='https://github.com/gritzko/swarm/issues/new'>report bugs, add feature
+                    requests,</a>
+                <li><a href='https://github.com/gritzko/swarm'>contribute</a>.
+            </ul>
+            Finally, this short intro may be too incomplete, so feel
+            free to ask questions.
             </p>
+
+            <h3>Links</h3>
+            <ul class='links'>
+                <li>GitHub project <a href='https://github.com/gritzko/swarm'>github.com/gritzko/swarm</a>
+                <li>Swarm blog <a href='http://swarmjs.github.io/'>swarmjs.github.io</a>
+                <li>Swarm and CRDTs, <a href='http://www.pds.ewi.tudelft.nl/~victor/polo.pdf'>short article</a>
+                <li>Pure op-based CRDT <a href='http://gsd.di.uminho.pt/members/cbm/ps/crdtOpsMiddleware.pdf'>article</a>
+            </ul>
         </div>
+
+        <br/>
 
         <!-- How is it different
             Meteor
@@ -283,6 +301,21 @@ i.e. purely offline, no server connections used. The text survives <a
         <script src="../../test/0_routines.js"></script>
         <script src="../conf/model/conf_model.js"></script>
         <script src="./datalink.js"></script>
+
+        <div id="disqus_thread"></div>
+            <script type="text/javascript">
+                var disqus_shortname = 'swarmjs';
+
+                /* * * DON'T EDIT BELOW THIS LINE * * */
+                (function() {
+                    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+                    dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+                    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+                })();
+            </script>
+            <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+            <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
 
         <a href="https://github.com/gritzko/swarm"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
     </body>
