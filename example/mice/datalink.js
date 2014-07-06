@@ -42,7 +42,7 @@ var app = app || {};
     app.host.on('reon', function (spec, val) {
         document.body.setAttribute('connected', app.host.isUplinked());
         app.mice._version && app.mice.addObject(mickey); // reinsert mickey
-        // TODO this _version check is annoying
+        // TODO this _version check is annoying! Use _tail instead. FIXME
     });
     app.host.on('reoff', function (spec, val) {
         document.body.setAttribute('connected', app.host.isUplinked());

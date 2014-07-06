@@ -7,6 +7,12 @@ body[local='1'] {
     background: #eef;
 }
 
+a {
+    color: #000;
+    text-decoration: none;
+    border-bottom: 1px solid #aaa;
+}
+
 table {
     width: 930px;
     margin: auto;
@@ -57,13 +63,17 @@ td.legend p {
 }
 
 div.preamble, div.story {
-    margin: 20px;
-    margin-left: 150px;
-    margin-right: 150px;
+    margin: auto;
     text-align: justify;
-    font-size: 18px;
+    font-size: 20px;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 700px;
+}
+p.cta {
+    font-size: 24px;
+    margin-top: 20px;
+    margin-bottom: 20px;
 }
 p.summary {
     font-size: 20px;

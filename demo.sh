@@ -1,4 +1,5 @@
 #!/bin/bash
 
-/opt/node11/bin/node --harmony server.js --models=example/mice/model/:example/conf/model/
+echo needs node v0.11
+node --harmony server.js --models=example/mice/model/:example/conf/model/
 
