@@ -1,5 +1,10 @@
 var app = app || {};
 
+// Antics
+// * two tabs: mice goes offline
+// * agenda doesn't sync to tabs
+// * text does not sync to tabs, is not saved
+
 ( function datalink() {
     // don't need OAuth for a demo, gen fake user account
     app.id = window.localStorage.getItem('.localuser') || 
