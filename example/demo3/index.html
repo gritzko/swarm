@@ -148,45 +148,95 @@ i.e. purely offline, no server connections used. The text survives <a
             Very soon, you will find yourself on the toughest
             pages of a CS textbook (see AP of
             <a href='http://blog.foundationdb.com/minimal-explanation-of-the-cap-theorem'>CAP</a>).
+
+            TREND
+            distributed logic, ditributed data
+            phones multicore  more storage space than
+            new opportunities old architectures can't exploit.
+
             </p>
 
             <!-- DREAM -->
             <p>
-            Our vision is to write distributed apps the way we did good old
-            local MVC apps.
-            The MVC loop naturally assumes there is no difference in processing
-            local and remote events.
-            Once replica synchronization is delegated to middleware,
-            developers may concentrate on logic and presentation.
-            <!--Once an app limits itself to local replica,-->
 
-            Our other goal is smooth scaling path.
-            <!--Once logic and presentation are clearly defined and nicely contained
-            in thier respective blocks, scaling is achieved by plugging the
-            right data source.-->
-            A developer should be able to start an app using Chrome as an IDE and
-            local storage as a backend, then switch to SaaS and later on to
-            own backend cluster.
-            That "deployment" stage slows down development way too often!
+            Our vision is to make distributed collaborative apps
+            with the same ease we did good old local
+            <a href='http://en.wikipedia.org/wiki/Model%E2%80%93view%E2%80%93controller'>MVC</a>
+            apps.
+            We achieve that by enhancing the classic MVC architecture
+            with Replicated Model (M+VC) that embeds all the
+            synchronization/caching magic.
 
-            Again, our way is: define the logic over a local replica, sync the
-            replica in the background. That is like Dropbox for your objects.
+            <!--Essentially, that is middleware that keeps in sync
+            all the model's replicas.-->
+
+            Once we isolate all the replication inside the model,
+            the rest of the MVC loop may make no distinction in processing
+            either local or remote events.
+
+            Consequently, by defining both presentation and logic
+            over a local replica of the model we achieve perfect compartmentalization.
+
+            The transition from MVC+API to M+VC is
+            somewhat comparable to a typical
+            <a href='http://jquery.com/'>jQuery</a> &rarr;
+            <a href='http://backbonejs.org'>Backbone</a>
+            transition in regard to the degree it sorts things out.
+            Instead of endlessly juggling
+            caches, local copies, APIs calls and db accesses,
+            developers may now concentrate on logic and presentation.
             </p>
 
-            <!-- METHOD -->
             <p>
-            Once every client hosts a replica of (some) data,
-            we deal with a radically ditributed AP system (by CAP)
-            which needs to be reconciled all the time.
-            And yes, "reconciled" means "eventual consistency".
+            Well, but teaching the model to replicate and synchronize
+            "on its own" is a major challenge.
+            Indeed, replicas must be able to function semi-autonomously,
+            as any locking or blocking nixes both usability and
+            performance in a distributed system.
+
+            <!--fully isolate fluid data
+            to make the system scale  behavior
+            non-blocking
+             accepting  eventual delivery
+            data will be delivered
+              rej? reconciliated merged lockless (impractical)-->
 
             Mathematically, the most bulletproof approach to
-            the problem was CRDT (Convergent Replicated Data Types).
+            the problem was
+            <a href='http://pagesperso-systeme.lip6.fr/Marc.Shapiro/papers/RR-6956.pdf'>Commutative Replicated Data Types</a>
+            <a href='http://kellabyte.com/2013/05/20/convergent-replicated-data-types/'>(CRDT)</a>.
             The CRDT theory is a dramatic improvement on Operational
             Transformation in handling concurrent changes in
             near-real-time systems.
+            CRDT tolerates divergence of replicas and varying operation orders,
+            aiming to reconciliate changes eventually, once
+            all the writes spread to all the replicas.
             CRDT is fundamentally asynchronous, survives intermittent
-            connectivity and perfectly matches reactive architectures.
+            connectivity and perfectly matches
+            <a href='http://www.reactivemanifesto.org/'>reactive architectures</a>.
+            </p>
+
+            <p>
+            Our other goal is a smooth scaling path.
+            <!--Once logic and presentation are clearly defined and nicely contained
+            in thier respective blocks, scaling is achieved by plugging the
+            right data source.-->
+            If both logic and presentation are neatly compartmentalized,
+            then deployment options may vary without much of disruption.
+            That "deployment" stage slows down development way too often!
+            A developer should be able to start developing an app
+            using Chrome as an IDE and
+            local storage as a backend, then switch to SaaS and later on to
+            a separate backend cluster.
+            That should not be a one-way road: the ability to debug a large app
+            piece by piece locally is priceless!
+            </p>
+
+            <p>
+            Again, our method is to orthogonalize data delivery, logic and
+            presentation: define the logic over a local replica, save and sync the
+            replica in the background.
+            This Replicated Model approach is like Dropbox for your objects.
             </p>
 
             <p>
@@ -194,7 +244,8 @@ i.e. purely offline, no server connections used. The text survives <a
             CRDT basis to implement a lightweight Backbone-like
             framework on top of it.
 
-            Swarm employs pure op-based CRDT flavor, where
+            Swarm employs a
+            <a href='http://link.springer.com/chapter/10.1007%2F978-3-662-43352-2_11#page-1'>pure op-based flavor of CRDT</a>, where
             an object is essentially a stream of mutation events (ops).
             Based on those <a href='http://en.wikipedia.org/wiki/Partially_ordered_set'>partially ordered</a> <a href='http://en.wikipedia.org/wiki/Lamport_timestamps'>Lamport-timestamped</a> operation logs, Swarm implements CRDT data types.
 
@@ -207,7 +258,9 @@ i.e. purely offline, no server connections used. The text survives <a
           Triple-mode exchange: state, diff, op.-->
 
             Swarm operations are represented as key-value pairs where
-            the key is a "specifier", a compound id consisting of class, object id,
+            the key is a
+            <a href='http://www.pds.ewi.tudelft.nl/~victor/polo.pdf'>"specifier"</a>,
+            a compound id consisting of class, object id,
             Lamport timestamp and operation name. The value is arbitrary JSON.
             All the operation routing, ordering, storage and application
             is based on specifiers.
@@ -239,7 +292,7 @@ i.e. purely offline, no server connections used. The text survives <a
             <li><tt>Host</tt> is (practically) a user session, and (formally) a partial
             replica of a dataset.
             <li><tt>Storage</tt> is (formally) a replica that does not implement
-            the logic. Practically, that is a storage :)
+            the logic. Practically, that is some storage :)
             Normally, Storage implementations use some dual state+log scheme to
             persist replicas.
             <li><tt>Pipe</tt> is a connection to a remote Host backed by a standard
