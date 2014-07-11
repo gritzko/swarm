@@ -59,7 +59,7 @@ storage and transport available.
 
             <tr class='example mice'>
                 <td>
-                    <iframe src='../mice/index.html#1'></iframe>
+                    <iframe class='example' src='../mice/index.html#1'></iframe>
                 </td>
                 <td class='legend'>
                     <!--h2>Mice</h2>
@@ -83,13 +83,13 @@ storage and transport available.
                         </p>
                 </td>
                 <td>
-                    <iframe src='../mice/index.html#2'></iframe>
+                    <iframe class='example' src='../mice/index.html#2'></iframe>
                 </td>
             </tr>
 
             <tr class='example editor'>
                 <td>
-                    <iframe src='../editor/index.html#1'></iframe>
+                    <iframe class='example' src='../editor/index.html#1'></iframe>
                 </td>
                 <td class='legend'>
                     <!--h2>Editor</h2>
@@ -107,12 +107,12 @@ i.e. purely offline, no server connections used. The text survives <a
  href='index.html'>page refresh</a>. <br/> Just start typing!  </p>
                 </td>
                 <td>
-                    <iframe src='../editor/index.html#2'></iframe>
+                    <iframe class='example' src='../editor/index.html#2'></iframe>
                 </td>
             </tr>
 
             <tr class='example conference'>
-                <td><iframe src='../conf/index.html#1'></iframe></td>
+                <td><iframe class='example' src='../conf/index.html#1'></iframe></td>
                 <td class='legend'>
                     <!--h2>Controls</h2>
                     <ul>
@@ -131,7 +131,7 @@ i.e. purely offline, no server connections used. The text survives <a
                         Just select talks you want to attend :)</p>
                 </td>
 
-                <td><iframe src='../conf/index.html#2'></iframe></td>
+                <td><iframe class='example' src='../conf/index.html#2'></iframe></td>
             </tr>
 
         </table>
@@ -332,8 +332,21 @@ i.e. purely offline, no server connections used. The text survives <a
             free to ask questions.
             </p>
 
+<!-- SHARING BUTTONS -->
+<a href="https://twitter.com/swarm_js" class="twitter-follow-button" data-show-count="false">Follow @swarm_js</a>
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+&nbsp;
+<a href="https://twitter.com/share" class="twitter-share-button" data-via="swarm_js">Tweet</a>
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');</script>
+
+<script type="text/javascript" src="http://www.reddit.com/buttonlite.js?i=4&url=swarmjs.github.io"></script>
+&nbsp;&nbsp;
+<a href="http://news.ycombinator.com/submit" class="hn-share-button" data-title="Some Title" data-url="http://swarmjs.github.io">Vote on HN</a>
+<!-- LINKS -->
+
             <h3>Links</h3>
             <ul class='links'>
+                <li>Twitter <a href='https://twitter.com/swarm_js'>@swarm_js</a>&nbsp;
                 <li>GitHub project <a href='https://github.com/gritzko/swarm'>github.com/gritzko/swarm</a>
                 <li>Swarm blog <a href='http://swarmjs.github.io/'>swarmjs.github.io</a>
                 <li>Swarm and CRDTs, <a href='http://www.pds.ewi.tudelft.nl/~victor/polo.pdf'>short article</a>
@@ -348,6 +361,7 @@ i.e. purely offline, no server connections used. The text survives <a
             Google Drive Realtime API
             Kafka per-object granularity (not a general bus) client-side
             -->
+<!-- CODE -->
 
         <script src="../../lib/swarm3.js"></script>
         <script src="../../lib/swarm3-murmur.js"></script>
@@ -355,6 +369,8 @@ i.e. purely offline, no server connections used. The text survives <a
         <script src="../../test/0_routines.js"></script>
         <script src="../conf/model/conf_model.js"></script>
         <script src="./datalink.js"></script>
+
+<!-- DISQUS -->
 
         <div id="disqus_thread"></div>
             <script type="text/javascript">
@@ -372,5 +388,14 @@ i.e. purely offline, no server connections used. The text survives <a
 
 
         <a href="https://github.com/gritzko/swarm"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://camo.githubusercontent.com/38ef81f8aca64bb9a64448d0d70f1308ef5341ab/68747470733a2f2f73332e616d617a6f6e6177732e636f6d2f6769746875622f726962626f6e732f666f726b6d655f72696768745f6461726b626c75655f3132313632312e706e67" alt="Fork me on GitHub" data-canonical-src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png"></a>
+
+        <script>
+    (function(d, t) {
+        var g = d.createElement(t),
+            s = d.getElementsByTagName(t)[0];
+        g.src = '//hnbutton.appspot.com/static/hn.min.js';
+        s.parentNode.insertBefore(g, s);
+    }(document, 'script'));
+</script>
     </body>
 </html>

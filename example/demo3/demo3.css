@@ -30,7 +30,7 @@ td {
     padding-bottom: 10px;
 }
 
-iframe {
+iframe.example {
     width: 300px;
     height: 300px;
     vertical-align: middle;
