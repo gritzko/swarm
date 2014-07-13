@@ -15,7 +15,8 @@ var app = app || {};
 
     app.host = Swarm.localhost = new Swarm.Host (app.id+'~local', 0, new DummyStorage(false));
 
-    new Swarm.PostMessageServer();
+    Swarm.PostMessageStream.listen(app.host);
+    
     
     app.agendaSpec = '/Agenda#'+app.id;
     //app.agenda = new Agenda(app.agendaSpec);
