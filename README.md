@@ -1,121 +1,29 @@
-# Swarm: a JavaScript object sync library
+# Swarm
 
-Swarm is a minimal library that magically synchronizes JavaScript
-objects between all your clients and servers, in real-time. All
-instances of an object will form a dynamic graph, exchanging deltas
-the most efficient way and merging changes.  Swarm needs Node.js and
-[einaros ws][ws] on the server side and HTML5 WebSocket in the browser.
+_reactive data sync lib: replicated model for your web app_
 
-The vision behind Swarm is to get back to the good old days: program a
-real-time multiuser multiserver app like a local MVC app, let things
-automatically synchronize in the background. Ideally, once view
-rendering is model event driven, there is hardly any difference
-in reacting to either local or remote changes.
+New opportunities bring new challenges; now, having all that laptops, smartphones and tablets on WiFi/3G, we need handover (aka continuity), real time sync and offline work. Those requirements stressed classic request-response HTTP architectures leading to fix-on-a-fix stacks that are far from perfection. Our dream is to develop distributed applications like good old local MVC apps, by fully delegating the data caching/synchronization magic to a dedicated layer. We want to deal with the data uniformly, no matter where it resides. We believe, that CRDT is the only approach that allows to fully embrace the reality of distributed data. Swarm is a CRDT-based replicated model library (M of MVC) that keeps your data correctly cached and synchronized in real time using any storage and transport available.
 
-The Swarm is the M of MVC. Regarding V and C parts, you may either
-attach your own View or Controller components (like [Handlebars][hb])
-or insert Swarm into your MVC framework of choice (like
-[Backbone.js][bb]).
+The problem of data synchronization is indeed purely technical with no direct relation to the business logic. Still, data sync becomes an issue in a complex web app. It is still a major challenge to implement real-time sync, intermittent connectivity support and caching. Very soon, you will find yourself on the toughest pages of a CS textbook (see AP of CAP). TREND distributed logic, ditributed data phones multicore more storage space than new opportunities old architectures can't exploit.
 
-[ws]: https://github.com/einaros/ws "Einar O. Stangvik WebSocket lib"
-[hb]: http://handlebarsjs.com/ "Handlebars templating lib"
-[bb]: http://backbonejs.org/ "Backbone.js MVC lib"
+Our vision is to make distributed collaborative apps with the same ease we did good old local MVC apps. We achieve that by enhancing the classic MVC architecture with Replicated Model (M+VC) that embeds all the synchronization/caching magic. Once we isolate all the replication inside the model, the rest of the MVC loop may make no distinction in processing either local or remote events. Consequently, by defining both presentation and logic over a local replica of the model we achieve perfect compartmentalization. The transition from MVC+API to M+VC is somewhat comparable to a typical jQuery → Backbone transition in regard to the degree it sorts things out. Instead of endlessly juggling caches, local copies, APIs calls and db accesses, developers may now concentrate on logic and presentation.
 
-## Architecture
+Well, but teaching the model to replicate and synchronize "on its own" is a major challenge. Indeed, replicas must be able to function semi-autonomously, as any locking or blocking nixes both usability and performance in a distributed system. Mathematically, the most bulletproof approach to the problem was Commutative Replicated Data Types (CRDT). The CRDT theory is a dramatic improvement on Operational Transformation in handling concurrent changes in near-real-time systems. CRDT tolerates divergence of replicas and varying operation orders, aiming to reconciliate changes eventually, once all the writes spread to all the replicas. CRDT is fundamentally asynchronous, survives intermittent connectivity and perfectly matches reactive architectures.
 
-We target an objective described by some as the Holy Grail of
-JavaScript real-time apps.  With HTML5 and node.js, server and client
-sides converge: both run JavaScript, both have their own storage
-and there is a continous two-way WebSocket connection between them.
-The Holy Grail idea is to run the same codebase as needed either on
-the server or on the client. In particular, we'd like to serve static
-HTML from the server to make our site indexable. Further on, we'd like
-to update HTML incrementally on the client. Once a user initiates an
-event, we often need to relay that event to other users.  In bigger
-setups, we also need to synchronize our multiple servers. Even at a
-single server, multiple node.js worker processes often need some sort
-of synchronization.
+Our other goal is a smooth scaling path. If both logic and presentation are neatly compartmentalized, then deployment options may vary without much of disruption. That "deployment" stage slows down development way too often! A developer should be able to start developing an app using Chrome as an IDE and local storage as a backend, then switch to SaaS and later on to a separate backend cluster. That should not be a one-way road: the ability to debug a large app piece by piece locally is priceless!
 
-There are various ways of resolving those matters, which mostly boil
-down to retrofitting the classic HTTP request-response architecture
-which dates back to the epoch of Apache CGI, Perl scripts and RDBMS
-backends. Instead, Swarm takes a fresh look at the problem, partially
-by borrowing some pages from peer-to-peer design books. Servers and
-clients form a single network to synchronize changes and relay events
-without relying too much on the (database) backend.
+Again, our method is to orthogonalize data delivery, logic and presentation: define the logic over a local replica, save and sync the replica in the background. This Replicated Model approach is like Dropbox for your objects.
 
-We assume that both server and client processes are unreliable alike.
-Server processes connect to each other in P2P fashion, forming a full
-mesh.  Servers may routinely join and depart, but dusruptions to the
-mesh are temporary. A client connects to a server of his choice by
-WebSocket.
-
-Once a client opens an object, the subscription comes to the server by
-a WebSocket connection.  In multi-server setups, the server contacts
-another server which is the 'root' for that object.  The 'root' is
-assigned algorithmically, using consistent hashing.  The root server
-conducts all DB reads and writes for the object to minimize DB access
-concurrency. The current state of an object is sent back to the
-client.  Further on, all replicas of the object at all the server and
-client processes will have to synchronize.  Every change will be
-serialized as a "diff" object. Diffs will propagate to all replicas by
-a spanning tree where the root server will serve as the root
-(tautology, right) and clients will be the leaves.  Normally, spanning
-trees have depth of three (the root, servers, clients).  In case of
-topology disruptions, the spanning tree may temporarily have more
-tiers due to transient inconsistencies, e.g. while the responsible
-node is not fully connected yet.  Once some clients stop listening to
-an object, the spanning tree contracts to the necessary minimum in a
-process that is reminiscent of garbage collection, albeit at the swarm
-level.  Once no client is listening, all replicas are garbage
-collected.
-
-## API
-
-Swarm is built around its concise four-method interface that expresses
-the core function of the library: synchronizing distributed object
-replicas. The interface is essentially a combination of two well
-recognized conventions, namely get/set and on/off method pairs, also
-available as getField/setField and addListener/removeListener calls
-respectively.  The most common object lifecycle pattern is:
-
-    var obj = swarmPeer.on(id, callbackFn); // also addListener()
-    obj.set('field',value);
-    obj.getField()===obj.get('field')===obj.field;
-    obj.on('field', fieldCallbackFn);
-    obj.off('field', fieldCallbackFn);
-    swarmPeer.off(id, callbackFn);  // also removeListener()
-
-Each set() call is essentially relayed to all the replicas of an object
-triggering all the attached listeners.
-
-Although the standard field-value signature is accepted, further down
-the call chain it is generalized to fully unambiguously specify the
-event in question.  Namely, the event/field name is generalized as a
-*specifier*, a compound identifier containing the class of the object,
-the object id, the field name and a version identifier. At the same
-time, the value is generalized as a {field:value} map. In particular,
-event listeners have to deal with the most "generalized" form of the
-specifier-value signature:
-
-    function fieldCallbackFn (spec, val) {
-        spec.id === obj.id;
-        val.field === obj.field === val[Peer.wireNames['field']];
-    }
+On the engineering side, our mission was to design a minimal CRDT basis to implement a lightweight Backbone-like framework on top of it. Swarm employs a pure op-based flavor of CRDT, where an object is essentially a stream of mutation events (ops). Based on those partially ordered Lamport-timestamped operation logs, Swarm implements CRDT data types. Swarm operations are represented as key-value pairs where the key is a "specifier", a compound id consisting of class, object id, Lamport timestamp and operation name. The value is arbitrary JSON. All the operation routing, ordering, storage and application is based on specifiers.
 
 
-The document on [Specifiers][sp] has detailed information on specifiers and API signatures.
+Speaking of Swarm API, the best option at this moment is to learn by example and by reading the code. Swarm implements M of MVC, so key classes are:
 
-[sp]: Specifiers.html "Swarm: specifying events"
+Model is a Backbone-like synced JavaScript object (extends Syncable).
+Set is the Swarm primary collection type (extends Syncable). Differently from Backbone, that is not an array, because arrays behave poorly under concurrent edits. Still, a Set can be sorted.
+Syncable is an abstract base class that implements most of op(log) related logic. A Syncable is an abstract object that is "synced". Syncables have a number of hidden fields, \_version and \_id being the most important. The \_oplog field contains some of the applied operations; which and how many depends on implementation (e.g. see log compaction discussion by Kreps).
+Host is (practically) a user session, and (formally) a partial replica of a dataset. Normally, a Host has some Storage and one or more Pipes to other Hosts.
+Storage is (formally) a replica that does not implement the logic. Practically, that is some storage :) Normally, Storage implementations use some dual state+log scheme to persist replicas. This particular example implementation flushes object state snapshots to separate files (periodically) while streaming all operations to a single log file (in real time).
+Pipe is a connection to a remote Host backed by a standard node.js-compatible Stream. Pipes and Streams are mostly used internally. An average developer is supposed to simply use URIs.
 
-## Future work
-
-* comment the mouse.js example extensively
-* explicitly mark load state of an object, obj.\_state as a bitmask of
-  EMPTY, READY, DIRTY...
-* add WebStorage cache to fasten load, enable offline operation
-* add derived/secondary fields calculated from regular state fields
-  (kind of cache)
-* add static event listeners, like onKeyChange(oldval,newval)
-* add PEX ability to server processes
-* add RPC functionality, still avoiding any oplog
+Swarm works well offline and under intermittent connectivity; it may cache data and resync it later, incuding the case of browser restart. 
