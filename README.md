@@ -19,11 +19,11 @@ On the engineering side, our mission was to design a minimal CRDT basis to imple
 
 Speaking of Swarm API, the best option at this moment is to learn by example and by reading the code. Swarm implements M of MVC, so key classes are:
 
-Model is a Backbone-like synced JavaScript object (extends Syncable).
-Set is the Swarm primary collection type (extends Syncable). Differently from Backbone, that is not an array, because arrays behave poorly under concurrent edits. Still, a Set can be sorted.
-Syncable is an abstract base class that implements most of op(log) related logic. A Syncable is an abstract object that is "synced". Syncables have a number of hidden fields, \_version and \_id being the most important. The \_oplog field contains some of the applied operations; which and how many depends on implementation (e.g. see log compaction discussion by Kreps).
-Host is (practically) a user session, and (formally) a partial replica of a dataset. Normally, a Host has some Storage and one or more Pipes to other Hosts.
-Storage is (formally) a replica that does not implement the logic. Practically, that is some storage :) Normally, Storage implementations use some dual state+log scheme to persist replicas. This particular example implementation flushes object state snapshots to separate files (periodically) while streaming all operations to a single log file (in real time).
-Pipe is a connection to a remote Host backed by a standard node.js-compatible Stream. Pipes and Streams are mostly used internally. An average developer is supposed to simply use URIs.
+* Model is a Backbone-like synced JavaScript object (extends Syncable).
+* Set is the Swarm primary collection type (extends Syncable). Differently from Backbone, that is not an array, because arrays behave poorly under concurrent edits. Still, a Set can be sorted.
+* Syncable is an abstract base class that implements most of op(log) related logic. A Syncable is an abstract object that is "synced". Syncables have a number of hidden fields, \_version and \_id being the most important. The \_oplog field contains some of the applied operations; which and how many depends on implementation (e.g. see log compaction discussion by Kreps).
+* Host is (practically) a user session, and (formally) a partial replica of a dataset. Normally, a Host has some Storage and one or more Pipes to other Hosts.
+* Storage is (formally) a replica that does not implement the logic. Practically, that is some storage :) Normally, Storage implementations use some dual state+log scheme to persist replicas. This particular example implementation flushes object state snapshots to separate files (periodically) while streaming all operations to a single log file (in real time).
+* Pipe is a connection to a remote Host backed by a standard node.js-compatible Stream. Pipes and Streams are mostly used internally. An average developer is supposed to simply use URIs.
 
 Swarm works well offline and under intermittent connectivity; it may cache data and resync it later, incuding the case of browser restart. 
