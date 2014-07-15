@@ -1,11 +1,8 @@
-if (typeof require == 'function') {
-    Swarm = require('../lib/swarm3.js');
-}
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
-Text = Swarm.Text;
+var Swarm        = require('../');
+var Spec         = Swarm.Spec;
+var Model        = Swarm.Model;
+var Set          = Swarm.Set;
+var DummyStorage = require('../lib/DummyStorage');
 
 /** Must be constructed from String, serialized into a String.
     JSON string is OK :) */
@@ -82,7 +79,7 @@ asyncTest('6.a Handshake K pattern', function () {
     downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
 
-    Swarm.localhost = uplink;
+    Swarm.setLocalhost(uplink);
     var uprepl = new Mouse({x:3,y:3});
     downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
         //  ? register ~ on ?
@@ -119,7 +116,7 @@ asyncTest('6.b Handshake D pattern', function () {
     uplink.getSources = function () {return [storage]};
     downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
-    Swarm.localhost = downlink;
+    Swarm.setLocalhost(downlink);
 
     storage.states['/Mouse#Mickey'] = {
         x:7,
@@ -195,7 +192,7 @@ asyncTest('6.c Handshake Z pattern', function () {
             '!1ail+old.set': {y:10}
         };
 
-    Swarm.localhost = downlink;
+    Swarm.setLocalhost(downlink);
 
     var dlrepl = new Mouse('Mickey',oldMickeyState);
     uplink.on('/Mouse#Mickey');
@@ -233,7 +230,7 @@ asyncTest('6.d Handshake R pattern', function () {
     uplink.getSources = function () {return [storage]};
     downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
-    Swarm.localhost = downlink;
+    Swarm.setLocalhost(downlink);
 
     downlink.on('/Mouse#Mickey.init',function(spec,val,dlrepl){
         // there is no state in the uplink, dl provided none as well
@@ -260,7 +257,7 @@ asyncTest('6.e Handshake A pattern', function () {
     uplink.getSources = function () {return [storage]};
     downlink.getSources = function () {return [uplink]};
     uplink.on(downlink);
-    Swarm.localhost = downlink;
+    Swarm.setLocalhost(downlink);
 
     var mickey = new Mouse({x:20,y:20});
     equal(mickey._id, mickey._version.substr(1));
@@ -292,7 +289,7 @@ test('6.f Handshake and sync', function () {
     
     uplink.on(downlink1);
 
-    Swarm.localhost = downlink1;
+    Swarm.setLocalhost(downlink1);
     
     var miceA = downlink1.get('/Mice#mice');
     var miceB = downlink2.get('/Mice#mice');

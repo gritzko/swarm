@@ -5,11 +5,11 @@
  * Time: 6:21 PM
  */
 
-if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
+var Swarm        = require('../');
+var Spec         = Swarm.Spec;
+var Model        = Swarm.Model;
+var Set          = Swarm.Set;
+var DummyStorage = require('../lib/DummyStorage');
 
 // BACK TO SANITY
 // V 0 write a test for tracked props/logged methods/serial/etc : the API end
@@ -131,12 +131,13 @@ var Nest = Swarm.Set.extend('Nest',{
 });
 
 var storage2 = new DummyStorage(false);
-var host2 = Swarm.localhost= new Swarm.Host('gritzko',0,storage2);
+var host2 = new Swarm.Host('gritzko',0,storage2);
 host2.availableUplinks = function () {return [storage2]};
+Swarm.setLocalhost(host2);
 
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2;
+    Swarm.setLocalhost(host2);
     expect(5);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
@@ -160,7 +161,7 @@ asyncTest('2.a basic listener func', function (test) {
 
 test('2.b create-by-id', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2;
+    Swarm.setLocalhost(host2);
     // there is 1:1 spec-to-object correspondence;
     // an attempt of creating a second copy of a model object
     // will throw an exception
@@ -175,7 +176,7 @@ test('2.b create-by-id', function (test) {
 
 test('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2;
+    Swarm.setLocalhost(host2);
     var louie = new Duck('louie');
     var ts1 = host2.time();
     louie.set({age:3});
@@ -189,7 +190,7 @@ test('2.c version ids', function (test) {
 
 test('2.d pojos',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2;
+    Swarm.setLocalhost(host2);
     var dewey = new Duck({age:0});
     var json = dewey.pojo();
     var duckJSON = {
@@ -202,7 +203,7 @@ test('2.d pojos',function (test) {
 
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var huey = host2.get('/Duck#huey');
     expect(2);
     var handle = Duck.addReaction('age', function reactionFn(spec,val) {
@@ -220,7 +221,7 @@ asyncTest('2.e reactions',function (test) {
 
 test('2.f once',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var huey = host2.get('/Duck#huey');
     expect(1);
     huey.once('age',function onceAgeCb(spec,value){
@@ -232,7 +233,7 @@ test('2.f once',function (test) {
 
 test('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var huey = host2.get('/Duck#huey');
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
@@ -243,7 +244,7 @@ test('2.g custom field type',function (test) {
 
 test('2.h state init',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var factoryBorn = new Duck({age:0,height:'4cm'});
     ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
     equal(factoryBorn.age,0);
@@ -251,7 +252,7 @@ test('2.h state init',function (test) {
 
 test('2.i batched set',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var nameless = new Duck();
     nameless.set({
         age:1,
@@ -266,7 +267,7 @@ test('2.i batched set',function (test) {
 // FIXME:  spec - to - (order)
 test('2.j basic Set functions (string index)',function (test) {
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
@@ -294,7 +295,7 @@ test('2.k distilled log', function (test) {
         return cnt;
     }
     console.warn(QUnit.config.current.testName);
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var duckling1 = host2.get(Duck);
     duckling1.set({age:1});
     duckling1.set({age:2});
@@ -310,7 +311,7 @@ test('2.k distilled log', function (test) {
 });
 
 test('2.l partial order', function (test) {
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var duckling = new Duck();
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
     duckling.deliver(new Swarm.Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
@@ -318,7 +319,7 @@ test('2.l partial order', function (test) {
 });
 
 asyncTest('2.m init push', function (test) {
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var scrooge = new Duck({age:105});
     scrooge.on('.init', function check() {
         var tail = storage2.tails[scrooge.spec()];
@@ -332,7 +333,7 @@ asyncTest('2.m init push', function (test) {
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
     expect(5);
-    Swarm.localhost= host2;
+    Swarm.setLocalhost(host2);
     var duck = new Duck();
     duck.on('.on', function (spec, val) {
         //triggered by itself, on(init) and host2.on below
@@ -353,7 +354,7 @@ test('2.n local listeners for on/off', function () {
 
 /*  TODO
  * test('2.m on/off sub', function (test) {
-    Swarm.localhost= host2
+    Swarm.setLocalhost(host2);
     var duckling = new Duck();
 
     expect(2);

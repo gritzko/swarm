@@ -1,8 +1,12 @@
-if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
+var Swarm                   = require('../');
+var Spec                    = Swarm.Spec;
+var Model                   = Swarm.Model;
+var Set                     = Swarm.Set;
+var DummyStorage            = require('../lib/DummyStorage');
+var AsyncLoopbackConnection = require('../lib/AsyncLoopbackConnection');
+
+
+Swarm.registerProtocolHandler('loopback', AsyncLoopbackConnection);
 
 
 var Thermometer = Swarm.Model.extend('Thermometer',{
@@ -93,7 +97,7 @@ asyncTest('3.c Disconnection events', function () {
     uplink.accept(new AsyncLoopbackConnection('loopback:3c'));
     downlink1.connect('loopback:c3');
 
-    Swarm.localhost = downlink1;
+    Swarm.setLocalhost(downlink1);
     
     /*var miceA = downlink1.get('/Mice#mice');
     var miceB = downlink2.get('/Mice#mice');
