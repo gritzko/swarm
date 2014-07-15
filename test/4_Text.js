@@ -4,16 +4,11 @@
  * Date: 8/24/13
  * Time: 6:21 PM
  */
-if (typeof require == 'function') {
-    Swarm = require('../lib/swarm3.js');
-    require('../lib/swarm3-text.js');
-}
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
-Text = Swarm.Text;
-diff = Swarm.diff;
+var Swarm        = require('../');
+var Spec         = Swarm.Spec;
+var Text         = require('../lib/Text');
+var diff         = Text.diff;
+var DummyStorage = require('../lib/DummyStorage');
 
 test('4._ diff', function (test){
     var eq = diff('same','same');

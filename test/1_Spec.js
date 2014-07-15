@@ -1,13 +1,11 @@
-if (typeof(require)==='function') {
-    Swarm = require('../lib/swarm3.js');
-}
-Spec = Swarm.Spec;
+var Swarm = require('../');
+var Spec  = Swarm.Spec;
 
-Swarm.debug = true;
-
+Swarm.options.debug = true;
 
 asyncTest('timestamp sequence test', function () {
-    var swarm = Swarm.localhost = new Swarm.Host('gritzko',{},{on:function(){}});
+    var swarm = new Swarm.Host('gritzko',{},{on:function(){}});
+    Swarm.setLocalhost(swarm);
     expect(100);
     var ts1 = swarm.time(), ts2, i=0;
     var iv = setInterval(function(){
@@ -47,7 +45,7 @@ test('version vector', function (){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
-    var map = new Swarm.Spec.Map(vec);
+    var map = new Swarm.VersionVector(vec);
     ok(map.covers('7AM0f+gritzko'));
     ok(!map.covers('7AMTd+aleksisha'));
     ok(!map.covers('6AMTd+maxmaxmax'));
