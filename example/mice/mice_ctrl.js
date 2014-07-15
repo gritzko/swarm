@@ -20,7 +20,18 @@ var app = app || {};
             timer = null;
         }, FREQ);
     }
+
+    function mickeyGo (event) {
+        if (!app.mouse._version) return;
+        toSend = {
+            x: Math.max(0,event.pageX-15),
+            y: Math.max(0,event.pageY-15)
+        };
+        app.mouse && app.mouse.set(toSend);
+    }
+
     document.documentElement.onmousemove = trackUserMoves;
+    document.documentElement.ontouchstart = mickeyGo;
 }());
 
 (function handleOnlineToggle() {

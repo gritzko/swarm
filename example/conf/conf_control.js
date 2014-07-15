@@ -1,6 +1,6 @@
 var app = app || {};
 
-$("body").on("click","td.talk",function onTalkSelected(ev){
+function onTalkSelected(ev){
     var talkId = ev.currentTarget.getAttribute('id');
     var m = talkId.match(/(\d+:\d+)_(.+)/);
     if (!m) return;
@@ -11,7 +11,9 @@ $("body").on("click","td.talk",function onTalkSelected(ev){
         slot: m[1],
         track: toAttend
     });
-});
+}
+
+$("body").on("click touchstart","td.talk",onTalkSelected);
 
 (function handleOnlineToggle() {
     "use strict";

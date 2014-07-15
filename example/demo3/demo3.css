@@ -114,3 +114,6 @@ ul.links {
 img#spec {
     width: 100%;
 }
+span.reddit_button {
+    font-size: 17px;
+}

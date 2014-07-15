@@ -149,10 +149,10 @@ i.e. purely offline, no server connections used. The text survives <a
             pages of a CS textbook (see AP of
             <a href='http://blog.foundationdb.com/minimal-explanation-of-the-cap-theorem'>CAP</a>).
 
-            TREND
+            <!--TREND
             distributed logic, ditributed data
             phones multicore  more storage space than
-            new opportunities old architectures can't exploit.
+            new opportunities old architectures can't exploit.-->
 
             </p>
 
@@ -245,7 +245,7 @@ i.e. purely offline, no server connections used. The text survives <a
             framework on top of it.
 
             Swarm employs a
-            <a href='http://link.springer.com/chapter/10.1007%2F978-3-662-43352-2_11#page-1'>pure op-based flavor of CRDT</a>, where
+            <a href='http://gsd.di.uminho.pt/members/cbm/ps/crdtOpsMiddleware.pdf'>pure op-based flavor of CRDT</a>, where
             an object is essentially a stream of mutation events (ops).
             Based on those <a href='http://en.wikipedia.org/wiki/Partially_ordered_set'>partially ordered</a> <a href='http://en.wikipedia.org/wiki/Lamport_timestamps'>Lamport-timestamped</a> operation logs, Swarm implements CRDT data types.
 
@@ -291,11 +291,16 @@ i.e. purely offline, no server connections used. The text survives <a
             <a href='http://kafka.apache.org/documentation.html#compaction'>log
             compaction</a> discussion by Kreps).
             <li><tt>Host</tt> is (practically) a user session, and (formally) a partial
-            replica of a dataset.
+            replica of a dataset. Normally, a Host has some Storage and one or more
+            Pipes to other Hosts.
             <li><tt>Storage</tt> is (formally) a replica that does not implement
             the logic. Practically, that is some storage :)
             Normally, Storage implementations use some dual state+log scheme to
             persist replicas.
+            <a href='../../lib/swarm3-server.js'>This</a>
+            particular example implementation flushes
+            object state snapshots to separate files (periodically) while streaming
+            all operations to a single log file (in real time).
             <li><tt>Pipe</tt> is a connection to a remote Host backed by a standard
             node.js-compatible <a href='http://nodejs.org/api/stream.html'>Stream</a>.
             Pipes and Streams are mostly used internally.
