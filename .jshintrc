@@ -1,0 +1,13 @@
+{
+  "globalstrict": true,
+  "expr": true,
+  "newcap": false,
+  "predef": [
+    "require", "module", "exports",
+    "window", "console", "document",
+    "process",
+    "localStorage", "sessionStorage",
+    "WebSocket",
+    "setTimeout", "setInterval", "clearInterval"
+  ]
+}

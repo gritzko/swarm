@@ -1,29 +1,32 @@
 {
-    "name": "swarm",
-    "version": "0.3",
-    "homepage": "http://github.com/gritzko/swarm",
-    "repository": {
-        "type": "git",
-        "url": "linode:/var/git/swarm.git"
-    },
-    "email": "victor.grishchenko@gmail.com",
-    "license": "MIT",
-    "files": [
-        "lib/swarm3.js",
-        "lib/pipe.js",
-        "lib/ce.js",
-        "lib/murmur.js"
-    ],
-    "dependencies": {
-        "ws": "~0.4.31",
-        "koa": "",
-        "koa-static-cache": "",
-        "react" : "",
-        "nopt": "",
-        "koa": ""
-    },
-    "devDependencies": {
-        "qunit" : "~0.6",
-        "underscore": "~1.6.0"
-    }
+  "name": "swarm",
+  "version": "0.3.0",
+  "homepage": "http://github.com/gritzko/swarm",
+  "main": "./lib/server.js",
+  "browser": "./lib/browser.js",
+  "repository": {
+    "type": "git",
+    "url": "linode:/var/git/swarm.git"
+  },
+  "email": "victor.grishchenko@gmail.com",
+  "license": "MIT",
+  "files": [
+    "lib/swarm3.js",
+    "lib/pipe.js",
+    "lib/ce.js",
+    "lib/murmur.js"
+  ],
+  "dependencies": {
+    "ws": "~0.4.31",
+    "koa": "",
+    "koa-static-cache": "",
+    "react": "",
+    "nopt": ""
+  },
+  "devDependencies": {
+    "jshint": "^2.5.2",
+    "nodeunit": "^0.9.0",
+    "qunit": "~0.6",
+    "underscore": "~1.6.0"
+  }
 }
