@@ -65,7 +65,7 @@ wsServer.on('connection', function(ws) {
     console.log('incomingWS %s', params.path);
     // check the secret
     // FIXME grant ssn
-    swarmHost.accept(new swarmServ.EinarosWSStream(ws));
+    swarmHost.accept(new swarmServ.EinarosWSStream(ws), { delay: 50 });
 });
 
 // TODO pexing

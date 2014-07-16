@@ -63,5 +63,5 @@ if (cluster.isMaster) {
     });
 
     // connect to server
-    my_host.connect('ws://' + connect_to);
+    my_host.connect('ws://' + connect_to, {delay: 50});
 }
