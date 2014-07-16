@@ -4,7 +4,7 @@ var app = app || {};
 
 (function () {
     'use strict';
-    Swarm.debug = true;
+    //Swarm.debug = true;
 
     app.id = window.localStorage.getItem('.localuser') || 
         'anon'+Spec.int2base((Math.random()*10000)|0);
