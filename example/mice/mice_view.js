@@ -5,6 +5,7 @@ var app = app || {};
 
     var SwarmMixin = {
         deliver: function (spec,val,source) {
+            if (!this.isMounted()) return;
             this.forceUpdate();
         },
         componentWillMount: function () {
