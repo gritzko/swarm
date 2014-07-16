@@ -93,14 +93,7 @@ var app = app || {};
     
     React.renderComponent(
             MouseTrackApp ({spec:app.mice.stateSpec()}),
-            document.getElementById('mice')
+            document.getElementById('mice-container')
     );
 
 })();
-
-// create Host
-// create a Mouse object
-// open #mice, list our object
-// create mice-view
-// create WebSocket connection
-// create Pipe
