@@ -18,7 +18,6 @@ var RTT, rttto, noTrack=false;
 
 
 function init () {
-    Swarm.debug = true;
     // fill in the palette array
     for(var r=40; r<=200; r+=40)
         for(var g=40; g<=200; g+=40)

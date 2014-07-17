@@ -4,7 +4,7 @@ var app = app || {};
 
 (function () {
     'use strict';
-    Swarm.debug = true;
+    //Swarm.debug = true;
 
     app.id = window.localStorage.getItem('.localuser') || 
         'anon'+Spec.int2base((Math.random()*10000)|0);
@@ -36,7 +36,7 @@ var app = app || {};
         app.mice.addObject(mickey);
     });
     // connect to server
-    app.host.connect(app.wsServerUri);
+    app.host.connect(app.wsServerUri, {delay: 50});
 
     //show online/offline status
     app.host.on('reon', function (spec, val) {
