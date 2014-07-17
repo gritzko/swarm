@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3",
+    "version": "0.3.0",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
