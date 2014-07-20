@@ -20,7 +20,7 @@
         "koa-static-cache": "",
         "react" : "",
         "nopt": "",
-        "koa": ""
+        "jquery": ""
     },
     "devDependencies": {
         "qunit" : "~0.6",
