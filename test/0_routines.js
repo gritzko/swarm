@@ -1,3 +1,7 @@
+if (typeof require == 'function') {
+    Swarm = require('../lib/swarm3.js');
+}
+
 function DummyStorage(async) {
     this.async = !!async || false;
     this.states = {};
@@ -5,6 +9,7 @@ function DummyStorage(async) {
     this._id = 'dummy';
 };
 
+Swarm.DummyStorage = DummyStorage;
 DummyStorage.prototype.time = Swarm.Host.prototype.time;
 
 DummyStorage.prototype.deliver = function (spec,value,src) {

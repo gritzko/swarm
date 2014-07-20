@@ -1,8 +1,9 @@
-if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
+if (typeof require == 'function') {
+    Swarm = require('../lib/swarm3.js');
+    Spec = Swarm.Spec;
+    Model = Swarm.Model;
+    Set = Swarm.Set;
+}
 
 
 var Thermometer = Swarm.Model.extend('Thermometer',{
@@ -19,8 +20,8 @@ asyncTest('3.a serialized on, reon', function (){
     var downlink = new Swarm.Host('client~3a');
     // that's the default uplink.getSources = function () {return [storage]};
 
-    uplink.accept(new AsyncLoopbackConnection('loopback:3a'));
-    downlink.connect(new AsyncLoopbackConnection('loopback:a3')); // TODO possible mismatch
+    uplink.accept('loopback:3a');
+    downlink.connect('loopback:a3'); // TODO possible mismatch
     
     //downlink.getSources = function () {return [lowerPipe]};
     
@@ -47,7 +48,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     var downlink = new Swarm.Host('client~3b');
 
 
-    uplink.accept(new AsyncLoopbackConnection('loopback:3b'));
+    uplink.accept('loopback:3b');
     downlink.connect('loopback:b3'); // TODO possible mismatch
 
     var thermometer = uplink.get(Thermometer), i=0;
@@ -70,7 +71,8 @@ asyncTest('3.b pipe reconnect, backoff', function (){
 
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         if (spec.op()==='set') {
-            var stream = AsyncLoopbackConnection.pipes['b3'];
+            var loopbackPipes = Swarm.streams.loopback.pipes;
+            var stream = loopbackPipes['b3'];
             stream && stream.close();
         }
     });
@@ -90,7 +92,7 @@ asyncTest('3.c Disconnection events', function () {
     downlink1.getSources = function () {return [uplink]};
     //downlink2.getSources = function () {return [uplink]};
     
-    uplink.accept(new AsyncLoopbackConnection('loopback:3c'));
+    uplink.accept('loopback:3c');
     downlink1.connect('loopback:c3');
 
     Swarm.localhost = downlink1;

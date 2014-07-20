@@ -5,11 +5,13 @@
  * Time: 6:21 PM
  */
 
-if (typeof require == 'function') Swarm = require('../lib/swarm3.js');
-Spec = Swarm.Spec;
-Model = Swarm.Model;
-Field = Swarm.Field;
-Set = Swarm.Set;
+if (typeof require == 'function') {
+    Swarm = require('../lib/swarm3.js');
+    Spec = Swarm.Spec;
+    Model = Swarm.Model;
+    Set = Swarm.Set;
+    DummyStorage = Swarm.DummyStorage;
+}
 
 // BACK TO SANITY
 // V 0 write a test for tracked props/logged methods/serial/etc : the API end
