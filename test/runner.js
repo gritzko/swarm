@@ -2,23 +2,30 @@ var testrunner = require("qunit");
 
 function onTest (err, report ){
     if (err) {
-        console.dir(err);
-        console.dir(err.stack);
+        console.warn(err);
+        console.warn(err.stack);
         process.exit(1);
     } else {
         //console.dir(report);
     }
 }
 
-testrunner.run([
-    {    
-        code: "lib/swarm3.js",
-        tests: "test/1_Spec.js"
-    },
-    {    
-        code: "lib/swarm3.js",
-        deps: ["test/0_routines.js"],
-        tests:  [ "test/2_EventRelay.js", "test/3_OnOff.js" ]
+testrunner.run(
+    {
+        code: "lib/Spec.js",
+        tests: "test/01_Spec.js"
     }
-], onTest);
+, onTest);
 
+testrunner.run(
+{
+    code: "lib/Model.js",
+    deps: [
+        "lib/Spec.js",
+        "lib/Host.js",
+        "lib/Model.js",
+        "lib/Set.js",
+        "lib/Storage.js"
+    ],
+    tests: "test/02_EventRelay.js"
+}, onTest);
