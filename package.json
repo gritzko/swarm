@@ -24,6 +24,8 @@
     },
     "devDependencies": {
         "qunit" : "",
-        "underscore": "~1.6.0"
+        "underscore": "~1.6.0",
+        "browserify": "",
+        "jshint": ""
     }
 }
