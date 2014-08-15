@@ -2,7 +2,7 @@ var env = require('../lib/env');
 var Spec = require('../lib/Spec');
 var Host = require('../lib/Host');  // FIXME time
 
-env.debug = true;
+env.debug = console.log;
 env.multihost = true;
 
 asyncTest('timestamp sequence test', function () {

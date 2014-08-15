@@ -4,64 +4,9 @@ Host = require('../lib/Host');
 Model = require('../lib/Model');
 Set = require('../lib/Set');
 Storage = require('../lib/Storage');
-env.multihost = true;
 
-// BACK TO SANITY
-// V 0 write a test for tracked props/logged methods/serial/etc : the API end
-// V 1 nice stacks, extend only, constructors, no surrogates
-// X 2 introspection back NO use addXXX() instead
-// V 3 trace it all along; get an intuition
-// V 4 init(): parent.children[id] = this;   (no create();
-//     new>init>children call chain instead)
-//
-// USABILITY TODOs
-//   1 new Model(id) OR new Model(values)
-//
-// CASCADE OPEN QUESTIONS
-// V 1 which swarm an obj belongs to? (finding the parent)
-//      new Swarm() becomes THE swarm, invoking .close() for the previous
-//      testing swarms: they are asynchronously connected, right? :)
-// V 2 should we put Views into the cascade or not?
-//      NO, the cascade is for models (sets, stubs)
-//      YES, if we want to cache/store Views
-//      YES, for uniformity, as Views are EventRelays
-//      YES, if we want to subscribe to Views (bare clients have no models)
-//
-// STORAGE/TRANSPORT OPEN QUESTIONS
-// V 1 should we add store/relay() method to model/views or use root.relay() ?
-//    x ROOT   as the server knows storage and uplink, downlinks are in _lstn
-//    v METHOD as we want to overload it for classes (what do we need the
-//             cascade for?)
-//             then, load() is part of init()?
-//    x ROOT   when using this.store() we need access to the root anyway
-//    v METHOD Model.store = function () { sql.update() }
-//    v METHOD listeners in model: better encapsulation
-// V 2 there is nothing bad in caching everything you get
-// V 3 stubs only have _lstn[], right?
-//
-// IMPLEMENTATION/TESTING PIPELINE
-// V 1 field set
-//      huey.age(1);
-// V 1' parent tree
-//     x a duck.parent===duckType
-//     v b root.descendant('/Duck#huey')
-// V 2 batch field set
-//      huey.set({age:1,height:"30cm"})
-//      // including replica bootup
-// V 3 init(id) vs init(value)
-//    v frozen vid
-// V 4 three-position signature
-//      Spec.normalize(arguments);
-//      var spec=arguments[0], value=arguments[1], listener=arguments[2];
-// V 5 fieldTypes - ???
-// ? 6 Set
-//      a string-to-spec key
-// > 7 View (default templated)  see 3_view.js
-//   8 RPC calls
-//   9 Rework EventRelayNode.set (see notes)
-//   A EventRelay.get (action *get, async)
-// X B specifier as a label stack (_parent, spec.push/pop/unshift/shift)
-//    v a this._parent
+env.multihost = true;
+env.debug = console.log;
 
 MetricLengthField.metricRe = /(\d+)(mm|cm|m|km)?/g;  // "1m and 10cm"
 MetricLengthField.scale = { m:1, cm:0.01, mm:0.001, km:1000 };
