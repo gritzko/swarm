@@ -1,4 +1,4 @@
-SUBDIRS = mice
+SUBDIRS = mice editor
 
 all:
 	for dir in $(SUBDIRS); do \

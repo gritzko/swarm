@@ -1,0 +1,17 @@
+body {
+    background: url(legal.png);
+}
+textarea {
+    width: 220px;
+    height: 280px;
+    border: none;
+    background: transparent;
+    margin-left: 70px;
+    text-align: left;
+}
+p.online {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    margin: 0;
+}
