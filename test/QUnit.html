@@ -4,20 +4,27 @@
   <title>QUnit basic example</title>
   <link rel="stylesheet" href="../node_modules/qunit/node_modules/qunitjs/qunit/qunit.css">
   <script src="../node_modules/qunit/node_modules/qunitjs/qunit/qunit.js"></script>
-  <!--script src="../dist/swarm.js"></script-->
+  <script src="../lib/swarm3.js"></script>
+  <script src="../lib/swarm3-murmur.js"></script>
+  <script src="../lib/swarm3-client.js"></script>
+  <script src="../lib/swarm3-text.js"></script>
 </head>
 <body>
   <div id="qunit"></div>
   <div id="qunit-fixture"></div>
-  <script src='../dist/tests.js'>
+  <script src='0_routines.js'>
   </script>
-  <!--script src='3_OnOff.js'>
+  <script src='1_Spec.js'>
+  </script>
+  <script src='2_EventRelay.js'>
+  </script>
+  <script src='3_OnOff.js'>
   </script>
   <script src='4_Text.js'>
   </script>
-  <script src='5_TicTacToe.js'>
-  </script>
-  <script src='6_MickeySync.js'>
+  <!--script src='5_TicTacToe.js'>
   </script-->
+  <script src='6_MickeySync.js'>
+  </script>
 </body>
 </html>

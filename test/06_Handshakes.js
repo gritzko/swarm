@@ -12,7 +12,8 @@ Model = require('../lib/Model');
 Set = require('../lib/Set');
 Storage = require('../lib/Storage');
 Pipe = require('../lib/Pipe');
-//var ALC = require('../lib/AsyncLoopbackConnection');
+
+env.multihost = true;
 
 /** Must be constructed from String, serialized into a String.
     JSON string is OK :) */
