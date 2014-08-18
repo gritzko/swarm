@@ -75,7 +75,7 @@ asyncTest('3.b pipe reconnect, backoff', function (){
 
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         if (spec.op()==='set') {
-            var loopbackPipes = Pipe.streams.loopback.pipes;
+            var loopbackPipes = env.streams.loopback.pipes;
             var stream = loopbackPipes['b3'];
             stream && stream.close();
         }

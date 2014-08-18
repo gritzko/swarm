@@ -12,13 +12,18 @@ test::
 lint::
 	$(BIN)/jshint $(SOURCES)
 
+examples::
+	cd example; $(MAKE) $(MFLAGS)
 
-dist::
-	$(BIN)/browserify lib/Swarm.js -o dist/swarm.js
+dist:: testdist html5dist
+
+html5dist:
+	$(BIN)/browserify lib/Html5Client.js -o dist/swarm-html5.js
+
+testdist:
 	$(BIN)/browserify test/Tests.js -o dist/tests.js
 
-all:: test dist lint
+all:: testdist test html5dist examples
 
 commit:: all
 	git diff --exit-code && git commit && echo "well, git push now"
-
