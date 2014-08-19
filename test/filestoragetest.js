@@ -1,3 +1,5 @@
+// FIXME UPDATE, integrate into Makefile
+
 var fs = require('fs'),
     nopt = require('nopt'),
     options = nopt({

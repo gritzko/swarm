@@ -9,3 +9,21 @@ module.exports = Model.extend('Mouse', {
         ms: 0// last activity timestamp
     }
 });
+
+
+// server state tracking: TODO
+
+/*var PeerData = Swarm.Model.extend('PeerData', {
+    defaults: {
+    timeToRestart: 0,
+        objectsTracked: 0
+    }
+});
+
+if (typeof(exports)==='object') {
+    exports.Mouse=Mouse;
+    exports.Mice=Mice;
+    exports.PeerData=PeerData;
+}*/
+
+console.log('\tmouse models defined ok');

@@ -1,3 +1,5 @@
+// FIXME UPDATE
+
 if (typeof require == 'function') {
     var swrm = require('../lib/swarm2.js');
     Spec = swrm.Spec;
@@ -153,7 +155,7 @@ test('simple view',function(){
     game.makeMove(4,'x');
     equal(view._html,'<pre>\nx  \n x \n   \n</pre>');
     game.makeMove(8,'x');
-    equal(view._html,'<pre>\nx  \n x \n  x\n</pre>');    
+    equal(view._html,'<pre>\nx  \n x \n  x\n</pre>');
 });
 
 function Player (id) {this.init(id)}
@@ -186,7 +188,7 @@ function TicTacToeTemplatedView (id,val,parent) {
 View.extend(TicTacToeTemplatedView,{
     modelType : 'TicTacToe',
     preHtml: TicTacToePreView.prototype.render, // see above
-    template : 
+    template :
         '<h2>Tic Tac Toe</h2>\n'+
         '<div class="players">\n'+
             '<p>playing for x : <%/PlayerView.xPlayer%>\n'+
@@ -209,7 +211,7 @@ test('simple templated view + nested views',function(){
     game.xPlayer('gritzko'); // FIXME also spec
     game.oPlayer('aleksisha');
     var view = new TicTacToeTemplatedView('clear');
-    var html = 
+    var html =
         '<div id="/TicTacToeTemplatedView#clear">'+
             '<h2>Tic Tac Toe</h2>\n'+
             '<div class="players">\n'+
@@ -285,4 +287,3 @@ test('live DOM', function (test) {
 
 });
 */
-

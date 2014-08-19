@@ -5,12 +5,15 @@ var fs = require('fs');
 var path = require('path');
 var url = require('url');
 var http = require('http');
-var Swarm = require('./lib/swarm3.js');
-var swarmServ = require('./lib/swarm3-server.js');
+
 var nopt = require('nopt');
 var koa = require('koa');
-var app = koa();
 var ws_lib = require('ws');
+
+var Swarm = require('./lib/NodeServer.js');
+var EinarosWSStream = require('./lib/EinarosWSStream');
+
+var app = koa();
 
 var options = nopt({
     models : path,
@@ -65,7 +68,7 @@ wsServer.on('connection', function(ws) {
     console.log('incomingWS %s', params.path);
     // check the secret
     // FIXME grant ssn
-    swarmHost.accept(new swarmServ.EinarosWSStream(ws), { delay: 50 });
+    swarmHost.accept(new EinarosWSStream(ws), { delay: 50 });
 });
 
 // TODO pexing

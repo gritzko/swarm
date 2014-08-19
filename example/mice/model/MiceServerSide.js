@@ -1,12 +1,10 @@
-if (typeof exports === 'object') {
-    Swarm = require('../../../lib/swarm3.js');
-}
+var Swarm = require('../../../lib/NodeServer.js');
 
 var moribund = {};
 
 function miceClean() {
     var time = new Date().getTime(),
-        host = Swarm.localhost,
+        host = Swarm.env.localhost,
         online = {},
         id;
     for (var src in host.sources) {
