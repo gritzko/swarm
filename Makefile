@@ -5,9 +5,10 @@ SOURCES = \
 		  ./lib/Host.js \
 		  ./lib/env.js
 
+all:: testdist test html5dist examples
+
 test::
 	node test/runner.js
-
 
 lint::
 	$(BIN)/jshint $(SOURCES)
@@ -22,8 +23,6 @@ html5dist:
 
 testdist:
 	$(BIN)/browserify test/Tests.js -o dist/tests.js
-
-all:: testdist test html5dist examples
 
 commit:: all
 	git diff --exit-code && git commit && echo "well, git push now"
