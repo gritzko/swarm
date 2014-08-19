@@ -1,19 +1,27 @@
-// FIXME UPDATE
+// 3rd parties
+var nopt = require('nopt');
+var cluster = require('cluster');
 
-var Swarm = require('../lib/swarm3.js'),
-    swarm_server = require('../lib/swarm3-server.js'),
-    model = require('../example/mice/model/mouse_model'),
-    nopt = require('nopt'),
-    cluster = require('cluster'),
-    options = nopt({
+// Swarm + Model
+var Swarm = require('../lib/NodeServer');
+var Mice = require('../example/mice/model/Mice');
+var Mouse = require('../example/mice/model/Mouse');
+// add "ws:"-protocol realization for Pipe
+require('../lib/EinarosWSStream');
+
+// parse cmd-line options
+var options = nopt({
         host: String, // host to connect
         count: Number, // mice count
-        freq: Number // frequency of movements (ms)
-    }),
-    connect_to = (options.host || 'localhost:8000'),
-    mice_count = (options.count || 10),
-    freq = (options.freq || 30),
-    user = process.env.user || 'master';
+        freq: Number, // frequency of movements (ms)
+        debug: Boolean
+    });
+var connect_to = (options.host || 'localhost:8000');
+var mice_count = (options.count || 10);
+var freq = (options.freq || 30);
+var debug_on = options.debug;
+
+var user = process.env.user || 'master';
 
 console.log(user + ' start');
 
@@ -34,16 +42,15 @@ if (cluster.isMaster) {
         cluster.fork({ user: 's' + (i + 1) });
     }
 } else {
-    //Swarm.debug = true;
+    Swarm.env.debug = debug_on;
 
-    var my_host = Swarm.localhost = new Swarm.Host(user + '~0'),
-
-        mickey = new model.Mouse(user),
+    var my_host = Swarm.localhost = new Swarm.Host(user + '~0');
+    var mickey = new Mouse(user);
 
         // open #mice, list our object
-        mice = my_host.get('/Mice#mice', function () {
-            mice.addObject(mickey);
-        });
+    var mice = my_host.get('/Mice#mice', function () {
+        mice.addObject(mickey);
+    });
 
     function moveMouse() {
         mickey.set({
@@ -53,14 +60,13 @@ if (cluster.isMaster) {
     }
 
     mickey.on('.init', function () {
-        if (this._version !== '!0') return; // FIXME default values
-
-        mickey.set({
-            x: 100 + (0 | (Math.random() * 100)),
-            y: 100 + (0 | (Math.random() * 100)),
-            symbol: user
-        });
-
+        if (this._version === '!0') {
+            mickey.set({
+                x: 100 + (0 | (Math.random() * 100)),
+                y: 100 + (0 | (Math.random() * 100)),
+                symbol: user
+            });
+        }
         setInterval(moveMouse, freq);
     });
 
