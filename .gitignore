@@ -1,4 +1,7 @@
+# Build products
 dist/*
+*.app.js
+*.min.js
 # byproducts
 *.log
 *.diff
