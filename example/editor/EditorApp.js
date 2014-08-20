@@ -4,10 +4,13 @@ var Host = require('../../lib/Host');
 var Text = require('../../lib/Text');
 var SharedWebStorage = require('../../lib/SharedWebStorage');
 
+env.debug = true;
+
 var storage = new SharedWebStorage(false);
 var hash = window.location.hash || '#0';
 var host = env.localhost = new Host('me'+hash.replace('#','~'),0,storage);
 host.availableUplinks = function () {return [storage]};
+
 // TODO explain no authoritative storage => stalls
 if (hash=='#1')
     storage.authoritative = true;

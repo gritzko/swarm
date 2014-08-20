@@ -11,6 +11,11 @@ prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
 	npm install
 
+clean:
+	find . -name '*.app.js' | xargs rm ;
+	find . -name '*.min.js' | xargs rm ;
+	rm dist/*.js ;
+
 test::
 	node test/runner.js
 
