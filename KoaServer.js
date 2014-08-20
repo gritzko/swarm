@@ -32,16 +32,10 @@ modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
     while (modelFile = modelClasses.pop()) {
         if (!/^\w+\.js$/.test(modelFile)) continue;
         var modpath = path.join(modelPath, modelFile);
-        console.log('Loading model file', modpath);
-        var mod = require(modpath);
-        for (var item in mod) {
-            var fn = mod[item];
-            console.log('checking',item);
-            if (fn.constructor !== Function) continue;
-            console.log('...');
-            if (fn.extend !== Swarm.Syncable.extend) continue;
-            console.log('\tmodel class found:\t', item);
-        }
+        var fn = require(modpath);
+        if (fn.constructor !== Function) continue;
+        if (fn.extend !== Swarm.Syncable.extend) continue;
+        console.log('Model loaded', fn.prototype._type, ' at ', modpath);
     }
 });
 
