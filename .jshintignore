@@ -1,0 +1,5 @@
+dist/*.js
+example/**/*.app.js
+
+# FIXME
+test/5_TicTacToe.js

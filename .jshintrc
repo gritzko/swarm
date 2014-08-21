@@ -1,0 +1,34 @@
+{
+    "node": true,
+    "browser": true,
+
+    "boss": true,
+    "curly": true,
+    "devel": true,
+    "eqnull": true,
+    "expr": true,
+    "funcscope": true,
+    "globalstrict": true,
+    "loopfunc": true,
+    "newcap": false,
+    "noempty": true,
+    "nonstandard": true,
+    "onecase": true,
+    "sub": true,
+    "regexdash": true,
+    "trailing": true,
+    "undef": true,
+    "unused": "vars",
+
+    "predef": [
+        "QUnit",
+        "asyncTest",
+        "test",
+        "start",
+        "expect",
+        "ok",
+        "equal",
+        "strictEqual",
+        "deepEqual"
+    ]
+}
