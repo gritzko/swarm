@@ -1,24 +1,21 @@
+"use strict";
+
 var testrunner = require("qunit");
 
-function onTest (err, report ){
+function onTest (err, report ) {
     if (err) {
         console.warn(err);
         console.warn(err.stack);
         process.exit(1);
-    } else {
-        //console.dir(report);
-    }
+    } // else { //console.dir(report); }
 }
 
-testrunner.run(
-    {
-        code: "lib/Spec.js",
-        tests: "test/01_Spec.js"
-    }
-, onTest);
+testrunner.run({
+    code: "lib/Spec.js",
+    tests: "test/01_Spec.js"
+}, onTest);
 
-testrunner.run(
-{
+testrunner.run({
     code: "lib/Model.js",
     deps: [
         "lib/Spec.js",
@@ -29,8 +26,7 @@ testrunner.run(
     tests: "test/02_EventRelay.js"
 }, onTest);
 
-testrunner.run(
-{
+testrunner.run({
     code: "lib/Text.js",
     deps: [
         "lib/Spec.js",
@@ -40,8 +36,7 @@ testrunner.run(
     tests: "test/04_Text.js"
 }, onTest);
 
-testrunner.run(
-{
+testrunner.run({
     code: "lib/Pipe.js",
     deps: [
         "lib/Spec.js",
@@ -53,8 +48,7 @@ testrunner.run(
     tests: "test/03_OnOff.js"
 }, onTest);
 
-testrunner.run(
-{
+testrunner.run({
     code: "lib/Host.js",
     deps: [
         "lib/Spec.js",

@@ -1,3 +1,5 @@
+"use strict";
+
 var Set = require('../../../lib/Set');
 
 // this collection class has no functionality except for being a list

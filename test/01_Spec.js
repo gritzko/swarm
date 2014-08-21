@@ -1,3 +1,4 @@
+"use strict";
 var env = require('../lib/env');
 var Spec = require('../lib/Spec');
 var Host = require('../lib/Host');  // FIXME time
@@ -11,13 +12,15 @@ asyncTest('timestamp sequence test', function () {
     var ts1 = swarm.time(), ts2, i=0;
     var iv = setInterval(function(){
         ts2 = swarm.time();
-        if (ts2<=ts1)
-            console.error(ts2,'<=',ts1);
+        if (ts2<=ts1) {
+            console.error(ts2, '<=', ts1);
+        }
         if (i++==100) {
             start();
             clearInterval(iv);
-        } else
-            ok(ts2>ts1);
+        } else {
+            ok(ts2 > ts1);
+        }
         ts1 = ts2;
     }, 0);
     //swarm.close();

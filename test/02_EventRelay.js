@@ -1,9 +1,11 @@
-env = require('../lib/env');
-Spec = require('../lib/Spec');
-Host = require('../lib/Host');
-Model = require('../lib/Model');
-Set = require('../lib/Set');
-Storage = require('../lib/Storage');
+"use strict";
+
+var env = require('../lib/env');
+var Spec = require('../lib/Spec');
+var Host = require('../lib/Host');
+var Model = require('../lib/Model');
+var SyncSet = require('../lib/Set');
+var Storage = require('../lib/Storage');
 
 env.multihost = true;
 env.debug = console.log;
@@ -26,7 +28,7 @@ function MetricLengthField (value) {
             this.meters += parseInt(m[1]) * unit;
         }
     }
-};
+}
 MetricLengthField.prototype.add = function () {
 
 };
@@ -37,8 +39,9 @@ MetricLengthField.prototype.toString = function () {
         var unit = scar[i],
             scale= MetricLengthField.scale[unit];
         var wholeUnits = Math.floor(m/scale);
-        if (wholeUnits>=1)
-            ret += wholeUnits+unit;
+        if (wholeUnits>=1) {
+            ret += wholeUnits + unit;
+        }
         m -= wholeUnits*scale;
     }
     return ret;
@@ -66,13 +69,13 @@ var Duck = Model.extend('Duck',{
     }
 });
 
-var Nest = Set.extend('Nest',{
+var Nest = SyncSet.extend('Nest',{
     entryType: Duck
 });
 
 var storage2 = new Storage(false);
 var host2 = env.localhost= new Host('gritzko',0,storage2);
-host2.availableUplinks = function () {return [storage2]};
+host2.availableUplinks = function () {return [storage2]; };
 
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
@@ -142,7 +145,7 @@ test('2.d pojos',function (test) {
 
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var huey = host2.get('/Duck#huey');
     expect(2);
     var handle = Duck.addReaction('age', function reactionFn(spec,val) {
@@ -160,7 +163,7 @@ asyncTest('2.e reactions',function (test) {
 
 test('2.f once',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var huey = host2.get('/Duck#huey');
     expect(1);
     huey.once('age',function onceAgeCb(spec,value){
@@ -172,7 +175,7 @@ test('2.f once',function (test) {
 
 test('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var huey = host2.get('/Duck#huey');
     huey.set({height:'32cm'});
     ok(Math.abs(huey.height.meters-0.32)<0.0001);
@@ -183,7 +186,7 @@ test('2.g custom field type',function (test) {
 
 test('2.h state init',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var factoryBorn = new Duck({age:0,height:'4cm'});
     ok(Math.abs(factoryBorn.height.meters-0.04)<0.0001);
     equal(factoryBorn.age,0);
@@ -191,7 +194,7 @@ test('2.h state init',function (test) {
 
 test('2.i batched set',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var nameless = new Duck();
     nameless.set({
         age:1,
@@ -206,7 +209,7 @@ test('2.i batched set',function (test) {
 // FIXME:  spec - to - (order)
 test('2.j basic Set functions (string index)',function (test) {
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var hueyClone = new Duck({age:2});
     var deweyClone = new Duck({age:1});
     var louieClone = new Duck({age:3});
@@ -214,14 +217,14 @@ test('2.j basic Set functions (string index)',function (test) {
     clones.addObject(louieClone);
     clones.addObject(hueyClone);
     clones.addObject(deweyClone);
-    var sibs = clones.list(function(a,b){return a.age - b.age});
+    var sibs = clones.list(function(a,b){return a.age - b.age;});
     strictEqual(sibs[0],deweyClone);
     strictEqual(sibs[1],hueyClone);
     strictEqual(sibs[2],louieClone);
     var change = {};
     change[hueyClone.spec()] = 0;
     clones.change(change);
-    var sibs2 = clones.list(function(a,b){return a.age - b.age});
+    var sibs2 = clones.list(function(a,b){return a.age - b.age;});
     equal(sibs2.length,2);
     strictEqual(sibs2[0],deweyClone);
     strictEqual(sibs2[1],louieClone);
@@ -230,11 +233,13 @@ test('2.j basic Set functions (string index)',function (test) {
 test('2.k distilled log', function (test) {
     function logSize(obj) {
         var log = obj._oplog, cnt=0;
-        for(var key in log) cnt++;
+        for(var key in log) { // jshint ignore:line
+            cnt++;
+        }
         return cnt;
     }
     console.warn(QUnit.config.current.testName);
-    env.localhost= host2
+    env.localhost= host2;
     var duckling1 = host2.get(Duck);
     duckling1.set({age:1});
     duckling1.set({age:2});
@@ -250,7 +255,7 @@ test('2.k distilled log', function (test) {
 });
 
 test('2.l partial order', function (test) {
-    env.localhost= host2
+    env.localhost= host2;
     var duckling = new Duck();
     duckling.deliver(new Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
     duckling.deliver(new Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
@@ -258,7 +263,7 @@ test('2.l partial order', function (test) {
 });
 
 asyncTest('2.m init push', function (test) {
-    env.localhost= host2
+    env.localhost= host2;
     var scrooge = new Duck({age:105});
     scrooge.on('.init', function check() {
         var tail = storage2.tails[scrooge.spec()];

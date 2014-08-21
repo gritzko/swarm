@@ -1,11 +1,10 @@
-env = require('../lib/env');
-Spec = require('../lib/Spec');
-Host = require('../lib/Host');
-Model = require('../lib/Model');
-Set = require('../lib/Set');
-Storage = require('../lib/Storage');
-Pipe = require('../lib/Pipe');
-var ALC = require('../lib/AsyncLoopbackConnection');
+"use strict";
+
+var env = require('../lib/env');
+var Host = require('../lib/Host');
+var Model = require('../lib/Model');
+var Storage = require('../lib/Storage');
+require('../lib/AsyncLoopbackConnection');
 
 env.multihost = true;
 env.debug = console.log;
@@ -48,9 +47,8 @@ asyncTest('3.a serialized on, reon', function (){
 asyncTest('3.b pipe reconnect, backoff', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new Storage(false);
-    var uplink = new Host('swarm~3b',0,storage);
+    var uplink = new Host('swarm~3b', 0, storage);
     var downlink = new Host('client~3b');
-
 
     uplink.accept('loopback:3b');
     downlink.connect('loopback:b3'); // TODO possible mismatch
@@ -92,8 +90,12 @@ asyncTest('3.c Disconnection events', function () {
     var uplink = new Host('uplink~C',0,storage);
     var downlink1 = new Host('downlink~C1');
     //var downlink2 = new Host('downlink~C2');
-    uplink.getSources = function () {return [storage]};
-    downlink1.getSources = function () {return [uplink]};
+    uplink.getSources = function () {
+        return [storage];
+    };
+    downlink1.getSources = function () {
+        return [uplink];
+    };
     //downlink2.getSources = function () {return [uplink]};
 
     uplink.accept('loopback:3c');
@@ -108,15 +110,15 @@ asyncTest('3.c Disconnection events', function () {
     expect(3);
 
     downlink1.on('.reoff', function (spec,val,src) {
-        equal(src,downlink1);
+        equal(src, downlink1);
         ok(!src.isUplinked());
         start();
     });
 
     downlink1.on('.reon', function (spec,val,src) {
-        equal(spec.id(),'downlink~C1');
+        equal(spec.id(), 'downlink~C1');
         setTimeout(function(){ //:)
             downlink1.disconnect('uplink~C');
-        },100);
+        }, 100);
     });
 });

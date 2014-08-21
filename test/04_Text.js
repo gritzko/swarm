@@ -1,10 +1,10 @@
-env = require('../lib/env');
-Spec = require('../lib/Spec');
-Host = require('../lib/Host');
-Model = require('../lib/Model');
-Set = require('../lib/Set');
-Text = require('../lib/Text');
-Storage = require('../lib/Storage');
+"use strict";
+
+var env = require('../lib/env');
+var Spec = require('../lib/Spec');
+var Host = require('../lib/Host');
+var Text = require('../lib/Text');
+var Storage = require('../lib/Storage');
 
 
 test('4._ diff', function (test){
@@ -18,13 +18,13 @@ test('4._ diff', function (test){
 
 var storage = new Storage(false);
 var host04 = new Host('gritzko',0,storage);
-host04.availableUplinks = function () {return [storage]};
+host04.availableUplinks = function () {return [storage];};
 
 test('4.a init', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost = host04;
 
-    var text = new Text(), op;
+    var text = new Text();
     text.set('test');
     equal(text.text,'test');
 });
@@ -33,7 +33,7 @@ test('4.b in rm', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost = host04;
 
-    var text = new Text(), op;
+    var text = new Text();
 
     text.set("tesst");
     text.set("tet");
@@ -50,9 +50,7 @@ test('4.c concurrent insert', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost = host04;
 
-    var text = new Text('ALE'), op;
-    var eid = text.ids[2];
-    var spec = text.spec();
+    var text = new Text('ALE');
     text.deliver ( new Spec("/Text#ALE!00001+gritzko.insert"), { '00000+swarm': 'a' });
     text.deliver ( new Spec("/Text#ALE!00003+gritzko~1.insert"), { '00001+gritzko' : 'l' });
     text.deliver ( new Spec("/Text#ALE!00002+gritzko~2.insert"), { '00001+gritzko' : 'e' });

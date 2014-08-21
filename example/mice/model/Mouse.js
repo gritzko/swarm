@@ -1,3 +1,5 @@
+"use strict";
+
 var Model = require('../../../lib/Model');
 
 // Our key class: a mouse pointer :)
