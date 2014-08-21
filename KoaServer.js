@@ -1,3 +1,5 @@
+"use strict";
+
 // Simple Swarm sync server: picks model classes from a directory,
 // starts a WebSocket server at a port. Serves some static content,
 // although I'd recomment to shield it with nginx.
@@ -30,11 +32,11 @@ modelPathList.split(/[\:;,]/g).forEach(function (modelPath) {
     console.log('scanning',modelPath);
     var modelClasses = fs.readdirSync(modelPath), modelFile;
     while (modelFile = modelClasses.pop()) {
-        if (!/^\w+\.js$/.test(modelFile)) continue;
+        if (!/^\w+\.js$/.test(modelFile)) { continue; }
         var modpath = path.join(modelPath, modelFile);
         var fn = require(modpath);
-        if (fn.constructor !== Function) continue;
-        if (fn.extend !== Swarm.Syncable.extend) continue;
+        if (fn.constructor !== Function) { continue; }
+        if (fn.extend !== Swarm.Syncable.extend) { continue; }
         console.log('Model loaded', fn.prototype._type, ' at ', modpath);
     }
 });

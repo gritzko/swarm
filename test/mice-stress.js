@@ -1,11 +1,13 @@
+"use strict";
+
 // 3rd parties
 var nopt = require('nopt');
 var cluster = require('cluster');
 
 // Swarm + Model
 var Swarm = require('../lib/NodeServer');
-var Mice = require('../example/mice/model/Mice');
 var Mouse = require('../example/mice/model/Mouse');
+require('../example/mice/model/Mice');
 // add "ws:"-protocol realization for Pipe
 require('../lib/EinarosWSStream');
 
@@ -47,17 +49,10 @@ if (cluster.isMaster) {
     var my_host = Swarm.localhost = new Swarm.Host(user + '~0');
     var mickey = new Mouse(user);
 
-        // open #mice, list our object
+    // open #mice, list our object
     var mice = my_host.get('/Mice#mice', function () {
         mice.addObject(mickey);
     });
-
-    function moveMouse() {
-        mickey.set({
-            x: Math.min(300, Math.max(0, mickey.x + (0 | (Math.random() * 3)) - 1)),
-            y: Math.min(300, Math.max(0, mickey.y + (0 | (Math.random() * 3)) - 1))
-        });
-    }
 
     mickey.on('.init', function () {
         if (this._version === '!0') {
@@ -67,7 +62,12 @@ if (cluster.isMaster) {
                 symbol: user
             });
         }
-        setInterval(moveMouse, freq);
+        setInterval(function moveMouse() {
+            mickey.set({
+                x: Math.min(300, Math.max(0, mickey.x + (0 | (Math.random() * 3)) - 1)),
+                y: Math.min(300, Math.max(0, mickey.y + (0 | (Math.random() * 3)) - 1))
+            });
+        }, freq);
     });
 
     // connect to server

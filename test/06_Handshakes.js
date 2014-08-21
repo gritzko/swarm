@@ -1,3 +1,5 @@
+"use strict";
+
 // This test suite covers various handshake patterns.
 // Making an object live demands a connection to an uplink.
 // A connection starts with a handshake synchronizing versions on both ends.
@@ -5,13 +7,12 @@
 // also various concurrency/asynchrony issues, handshakes proceed in different
 // ways.
 
-env = require('../lib/env');
-Spec = require('../lib/Spec');
-Host = require('../lib/Host');
-Model = require('../lib/Model');
-Set = require('../lib/Set');
-Storage = require('../lib/Storage');
-Pipe = require('../lib/Pipe');
+var env = require('../lib/env');
+var Spec = require('../lib/Spec');
+var Host = require('../lib/Host');
+var Model = require('../lib/Model');
+var Storage = require('../lib/Storage');
+require('../example/mice/model/Mice');
 
 env.multihost = true;
 
@@ -24,7 +25,7 @@ function FullName (name) {
 }
 FullName.prototype.toString = function () {
     return this.first + ' ' + this.last;
-}
+};
 
 var Mouse = Model.extend('Mouse', {
     defaults: {
@@ -35,18 +36,26 @@ var Mouse = Model.extend('Mouse', {
     // adapted to handle the $$move op
     TODO_distillLog: function () {
         // explain
-        var sets = [], cumul = {}, heads = {};
-        for(var spec in this._oplog)
-            if (Spec.get(spec,'.')==='.set')
+        var sets = [],
+            cumul = {},
+            heads = {},
+            spec;
+        for(spec in this._oplog) {
+            if (Spec.get(spec, '.') === '.set') {
                 sets.push(spec);
+            }
+        }
         sets.sort();
         for(var i=sets.length-1; i>=0; i--) {
-            var spec = sets[i], val = this._oplog[spec], notempty=false;
-            for(var key in val)
-                if (key in cumul)
+            spec = sets[i];
+            var val = this._oplog[spec], notempty=false;
+            for(var key in val) {
+                if (key in cumul) {
                     delete val[key];
-                else
+                } else {
                     notempty = cumul[key] = true;
+                }
+            }
             var source = new Spec(key).source();
             notempty || (heads[source] && delete this._oplog[spec]);
             heads[source] = true;
@@ -60,21 +69,20 @@ var Mouse = Model.extend('Mouse', {
             // an op that overwrites it then we skip it.
             var version = spec.version();
             if (version<this._version) {
-                for(var opspec in this._oplog)
-                    if (opspec>'!'+version) {
+                for(var opspec in this._oplog) {
+                    if (opspec > '!' + version) {
                         var os = new Spec(opspec);
-                        if (os.op()==='set' && os.version()>version)
+                        if (os.op() === 'set' && os.version() > version) {
                             return; // overwritten in the total order
+                        }
                     }
+                }
             }
             // Q if set is late => move is overwritten!
             this.x += d.x||0;
             this.y += d.y||0;
         }
     }
-});
-
-var Mice = Set.extend('Mice', {
 });
 
 //    S O  I T  F I T S
@@ -86,8 +94,8 @@ asyncTest('6.a Handshake K pattern', function () {
     // FIXME pass storage to Host
     var uplink = new Host('uplink~K',0,storage);
     var downlink = new Host('downlink~K');
-    uplink.getSources = function () {return [storage]};
-    downlink.getSources = function () {return [uplink]};
+    uplink.getSources = function () {return [storage];};
+    downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
 
     env.localhost = uplink;
@@ -109,7 +117,8 @@ asyncTest('6.a Handshake K pattern', function () {
         // TODO this happens later ok(storage.states[uprepl.spec()]);
         start();
     });
-    var dlrepl = downlink.objects[uprepl.spec()];
+    //var dlrepl = downlink.objects[uprepl.spec()];
+
     // here we have sync retrieval, so check it now
     //equal(dlrepl.x,3);
     //equal(dlrepl.y,3);
@@ -124,8 +133,8 @@ asyncTest('6.b Handshake D pattern', function () {
     var storage = new Storage(true);
     var uplink = new Host('uplink~D',storage);
     var downlink = new Host('downlink~D');
-    uplink.getSources = function () {return [storage]};
-    downlink.getSources = function () {return [uplink]};
+    uplink.getSources = function () {return [storage];};
+    downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
     env.localhost = downlink;
 
@@ -182,8 +191,8 @@ asyncTest('6.c Handshake Z pattern', function () {
     var oldstorage = new Storage(false);
     var uplink = new Host('uplink~Z',0,storage);
     var downlink = new Host('downlink~Z');
-    uplink.getSources = function () {return [storage]};
-    downlink.getSources = function () {return [oldstorage]};
+    uplink.getSources = function () {return [storage];};
+    downlink.getSources = function () {return [oldstorage];};
 
     var oldMickeyState = {
         x:7,
@@ -217,7 +226,7 @@ asyncTest('6.c Handshake Z pattern', function () {
     equal(uprepl.y,10);
 
     // Two uplinks! The "server" and the "cache".
-    downlink.getSources = function () {return [oldstorage,uplink]};
+    downlink.getSources = function () { return [oldstorage,uplink]; };
     console.warn('connect');
     uplink.on(downlink);
 
@@ -238,8 +247,8 @@ asyncTest('6.d Handshake R pattern', function () {
     var storage = new Storage(false);
     var uplink = new Host('uplink~R');
     var downlink = new Host('downlink~R');
-    uplink.getSources = function () {return [storage]};
-    downlink.getSources = function () {return [uplink]};
+    uplink.getSources = function () {return [storage];};
+    downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
     env.localhost = downlink;
 
@@ -250,7 +259,7 @@ asyncTest('6.d Handshake R pattern', function () {
         equal(dlrepl._version,'!0'); // auth storage has no state
 
         dlrepl.set({x:18,y:18}); // FIXME this is not R
-        uprepl = uplink.objects['/Mouse#Mickey'];
+        var uprepl = uplink.objects['/Mouse#Mickey'];
         equal(uprepl.x,18);
 
         start();
@@ -265,8 +274,8 @@ asyncTest('6.e Handshake A pattern', function () {
     var storage = new Storage(false);
     var uplink = new Host('uplink~A');
     var downlink = new Host('downlink~A');
-    uplink.getSources = function () {return [storage]};
-    downlink.getSources = function () {return [uplink]};
+    uplink.getSources = function () {return [storage];};
+    downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
     env.localhost = downlink;
 
@@ -294,9 +303,9 @@ test('6.f Handshake and sync', function () {
     var uplink = new Host('uplink~F',0,storage);
     var downlink1 = new Host('downlink~F1');
     var downlink2 = new Host('downlink~F2');
-    uplink.getSources = function () {return [storage]};
-    downlink1.getSources = function () {return [uplink]};
-    downlink2.getSources = function () {return [uplink]};
+    uplink.getSources = function () {return [storage];};
+    downlink1.getSources = function () {return [uplink];};
+    downlink2.getSources = function () {return [uplink];};
 
     uplink.on(downlink1);
 

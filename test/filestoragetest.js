@@ -1,22 +1,20 @@
+"use strict";
+
 // FIXME UPDATE, integrate into Makefile
 
-var fs = require('fs'),
-    nopt = require('nopt'),
+var nopt = require('nopt'),
     options = nopt({
         mode : [String, "write"]
     }),
-    Swarm = require('../lib/swarm3.js');
+    Swarm = require('../lib/NodeServer');
 
-require('../lib/swarm3-server.js');
-
-Counter = Swarm.Model.extend('Counter',{
+var Counter = Swarm.Model.extend('Counter',{
     defaults: {
         i: 0
     }
 });
 
 var store = './.store/',
-    firstRun = !fs.existsSync(store),
     storage = new Swarm.FileStorage(store),
     host = new Swarm.Host('swarm', 0, storage),
     i;
@@ -40,9 +38,11 @@ switch (options.mode) {
 case 'write':
 
     // half a million ops must be enough
-    for (i = 0; i < 100; i++)
-        for (var k = i; k < 100; k++)
+    for (i = 0; i < 100; i++) {
+        for (var k = i; k < 100; k++) {
             counters[k].set({i: i}); // :)
+        }
+    }
 
     storage.rotateLog();
     storage.pullState();
@@ -53,9 +53,11 @@ case 'check':
 
     setTimeout(function(){ // TODO collection onload()
         for (var i = 0; i < 100; i++) {
+            /* jshint
             if (!counters[i]._version) {
             } else if (i === counters[i].i) {
             }
+            */
             if (counters[i]._version) {
                 console.log(i, counters[i].i);
                 //delete counters[i]._host;
