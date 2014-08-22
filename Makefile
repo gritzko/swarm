@@ -1,9 +1,7 @@
 BIN = ./node_modules/.bin/
 
 SOURCES = \
-		  ./lib/Spec.js \
-		  ./lib/Host.js \
-		  ./lib/env.js
+		  ./lib/*.js
 
 all:: prepare testdist test dist examples
 

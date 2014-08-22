@@ -26,5 +26,10 @@
         "qunit" : "",
         "browserify": "",
         "jshint": ""
+    },
+    "scripts": {
+        "test": "make test",
+        "postinstall": "make dist examples",
+        "runExamples": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
     }
 }
