@@ -20,12 +20,12 @@
         "koa-static-cache": "",
         "react" : "",
         "nopt": "",
-        "jquery": ""
-    },
-    "devDependencies": {
+        "jquery": "",
         "qunit" : "",
         "browserify": "",
         "jshint": ""
+    },
+    "devDependencies": {
     },
     "scripts": {
         "test": "make test",
