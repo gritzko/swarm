@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3.3",
+    "version": "0.3.4",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -23,6 +23,8 @@
         "Makefile",
         "LICENSE"
     ],
+    "main": "lib/NodeServer.js",
+    "browser": "dist/swarm-html5.js",
     "dependencies": {
         "ws": "~0.4.31"
     },
