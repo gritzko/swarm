@@ -1,35 +1,36 @@
 {
     "name": "swarm",
-    "version": "0.3.0",
+    "version": "0.3.2",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
-        "url": "linode:/var/git/swarm.git"
+        "url": "https://github.com/gritzko/swarm.git"
     },
     "email": "victor.grishchenko@gmail.com",
     "license": "MIT",
     "files": [
-        "lib/swarm3.js",
-        "lib/pipe.js",
-        "lib/ce.js",
-        "lib/murmur.js"
+        "lib/",
+        "dist/",
+        "example/",
+	"Makefile",
+	"LICENSE"
     ],
     "dependencies": {
         "ws": "~0.4.31",
-        "koa": "",
-        "koa-static-cache": "",
         "react" : "",
-        "nopt": "",
-        "jquery": "",
-        "qunit" : "",
-        "browserify": "",
-        "jshint": ""
+        "jquery": ""
     },
     "devDependencies": {
+        "qunit" : "",
+        "browserify": "",
+        "jshint": "",
+        "koa": "",
+        "nopt": "",
+        "koa-static-cache": ""
     },
     "scripts": {
         "test": "make test",
-        "postinstall": "make dist examples",
-        "runExamples": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
+        "rebuild": "make dist examples",
+        "demo": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
     }
 }
