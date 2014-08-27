@@ -1,26 +1,34 @@
 {
     "name": "swarm",
-    "version": "0.3.2",
+    "version": "0.3.3",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
         "url": "https://github.com/gritzko/swarm.git"
     },
-    "email": "victor.grishchenko@gmail.com",
+    "author": {
+        "email": "victor.grishchenko@gmail.com",
+        "name": "Victor Grishchenko"
+    },
+    "contributors": [
+        {"name": "Aleksei Balandin", "email": "aleksisha@gmail.com"},
+        {"name": "Andrey Popp", "email": "8mayday@gmail.com"}
+    ],
+    "email": "swarm.js@gmail.com",
     "license": "MIT",
     "files": [
         "lib/",
         "dist/",
         "example/",
-	"Makefile",
-	"LICENSE"
+        "Makefile",
+        "LICENSE"
     ],
     "dependencies": {
-        "ws": "~0.4.31",
-        "react" : "",
-        "jquery": ""
+        "ws": "~0.4.31"
     },
     "devDependencies": {
+        "react" : "",
+        "jquery": "",
         "qunit" : "",
         "browserify": "",
         "jshint": "",
