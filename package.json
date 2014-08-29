@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3.4",
+    "version": "0.3.10",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -17,14 +17,14 @@
     "email": "swarm.js@gmail.com",
     "license": "MIT",
     "files": [
-        "lib/",
-        "dist/",
+        "lib/*.js",
+        "dist/*.js",
         "example/",
         "Makefile",
         "LICENSE"
     ],
     "main": "lib/NodeServer.js",
-    "browser": "dist/swarm-html5.js",
+    "browser": "lib/Html5Client.js",
     "dependencies": {
         "ws": "~0.4.31"
     },

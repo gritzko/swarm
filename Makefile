@@ -10,8 +10,8 @@ prepare::
 	npm install
 
 clean:
-	find . -name '*.app.js' | xargs rm ;
-	find . -name '*.min.js' | xargs rm ;
+	find . -name '*.app.js' | xargs rm -f ;
+	find . -name '*.min.js' | xargs rm -f ;
 	rm dist/*.js ;
 
 test::
