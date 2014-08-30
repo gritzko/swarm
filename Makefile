@@ -3,7 +3,7 @@ BIN = ./node_modules/.bin/
 SOURCES = \
 		  ./lib/*.js
 
-all:: prepare testdist test dist examples
+all:: prepare testdist test dist examples todo
 
 prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
@@ -36,3 +36,9 @@ nodedist:
 
 commit:: all
 	git diff --exit-code && git commit && echo "well, git push now"
+
+todo::
+	@echo
+	@git grep -w --color -n 'TO\DO'
+	@echo
+

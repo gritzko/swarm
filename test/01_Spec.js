@@ -43,6 +43,17 @@ test('basic specifier syntax', function (test) {
     var def = new Spec('/Type#id!ver.method');
     var over = def.set('#newid.newmethod');
     equal(over,'/Type#newid!ver.newmethod');
+    var abc = new Spec('!abc');
+    equal(abc.has('!ab'), false); // ?
+    equal(abc.has('!'), true);
+});
+
+test('spec filters', function () {
+    var filter = '.on';
+    equal (new Spec('!abc.on/Class').fits(filter), true);
+    equal (new Spec('.off/Class').fits(filter), false);
+    equal (new Spec('/Type!abc.off.on').fits(filter), true);
+
 });
 
 test('version vector', function (){
