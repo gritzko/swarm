@@ -83,10 +83,10 @@ test('5.3 edits and O(n)', function (test){
     var count = 4;
     var longls = new LongSpec(), i = null;
     for(var i=0; i<count; i++)
-        longls.insert('.a');
+        longls.append('.a');
     var at = -1;
     while ( -1 !== (at = longls.find('.a',at+1)) && count--) {
-        longls.insert('.bcdef',at);
+        longls.insertAfter('.bcdef',at);
     }
     var spec = longls.toString();
     equal(spec, '.a.bcdef.a.bcdef.a.bcdef.a.bcdef');
