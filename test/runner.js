@@ -27,6 +27,18 @@ testrunner.run({
 }, onTest);
 
 testrunner.run({
+    code: "lib/Pipe.js",
+    deps: [
+        "lib/Spec.js",
+        "lib/Host.js",
+        "lib/Set.js",
+        "lib/Storage.js",
+        "lib/AsyncLoopbackConnection.js"
+    ],
+    tests: "test/03_OnOff.js"
+}, onTest);
+
+testrunner.run({
     code: "lib/Text.js",
     deps: [
         "lib/Spec.js",
@@ -37,15 +49,11 @@ testrunner.run({
 }, onTest);
 
 testrunner.run({
-    code: "lib/Pipe.js",
+    code: "lib/LongSpec.js",
     deps: [
-        "lib/Spec.js",
-        "lib/Host.js",
-        "lib/Set.js",
-        "lib/Storage.js",
-        "lib/AsyncLoopbackConnection.js"
+        "lib/Spec.js"
     ],
-    tests: "test/03_OnOff.js"
+    tests: "test/05_LongSpec.js"
 }, onTest);
 
 testrunner.run({
