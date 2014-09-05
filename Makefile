@@ -38,7 +38,7 @@ commit:: all
 	git diff --exit-code && git commit && echo "well, git push now"
 
 todo::
-	@echo
-	@git grep -w --color -n 'TO\DO'
+	@echo === GROUND LEVEL BUG/ISSUE TRACKER ===
+	@git grep -w --color -n -P 'TO\DO|FIX\ME'
 	@echo
 
