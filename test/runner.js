@@ -2,12 +2,17 @@
 
 var testrunner = require("qunit");
 
-function onTest (err, report ) {
+var exitCode = 0;
+
+function onTest (err, report) {
+    if (report.failed) {
+        process.exit(1);
+    }
     if (err) {
         console.warn(err);
         console.warn(err.stack);
-        process.exit(1);
-    } // else { //console.dir(report); }
+        process.exit(-1);
+    }
 }
 
 testrunner.run({

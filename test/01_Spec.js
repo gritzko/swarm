@@ -1,17 +1,17 @@
 "use strict";
 var env = require('../lib/env');
 var Spec = require('../lib/Spec');
-var Host = require('../lib/Host');  // FIXME time
+var SecondPreciseClock = require('../lib/SecondPreciseClock');
 
 env.debug = console.log;
 env.multihost = true;
 
-asyncTest('timestamp sequence test', function () {
-    var swarm = new Host('gritzko',{},{on:function(){}});
+asyncTest('1.a timestamp sequence test', function () {
+    var clock = new SecondPreciseClock('gritzko');
     expect(100);
-    var ts1 = swarm.time(), ts2, i=0;
+    var ts1 = clock.issueTimestamp(), ts2, i=0;
     var iv = setInterval(function(){
-        ts2 = swarm.time();
+        ts2 = clock.issueTimestamp();
         if (ts2<=ts1) {
             console.error(ts2, '<=', ts1);
         }
@@ -26,7 +26,7 @@ asyncTest('timestamp sequence test', function () {
     //swarm.close();
 });
 
-test('basic specifier syntax', function (test) {
+test('1.b basic specifier syntax', function (test) {
     var testSpec = '/Class#ID!7Umum+gritzko.event';
     var spec = new Spec(testSpec);
     equal(spec.version(),'7Umum+gritzko');
@@ -48,7 +48,7 @@ test('basic specifier syntax', function (test) {
     equal(abc.has('!'), true);
 });
 
-test('spec filters', function () {
+test('1.c spec filters', function () {
     var filter = '.on';
     equal (new Spec('!abc.on/Class').fits(filter), true);
     equal (new Spec('.off/Class').fits(filter), false);
@@ -56,7 +56,7 @@ test('spec filters', function () {
 
 });
 
-test('version vector', function (){
+test('1.d version vector', function (){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
@@ -72,7 +72,7 @@ test('version vector', function (){
     equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha');
 });
 
-test('corner cases', function () {
+test('1.e corner cases', function () {
     var empty = new Spec('');
     equal(empty.type()||empty.id()||empty.op()||empty.version(),'');
     equal(empty.toString(),'');
@@ -84,6 +84,30 @@ test('corner cases', function () {
     equal(fieldSet.version(),'7AMTc+gritzko');
     equal(fieldSet.op(),'set');
 });
+
+/*test('1.f minute-precise clox', function(test){
+    var clock = new MinutePreciseClock('min');
+    // tick 60 times
+    // check the last char is changing
+    // unless minute changed then restart
+    // tick 60 times
+    // see it spills over (extended ts)
+});*/
+
+test('1.g timestamp-ahead', function(test){
+    var clock = new SecondPreciseClock('normal');
+    var ts = clock.issueTimestamp();
+    var parsed = clock.parseTimestamp(ts);
+    var tenAhead = Spec.int2base(parsed.time+10, 5)+'+ahead';
+    var tenBehind = Spec.int2base(parsed.time-10, 5)+'+behind';
+    var clockAhead = new SecondPreciseClock('ahead', tenAhead);
+    var clockBehind = new SecondPreciseClock('behind', tenBehind);
+    var tsAhead = clockAhead.issueTimestamp();
+    var tsBehind = clockBehind.issueTimestamp();
+    ok(tsAhead>ts);
+    ok(ts>tsBehind);
+});
+
 
 //var Empty = Swarm.Syncable.extend('Empty',{});
 
