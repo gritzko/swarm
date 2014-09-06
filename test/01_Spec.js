@@ -2,6 +2,7 @@
 var env = require('../lib/env');
 var Spec = require('../lib/Spec');
 var SecondPreciseClock = require('../lib/SecondPreciseClock');
+var MinutePreciseClock = require('../lib/MinutePreciseClock');
 
 env.debug = console.log;
 env.multihost = true;
@@ -85,14 +86,26 @@ test('1.e corner cases', function () {
     equal(fieldSet.op(),'set');
 });
 
-/*test('1.f minute-precise clox', function(test){
+test('1.f minute-precise clox', function(test){
     var clock = new MinutePreciseClock('min');
+    var prevts = '';
+    for(var i=0; i<64; i++) {
+        var ts = clock.issueTimestamp();
+        ok(/^[0-9a-zA-Z_~]{5}\+min$/.test(ts));
+        ok(ts>prevts);
+        prevts = ts;
+    }
+    for(var i=0; i<130; i++) {
+        var ts = clock.issueTimestamp();
+    }
+    ok(/^[0-9a-zA-Z_~]{7}\+min$/.test(ts));
+
     // tick 60 times
     // check the last char is changing
     // unless minute changed then restart
     // tick 60 times
     // see it spills over (extended ts)
-});*/
+});
 
 test('1.g timestamp-ahead', function(test){
     var clock = new SecondPreciseClock('normal');
@@ -106,6 +119,14 @@ test('1.g timestamp-ahead', function(test){
     var tsBehind = clockBehind.issueTimestamp();
     ok(tsAhead>ts);
     ok(ts>tsBehind);
+});
+
+test('1.h timestamp to date', function(test){
+    var clock = new SecondPreciseClock('normal');
+    var ts = clock.issueTimestamp();
+    var date = new Date();
+    var recovered = clock.timestamp2date(ts);
+    ok( Math.abs(date.getTime()-recovered.getTime()) < 2000 );
 });
 
 

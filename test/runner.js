@@ -2,8 +2,6 @@
 
 var testrunner = require("qunit");
 
-var exitCode = 0;
-
 function onTest (err, report) {
     if (report.failed) {
         process.exit(1);
