@@ -8,6 +8,7 @@ dist/*
 *.patch
 *.cpuprofile
 .swarm
+.store
 *.swp
 # dev stuff
 .idea
