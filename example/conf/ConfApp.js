@@ -1,3 +1,5 @@
+"use strict";
+
 var env = require('../../lib/env');
 var Spec = require('../../lib/Spec');
 var Host = require('../../lib/Host');
@@ -5,7 +7,7 @@ var Storage = require('../../lib/Storage');
 require('../../lib/Html5Client');
 var Agenda = require('./model/Agenda');
 var AgendaView = require('./view/AgendaView');
-var PostMessageStream = require('../../lib/PostMessageStream');
+require('../../lib/PostMessageStream');
 
 var app = window.app = {};
 
