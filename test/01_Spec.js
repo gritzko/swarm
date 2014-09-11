@@ -3,6 +3,7 @@ var env = require('../lib/env');
 var Spec = require('../lib/Spec');
 var SecondPreciseClock = require('../lib/SecondPreciseClock');
 var MinutePreciseClock = require('../lib/MinutePreciseClock');
+var LamportClock = require('../lib/LamportClock');
 
 env.debug = console.log;
 env.multihost = true;
@@ -129,10 +130,23 @@ test('1.h timestamp to date', function(test){
     ok( Math.abs(date.getTime()-recovered.getTime()) < 2000 );
 });
 
+test('1.i Lamport clocks', function(test){
+    var clock = new LamportClock('leslie');
+    var ts1 = clock.issueTimestamp();
+    equal(ts1,'00000+leslie');
+    var ts2 = clock.issueTimestamp();
+    equal(ts2,'00001+leslie');
+    clock.seeTimestamp('00004+leslie');
+    equal(clock.issueTimestamp(),'00005+leslie');
+});
 
 //var Empty = Swarm.Syncable.extend('Empty',{});
 
-/*test('dry handshake', function () {
+/*
+
+    Vintage Victorian tests. Cool.
+
+test('dry handshake', function () {
     var v = 0;
     var host = {
         _id: 'DummyHost',
