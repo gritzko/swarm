@@ -4,3 +4,4 @@ require('./03_OnOff');
 require('./04_Text');
 require('./05_LongSpec');
 require('./06_Handshakes');
+require('./07_Vector');

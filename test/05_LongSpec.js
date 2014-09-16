@@ -250,12 +250,12 @@ test('5.j Sequential compression', function(test) {
     var next = find.next();
     equal(ls.decode(next.en), seqs[4]);
     Swarm.env.clock = Swarm.SecondPreciseClock;
-});
-
-test('5.8 humane API: insertAfter, Before', function (test){
-    var ls = new LongSpec('!one#two.three/four+4');
-    ls.insertAfter('#two+andahalf','#two');
-    ls.insertBefore('.three','/four+4');
-    equal(ls.itemAt(4),'/four+4');
-    equal(ls.toString(), '!one#two#two+andahalf.three/four+4');
 });*/
+
+test('5.8 humane API: insert, insertAfter', function (test){
+    var ls = new LongSpec('!one#two/four+4');
+    ls.insert('#two+andahalf',2);
+    ls.insert('.three',3);
+    equal(ls.tokenAt(4),'/four+4');
+    equal(ls.toString(), '!one#two#two+andahalf.three/four+4');
+});
