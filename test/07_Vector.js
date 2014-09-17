@@ -24,7 +24,7 @@ var jones = new Agent({name:'Jones', num:2});
 var brown = new Agent({name:'Brown', num:3});
 
 var AgentVector = Vector.extend('AgentVector',{
-    objectType: '/Agent'
+    objectType: Agent
 });
 
 function checkOrder(vec) {
