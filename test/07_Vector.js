@@ -124,19 +124,23 @@ test('7.h duplicates', function (test) {
     equal(vec.objects[2],smith);
 });
 
-/*test('7.l event relay', function (test) {
+test('7.l event relay', function (test) {
     var ids = [];
-    vec.onObjectEvent('.set', function(spec,val){
-        ids.push(spec.id());
+    var vec = new AgentVector();
+    vec.insert(smith);
+    vec.insert(smith);
+    vec.insert(smith);
+    vec.onObjectEvent(function(spec,val,src){
+        ids.push(src.name);
     });
-    smith.set({weapon:'Desert Eagle'});
-    equal(ids.join(),'smith,smith,smith');
+    smith.set({weapon:'bug'});
+    equal(ids.join(),'Smith,Smith,Smith');
     vec.remove(1);
-    vec.move(1,0);
+    //vec.move(1,0);
     ids = [];
     smith.set({weapon:'mighty fist'});
-    equal(ids.join(),'smith,smith');
-});*/
+    equal(ids.join(),'Smith,Smith');
+});
 
 
 /*test('7.i Array-like API', function (test) {
