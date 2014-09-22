@@ -143,18 +143,23 @@ test('7.l event relay', function (test) {
 });
 
 
-/*test('7.i Array-like API', function (test) {
+test('7.i Array-like API', function (test) {
     env.localhost = vhost;
-    var vec = new Vector();
-    vec.insert(smith);
-    vec.insert(smith);
-    vec.insert(smith);
-    vec.insert(brown);
-    vec.splice(1,2,jones);
-    checkOrder(vec);
+    var vec = new AgentVector();
+    vec.append(smith);
+    vec.append(smith);
+    vec.append(smith);
+    vec.append(brown);
+    equal(vec.indexOf(brown._id),3);
+    equal(vec.indexOf(brown.spec()),3);
+    equal(vec.indexOf(brown),3);
+    equal(vec.indexOf(smith._id),0);
+    equal(vec.indexOf(smith._id,1),1);
+    //vec.splice(1,2,jones);
+    //checkOrder(vec);
 });
 
-test('7.j sugary API', function (test) {
+/*test('7.j sugary API', function (test) {
     var vec = new Vector();
     vec.insert(jones);
     vec.insertAfter(smith,jones);
