@@ -70,3 +70,12 @@ testrunner.run({
     ],
     tests: "test/06_Handshakes.js"
 }, onTest);
+
+testrunner.run({
+    code: "lib/Vector.js",
+    deps: [
+        "lib/Spec.js",
+        "lib/Model.js"
+    ],
+    tests: "test/07_Vector.js"
+}, onTest);
