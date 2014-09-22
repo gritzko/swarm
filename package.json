@@ -21,7 +21,8 @@
         "dist/*.js",
         "example/",
         "Makefile",
-        "LICENSE"
+        "LICENSE",
+        "KoaServer.js"
     ],
     "main": "lib/NodeServer.js",
     "browser": "lib/Html5Client.js",

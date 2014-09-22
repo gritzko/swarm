@@ -69,15 +69,23 @@ test('7.c insert/remove', function (test) {
 
 test('7.d concurrent insert', function (test) {
     env.localhost = vhost;
-    var vec = new Vector('vecid');
-    //vec.setType(Agent); // TODO extend, statics, defaultType
-    var smithOp = Spec.as(vec.insert(smith)).tok('!');
     function cb () {
         throw new Error('what?');
     }
+
+    var vec = new Vector('vecid');
+    var smithOp = Spec.as(vec.insert(smith)).tok('!');
     vec.deliver ('/Vector#vecid!2after+src1.in', jones.spec()+smithOp, cb);
     vec.deliver ('/Vector#vecid!1before+src2.in', brown.spec()+smithOp, cb);
     checkOrder(vec);
+    equal(vec._order.toString(), smithOp+'!2after+src1!1before+src2');
+
+    var vec2 = new AgentVector('vecid2');
+    var smithOp2 = Spec.as(vec2.insert(smith)).tok('!');
+    vec2.deliver ('/Vector#vecid2!1before+src2.in', brown.spec()+smithOp2, cb);
+    vec2.deliver ('/Vector#vecid2!2after+src1.in', jones.spec()+smithOp2, cb);
+    checkOrder(vec2);
+    equal(vec2._order.toString(), smithOp2+'!2after+src1!1before+src2');
 });
 
 test('7.e dead point', function (test) {
