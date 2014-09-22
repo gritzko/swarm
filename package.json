@@ -36,11 +36,14 @@
         "jshint": "",
         "koa": "",
         "nopt": "",
-        "koa-static-cache": ""
+        "koa-spa": ""
     },
     "scripts": {
         "test": "make test",
         "rebuild": "make dist examples",
         "demo": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
+    },
+    "bin": {
+        "swarm-koa": "KoaServer.js"
     }
 }
