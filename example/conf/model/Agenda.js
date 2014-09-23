@@ -1,3 +1,5 @@
+"use strict";
+
 var Syncable = require('../../../lib/Syncable');
 var Model = require('../../../lib/Model');
 
@@ -21,8 +23,9 @@ var Agenda = Syncable.extend('Agenda', {
             for(var oldSpec in this._oplog) {
                 if (oldSpec>myVer) {
                     var oldVal = this._oplog[oldSpec];
-                    if (oldVal.slot===val.slot)
+                    if (oldVal.slot===val.slot) {
                         return; // rewritten already
+                    }
                 }
             }
             this.agenda[val.slot] = val.track;

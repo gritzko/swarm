@@ -1,5 +1,6 @@
 "use strict";
 
+var React = require('react');
 var env = require('../../lib/env');
 var Spec = require('../../lib/Spec');
 var Host = require('../../lib/Host');

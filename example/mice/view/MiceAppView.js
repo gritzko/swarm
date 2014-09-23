@@ -1,3 +1,6 @@
+"use strict";
+
+var React = require('react');
 var MiceView = require('./MiceView');
 
 module.exports = React.createClass({

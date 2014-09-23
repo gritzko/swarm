@@ -1,3 +1,6 @@
+"use strict";
+
+var React = require('react');
 var SwarmMixin = require('../../../lib/ReactMixin');
 
 module.exports = React.createClass({
@@ -6,7 +9,7 @@ module.exports = React.createClass({
     mixins: [SwarmMixin],
 
     render: function () {
-        var spec = this.props.spec;
+        //var spec = this.props.spec;
         var mouse = this.sync; //app.host.get(spec);
 
         return React.DOM.span({
@@ -15,7 +18,7 @@ module.exports = React.createClass({
             style: {
                 top: mouse.y,
                 left: mouse.x
-            },
+            }
         }, mouse.symbol);
     }
 });
