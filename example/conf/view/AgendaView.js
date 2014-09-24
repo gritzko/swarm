@@ -1,3 +1,6 @@
+"use strict";
+
+var React = require('react');
 var SwarmMixin = require('../../../lib/ReactMixin');
 var Agenda = require('../model/Agenda');
 
@@ -9,7 +12,7 @@ var AgendaView = React.createClass({
         console.warn('selected');
         var talkId = ev.currentTarget.getAttribute('id');
         var m = talkId.match(/(\d+:\d+)_(.+)/);
-        if (!m) return;
+        if (!m) { return; }
         var slot = m[1], track=m[2];
         var oldVal = this.sync.agenda[slot];
         var toAttend = oldVal===track ? '' : track;
@@ -24,8 +27,8 @@ var AgendaView = React.createClass({
         var self = this;
 
         var titles = [ '' ];
-        for(var track in Agenda.PROGRAM) titles.push(track);
-        var cols = titles.map(function(t){return React.DOM.th({},t)});
+        for(var track in Agenda.PROGRAM) { titles.push(track); }
+        var cols = titles.map(function(t){ return React.DOM.th({},t); });
         var header = React.DOM.tr({},cols);
 
         var rows = Agenda.SLOTS.map(function(slot){
@@ -37,8 +40,9 @@ var AgendaView = React.createClass({
                     ' '+Agenda.PROGRAM[track][slot].speakers));
                 var toAttend = agenda.agenda[slot];
                 var clazz = 'talk';
-                if (toAttend)
-                    clazz += toAttend===track ? ' attend' : ' skip';
+                if (toAttend) {
+                    clazz += toAttend === track ? ' attend' : ' skip';
+                }
                 return React.DOM.td(
                     {
                         id: slot+'_'+track,

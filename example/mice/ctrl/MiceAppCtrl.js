@@ -1,11 +1,13 @@
+"use strict";
+
 var FREQ = 30,
     toSend = null,
     timer = null;
 var online = document.getElementById('online');
 
 function trackUserMoves (event) {
-    if (online && event.clientY>online.offsetTop) return;
-    if (!app.mouse._version) return;
+    if (online && event.clientY>online.offsetTop) { return; }
+    if (!window.app.mouse._version) { return; }
     toSend = {
         x: Math.max(0,event.clientX-15),
         y: Math.max(0,event.clientY-15)
@@ -19,7 +21,7 @@ function trackUserMoves (event) {
 
 function mickeyGo (event) {
     var app = window.app;
-    if (!app.mouse._version) return;
+    if (!app.mouse._version) { return; }
     toSend = {
         x: Math.max(0,event.pageX-15),
         y: Math.max(0,event.pageY-15)

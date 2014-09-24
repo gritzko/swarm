@@ -1,9 +1,12 @@
+"use strict";
+
+var React = require('react');
 var env = require('../../lib/env');
 var Spec = require('../../lib/Spec');
 var Host = require('../../lib/Host');
 require('../../lib/Html5Client');
 var Mouse = require('./model/Mouse');
-var Mice = require('./model/Mice');
+require('./model/Mice');
 var MiceAppView = require('./view/MiceAppView');
 require('./ctrl/MiceAppCtrl');
 
@@ -27,14 +30,14 @@ var ssnInt = Spec.base2int(ssn);
 
 // create a Mouse object
 var mickey = app.mouse = new Mouse(app.id);
-mickey.on('.init',function(){
-    if (this._version!=='!0') return; // FIXME default values
+mickey.on('.state', function () {
+    if (this._version!=='!0') { return; } // FIXME default values
     mickey.set({
         x:100+(0|(Math.random()*100)),
         y:100+(0|(Math.random()*100)),
         symbol: String.fromCharCode(10000+ssnInt%60) // dingbats
     });
-})
+});
 
 // open #mice, list our object
 app.mice = app.host.get('/Mice#mice', function(){
@@ -68,4 +71,4 @@ window.onload = function () {
             MiceAppView ({spec:app.mice.stateSpec()}),
             document.getElementById('mice-container')
     );
-}
+};

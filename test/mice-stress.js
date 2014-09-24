@@ -54,7 +54,7 @@ if (cluster.isMaster) {
         mice.addObject(mickey);
     });
 
-    mickey.on('.init', function () {
+    mickey.on('.state', function () {
         if (this._version === '!0') {
             mickey.set({
                 x: 100 + (0 | (Math.random() * 100)),

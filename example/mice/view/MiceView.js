@@ -1,3 +1,6 @@
+"use strict";
+
+var React = require('react');
 var SwarmMixin = require('../../../lib/ReactMixin');
 var MouseView = require('./MouseView');
 
