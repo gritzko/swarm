@@ -79,3 +79,8 @@ testrunner.run({
     ],
     tests: "test/07_Vector.js"
 }, onTest);
+
+testrunner.run({
+    code: "lib/FileStorage.js",
+    tests: "test/08_FileStorage.js"
+}, onTest);
