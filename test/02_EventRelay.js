@@ -96,7 +96,7 @@ asyncTest('2.a basic listener func', function (test) {
         equal(huey._lstn.length,2); // only the uplink remains (and the comma)
         start();
     });
-    huey.on('.state', function init2a () {
+    huey.on('.init', function init2a () {
         huey.set({age:1});
     });
 });
@@ -265,7 +265,7 @@ test('2.l partial order', function (test) {
 asyncTest('2.m init push', function (test) {
     env.localhost= host2;
     var scrooge = new Duck({age:105});
-    scrooge.on('.state', function check() {
+    scrooge.on('.init', function check() {
         var tail = storage2.tails[scrooge.spec()];
         // FIXME equal(scrooge._version.substr(1), scrooge._id);
         var op = tail && tail[scrooge._version+'.set'];
@@ -283,7 +283,7 @@ test('2.n local listeners for on/off', function () {
         //triggered by itself, on(init) and host2.on below
         equal(spec.op(), 'on');
     });
-    duck.on('.state',function gotit(){
+    duck.on('.init',function gotit(){
         ok(duck._version);
     });
     duck.on('.reon', function (spec, val) {
