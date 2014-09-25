@@ -28,7 +28,7 @@ asyncTest('3.a serialized on, reon', function (){
 
     //downlink.getSources = function () {return [lowerPipe]};
 
-    downlink.on('/Thermometer#room.state',function i(spec,val,obj){
+    downlink.on('/Thermometer#room.init',function i(spec,val,obj){
         obj.set({t:22});
     });
 
@@ -39,7 +39,7 @@ asyncTest('3.a serialized on, reon', function (){
         //downlink.disconnect(lowerPipe);
         start();
         downlink.disconnect();
-    },250);
+    }, 250);
 
 });
 

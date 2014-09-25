@@ -100,7 +100,7 @@ asyncTest('6.a Handshake K pattern', function () {
 
     env.localhost = uplink;
     var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec()+'.state',function(sp,val,obj){
+    downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
         //  ? register ~ on ?
         //  host ~ event hub
         //    the missing signature: x.emit('event',value),
@@ -114,7 +114,7 @@ asyncTest('6.a Handshake K pattern', function () {
         equal(obj.x,3);
         equal(obj.y,3);
         equal(obj._version,uprepl._version);
-        // TODO this happens later ok(storage.states[uprepl.spec()]);
+        // TODO this happens later ok(storage..init[uprepl.spec()]);
         start();
     });
     //var dlrepl = downlink.objects[uprepl.spec()];
@@ -168,7 +168,7 @@ asyncTest('6.b Handshake D pattern', function () {
     //  Model.ROTSPAN
     //  Model.COAUTH
 
-    downlink.on('/Mouse#Mickey.state',function(spec,val,obj){
+    downlink.on('/Mouse#Mickey.init',function(spec,val,obj){
         equal(obj._id,'Mickey');
         equal(obj.x,7);
         equal(obj.y,7);
@@ -252,7 +252,7 @@ asyncTest('6.d Handshake R pattern', function () {
     uplink.on(downlink);
     env.localhost = downlink;
 
-    downlink.on('/Mouse#Mickey.state',function(spec,val,dlrepl){
+    downlink.on('/Mouse#Mickey.init',function(spec,val,dlrepl){
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);

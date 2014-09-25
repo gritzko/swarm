@@ -36,7 +36,7 @@ asyncTest('8.a init and save', function(test){
 
     var counter = new Counter('8a');
 
-    counter.on('.state', function () {
+    counter.on('.init', function () {
 
         var spec = counter.set({i:1});
 
@@ -68,7 +68,7 @@ asyncTest('8.b log trimming', function(test){
 
     var counter = new Counter('8b');
 
-    counter.on('.state', function () {
+    counter.on('.init', function () {
 
         var specs = [];
         for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
@@ -113,7 +113,7 @@ asyncTest('8.c state/log load', function(test){
 
     var counter = new Counter('8c');
 
-    counter.on('.state', function () {
+    counter.on('.init', function () {
 
         var specs = [];
         for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
@@ -126,7 +126,7 @@ asyncTest('8.c state/log load', function(test){
             var storage2 = new FileStorage('8c');
             var host2 = new Host('counters~8cv2', 0, storage2);
             var counter2 = host2.get(counter.spec());
-            counter2.on('.state', function () {
+            counter2.on('.init', function () {
                 equal(counter2.i,i);
                 start();
             });

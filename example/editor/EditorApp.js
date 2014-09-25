@@ -31,7 +31,7 @@ function M2V () {
     textarea.value = text.text;
 }
 
-text.on('.state',M2V); // FIXME on('')
+text.on('.init',M2V); // FIXME on('')
 text.on(M2V);
 
 textarea.onkeyup = function textChange(ev) {
