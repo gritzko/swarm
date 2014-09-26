@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3.10",
+    "version": "0.3.11",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -35,9 +35,8 @@
         "qunit" : "",
         "browserify": "",
         "jshint": "",
-        "koa": "",
         "nopt": "",
-        "koa-spa": ""
+        "rimraf": ""
     },
     "scripts": {
         "test": "make test",
