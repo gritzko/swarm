@@ -339,3 +339,26 @@ test('6.f Handshake and sync', function () {
     equal(mickey1.y,0xA);
     equal(mickey2.y,0xB);
 });
+
+
+
+asyncTest('6.g Cache vs storage',function () {
+    var storage = new Storage(true);
+    var cache = new Storage(false);
+    cache.isRoot = false;
+    var uplink = new Host('uplink~G',0,storage);
+    var downlink = new Host('downlink~G',0,cache);
+    downlink.getSources = function () {return [uplink];};
+
+    env.localhost = uplink;
+    var mickey = new Mouse({x:1,y:2});
+
+    //env.localhost = downlink;
+    var copy = downlink.get(mickey.spec());
+    copy.on('.init', function (){
+        equal(copy.x,1);
+        equal(copy.y,2);
+        start();
+    });
+
+});
