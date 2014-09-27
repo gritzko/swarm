@@ -1,0 +1,51 @@
+<html>
+<head>
+<script src='../dist/swarm-html5.js'></script>
+</head>
+<body>
+<input id='val' value='1'/>
+<script>
+
+    Swarm.env.debug = true;
+
+    var Counter = Swarm.Model.extend("Counter", {
+        defaults: {
+            value: 1
+        }
+    });
+    
+    var storage = new Swarm.SharedWebStorage('web',{persistent:true});
+    var host = new Swarm.Host('local',0,storage);
+
+    var id = window.localStorage.getItem('counterId');
+
+    var counter;
+    
+    if (id) {
+        counter = new Counter(id);
+    } else {
+        counter = new Counter();
+        window.localStorage.setItem('counterId',counter._id);
+    }
+
+    var input = document.getElementById('val');
+
+    counter.on('.init', function(spec,val) {
+        input.value = counter.value;
+    });
+    counter.on(function(spec,val) {
+        input.value = counter.value;
+    });
+
+    input.addEventListener('change',function(){
+            console.log('changed to',input.value);
+            counter.set({value:parseInt(input.value)});
+    });
+
+    if (!counter._version) {
+        counter.set({value:99});
+    }
+    
+</script>
+</body>
+</html>

@@ -25,6 +25,7 @@ var Counter = Swarm.Model.extend('Counter',{
 
 
 asyncTest('8.a init and save', function(test){
+    console.warn(QUnit.config.current.testName);
     if (fs.existsSync('8a')) {
         rimraf.sync('8a');
     }
@@ -57,6 +58,7 @@ asyncTest('8.a init and save', function(test){
 });
 
 asyncTest('8.b log trimming', function(test){
+    console.warn(QUnit.config.current.testName);
     if (fs.existsSync('8b')) {
         rimraf.sync('8b');
     }
@@ -102,6 +104,7 @@ asyncTest('8.b log trimming', function(test){
 
 
 asyncTest('8.c state/log load', function(test){
+    console.warn(QUnit.config.current.testName);
     if (fs.existsSync('8c')) {
         rimraf.sync('8c');
     }

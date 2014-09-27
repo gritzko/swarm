@@ -10,7 +10,6 @@ var http = require('http');
 
 var nopt = require('nopt');
 var koa = require('koa');
-var spa = require('koa-spa');
 var ws_lib = require('ws');
 
 var Swarm = require('./lib/NodeServer.js');
@@ -20,18 +19,11 @@ var app = koa();
 
 var options = nopt({
     models : path,
-    index : path,
     port : Number
 });
 
-var indexHtml = options.index||undefined; // TODO make demo3 run from /
-
-app.use(spa('.', {
-         index: indexHtml,
-         404: '404.html',
-         routeBase: '/'
-      }));
-
+var koa_static = require('koa-static-cache');
+app.use(koa_static('.'));
 
 // boot model classes
 var modelPathList = options.models||'model/';
