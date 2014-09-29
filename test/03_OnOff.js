@@ -20,7 +20,7 @@ asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new Storage(true);
     var uplink = new Host('swarm~3a',0,storage);
-    var downlink = new Host('client~3a');
+    var downlink = new Host('client~3a',5);
     // that's the default uplink.getSources = function () {return [storage]};
 
     uplink.accept('loopback:3a');

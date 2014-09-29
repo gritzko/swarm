@@ -15,7 +15,7 @@ var Agent = Model.extend('Agent', {
     }
 });
 
-var vhost = new Host('matrix');
+var vhost = new Host('matrix',0);
 
 env.localhost = vhost;
 

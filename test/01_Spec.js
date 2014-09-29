@@ -112,10 +112,10 @@ test('1.g timestamp-ahead', function(test){
     var clock = new SecondPreciseClock('normal');
     var ts = clock.issueTimestamp();
     var parsed = clock.parseTimestamp(ts);
-    var tenAhead = Spec.int2base(parsed.time+10, 5)+'+ahead';
-    var tenBehind = Spec.int2base(parsed.time-10, 5)+'+behind';
-    var clockAhead = new SecondPreciseClock('ahead', tenAhead);
-    var clockBehind = new SecondPreciseClock('behind', tenBehind);
+    //var tenAhead = Spec.int2base(parsed.time+10, 5)+'+ahead';
+    //var tenBehind = Spec.int2base(parsed.time-10, 5)+'+behind';
+    var clockAhead = new SecondPreciseClock('ahead', 10000);
+    var clockBehind = new SecondPreciseClock('behind', -10000);
     var tsAhead = clockAhead.issueTimestamp();
     var tsBehind = clockBehind.issueTimestamp();
     ok(tsAhead>ts);
@@ -136,7 +136,7 @@ test('1.i Lamport clocks', function(test){
     equal(ts1,'00000+leslie');
     var ts2 = clock.issueTimestamp();
     equal(ts2,'00001+leslie');
-    clock.seeTimestamp('00004+leslie');
+    clock.checkTimestamp('00004+leslie');
     equal(clock.issueTimestamp(),'00005+leslie');
 });
 

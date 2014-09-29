@@ -93,7 +93,7 @@ asyncTest('6.a Handshake K pattern', function () {
     var storage = new Storage(true);
     // FIXME pass storage to Host
     var uplink = new Host('uplink~K',0,storage);
-    var downlink = new Host('downlink~K');
+    var downlink = new Host('downlink~K',100); 
     uplink.getSources = function () {return [storage];};
     downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
@@ -131,8 +131,8 @@ asyncTest('6.b Handshake D pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new Storage(true);
-    var uplink = new Host('uplink~D',storage);
-    var downlink = new Host('downlink~D');
+    var uplink = new Host('uplink~D',0,storage);
+    var downlink = new Host('downlink~D',10000);
     uplink.getSources = function () {return [storage];};
     downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
