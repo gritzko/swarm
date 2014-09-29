@@ -1,13 +1,8 @@
 "use strict";
 
-var env = require('../lib/env');
 var fs = require('fs');
-var path = require('path');
 var rimraf = require("rimraf");
 var Swarm = require('../lib/NodeServer');
-var Spec = require('../lib/Spec');
-var Model = require('../lib/Model');
-var Vector = require('../lib/Vector');
 var Host = require('../lib/Host');
 var FileStorage = require('../lib/FileStorage');
 
@@ -122,7 +117,7 @@ asyncTest('8.c state/log load', function(test){
         for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
             specs.push(counter.set({i:i}));
         }
-        var newOp = counter.set({i:i});
+        counter.set({i:i});
 
         host.close(function() {
 
