@@ -280,18 +280,19 @@ test('2.n local listeners for on/off', function () {
     env.localhost= host2;
     var duck = new Duck();
     duck.on('.on', function (spec, val) {
-        //triggered by itself, on(init) and host2.on below
+        console.log('triggered by itself, on(init) and host2.on below');
         equal(spec.op(), 'on');
     });
     duck.on('.init',function gotit(){
+        console.log('inevitable');
         ok(duck._version);
     });
     duck.on('.reon', function (spec, val) {
-        // doesn't get triggered if the storage is sync
+        console.log("must NOT get triggered if the storage is sync");
         equal(spec.op(), 'reon');
     });
     host2.on('/Host#gritzko.on', function (spec, val) {
-        // this listener is triggered by this exact call :)
+        console.log('this listener is triggered by itself');
         equal(spec.op(), 'on');
     });
 });

@@ -72,6 +72,9 @@ test('1.d version vector', function (){
     ok(!('garbage' in map.map));
     equal(map.toString({rot:'6'}),'!7AMTc+aleksisha!7AM0f+gritzko');
     equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha');
+
+    var map2 = new Spec.Map("!1QDpv03+anon000qO!1P7AE05+anon000Bu");
+    equal(!map2.covers(new Spec('!1P7AE05+anon000Bu.in').version()),false);
 });
 
 test('1.e corner cases', function () {
