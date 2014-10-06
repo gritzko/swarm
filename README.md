@@ -1,4 +1,5 @@
 # Swarm
+[![Build Status](https://img.shields.io/travis/gritzko/swarm/master.svg)](https://travis-ci.org/gritzko/swarm)
 
 _reactive data sync lib: replicated model for your web app_
 
