@@ -16,16 +16,18 @@ var Counter = Swarm.Model.extend('Counter',{
     }
 });
 
-
+var ts = new Swarm.SecondPreciseClock('8').issueTimestamp();
+var tsbase = '.test.'+ts+'/';
+if (fs.existsSync(tsbase)) {
+    rimraf.sync(tsbase);
+}
+fs.mkdirSync(tsbase);
 
 
 asyncTest('8.a init and save', function(test){
     console.warn(QUnit.config.current.testName);
-    if (fs.existsSync('8a')) {
-        rimraf.sync('8a');
-    }
 
-    var storage = new FileStorage('8a');
+    var storage = new FileStorage(tsbase+'8a');
     var host = new Host('counters', 0, storage);
     Swarm.env.localhost = host;
     storage.MAX_LOG_SIZE = 100;
@@ -54,11 +56,8 @@ asyncTest('8.a init and save', function(test){
 
 asyncTest('8.b log trimming', function(test){
     console.warn(QUnit.config.current.testName);
-    if (fs.existsSync('8b')) {
-        rimraf.sync('8b');
-    }
 
-    var storage = new FileStorage('8b');
+    var storage = new FileStorage(tsbase+'8b');
     var host = new Host('counters~8b', 0, storage);
     Swarm.env.localhost = host;
     storage.MAX_LOG_SIZE = 3;
@@ -100,11 +99,8 @@ asyncTest('8.b log trimming', function(test){
 
 asyncTest('8.c state/log load', function(test){
     console.warn(QUnit.config.current.testName);
-    if (fs.existsSync('8c')) {
-        rimraf.sync('8c');
-    }
 
-    var storage = new FileStorage('8c');
+    var storage = new FileStorage(tsbase+'8c');
     var host = new Host('counters~8c', 0, storage);
     Swarm.env.localhost = host;
     storage.MAX_LOG_SIZE = 3;
@@ -121,7 +117,7 @@ asyncTest('8.c state/log load', function(test){
 
         host.close(function() {
 
-            var storage2 = new FileStorage('8c');
+            var storage2 = new FileStorage(tsbase+'8c');
             var host2 = new Host('counters~8cv2', 0, storage2);
             var counter2 = host2.get(counter.spec());
             counter2.on('.init', function () {

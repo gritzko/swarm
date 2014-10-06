@@ -15,7 +15,7 @@ clean:
 	rm dist/*.js ;
 
 test::
-	node test/runner.js && rm -rf 8?
+	node test/runner.js && rm -rf .test.*8
 
 lint::
 	$(BIN)/jshint $(SOURCES)
