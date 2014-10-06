@@ -42,7 +42,7 @@ asyncTest('8.a init and save', function(test){
             var fn = storage.logFileName();
             var logstr = fs.readFileSync(fn,'utf8');
             var log = JSON.parse(logstr);
-            var correctLog = {'':1};
+            var correctLog = {'':{}};
             correctLog[spec] = {i:1};
 
             deepEqual(log,correctLog);
@@ -87,7 +87,7 @@ asyncTest('8.b log trimming', function(test){
             correctLog[ti] = {};
             correctLog[ti][vm] = {i:i};
 
-            deepEqual(log,correctLog);
+            deepEqual(log[''],correctLog);
 
             //rimraf('8a');
             start();
@@ -118,7 +118,7 @@ asyncTest('8.c state/log load', function(test){
         host.close(function() {
 
             var storage2 = new FileStorage(tsbase+'8c');
-            var host2 = new Host('counters~8cv2', 0, storage2);
+            var host2 = new Host('counters~8c~v2', 0, storage2);
             var counter2 = host2.get(counter.spec());
             counter2.on('.init', function () {
                 equal(counter2.i,i);
