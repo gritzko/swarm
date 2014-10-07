@@ -13,6 +13,7 @@ clean:
 	find . -name '*.app.js' | xargs rm -f ;
 	find . -name '*.min.js' | xargs rm -f ;
 	rm dist/*.js ;
+	rm -rf coverage ;
 
 test::
 	node test/runner.js && rm -rf .test.*8
