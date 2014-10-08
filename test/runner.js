@@ -13,6 +13,10 @@ function onTest (err, report) {
     }
 }
 
+testrunner.setup({
+    coverage: true
+});
+
 testrunner.run({
     code: "lib/Spec.js",
     tests: "test/01_Spec.js"
