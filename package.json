@@ -11,8 +11,14 @@
         "name": "Victor Grishchenko"
     },
     "contributors": [
-        {"name": "Aleksei Balandin", "email": "aleksisha@gmail.com"},
-        {"name": "Andrey Popp", "email": "8mayday@gmail.com"}
+        {
+            "name": "Aleksei Balandin",
+            "email": "aleksisha@gmail.com"
+        },
+        {
+            "name": "Andrey Popp",
+            "email": "8mayday@gmail.com"
+        }
     ],
     "email": "swarm.js@gmail.com",
     "license": "MIT",
@@ -27,16 +33,18 @@
     "main": "lib/NodeServer.js",
     "browser": "lib/Html5Client.js",
     "dependencies": {
+        "level-js": "^2.1.6",
+        "level-packager": "^0.18.0",
+        "leveldown": "^1.0.0",
         "ws": "~0.4.31"
     },
     "devDependencies": {
-        "react" : "",
+        "react": "",
         "jquery": "",
-        "qunit" : "",
+        "qunit": "",
         "browserify": "",
         "jshint": "",
         "nopt": "",
-        "level": "",
         "rimraf": ""
     },
     "scripts": {
