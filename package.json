@@ -11,8 +11,14 @@
         "name": "Victor Grishchenko"
     },
     "contributors": [
-        {"name": "Aleksei Balandin", "email": "aleksisha@gmail.com"},
-        {"name": "Andrey Popp", "email": "8mayday@gmail.com"}
+        {
+            "name": "Aleksei Balandin",
+            "email": "aleksisha@gmail.com"
+        },
+        {
+            "name": "Andrey Popp",
+            "email": "8mayday@gmail.com"
+        }
     ],
     "email": "swarm.js@gmail.com",
     "license": "MIT",
