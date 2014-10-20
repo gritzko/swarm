@@ -1,6 +1,6 @@
 "use strict";
 
-var Model = require('../../../lib/Model');
+var Model = require('../../lib/Model');
 
 // Our key class: a mouse pointer :)
 module.exports = Model.extend('Mouse', {

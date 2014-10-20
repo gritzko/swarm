@@ -1,49 +1,48 @@
 {
-    "name": "swarm",
-    "version": "0.3.11",
-    "homepage": "http://github.com/gritzko/swarm",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/gritzko/swarm.git"
+  "name": "swarm",
+  "version": "0.3.11",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "contributors": [
+    {
+      "name": "Aleksei Balandin",
+      "email": "aleksisha@gmail.com"
     },
-    "author": {
-        "email": "victor.grishchenko@gmail.com",
-        "name": "Victor Grishchenko"
-    },
-    "contributors": [
-        {"name": "Aleksei Balandin", "email": "aleksisha@gmail.com"},
-        {"name": "Andrey Popp", "email": "8mayday@gmail.com"}
-    ],
-    "email": "swarm.js@gmail.com",
-    "license": "MIT",
-    "files": [
-        "lib/*.js",
-        "dist/*.js",
-        "example/",
-        "Makefile",
-        "LICENSE",
-        "KoaServer.js"
-    ],
-    "main": "lib/NodeServer.js",
-    "browser": "lib/Html5Client.js",
-    "dependencies": {
-        "ws": "~0.4.31"
-    },
-    "devDependencies": {
-        "react" : "",
-        "jquery": "",
-        "qunit" : "",
-        "browserify": "",
-        "jshint": "",
-        "nopt": "",
-        "rimraf": ""
-    },
-    "scripts": {
-        "test": "make test",
-        "rebuild": "make dist examples",
-        "demo": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
-    },
-    "bin": {
-        "swarm-koa": "KoaServer.js"
+    {
+      "name": "Andrey Popp",
+      "email": "8mayday@gmail.com"
     }
+  ],
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "lib/*.js",
+    "dist/*.js",
+    "example/",
+    "Makefile",
+    "LICENSE"
+  ],
+  "main": "lib/NodeServer.js",
+  "browser": "lib/Html5Client.js",
+  "dependencies": {
+    "ws": "~0.4.31"
+  },
+  "devDependencies": {
+    "browserify": "",
+    "istanbul": "^0.3.2",
+    "jshint": "",
+    "qunit": "^0.7.5",
+    "rimraf": "^2.2.8"
+  },
+  "scripts": {
+    "test": "make test",
+    "postinstall": "make dist"
+  }
 }
