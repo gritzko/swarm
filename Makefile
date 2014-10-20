@@ -13,7 +13,7 @@ clean:
 	rm dist/*.js ;
 	rm -rf coverage ;
 
-test::
+test:: testdist
 	node test/runner.js && rm -rf .test.*8
 
 lint::
@@ -21,13 +21,13 @@ lint::
 
 dist:: testdist html5dist nodedist
 
-html5dist:
+html5dist: prepare
 	$(BIN)/browserify lib/Html5Client.js -o dist/swarm-html5.js
 
-testdist:
+testdist: prepare
 	$(BIN)/browserify test/Tests.js -o dist/swarm-tests.js
 
-nodedist:
+nodedist: prepare
 	$(BIN)/browserify lib/NodeServer.js -o dist/swarm-node.js
 
 commit:: all
