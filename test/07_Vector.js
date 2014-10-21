@@ -5,6 +5,7 @@ var Spec = require('../lib/Spec');
 var Model = require('../lib/Model');
 var Vector = require('../lib/Vector');
 var Host = require('../lib/Host');
+var Storage = require('../lib/Storage');
 
 var Agent = Model.extend('Agent', {
     defaults: {
@@ -195,3 +196,56 @@ test('7.i Array-like API', function (test) {
     equal(vec.objects[0].name,'Smith');
     equal(vec.objects[num-1].name,'Smith');
 });*/
+
+test('7.l onObjectEvent / offObjectEvent', function () {
+    env.localhost = vhost;
+    var vec = new AgentVector();
+    vec.insert(smith);
+    expect(2);
+
+    function onAgentChanged() {
+        ok(true);
+    }
+
+    vec.onObjectEvent(onAgentChanged);
+    smith.set({dressCode: 'Casual'});
+    smith.set({gun: 'nope'});
+
+    vec.offObjectEvent(onAgentChanged);
+    smith.set({gun: 'IMI Desert Eagle'});
+});
+
+asyncTest('7.m onObjectStateReady', function () {
+    var asyncStorage = new Storage(true);
+    env.localhost = null;
+    var host = new Host('async_matrix', 0, asyncStorage);
+    env.localhost = host;
+
+    var vec = host.get('/AgentVector#test7l');
+
+    var agents = [];
+    for (var i = 0; i < 10; i++) {
+        var agent = host.get('/Agent#smith_' + i);
+        agents.push(agent);
+        vec.insert(agent);
+    }
+
+    expect(21);
+
+    // not inited at the beginning (+10 assertions)
+    agents.forEach(function (agent) {
+        ok(!agent._version);
+    });
+
+
+    vec.onObjectStateReady(function () {
+        // check vector and all its entries inited (+1 assertion)
+        ok(!!vec._version);
+        // (+10) assertions
+        agents.forEach(function (agent) {
+            ok(!!agent._version);
+        });
+
+        start();
+    });
+});
