@@ -14,9 +14,10 @@ clean:
 	find . -name '*.min.js' | xargs rm -f ;
 	rm dist/*.js ;
 	rm -rf coverage ;
+	rm -rf .test.* ;
 
 test::
-	node test/runner.js && rm -rf .test.*8
+	node test/runner.js && rm -rf .test.*
 
 lint::
 	$(BIN)/jshint $(SOURCES)
