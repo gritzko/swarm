@@ -12,7 +12,7 @@ var Spec = require('../lib/Spec');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var Storage = require('../lib/Storage');
-require('../example/mice/model/Mice');
+require('./model/Mice');
 
 env.multihost = true;
 

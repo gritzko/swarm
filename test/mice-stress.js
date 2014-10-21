@@ -6,8 +6,8 @@ var cluster = require('cluster');
 
 // Swarm + Model
 var Swarm = require('../lib/NodeServer');
-var Mouse = require('../example/mice/model/Mouse');
-require('../example/mice/model/Mice');
+var Mouse = require('./model/Mouse');
+require('./model/Mice');
 // add "ws:"-protocol realization for Pipe
 require('../lib/EinarosWSStream');
 

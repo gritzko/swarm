@@ -3,36 +3,31 @@ BIN = ./node_modules/.bin/
 SOURCES = \
 		  ./lib/*.js
 
-all:: prepare testdist test dist examples todo
+all:: prepare testdist test dist todo
 
 prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
-	npm install
 
 clean:
-	find . -name '*.app.js' | xargs rm -f ;
 	find . -name '*.min.js' | xargs rm -f ;
 	rm dist/*.js ;
 	rm -rf coverage ;
 
-test::
+test:: testdist
 	node test/runner.js && rm -rf .test.*8
 
 lint::
 	$(BIN)/jshint $(SOURCES)
 
-examples::
-	cd example; $(MAKE) $(MFLAGS)
-
 dist:: testdist html5dist nodedist
 
-html5dist:
+html5dist: prepare
 	$(BIN)/browserify lib/Html5Client.js -o dist/swarm-html5.js
 
-testdist:
+testdist: prepare
 	$(BIN)/browserify test/Tests.js -o dist/swarm-tests.js
 
-nodedist:
+nodedist: prepare
 	$(BIN)/browserify lib/NodeServer.js -o dist/swarm-node.js
 
 commit:: all

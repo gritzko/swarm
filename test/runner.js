@@ -14,7 +14,7 @@ function onTest (err, report) {
 }
 
 testrunner.setup({
-    coverage: true
+//    coverage: true
 });
 
 testrunner.run({

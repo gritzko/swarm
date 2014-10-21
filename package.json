@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3.12",
+    "version": "0.3.20",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -11,18 +11,22 @@
         "name": "Victor Grishchenko"
     },
     "contributors": [
-        {"name": "Aleksei Balandin", "email": "aleksisha@gmail.com"},
-        {"name": "Andrey Popp", "email": "8mayday@gmail.com"}
+        {
+            "name": "Aleksei Balandin",
+            "email": "aleksisha@gmail.com"
+        },
+        {
+            "name": "Andrey Popp",
+            "email": "8mayday@gmail.com"
+        }
     ],
     "email": "swarm.js@gmail.com",
     "license": "MIT",
     "files": [
         "lib/*.js",
         "dist/*.js",
-        "example/",
         "Makefile",
-        "LICENSE",
-        "KoaServer.js"
+        "LICENSE"
     ],
     "main": "lib/NodeServer.js",
     "browser": "lib/Html5Client.js",
@@ -30,20 +34,14 @@
         "ws": "~0.4.31"
     },
     "devDependencies": {
-        "react" : "",
-        "jquery": "",
-        "qunit" : "",
         "browserify": "",
+        "istanbul": "^0.3.2",
         "jshint": "",
-        "nopt": "",
-        "rimraf": ""
+        "qunit": "^0.7.5",
+        "rimraf": "^2.2.8"
     },
     "scripts": {
         "test": "make test",
-        "rebuild": "make dist examples",
-        "demo": "node --harmony KoaServer.js --models=example/mice/model:example/conf/model --port:8000"
-    },
-    "bin": {
-        "swarm-koa": "KoaServer.js"
+        "postinstall": "make dist"
     }
 }
