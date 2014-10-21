@@ -3,14 +3,12 @@ BIN = ./node_modules/.bin/
 SOURCES = \
 		  ./lib/*.js
 
-all:: prepare testdist test dist examples todo
+all:: prepare testdist test dist todo
 
 prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
-	npm install
 
 clean:
-	find . -name '*.app.js' | xargs rm -f ;
 	find . -name '*.min.js' | xargs rm -f ;
 	rm dist/*.js ;
 	rm -rf coverage ;
@@ -20,9 +18,6 @@ test:: testdist
 
 lint::
 	$(BIN)/jshint $(SOURCES)
-
-examples::
-	cd example; $(MAKE) $(MFLAGS)
 
 dist:: testdist html5dist nodedist
 
