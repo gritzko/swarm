@@ -14,7 +14,7 @@ clean:
 	rm -rf coverage ;
 
 test:: testdist
-	node test/runner.js && rm -rf .test.*8
+	node test/runner.js && rm -rf .test.*
 
 lint::
 	$(BIN)/jshint $(SOURCES)

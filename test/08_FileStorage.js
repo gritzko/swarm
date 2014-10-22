@@ -1,7 +1,6 @@
 "use strict";
 
 var fs = require('fs');
-var rimraf = require("rimraf");
 var Swarm = require('../lib/NodeServer');
 var Host = require('../lib/Host');
 var FileStorage = require('../lib/FileStorage');
@@ -18,9 +17,6 @@ var Counter = Swarm.Model.extend('Counter',{
 
 var ts = new Swarm.SecondPreciseClock('8').issueTimestamp();
 var tsbase = '.test.'+ts+'/';
-if (fs.existsSync(tsbase)) {
-    rimraf.sync(tsbase);
-}
 fs.mkdirSync(tsbase);
 
 
@@ -47,7 +43,6 @@ asyncTest('8.a init and save', function(test){
 
             deepEqual(log,correctLog);
 
-            //rimraf('8a');
             start();
         });
 
@@ -89,7 +84,6 @@ asyncTest('8.b log trimming', function(test){
 
             deepEqual(log[''],correctLog);
 
-            //rimraf('8a');
             start();
         });
 

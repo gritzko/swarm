@@ -37,8 +37,7 @@
         "browserify": "",
         "istanbul": "^0.3.2",
         "jshint": "",
-        "qunit": "^0.7.5",
-        "rimraf": "^2.2.8"
+        "qunit": "^0.7.5"
     },
     "scripts": {
         "test": "make test",
