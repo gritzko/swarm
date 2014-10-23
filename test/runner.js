@@ -14,7 +14,8 @@ function onTest (err, report) {
 }
 
 testrunner.setup({
-//    coverage: true
+    //coverage: true,
+    maxBlockDuration: 10000
 });
 
 testrunner.run({
@@ -23,9 +24,10 @@ testrunner.run({
 }, onTest);
 
 testrunner.run({
-    code: "lib/Model.js",
+    code: "lib/Syncable.js",
     deps: [
         "lib/Spec.js",
+        "lib/Model.js",
         "lib/Host.js",
         "lib/Set.js",
         "lib/Storage.js"
@@ -79,7 +81,8 @@ testrunner.run({
     code: "lib/Vector.js",
     deps: [
         "lib/Spec.js",
-        "lib/Model.js"
+        "lib/Model.js",
+        "lib/Storage.js"
     ],
     tests: "test/07_Vector.js"
 }, onTest);
