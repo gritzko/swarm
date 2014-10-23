@@ -1,7 +1,6 @@
 "use strict";
 
 var fs = require('fs');
-var rimraf = require("rimraf");
 var Swarm = require('../lib/NodeServer');
 var Host = require('../lib/Host');
 var Spec = require('../lib/Spec');
@@ -13,9 +12,6 @@ Swarm.env.multihost = true;
 
 var ts = new Swarm.SecondPreciseClock('9').issueTimestamp();
 var tsbase = '.test.'+ts+'/';
-if (fs.existsSync(tsbase)) {
-    rimraf.sync(tsbase);
-}
 fs.mkdirSync(tsbase);
 
 var Counter = Swarm.Model.extend('Counter',{
