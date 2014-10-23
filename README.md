@@ -3,69 +3,92 @@
 
 _reactive data sync lib: replicated model for your web app_
 
-## Introduction
+[Swarm](http://swarmjs.github.io/articles/todomvc/) is an isomorphic reactive M-of-MVC library that synchronizes objects in real-time and may work offline. Swarm is perfect for implementing collaboration or continuity features in Web and mobile apps. Swarm supports complex data types by relying on its op-based CRDT base.
 
-New opportunities bring new challenges; now, having all that laptops, smartphones and tablets on WiFi/3G, we need handover (aka continuity), real time sync and offline work. Those requirements stressed classic request-response HTTP architectures leading to fix-on-a-fix stacks that are far from perfection. Our dream is to develop distributed applications like good old local MVC apps, by fully delegating the data caching/synchronization magic to a dedicated layer. We want to deal with the data uniformly, no matter where it resides. We believe, that CRDT is the only approach that allows to fully embrace the reality of distributed data. Swarm is a CRDT-based replicated model library (M of MVC) that keeps your data correctly cached and synchronized in real time using any storage and transport available.
+You may run your own Swarm server. If you understand what CRDT is, then you may implement your own data types. Free-as-in-freedom (MIT).
 
-The problem of data synchronization is indeed purely technical with no direct relation to the business logic. Still, data sync becomes an issue in a complex web app. It is still a major challenge to implement real-time sync, intermittent connectivity support and caching. Very soon, you will find yourself on the toughest pages of a CS textbook (see AP of CAP).
-
-Our vision is to make distributed collaborative apps with the same ease we did good old local MVC apps. We achieve that by enhancing the classic MVC architecture with Replicated Model (M+VC) that embeds all the synchronization/caching magic. Once we isolate all the replication inside the model, the rest of the MVC loop may make no distinction in processing either local or remote events. Consequently, by defining both presentation and logic over a local replica of the model we achieve perfect compartmentalization. The transition from MVC+API to M+VC is somewhat comparable to a typical jQuery → Backbone transition in regard to the degree it sorts things out. Instead of endlessly juggling caches, local copies, APIs calls and db accesses, developers may now concentrate on logic and presentation.
-
-Well, but teaching the model to replicate and synchronize "on its own" is a major challenge. Indeed, replicas must be able to function semi-autonomously, as any locking or blocking nixes both usability and performance in a distributed system. Mathematically, the most bulletproof approach to the problem was Commutative Replicated Data Types (CRDT). The CRDT theory is a dramatic improvement on Operational Transformation in handling concurrent changes in near-real-time systems. CRDT tolerates divergence of replicas and varying operation orders, aiming to reconciliate changes eventually, once all the writes spread to all the replicas. CRDT is fundamentally asynchronous, survives intermittent connectivity and perfectly matches reactive architectures.
-
-Our other goal is a smooth scaling path. If both logic and presentation are neatly compartmentalized, then deployment options may vary without much of disruption. That "deployment" stage slows down development way too often! A developer should be able to start developing an app using Chrome as an IDE and local storage as a backend, then switch to SaaS and later on to a separate backend cluster. That should not be a one-way road: the ability to debug a large app piece by piece locally is priceless!
-
-Again, our method is to orthogonalize data delivery, logic and presentation: define the logic over a local replica, save and sync the replica in the background. This Replicated Model approach is like Dropbox for your objects.
-
-On the engineering side, our mission was to design a minimal CRDT basis to implement a lightweight Backbone-like framework on top of it. Swarm employs a pure op-based flavor of CRDT, where an object is essentially a stream of mutation events (ops). Based on those partially ordered Lamport-timestamped operation logs, Swarm implements CRDT data types. Swarm operations are represented as key-value pairs where the key is a "specifier", a compound id consisting of class, object id, Lamport timestamp and operation name. The value is arbitrary JSON. All the operation routing, ordering, storage and application is based on specifiers.
-
-Swarm works well offline and under intermittent connectivity; it may cache data and resync it later, incuding the case of browser restart.
-
-### Features
-
-* Isomorphic JavaScript.
-* Realtime collaboration support.
-* Offline and intermittent connectivity ready.
+![Swarm: deployment](doc/swarm-moscowjs-deployment.png)
 
 ## Installation
 
 `npm install swarm`
+or
+`git clone https://github.com/gritzko/swarm.git`
 
 ## Usage (Code Samples)
+
+see example apps at
+
+* [Swarm+React TodoMVC](https://github.com/gritzko/todomvc-swarm)
+* [Swarm Demo3](https://github.com/abalandin/swarm-example)
 
 ### How to create own simple LWW model (MyModel.js)
 
 ```js
 var Swarm = require('swarm');
 
-module.exports = Swarm.Model.extend('MyModel', {
+module.exports = Swarm.Model.extend('Mouse', {
     defaults: {
-        field1: 'val',
-        field2: 0
+        name: 'Mickey',
+        x: 0,
+        y: 0
     }
 });
 ```
 
-### Simple NodeJS Swarm Server (server.js)
+### Using the model on the client (app.js)
+
+```js
+// 1. create local Host
+var swarmHost = new Swarm.Host('unique_client_id');
+
+// 2. connect to server
+swarmHost.connect('ws://localhost:8000/');
+
+// 3.a. create an object
+var someMouse = new Mouse();
+// OR var object = swarmHost.get('/MyModel');
+// OR var object = new MyModel({field1: 'x', field2: 10});
+
+// 4.a. a locally created object may be touched immediately
+someMouse.set({x:1,y:2});
+
+// 3.b. This object is global (we supply a certain id) so we
+// may need to wait for its state to arrive from the server
+var mickey = new Mouse('Mickey');
+
+// 4.b. ...wait for the state to arrive
+mickey.on('init', function () {
+    // ...so we may touch it finally.
+    mickey.set({x: 1, y: 2});
+});
+
+// 5. let's subscribe to the object's change events
+mickey.on(function (spec, val, source) {
+    // this will be triggered by every state change, be it
+    // local or remote
+    console.log('event: ', spec.op(), val);
+});
+```
+
+### Creating a simple NodeJS sync server
 
 ```js
 var http = require('http');
 
-// TODO npm install ws
+// npm install ws
 var ws_lib = require('ws');
 
-// TODO npm install swarm
+// npm install swarm
 var Swarm = require('swarm');
 
-// TODO include your model files here require('./MyModel.js');
+require('./Mouse.js'); // see model definition above
 
 // use file storage
-var fileStorage = new Swarm.FileStorage('.swarm');
+var fileStorage = new Swarm.FileStorage('storage');
 
 // create Swarm Host
 var swarmHost = new Swarm.Host('swarm~nodejs', 0, fileStorage);
-// and make it the default Host
-Swarm.env.localhost = swarmHost;
 
 // create and start the HTTP server
 var httpServer = http.createServer();
@@ -85,65 +108,20 @@ wsServer.on('connection', function (ws) {
     console.log('new incoming WS');
     swarmHost.accept(new Swarm.EinarosWSStream(ws), { delay: 50 });
 });
-
-// handle exit signals
-function onExit(exitCode) {
-    console.log('shutting down http-server...');
-    httpServer.close();
-    console.log('closing swarm host...');
-    app.swarmHost.close(function () {
-        console.log('swarm host closed');
-        process.exit(exitCode);
-    });
-}
-process.on('SIGTERM', onExit);
-process.on('SIGINT', onExit);
-process.on('SIGQUIT', onExit);
 ```
 
-### How to use model on client (app.js)
+see [swarm-example](https://github.com/swarmjs/swarm-example/blob/master/server.js) for a nice example of a generic model sync server
 
-```js
-// 1. create local Host
-var swarmHost = new Swarm.Host('unique_client_id');
-
-// 2. connect to server
-swarmHost.connect('ws://localhost:8000/');
-
-// 3. create model instance
-var object = new MyModel();
-// OR var object = swarmHost.get('/MyModel');
-// OR var object = new MyModel({field1: 'x', field2: 10});
-
-// 4. wait for object initialization
-object.on('init', function () {
-    // local object replica has state now
-    // and can be operated like this:
-    object.set({field1: 'new_value', field2: 20});
-});
-
-// 5. subscribe to events changing the object
-object.on(function onObject1Changes(spec, val, source) {
-    console.log('object1 event: ', spec, val);
-});
-```
-
-### Other samples
-
-* [Swarm+React TodoMVC](https://github.com/gritzko/todomvc-swarm)
-* [Swarm Demo3](https://github.com/abalandin/swarm-example)
 
 ## Swarm API Quickstart
 
-Speaking of Swarm API, the best option at the moment is to learn by example and by reading the code.
-Swarm implements M of MVC, so key classes are:
+Key classes:
 
-**Host** is a container for **CRDT** (Convergent Replicated Data Type) object replicas.
-**Hosts** interact each other through **Streams** by sending **Events**.
-Each **Host** can have some **Storage** for persistence or caching.
-**Event** is a pair: **Specifier** and **Value**.
-**Specifier** describes what object replica has been changed, it contains unique id and name of an event.
-**Value** contains some parameters of an **Event**.
+* **Host** is a container for **CRDT** (Convergent Replicated Data Type) [object replicas](http://swarmjs.github.io/articles/objects-are-event-streams/). **Hosts** interact each other through **Streams** by sending **Operations**. Each **Host** normally has some **Storage** attached.
+* An **Operation** (op) is a pair of a **Specifier** (key) and a **Value**. [**Specifier**](http://swarmjs.github.io/articles/lamport/) is unique for each op invocation, contains type name, object id, Lamport timestamp and method (op) name. **Value** is something JSON-serializable, may understand it as parameters to the op/method.
+* **Model** is a CRDT type for a simple per-field last-write-wins object.
+* *Set* is a set of objects (unordered collection, unique elements).
+* *Vector* is a Vector of objects (ordered collection).
 
 ### Host
 
@@ -228,6 +206,26 @@ Read our [blog](http://swarmjs.github.io/).
 ## Contribution
 
 TODO
+
+
+## Lyrics
+
+New opportunities bring new challenges; now, having all that laptops, smartphones and tablets on WiFi/3G, we need handover (aka continuity), real time sync and offline work. Those requirements stressed classic request-response HTTP architectures leading to fix-on-a-fix stacks that are far from perfection. Our dream is to develop distributed applications like good old local MVC apps, by fully delegating the data caching/synchronization magic to a dedicated layer. We want to deal with the data uniformly, no matter where it resides. We believe, that CRDT is the only approach that allows to fully embrace the reality of distributed data. Swarm is a CRDT-based replicated model library (M of MVC) that keeps your data correctly cached and synchronized in real time using any storage and transport available.
+
+The problem of data synchronization is indeed purely technical with no direct relation to the business logic. Still, data sync becomes an issue in a complex web app. It is still a major challenge to implement real-time sync, intermittent connectivity support and caching. Very soon, you will find yourself on the toughest pages of a CS textbook (see AP of CAP).
+
+Our vision is to make distributed collaborative apps with the same ease we did good old local MVC apps. We achieve that by enhancing the classic MVC architecture with Replicated Model (M+VC) that embeds all the synchronization/caching magic. Once we isolate all the replication inside the model, the rest of the MVC loop may make no distinction in processing either local or remote events. Consequently, by defining both presentation and logic over a local replica of the model we achieve perfect compartmentalization. The transition from MVC+API to M+VC is somewhat comparable to a typical jQuery → Backbone transition in regard to the degree it sorts things out. Instead of endlessly juggling caches, local copies, APIs calls and db accesses, developers may now concentrate on logic and presentation.
+
+Well, but teaching the model to replicate and synchronize "on its own" is a major challenge. Indeed, replicas must be able to function semi-autonomously, as any locking or blocking nixes both usability and performance in a distributed system. Mathematically, the most bulletproof approach to the problem was Commutative Replicated Data Types (CRDT). The CRDT theory is a dramatic improvement on Operational Transformation in handling concurrent changes in near-real-time systems. CRDT tolerates divergence of replicas and varying operation orders, aiming to reconciliate changes eventually, once all the writes spread to all the replicas. CRDT is fundamentally asynchronous, survives intermittent connectivity and perfectly matches reactive architectures.
+
+Our other goal is a smooth scaling path. If both logic and presentation are neatly compartmentalized, then deployment options may vary without much of disruption. That "deployment" stage slows down development way too often! A developer should be able to start developing an app using Chrome as an IDE and local storage as a backend, then switch to SaaS and later on to a separate backend cluster. That should not be a one-way road: the ability to debug a large app piece by piece locally is priceless!
+
+Again, our method is to orthogonalize data delivery, logic and presentation: define the logic over a local replica, save and sync the replica in the background. This Replicated Model approach is like Dropbox for your objects.
+
+On the engineering side, our mission was to design a minimal CRDT basis to implement a lightweight Backbone-like framework on top of it. Swarm employs a pure op-based flavor of CRDT, where an object is essentially a stream of mutation events (ops). Based on those partially ordered Lamport-timestamped operation logs, Swarm implements CRDT data types. Swarm operations are represented as key-value pairs where the key is a "specifier", a compound id consisting of class, object id, Lamport timestamp and operation name. The value is arbitrary JSON. All the operation routing, ordering, storage and application is based on specifiers.
+
+Swarm works well offline and under intermittent connectivity; it may cache data and resync it later, incuding the case of browser restart.
+
 
 ## License
 
