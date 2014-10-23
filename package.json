@@ -31,10 +31,10 @@
     "main": "lib/NodeServer.js",
     "browser": "lib/Html5Client.js",
     "dependencies": {
+        "browserify": "",
         "ws": "~0.4.31"
     },
     "devDependencies": {
-        "browserify": "",
         "istanbul": "^0.3.2",
         "jshint": "",
         "qunit": "^0.7.5",
