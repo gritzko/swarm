@@ -42,7 +42,6 @@
         "leveldown": "1.0.0"
     },
     "scripts": {
-        "test": "make test",
-        "postinstall": "make dist"
+        "test": "make test"
     }
 }
