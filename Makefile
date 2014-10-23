@@ -19,7 +19,7 @@ test:: testdist
 lint::
 	$(BIN)/jshint $(SOURCES)
 
-dist:: testdist html5dist nodedist
+dist:: html5dist nodedist
 
 html5dist: prepare
 	$(BIN)/browserify lib/Html5Client.js -o dist/swarm-html5.js
