@@ -91,3 +91,8 @@ testrunner.run({
     code: "lib/FileStorage.js",
     tests: "test/08_FileStorage.js"
 }, onTest);
+
+testrunner.run({
+    code: "lib/LevelStorage.js",
+    tests: "test/09_LevelStorage.js"
+}, onTest);

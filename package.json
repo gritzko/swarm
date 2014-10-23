@@ -1,6 +1,6 @@
 {
     "name": "swarm",
-    "version": "0.3.21",
+    "version": "0.3.22",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -37,7 +37,9 @@
         "browserify": "",
         "istanbul": "^0.3.2",
         "jshint": "",
-        "qunit": "^0.7.5"
+        "qunit": "^0.7.5",
+        "nopt": "",
+        "leveldown": "1.0.0"
     },
     "scripts": {
         "test": "make test",
