@@ -29,13 +29,15 @@ these demos are normally online at http://ppyr.us and http://ppyr.us:8001/demo3/
 ```js
 var Swarm = require('swarm');
 
-module.exports = Swarm.Model.extend('Mouse', {
+var Mouse = Swarm.Model.extend('Mouse', {
     defaults: {
         name: 'Mickey',
         x: 0,
         y: 0
     }
 });
+
+module.exports = Mouse; // CommonJS
 ```
 
 ### Using the model on the client (app.js)
@@ -86,7 +88,7 @@ var ws_lib = require('ws');
 // npm install swarm
 var Swarm = require('swarm');
 
-require('./Mouse.js'); // see the model definition above
+var Mouse = require('./Mouse.js'); // see the model definition above
 
 // use file storage
 var fileStorage = new Swarm.FileStorage('storage');
@@ -124,9 +126,9 @@ Key classes:
 * **Host** is a container for **CRDT** (Convergent Replicated Data Type) [object replicas](http://swarmjs.github.io/articles/objects-are-event-streams/). **Hosts** interact each other through **Streams** by sending **Operations**. Each **Host** normally has some **Storage** attached.
 * An **Operation** (op) is a pair of a **Specifier** (key) and a **Value**. [**Specifier**](http://swarmjs.github.io/articles/lamport/) is unique for each op invocation, contains type name, object id, Lamport timestamp and method (op) name. **Value** is something JSON-serializable, may understand it as parameters to the op/method.
 * **Model** is a CRDT type for a simple per-field last-write-wins object.
-* **Set** is a set of objects (unordered collection, unique elements).
+* **Set** is a type for a set of objects (unordered collection, unique elements).
 * **Vector** is a Vector of objects (ordered collection).
-* **Text** is a collaboratively editable plain text class (a very simplistic [Causal Trees](http://www.pds.ewi.tudelft.nl/~victor/polo.pdf) implementation)
+* **Text** is a collaboratively editable plain text type (a very simplistic [Causal Trees](http://www.pds.ewi.tudelft.nl/~victor/polo.pdf) implementation)
 
 ### Host
 
