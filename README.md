@@ -1,7 +1,7 @@
 # Swarm
-[![Build Status](https://img.shields.io/travis/gritzko/swarm/master.svg)](https://travis-ci.org/gritzko/swarm)
-
 _reactive data sync lib: replicated model for your web app_
+
+[![Build Status](https://img.shields.io/travis/gritzko/swarm/master.svg)](https://travis-ci.org/gritzko/swarm)
 
 [Swarm](http://swarmjs.github.io/articles/todomvc/) is an isomorphic reactive M-of-MVC library that synchronizes objects in real-time and may work offline. Swarm is perfect for implementing collaboration or continuity features in Web and mobile apps. Swarm supports complex data types by relying on its op-based CRDT base.
 
@@ -20,9 +20,11 @@ or
 see example apps at
 
 * [Swarm+React TodoMVC](https://github.com/gritzko/todomvc-swarm)
-* [Swarm Demo3](https://github.com/abalandin/swarm-example)
+* [Swarm Demo3](https://github.com/swarmjs/swarm-example)
 
-### How to create own simple LWW model (MyModel.js)
+these demos are normally online at http://ppyr.us and http://ppyr.us:8001/demo3/index.html respectively.
+
+### Creating your first simple synchronized type
 
 ```js
 var Swarm = require('swarm');
@@ -42,13 +44,13 @@ module.exports = Swarm.Model.extend('Mouse', {
 // 1. create local Host
 var swarmHost = new Swarm.Host('unique_client_id');
 
-// 2. connect to server
+// 2. connect to your server
 swarmHost.connect('ws://localhost:8000/');
 
 // 3.a. create an object
 var someMouse = new Mouse();
-// OR var object = swarmHost.get('/MyModel');
-// OR var object = new MyModel({field1: 'x', field2: 10});
+// OR swarmHost.get('/Mouse');
+// OR new Mouse({x:1, y:2});
 
 // 4.a. a locally created object may be touched immediately
 someMouse.set({x:1,y:2});
@@ -60,7 +62,7 @@ var mickey = new Mouse('Mickey');
 // 4.b. ...wait for the state to arrive
 mickey.on('init', function () {
     // ...so we may touch it finally.
-    mickey.set({x: 1, y: 2});
+    mickey.set({x: 3, y: 4});
 });
 
 // 5. let's subscribe to the object's change events
@@ -68,6 +70,8 @@ mickey.on(function (spec, val, source) {
     // this will be triggered by every state change, be it
     // local or remote
     console.log('event: ', spec.op(), val);
+    // outputs:
+    // set {x:3, y:4}
 });
 ```
 
@@ -82,12 +86,12 @@ var ws_lib = require('ws');
 // npm install swarm
 var Swarm = require('swarm');
 
-require('./Mouse.js'); // see model definition above
+require('./Mouse.js'); // see the model definition above
 
 // use file storage
 var fileStorage = new Swarm.FileStorage('storage');
 
-// create Swarm Host
+// create the server-side Swarm Host
 var swarmHost = new Swarm.Host('swarm~nodejs', 0, fileStorage);
 
 // create and start the HTTP server
@@ -103,9 +107,9 @@ httpServer.listen(8000, function (err) {
 // start WebSocket server
 var wsServer = new ws_lib.Server({ server: httpServer });
 
-// accept incoming WebSockets connection
+// accept incoming WebSockets connections
 wsServer.on('connection', function (ws) {
-    console.log('new incoming WS');
+    console.log('new incoming WebSocket connection');
     swarmHost.accept(new Swarm.EinarosWSStream(ws), { delay: 50 });
 });
 ```
@@ -120,8 +124,9 @@ Key classes:
 * **Host** is a container for **CRDT** (Convergent Replicated Data Type) [object replicas](http://swarmjs.github.io/articles/objects-are-event-streams/). **Hosts** interact each other through **Streams** by sending **Operations**. Each **Host** normally has some **Storage** attached.
 * An **Operation** (op) is a pair of a **Specifier** (key) and a **Value**. [**Specifier**](http://swarmjs.github.io/articles/lamport/) is unique for each op invocation, contains type name, object id, Lamport timestamp and method (op) name. **Value** is something JSON-serializable, may understand it as parameters to the op/method.
 * **Model** is a CRDT type for a simple per-field last-write-wins object.
-* *Set* is a set of objects (unordered collection, unique elements).
-* *Vector* is a Vector of objects (ordered collection).
+* **Set** is a set of objects (unordered collection, unique elements).
+* **Vector** is a Vector of objects (ordered collection).
+* **Text** is a collaboratively editable plain text class (a very simplistic [Causal Trees](http://www.pds.ewi.tudelft.nl/~victor/polo.pdf) implementation)
 
 ### Host
 
@@ -203,7 +208,7 @@ Follow SwarmJS on Twitter ([@swarm_js](https://twitter.com/swarm_js)).
 
 Read our [blog](http://swarmjs.github.io/).
 
-## Contribution
+## Contributing
 
 TODO
 
