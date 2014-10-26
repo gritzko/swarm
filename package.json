@@ -32,7 +32,7 @@
     "browser": "lib/Html5Client.js",
     "dependencies": {
         "ws": "~0.4.31",
-        "browserify": "^6.2.0",
+        "browserify": "^6.2.0"
     },
     "devDependencies": {
         "istanbul": "^0.3.2",
