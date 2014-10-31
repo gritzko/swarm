@@ -207,11 +207,9 @@ asyncTest('6.c Handshake Z pattern', function () {
     oldstorage.states['/Mouse#Mickey'] = JSON.stringify(oldMickeyState);
 
     // new ops at the uplink' storage
-    storage.tails['/Mouse#Mickey'] =
-        JSON.stringify({
-            '!1ail+old.set': {y:10}
-        });
-
+    storage.tails['/Mouse#Mickey'] = {
+        '!1ail+old.set': JSON.stringify({y:10})
+    };
     env.localhost = downlink;
 
     var dlrepl = new Mouse('Mickey',oldMickeyState);
@@ -300,12 +298,12 @@ test('6.f Handshake and sync', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new Storage(false);
-    var uplink = new Host('uplink~F',0,storage);
-    var downlink1 = new Host('downlink~F1');
-    var downlink2 = new Host('downlink~F2');
-    uplink.getSources = function () {return [storage];};
-    downlink1.getSources = function () {return [uplink];};
-    downlink2.getSources = function () {return [uplink];};
+    var uplink = new Host('swarm~F',0,storage);
+    var downlink1 = new Host('client~F1');
+    var downlink2 = new Host('client~F2');
+    //uplink.getSources = function () {return [storage];};
+    //downlink1.getSources = function () {return [uplink];};
+    //downlink2.getSources = function () {return [uplink];};
 
     uplink.on(downlink1);
 

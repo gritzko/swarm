@@ -75,7 +75,6 @@ var Nest = SyncSet.extend('Nest',{
 
 var storage2 = new Storage(false);
 var host2 = env.localhost= new Host('gritzko',0,storage2);
-host2.availableUplinks = function () {return [storage2]; };
 
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
@@ -276,23 +275,26 @@ asyncTest('2.m init push', function (test) {
 
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
-    expect(5);
+    expect(4);
     env.localhost= host2;
     var duck = new Duck();
     duck.on('.on', function (spec, val) {
-        console.log('triggered by itself, on(init) and host2.on below');
+        console.log('triggered by on(init), on(reon) and host2.on() below');
+        // +3
         equal(spec.op(), 'on');
     });
     duck.on('.init',function gotit(){
         console.log('inevitable');
+        // +1
         ok(duck._version);
     });
     duck.on('.reon', function (spec, val) {
         console.log("must NOT get triggered if the storage is sync");
         equal(spec.op(), 'reon');
     });
-    host2.on('/Host#gritzko.on', function (spec, val) {
+    host2.on('/Duck#' + duck._id + '.on', function (spec, val) {
         console.log('this listener is triggered by itself');
+        // +1
         equal(spec.op(), 'on');
     });
 });

@@ -19,12 +19,14 @@ var Thermometer = Model.extend('Thermometer',{
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new Storage(true);
+    storage.isRoot = true;
     var uplink = new Host('swarm~3a',0,storage);
     var downlink = new Host('client~3a',5);
     // that's the default uplink.getSources = function () {return [storage]};
 
+    expect(2);
     uplink.accept('loopback:3a');
-    downlink.connect('loopback:a3'); // TODO possible mismatch
+    downlink.connect('loopback:a3');
 
     //downlink.getSources = function () {return [lowerPipe]};
 
@@ -34,9 +36,8 @@ asyncTest('3.a serialized on, reon', function (){
 
     setTimeout(function x(){
         var o = uplink.objects['/Thermometer#room'];
-        ok(o);
-        o && equal(o.t,22);
-        //downlink.disconnect(lowerPipe);
+        ok(o); // (1)
+        equal(o.t, 22); // (2)
         start();
         downlink.disconnect();
     }, 250);

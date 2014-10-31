@@ -136,6 +136,7 @@ test('7.h duplicates', function (test) {
 test('7.l event relay', function (test) {
     var ids = [];
     var vec = new AgentVector();
+    // vec._proxy will be subscribed to smith events just once
     vec.insert(smith);
     vec.insert(smith);
     vec.insert(smith);
@@ -143,12 +144,12 @@ test('7.l event relay', function (test) {
         ids.push(src.name);
     });
     smith.set({weapon:'bug'});
-    equal(ids.join(),'Smith,Smith,Smith');
+    equal(ids.join(),'Smith');
     vec.remove(1);
     //vec.move(1,0);
     ids = [];
     smith.set({weapon:'mighty fist'});
-    equal(ids.join(),'Smith,Smith');
+    equal(ids.join(),'Smith');
 });
 
 

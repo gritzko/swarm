@@ -18,7 +18,6 @@ test('4._ diff', function (test){
 
 var storage = new Storage(false);
 var host04 = new Host('gritzko',0,storage);
-host04.availableUplinks = function () {return [storage];};
 
 test('4.a init', function (test) {
     console.warn(QUnit.config.current.testName);
