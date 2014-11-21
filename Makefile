@@ -7,6 +7,7 @@ all:: prepare testdist test dist todo
 
 prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
+	npm install
 
 clean:
 	find . -name '*.min.js' | xargs rm -f ;
