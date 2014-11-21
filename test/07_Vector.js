@@ -76,17 +76,23 @@ test('7.d concurrent insert', function (test) {
 
     var vec = new Vector('vecid');
     var smithOp = Spec.as(vec.insert(smith)).tok('!');
-    vec.deliver ('/Vector#vecid!2after+src1.in', jones.spec()+smithOp, cb);
-    vec.deliver ('/Vector#vecid!1before+src2.in', brown.spec()+smithOp, cb);
+    var t1 = vhost.time().replace('+'+vhost._id, '+src2');
+    var t2 = vhost.time().replace('+'+vhost._id, '+src1');
+
+    vec.deliver ('/Vector#vecid!'+t2+'.in', jones.spec()+smithOp, cb);
+    vec.deliver ('/Vector#vecid!'+t1+'.in', brown.spec()+smithOp, cb);
     checkOrder(vec);
-    equal(vec._order.toString(), smithOp+'!2after+src1!1before+src2');
+    equal(vec._order.toString(), smithOp+'!'+t2+'!'+t1);
 
     var vec2 = new AgentVector('vecid2');
     var smithOp2 = Spec.as(vec2.insert(smith)).tok('!');
-    vec2.deliver ('/Vector#vecid2!1before+src2.in', brown.spec()+smithOp2, cb);
-    vec2.deliver ('/Vector#vecid2!2after+src1.in', jones.spec()+smithOp2, cb);
+    t1 = vhost.time().replace('+'+vhost._id, '+src2');
+    t2 = vhost.time().replace('+'+vhost._id, '+src1');
+
+    vec2.deliver ('/Vector#vecid2!'+t1+'.in', brown.spec()+smithOp2, cb);
+    vec2.deliver ('/Vector#vecid2!'+t2+'.in', jones.spec()+smithOp2, cb);
     checkOrder(vec2);
-    equal(vec2._order.toString(), smithOp2+'!2after+src1!1before+src2');
+    equal(vec2._order.toString(), smithOp2+'!'+t2+'!'+t1);
 });
 
 test('7.e dead point', function (test) {
@@ -96,11 +102,13 @@ test('7.e dead point', function (test) {
     vec.insert(smith);
     var pos = vec._order.tokenAt(0); // !time
     vec.remove(smith);
+    var t1 = vhost.time().replace('+'+vhost._id, '+src2');
+    var t2 = vhost.time().replace('+'+vhost._id, '+src1');
     function cb () {
         // nothing
     }
-    vec.deliver(vec.spec()+'!2after+src1.in', jones.spec()+pos, cb);
-    vec.deliver(vec.spec()+'!1before+src2.in', brown.spec()+pos, cb);
+    vec.deliver(vec.spec()+'!'+t2+'.in', jones.spec()+pos, cb);
+    vec.deliver(vec.spec()+'!'+t1+'.in', brown.spec()+pos, cb);
     vec.insertBefore(smith,jones);
     checkOrder(vec);
 });
