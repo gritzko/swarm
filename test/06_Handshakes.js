@@ -320,13 +320,13 @@ test('6.f Handshake and sync', function () {
 
     uplink.on(downlink2);
 
-    var mickey1at2 = miceB.objects[mickey1.spec()];
-    ok(miceA.objects[mickey1.spec()]);
+    var mickey1at2 = miceB._objects[mickey1.spec()];
+    ok(miceA._objects[mickey1.spec()]);
     ok(mickey1at2);
     miceB.addObject(mickey2);
 
-    var mickey2at1 = miceA.objects[mickey2.spec()];
-    ok(miceB.objects[mickey2.spec()]);
+    var mickey2at1 = miceA._objects[mickey2.spec()];
+    ok(miceB._objects[mickey2.spec()]);
     ok(mickey2at1);
 
     mickey1.set({x:0xA});

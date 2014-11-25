@@ -30,7 +30,7 @@ var AgentVector = Vector.extend('AgentVector',{
 
 function checkOrder(vec) {
     var names = [];
-    vec.objects.forEach(function(o){ names.push(o.name); });
+    vec._objects.forEach(function(o){ names.push(o.name); });
     equal(names.join(), 'Smith,Jones,Brown');
 }
 
@@ -136,9 +136,9 @@ test('7.h duplicates', function (test) {
     vec.insert(smith);
     vec.insertAfter(smith._id);
     vec.insertAfter(smith.spec()); // take that :)
-    equal(vec.objects[0],smith);
-    equal(vec.objects[1],smith);
-    equal(vec.objects[2],smith);
+    equal(vec._objects[0],smith);
+    equal(vec._objects[1],smith);
+    equal(vec._objects[2],smith);
 });
 
 test('7.l event relay', function (test) {
@@ -201,8 +201,8 @@ test('7.i Array-like API', function (test) {
         vec.remove(i);
     }
     equal(vec.length(), bignum>>1);
-    equal(vec.objects[0].name,'Smith');
-    equal(vec.objects[num-1].name,'Smith');
+    equal(vec._objects[0].name,'Smith');
+    equal(vec._objects[num-1].name,'Smith');
 });*/
 
 test('7.l onObjectEvent / offObjectEvent', function () {
