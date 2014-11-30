@@ -1,47 +1,47 @@
 {
-    "name": "swarm",
-    "version": "0.3.23",
-    "homepage": "http://github.com/gritzko/swarm",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/gritzko/swarm.git"
+  "name": "swarm",
+  "version": "0.3.24",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "contributors": [
+    {
+      "name": "Aleksei Balandin",
+      "email": "aleksisha@gmail.com"
     },
-    "author": {
-        "email": "victor.grishchenko@gmail.com",
-        "name": "Victor Grishchenko"
-    },
-    "contributors": [
-        {
-            "name": "Aleksei Balandin",
-            "email": "aleksisha@gmail.com"
-        },
-        {
-            "name": "Andrey Popp",
-            "email": "8mayday@gmail.com"
-        }
-    ],
-    "email": "swarm.js@gmail.com",
-    "license": "MIT",
-    "files": [
-        "lib/*.js",
-        "dist/*.js",
-        "Makefile",
-        "LICENSE"
-    ],
-    "main": "lib/NodeServer.js",
-    "browser": "lib/Html5Client.js",
-    "dependencies": {
-        "ws": "~0.4.31"
-    },
-    "devDependencies": {
-        "browserify": "",
-        "istanbul": "^0.3.2",
-        "jshint": "",
-        "qunit": "^0.7.5",
-        "nopt": "",
-        "leveldown": "1.0.0"
-    },
-    "scripts": {
-        "test": "make test"
+    {
+      "name": "Andrey Popp",
+      "email": "8mayday@gmail.com"
     }
+  ],
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "lib/*.js",
+    "dist/*.js",
+    "Makefile",
+    "LICENSE"
+  ],
+  "main": "lib/NodeServer.js",
+  "browser": "lib/Html5Client.js",
+  "dependencies": {
+    "ws": "~0.4.31"
+  },
+  "devDependencies": {
+    "browserify": "",
+    "istanbul": "^0.3.2",
+    "jshint": "",
+    "qunit": "^0.7.5",
+    "nopt": "",
+    "leveldown": "1.0.0"
+  },
+  "scripts": {
+    "test": "make test"
+  }
 }
