@@ -99,8 +99,10 @@ asyncTest('6.a Handshake K pattern', function () {
     uplink.on(downlink);
 
     env.localhost = uplink;
-    var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
+    var uplink_replica = new Mouse({x:3,y:3});
+
+    var downlink_replica = downlink.get(uplink_replica.spec());
+    downlink_replica.onStateReady(function(){
         //  ? register ~ on ?
         //  host ~ event hub
         //    the missing signature: x.emit('event',value),
@@ -111,19 +113,12 @@ asyncTest('6.a Handshake K pattern', function () {
         //    /Mouse#Mickey!now.on   !since.event   callback
         //  host's completely specd filter
         //    /Host#local!now.on   /Mouse#Mickey!since.event   callback
-        equal(obj.x,3);
-        equal(obj.y,3);
-        equal(obj._version,uprepl._version);
+        equal(downlink_replica.x,3);
+        equal(downlink_replica.y,3);
+        equal(downlink_replica._version,uplink_replica._version);
         // TODO this happens later ok(storage..init[uprepl.spec()]);
         start();
     });
-    //var dlrepl = downlink.objects[uprepl.spec()];
-
-    // here we have sync retrieval, so check it now
-    //equal(dlrepl.x,3);
-    //equal(dlrepl.y,3);
-    //equal(dlrepl._version,dlrepl._id);
-    // NO WAY, storage is async
 });
 
 
@@ -168,11 +163,14 @@ asyncTest('6.b Handshake D pattern', function () {
     //  Model.ROTSPAN
     //  Model.COAUTH
 
-    downlink.on('/Mouse#Mickey.init',function(spec,val,obj){
-        equal(obj._id,'Mickey');
-        equal(obj.x,7);
-        equal(obj.y,7);
-        equal(obj._version,'!0eonago');
+    var mickey = downlink.get('/Mouse#Mickey');
+    console.log('wait till mickey get ready');
+    mickey.onStateReady(function () {
+        console.log('mickey initialized');
+        equal(mickey._id,'Mickey');
+        equal(mickey.x,7);
+        equal(mickey.y,7);
+        equal(mickey._version,'!0eonago');
         start();
     });
     var dlrepl = downlink.objects['/Mouse#Mickey'];
@@ -212,16 +210,16 @@ asyncTest('6.c Handshake Z pattern', function () {
     };
     env.localhost = downlink;
 
-    var dlrepl = new Mouse('Mickey',oldMickeyState);
+    var downlink_replica = new Mouse('Mickey',oldMickeyState);
     uplink.on('/Mouse#Mickey');
-    var uprepl = uplink.objects[dlrepl.spec()];
+    var uplink_replica = uplink.objects[downlink_replica.spec()];
 
     // offline changes at the downlink
-    dlrepl.set({x:12});
+    downlink_replica.set({x:12});
 
     // ...we see the tail applied, downlink changes not here yet
-    equal(uprepl.x,7);
-    equal(uprepl.y,10);
+    equal(uplink_replica.x,7);
+    equal(uplink_replica.y,10);
 
     // Two uplinks! The "server" and the "cache".
     downlink.getSources = function () { return [oldstorage,uplink]; };
@@ -229,10 +227,10 @@ asyncTest('6.c Handshake Z pattern', function () {
     uplink.on(downlink);
 
     // their respective changes must merge
-    equal(dlrepl.x,12);
-    equal(dlrepl.y,10);
-    equal(uprepl.x,12);
-    equal(uprepl.y,10);
+    equal(downlink_replica.x,12);
+    equal(downlink_replica.y,10);
+    equal(uplink_replica.x,12);
+    equal(uplink_replica.y,10);
 
     start();
 
@@ -250,15 +248,16 @@ asyncTest('6.d Handshake R pattern', function () {
     uplink.on(downlink);
     env.localhost = downlink;
 
-    downlink.on('/Mouse#Mickey.init',function(spec,val,dlrepl){
+    var downlink_replica = downlink.get('/Mouse#Mickey');
+    downlink_replica.onStateReady(function () {
         // there is no state in the uplink, dl provided none as well
-        ok(!dlrepl.x);
-        ok(!dlrepl.y);
-        equal(dlrepl._version,'!0'); // auth storage has no state
+        ok(!downlink_replica.x);
+        ok(!downlink_replica.y);
+        equal(downlink_replica._version,'!0'); // auth storage has no state
 
-        dlrepl.set({x:18,y:18}); // FIXME this is not R
-        var uprepl = uplink.objects['/Mouse#Mickey'];
-        equal(uprepl.x,18);
+        downlink_replica.set({x:18,y:18}); // FIXME this is not R
+        var uplink_replica = uplink.objects['/Mouse#Mickey'];
+        equal(uplink_replica.x,18);
 
         start();
     });
@@ -282,12 +281,12 @@ asyncTest('6.e Handshake A pattern', function () {
 
     // FIXME no value push; this is R actually
     setTimeout(function check(){
-        var uprepl = uplink.objects[mickey.spec()];
-        var dlrepl = downlink.objects[mickey.spec()];
-        equal(uprepl.x,20);
-        equal(uprepl.y,20);
-        equal(dlrepl.x,20);
-        equal(dlrepl.y,20);
+        var uplink_replica = uplink.objects[mickey.spec()];
+        var downlink_replica = downlink.objects[mickey.spec()];
+        equal(uplink_replica.x,20);
+        equal(uplink_replica.y,20);
+        equal(downlink_replica.x,20);
+        equal(downlink_replica.y,20);
         start();
     }, 100);
 
@@ -353,7 +352,7 @@ asyncTest('6.g Cache vs storage',function () {
 
     //env.localhost = downlink;
     var copy = downlink.get(mickey.spec());
-    copy.on('.init', function (){
+    copy.onStateReady(function () {
         equal(copy.x,1);
         equal(copy.y,2);
         start();

@@ -31,18 +31,21 @@ asyncTest('3.a serialized on, reon', function (){
 
     //downlink.getSources = function () {return [lowerPipe]};
 
-    downlink.on('/Thermometer#room.init',function i(spec,val,obj){
-        obj.set({t:22});
+    var term = downlink.get('/Thermometer#room');
+    term.onStateReady(function onTermInited() {
+        console.log('t := 22');
+        term.set({t:22});
+
+        console.log('wait 250ms');
+        setTimeout(function x(){
+            var o = uplink.objects['/Thermometer#room'];
+            ok(o); // (1)
+            equal(o.t, 22); // (2)
+            start();
+            console.log('disconnecting');
+            downlink.disconnect();
+        }, 250);
     });
-
-    setTimeout(function x(){
-        var o = uplink.objects['/Thermometer#room'];
-        ok(o); // (1)
-        equal(o.t, 22); // (2)
-        start();
-        downlink.disconnect();
-    }, 250);
-
 });
 
 

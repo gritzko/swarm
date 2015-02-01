@@ -45,7 +45,7 @@ var Counter = Swarm.Model.extend('Counter',{
                 var host = new Host('9a', 0, storage);
                 Swarm.env.localhost = host;
                 var counter = new Counter('ten');
-                counter.on('.init', function () {
+                counter.onStateReady(function () {
                     equal(counter.i,10);
                     start();
                 });
@@ -69,7 +69,7 @@ asyncTest('9.b write&read', function(test){
         var host = new Host('9b', 0, storage);
         Swarm.env.localhost = host;
         var counter = new Counter();
-        counter.on('.init',function() {
+        counter.onStateReady(function() {
             delay(10, function() {
                 for(var i=1; i<=100; i++) {
                     counter.set({i:i});
@@ -82,7 +82,7 @@ asyncTest('9.b write&read', function(test){
                             var host2 = new Host('9b~2', 0, storage2);
                             Swarm.env.localhost = host2;
                             var counter2 = new Counter(counter.spec());
-                            counter2.on('.init', function () {
+                            counter2.onStateReady(function () {
                                 equal(counter2.i,100);
                                 start();
                             });

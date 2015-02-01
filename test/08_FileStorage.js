@@ -7,6 +7,7 @@ var FileStorage = require('../lib/FileStorage');
 
 
 Swarm.env.debug = true;
+Swarm.env.trace = false;
 Swarm.env.multihost = true;
 
 var Counter = Swarm.Model.extend('Counter',{
@@ -19,7 +20,6 @@ var ts = new Swarm.SecondPreciseClock('8').issueTimestamp();
 var tsbase = '.test.'+ts+'/';
 fs.mkdirSync(tsbase);
 
-
 asyncTest('8.a init and save', function(test){
     console.warn(QUnit.config.current.testName);
 
@@ -30,22 +30,24 @@ asyncTest('8.a init and save', function(test){
 
     var counter = new Counter('8a');
 
-    counter.on('.init', function () {
+    counter.onStateReady(function () {
+        // wait for for storage reon or following counter changes will be the part of state (_tail)
+        setTimeout(function waitForStorageReon() {
 
-        var spec = counter.set({i:1});
+            var spec = counter.set({i:1});
 
-        host.close(function() {
-            var fn = storage.logFileName();
-            var logstr = fs.readFileSync(fn,'utf8');
-            var log = JSON.parse(logstr);
-            var correctLog = {'':{}};
-            correctLog[spec] = {i:1};
+            host.close(function () {
+                var fn = storage.logFileName();
+                var logstr = fs.readFileSync(fn, 'utf8');
+                var log = JSON.parse(logstr);
+                var correctLog = {'': {}};
+                correctLog[spec] = {i: 1};
 
-            deepEqual(log,correctLog);
+                deepEqual(log, correctLog);
 
-            start();
-        });
-
+                start();
+            });
+        }, 10);
     });
 });
 
@@ -59,37 +61,39 @@ asyncTest('8.b log trimming', function(test){
 
     var counter = new Counter('8b');
 
-    counter.on('.init', function () {
+    counter.onStateReady(function () {
 
-        var specs = [];
-        for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
-            specs.push(counter.set({i:i}));
-        }
-        var newOp = counter.set({i:i});
+        // wait for for storage reon or following counter changes will be the part of state (_tail)
+        setTimeout(function waitForStorageReon() {
+            var specs = [];
+            for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
+                specs.push(counter.set({i:i}));
+            }
+            var newOp = counter.set({i:i});
 
-        // tadaam
-        storage.rotateLog();
+            // tadaam
+            storage.rotateLog();
 
-        host.close(function() {
-            var fn = storage.logFileName();
-            var logstr = fs.readFileSync(fn,'utf8');
-            var log = JSON.parse(logstr);
+            host.close(function () {
+                var fn = storage.logFileName();
+                var logstr = fs.readFileSync(fn, 'utf8');
+                var log = JSON.parse(logstr);
 
-            var ti = newOp.filter('/#');
-            var vm = newOp.filter('!.');
+                var ti = newOp.filter('/#');
+                var vm = newOp.filter('!.');
 
-            var correctLog = {};
-            correctLog[ti] = {};
-            correctLog[ti][vm] = {i:i};
+                var correctLog = {};
+                correctLog[ti] = {};
+                correctLog[ti][vm] = {i: i};
 
-            deepEqual(log[''],correctLog);
+                deepEqual(log[''], correctLog);
 
-            start();
-        });
+                start();
+            });
 
+        }, 10);
     });
 });
-
 
 asyncTest('8.c state/log load', function(test){
     console.warn(QUnit.config.current.testName);
@@ -101,27 +105,29 @@ asyncTest('8.c state/log load', function(test){
 
     var counter = new Counter('8c');
 
-    counter.on('.init', function () {
+    counter.onStateReady(function () {
 
-        var specs = [];
-        for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
-            specs.push(counter.set({i:i}));
-        }
-        counter.set({i:i});
+        // wait for for storage reon or following counter changes will be the part of state (_tail)
+        setTimeout(function waitForStorageReon() {
 
-        host.close(function() {
+            var specs = [];
+            for(var i=0; i<=storage.MAX_LOG_SIZE; i++) {
+                specs.push(counter.set({i:i}));
+            }
+            counter.set({i:i});
 
-            var storage2 = new FileStorage(tsbase+'8c');
-            var host2 = new Host('counters~8c~v2', 0, storage2);
-            var counter2 = host2.get(counter.spec());
-            counter2.on('.init', function () {
-                equal(counter2.i,i);
-                start();
+            host.close(function () {
+
+                var storage2 = new FileStorage(tsbase + '8c');
+                var host2 = new Host('counters~8c~v2', 0, storage2);
+                var counter2 = host2.get(counter.spec());
+                counter2.onStateReady(function () {
+                    equal(counter2.i, i);
+                    start();
+                });
+
             });
-
-        });
-
-
+        }, 10);
     });
 
 });

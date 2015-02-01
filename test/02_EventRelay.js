@@ -8,7 +8,7 @@ var SyncSet = require('../lib/Set');
 var Storage = require('../lib/Storage');
 
 env.multihost = true;
-env.debug = console.log;
+env.debug = true;
 
 MetricLengthField.metricRe = /(\d+)(mm|cm|m|km)?/g;  // "1m and 10cm"
 MetricLengthField.scale = { m:1, cm:0.01, mm:0.001, km:1000 };
@@ -95,7 +95,7 @@ asyncTest('2.a basic listener func', function (test) {
         equal(huey._lstn.length,2); // only the uplink remains (and the comma)
         start();
     });
-    huey.on('.init', function init2a () {
+    huey.onStateReady(function init2a () {
         huey.set({age:1});
     });
 });
@@ -264,7 +264,7 @@ test('2.l partial order', function (test) {
 asyncTest('2.m init push', function (test) {
     env.localhost= host2;
     var scrooge = new Duck({age:105});
-    scrooge.on('.init', function check() {
+    scrooge.onStateReady(function check() {
         var tail = storage2.tails[scrooge.spec()];
         // FIXME equal(scrooge._version.substr(1), scrooge._id);
         var op = tail && tail[scrooge._version+'.set'];
@@ -275,26 +275,26 @@ asyncTest('2.m init push', function (test) {
 
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
-    expect(4);
+    expect(3);
     env.localhost= host2;
     var duck = new Duck();
-    duck.on('.on', function (spec, val) {
-        console.log('triggered by on(init), on(reon) and host2.on() below');
-        // +3
+    duck.on('.on', function duckOnHandler(spec, val) {
+        // +2
+        // not triggered by itself (notification of source prevented)
+        console.log('triggered by duck.on and host2.on below');
         equal(spec.op(), 'on');
     });
-    duck.on('.init',function gotit(){
-        console.log('inevitable');
+    duck.onStateReady(function gotit(){
         // +1
+        console.log('inevitable');
         ok(duck._version);
     });
-    duck.on('.reon', function (spec, val) {
-        console.log("must NOT get triggered if the storage is sync");
+    duck.on('.reon', function duckReonHandler(spec, val) {
+        console.warn("must NOT get triggered if the storage is sync");
         equal(spec.op(), 'reon');
     });
-    host2.on('/Duck#' + duck._id + '.on', function (spec, val) {
-        console.log('this listener is triggered by itself');
-        // +1
+    host2.on('/Duck#' + duck._id + '.on', function hostDuckOnHandler(spec, val) {
+        console.log('must NOT get triggered (no notification of operation source)');
         equal(spec.op(), 'on');
     });
 });
