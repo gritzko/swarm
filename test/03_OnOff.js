@@ -4,10 +4,11 @@ var env = require('../lib/env');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var Storage = require('../lib/Storage');
-require('../lib/AsyncLoopbackConnection');
+var AsyncLoopbackConnection = require('../lib/AsyncLoopbackConnection');
 
 env.multihost = true;
-env.debug = console.log;
+env.debug = true;
+env.trace = false;
 
 var Thermometer = Model.extend('Thermometer',{
     defaults: {
@@ -25,7 +26,7 @@ asyncTest('3.a serialized on, reon', function (){
     // that's the default uplink.getSources = function () {return [storage]};
 
     expect(2);
-    uplink.accept('loopback:3a');
+    AsyncLoopbackConnection.registerUplink('loopback:a3', uplink);
     downlink.connect('loopback:a3');
 
     //downlink.getSources = function () {return [lowerPipe]};
@@ -50,9 +51,11 @@ asyncTest('3.b pipe reconnect, backoff', function (){
     var storage = new Storage(false);
     var uplink = new Host('swarm~3b', 0, storage);
     var downlink = new Host('client~3b');
+    AsyncLoopbackConnection.registerUplink('loopback:b3', uplink);
 
-    uplink.accept('loopback:3b');
-    downlink.connect('loopback:b3'); // TODO possible mismatch
+    downlink.connect('loopback:b3', {
+        reconnectDelay: 10
+    }); // TODO possible mismatch
 
     var thermometer = uplink.get(Thermometer), i=0;
 
@@ -66,7 +69,8 @@ asyncTest('3.b pipe reconnect, backoff', function (){
             ok(thermometer._lstn.length<=3); // storage and maybe the client
             clearInterval(ih);
             start();
-            uplink.disconnect();
+            console.log('final disconnection');
+            downlink.disconnect();
         }
     },100);
 
@@ -74,12 +78,10 @@ asyncTest('3.b pipe reconnect, backoff', function (){
 
     downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
         if (spec.op()==='set') {
-            var loopbackPipes = env.streams.loopback.pipes;
-            var stream = loopbackPipes['b3'];
-            stream && stream.close();
+            console.log('disconnect');
+            uplink.disconnect(downlink._id);
         }
     });
-
 });
 
 
@@ -99,7 +101,8 @@ asyncTest('3.c Disconnection events', function () {
     };
     //downlink2.getSources = function () {return [uplink]};
 
-    uplink.accept('loopback:3c');
+    AsyncLoopbackConnection.registerUplink('loopback:c3', uplink);
+
     downlink1.connect('loopback:c3');
 
     env.localhost = downlink1;
@@ -117,7 +120,7 @@ asyncTest('3.c Disconnection events', function () {
     });
 
     downlink1.on('.reon', function (spec,val,src) {
-        equal(spec.id(), 'downlink~C1');
+        equal(spec.id(), 'uplink~C');
         setTimeout(function(){ //:)
             downlink1.disconnect('uplink~C');
         }, 100);
