@@ -34,12 +34,15 @@
     "ws": "~0.4.31"
   },
   "devDependencies": {
+    "async": "^0.9.0",
     "browserify": "",
     "istanbul": "^0.3.2",
     "jshint": "",
-    "qunit": "^0.7.5",
+    "leveldown": "1.0.0",
+    "minimist": "^1.1.0",
     "nopt": "",
-    "leveldown": "1.0.0"
+    "qunit": "^0.7.5",
+    "redis": "^0.12.1"
   },
   "scripts": {
     "test": "make test"
