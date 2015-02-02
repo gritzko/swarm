@@ -1,7 +1,7 @@
 # Swarm
 _reactive data sync lib: replicated model for your web app_
 
-[![Build Status](https://img.shields.io/travis/gritzko/swarm/master.svg)](https://travis-ci.org/gritzko/swarm)
+[![Build Status](https://travis-ci.org/gritzko/swarm.svg?branch=master)](https://travis-ci.org/gritzko/swarm)
 
 [Swarm](http://swarmjs.github.io/articles/todomvc/) is an isomorphic reactive M-of-MVC library that synchronizes objects in real-time and may work offline. Swarm is perfect for implementing collaboration or continuity features in Web and mobile apps. Swarm supports complex data types by relying on its op-based CRDT base.
 
@@ -62,7 +62,7 @@ someMouse.set({x:1,y:2});
 var mickey = new Mouse('Mickey');
 
 // 4.b. ...wait for the state to arrive
-mickey.on('init', function () {
+mickey.onStateReady(function () {
     // ...so we may touch it finally.
     mickey.set({x: 3, y: 4});
 });
