@@ -13,6 +13,17 @@ test('A.a init', function(test){
     equal(arr.at(0),v1.substr(1));
     equal(arr.at(1),v2);
     equal(arr.at(2),v3);
+
+    var limits = new IdArray();
+    limits.push("!~~~~~+eternity");
+    limits.push("!~~~~~"+Spec.MAX_SEQ+"+eternity");
+    limits.push("!00000+big~bang");
+    limits.push("!0000000+big~bang");
+    equal(limits.at(0),"~~~~~+eternity");
+    equal(limits.at(1),"~~~~~"+Spec.MAX_SEQ+"+eternity");
+    equal(limits.at(2),"00000+big~bang");
+    equal(limits.at(3),"00000+big~bang"); // 00 is eaten!
+
 });
 
 test('A.b sequence compression', function(test){

@@ -19,6 +19,11 @@ testrunner.setup({
 });
 
 testrunner.run({
+    code: "lib/IdArray.js",
+    tests: "test/0A_IdArray.js"
+}, onTest);
+
+testrunner.run({
     code: "lib/Spec.js",
     tests: "test/01_Spec.js"
 }, onTest);
