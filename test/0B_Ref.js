@@ -16,6 +16,7 @@ var BiblicalPerson = Model.extend('BiblicalPerson',{
     getName: function () {return this.name;}
 });
 
+env.multihost = true;
 
 test('B.a ref init', function(test){
     var storage = new Storage(false);
