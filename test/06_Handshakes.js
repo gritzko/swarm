@@ -34,7 +34,7 @@ var Mouse = Model.extend('Mouse', {
         //name: FullName
     },
     // adapted to handle the $$move op
-    TODO_distillLog: function () {
+    /*TODO_distillLog: function () {
         // explain
         var sets = [],
             cumul = {},
@@ -61,7 +61,7 @@ var Mouse = Model.extend('Mouse', {
             heads[source] = true;
         }
         return cumul;
-    },
+    },*/
     ops: {
         move: function (spec,d) {
             // To implement your own ops you must understand implications
@@ -91,9 +91,8 @@ asyncTest('6.a Handshake K pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new Storage(true);
-    // FIXME pass storage to Host
     var uplink = new Host('uplink~K',0,storage);
-    var downlink = new Host('downlink~K',100); 
+    var downlink = new Host('downlink~K',100);
     uplink.getSources = function () {return [storage];};
     downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
@@ -208,9 +207,9 @@ asyncTest('6.c Handshake Z pattern', function () {
 
     // new ops at the uplink' storage
     storage.tails['/Mouse#Mickey'] =
-        JSON.stringify({
-            '!1ail+old.set': {y:10}
-        });
+        {
+            '!1ail+old.set': JSON.stringify({y:10})
+        };
 
     env.localhost = downlink;
 

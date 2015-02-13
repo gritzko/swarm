@@ -11,7 +11,7 @@ var Agent = Model.extend('Agent', {
     defaults: {
         name: 'Anonymous',
         num: -1,
-        gun: "IMI Desert Eagle",
+        weapon: "IMI Desert Eagle",
         dressCode: "Business"
     }
 });
@@ -30,7 +30,9 @@ var AgentVector = Vector.extend('AgentVector',{
 
 function checkOrder(vec) {
     var names = [];
-    vec.objects.forEach(function(o){ names.push(o.name); });
+    vec.objects.forEach(function(o){ 
+        names.push(o.name);
+    });
     equal(names.join(), 'Smith,Jones,Brown');
 }
 
@@ -217,10 +219,10 @@ test('7.l onObjectEvent / offObjectEvent', function () {
 
     vec.onObjectEvent(onAgentChanged);
     smith.set({dressCode: 'Casual'});
-    smith.set({gun: 'nope'});
+    smith.set({weapon: 'nope'});
 
     vec.offObjectEvent(onAgentChanged);
-    smith.set({gun: 'IMI Desert Eagle'});
+    smith.set({weapon: 'IMI Desert Eagle'});
 });
 
 asyncTest('7.m onObjectStateReady', function () {

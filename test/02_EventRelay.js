@@ -46,6 +46,7 @@ MetricLengthField.prototype.toString = function () {
     }
     return ret;
 };
+MetricLengthField.prototype.toPojo = MetricLengthField.prototype.toString;
 
 
 // Duck is our core testing class :)
@@ -63,10 +64,10 @@ var Duck = Model.extend('Duck',{
         return ''; // :|
         //return spec.op()!=='set' || !('height' in val);
         //throw new Error("can't set height, may only grow");
-    },
-    $$grow: function (spec,by,src) {
-        this.height = this.height.add(by);
     }
+    /*$$grow: function (spec,by,src) {
+        this.height = this.height.add(by);
+    }*/
 });
 
 var Nest = SyncSet.extend('Nest',{

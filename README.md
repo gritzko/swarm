@@ -1,3 +1,5 @@
+**this repo contains the 0.4 version which is in active development and may be incompatible with 0.3**
+
 # Swarm
 _reactive data sync lib: replicated model for your web app_
 
