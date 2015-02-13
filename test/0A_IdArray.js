@@ -19,10 +19,12 @@ test('A.a init', function(test){
     limits.push("!~~~~~"+Spec.MAX_SEQ+"+eternity");
     limits.push("!00000+big~bang");
     limits.push("!0000000+big~bang");
+    limits.push('!0');
     equal(limits.at(0),"~~~~~+eternity");
     equal(limits.at(1),"~~~~~"+Spec.MAX_SEQ+"+eternity");
     equal(limits.at(2),"00000+big~bang");
     equal(limits.at(3),"00000+big~bang"); // 00 is eaten!
+    equal(limits.at(4),"0");
 
 });
 
