@@ -9,27 +9,31 @@ var Collection = require('../lib/Collection');
 var UnicodePoint = Model.extend('UnicodePoint',{
     defaults: {
         name: "",
-        code: 0
+        code: 0x0
     },
     getChar: function () {return String.fromCharCode(this.code);}
 });
 
+var CodePointVector = Collection.Vector.extend("CodePointVector",{
 
-test('C.a vector', function (test) {
-    var storage = new Storage(false);
-    var host = new Host('local~Ca',0,storage);
-    env.localhost = host;
-    var CodePointVector = Collection.Vector.extend("CodePointVector",{
-        entryType: UnicodePoint._pt._type
-    });
-    var vec = new CodePointVector();
-    vec.toString = function () {
+    entryType: UnicodePoint._pt._type,
+
+    toString: function () {
         var ret = [];
         this.vector.forEach(function(v){
             ret.push(String.fromCharCode(v.code));
         });
         return ret.join('');
-    };
+    }
+
+});
+
+test('C.a vector', function (test) {
+    console.warn(QUnit.config.current.testName);
+    var storage = new Storage(false);
+    var host = new Host('local~Ca',0,storage);
+    env.localhost = host;
+    var vec = new CodePointVector();
     var R_tail = new UnicodePoint({ // Ɽ
         name: "LATIN CAPITAL LETTER R WITH TAIL",
         code: 0x2C64
@@ -41,10 +45,6 @@ test('C.a vector', function (test) {
     var A_alpha = new UnicodePoint({ // Ɑ
         name: "LATIN CAPITAL LETTER ALPHA",
         code: 0x2C6D
-    });
-    var f_lenis = new UnicodePoint({ // ꬵ
-        name: "LATIN SMALL LETTER LENIS F",
-        code: 0xAB35
     });
     var IJ = new UnicodePoint({ // Ĳ
         name: "LATIN CAPITAL LIGATURE IJ",
@@ -70,8 +70,73 @@ test('C.a vector', function (test) {
     equal(vec.toString(),"ⱤⱭ"); //10
     env.localhost = null;
 });
+
+var unicode_math = [
+    { code: 0x2227, name: "LOGICAL AND" },
+    { code: 0x2203, name: "THERE EXISTS" },
+    { code: 0x2200, name: "FOR ALL" },
+    { code: 0x221E, name: "INFINITY" },
+    { code: 0x2211, name: "N-ARY SUMMATION" },
+    { code: 0x2208, name: "ELEMENT OF" },
+    { code: 0x2209, name: "NOT AN ELEMENT OF" },
+    { code: 0x2205, name: "EMPTY SET" },
+    { code: 0x222A, name: "UNION" },
+    { code: 0x2230, name: "VOLUME INTEGRAL" },
+    { code: 0x2261, name: "IDENTICAL TO" },
+    { code: 0x2270, name: "NEITHER LESS-THAN NOR EQUAL TO" }
+];
+
+test('C.b serialization', function (test) {
+    console.warn(QUnit.config.current.testName);
+    var storage_up = new Storage(false);
+    var uplink = new Host('local~Cb1',0,storage_up);
+    var storage_dl = new Storage(false);
+    var downlink = new Host('local~Cb2',0,storage_dl);
+    downlink.getSources = function () {return [uplink];};
+    uplink.on(downlink);
+    env.localhost = uplink;
+
+    var vec = new CodePointVector();
+    for(var i=0; i<unicode_math.length; i++) {
+        vec.push(unicode_math[i]);
+    }
+    equal(vec.toString(),"∧∃∀∞∑∈∉∅∪∰≡≰");
+
+    // console: ensure init-boot
+    console.warn("dl-ing a collection");
+    var vec_dl = downlink.get(vec.spec());
+    equal(vec_dl.toString(),"∧∃∀∞∑∈∉∅∪∰≡≰");
+
+    vec.push({
+        code: 0x2276,
+        name: "LESS-THAN OR GREATER-THAN"
+    });
+    equal(vec.toString(),"∧∃∀∞∑∈∉∅∪∰≡≰≶");
+    equal(vec_dl.toString(),"∧∃∀∞∑∈∉∅∪∰≡≰≶");
+
+    env.localhost = null;
+});
+
+/*asyncTest('C.c event relay, API events', function (test) {
+    console.warn(QUnit.config.current.testName);
+    var storage_up = new Storage(true);
+    var uplink = new Host('local~Cc0',0,storage_up);
+    var downlink1 = new Host('local~Cc1',0);
+    var downlink2 = new Host('local~Cc2',0);
+    // create+fill object #1
+    var math1 = new CodePointVector(unicode_math, downlink1);
+    // open at #2
+    var math2 = new CodePointVector(math1.spec(), downlink2);
+    math2.on('.init', function(){
+        // on: objects are OK
+        equal(math2.toString(),"∧∃∀∞∑∈∉∅∪∰≡≰");
+        start();
+    });
+
+});*/
+
 /*
-test('C.b set', function (test) {
+test('C.c set', function (test) {
     var storage = new Storage(false);
     var host = new Host('local~Ca',0,storage);
     env.localhost = host;
@@ -103,7 +168,7 @@ test('C.b set', function (test) {
     env.localhost = null;
 });
 
-test('C.c map', function (test) {
+test('C.d map', function (test) {
     var storage = new Storage(false);
     var host = new Host('local~Ca',0,storage);
     env.localhost = host;
