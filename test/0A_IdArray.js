@@ -77,6 +77,7 @@ test('A.c insertion', function(test){
     equal(arr.body.length,amount+3); // 4 chars for the first entry
 });
 
+
 test('A.d removal', function(test){
     var time = new SecondPreciseClock('remove~test');
     var arr = new IdArray();
@@ -163,8 +164,8 @@ test('A.e2 remix', function(test){
         arr.insert(someid,to);
     }
     var ids2 = [];
-    for(var iter=arr._iter(); iter.match; arr._next(iter)) {
-        ids2.push(arr._decode(arr._at(iter)));
+    for(var iter=arr.iterator(); !iter.end(); iter.next()) {
+        ids2.push(iter.base64id());
     }
     ids2.sort();
     equal(ids.join(),ids2.join());
