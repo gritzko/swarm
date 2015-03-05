@@ -29,10 +29,12 @@ asyncTest('1.a timestamp sequence test', function () {
 });
 
 test('1.b basic specifier syntax', function (test) {
-    var testSpec = '/Class#ID!7Umum+gritzko.event';
+    var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
     var spec = new Spec(testSpec);
-    equal(spec.version(),'7Umum+gritzko');
-    equal(spec.token('!').ext,'gritzko');
+    equal(spec.version(),'7Umum+gritzko~ssn');
+    equal(spec.token('!').ext,'gritzko~ssn');
+    equal(spec.source(),'gritzko~ssn');
+    equal(spec.author(),'gritzko');
     var rev = spec.toString();
     equal(rev,testSpec);
     /*var time = '20130811192020';
