@@ -298,6 +298,27 @@ test('2.n local listeners for on/off', function () {
     });
 });
 
+
+test('2.o event relay', function () {
+    console.warn(QUnit.config.current.testName);
+    env.localhost= host2;
+    var hueyClone = new Duck({age:2});
+    var deweyClone = new Duck({age:1});
+    var louieClone = new Duck({age:3});
+    var clones = new Nest();
+    clones.addObject(louieClone);
+    clones.addObject(hueyClone);
+    clones.onObjectEvent(function(spec,val){
+        ok('age' in val);
+    });
+    expect(3);
+    hueyClone.set({age:3});
+    louieClone.set({age:4});
+    clones.addObject(deweyClone);
+    deweyClone.set({age:2});
+});
+
+
 /*  TODO
  * test('2.m on/off sub', function (test) {
     env.localhost= host2
