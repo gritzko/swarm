@@ -160,8 +160,20 @@ test('A.e2 remix', function(test){
         var from=Math.floor(Math.random()*amount);
         var to=Math.floor(Math.random()*(amount-1));
         var someid = arr.at(from);
+
         arr.remove(from);
         arr.insert(someid,to);
+
+        var count = 0, factlen = 0;
+        for(var j=arr.iterator(); j.match; j.next()) {
+            factlen++;
+            if (j.base64id()===someid) {
+                count++;
+            }
+        }
+        equal(count,1);
+        equal(factlen,1024);
+
     }
     var ids2 = [];
     for(var iter=arr.iterator(); !iter.end(); iter.next()) {
