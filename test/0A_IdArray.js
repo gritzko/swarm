@@ -99,7 +99,6 @@ test('A.d removal', function(test){
     equal(arr.at(9),ids[19]);
     arr.remove(1000-10-20,10);
     equal(arr.at(1000-30-1),ids[1000-10-1]);
-
 });
 
 
@@ -197,3 +196,42 @@ test('A.e2 remix', function(test){
     }
 });
 */
+
+test('A.g splice', function(test){
+    var a = new IdArray([
+        'time1+john',
+        'time2+jane',
+        'time0+jack'
+    ]);
+    var i = a.iterator(1);
+    equal(i.base64id(),'time2+jane');
+    a._splice(i,2,[a.encoder.encode('time3+joe')]);
+    equal(a.toString(),'time1+john,time3+joe');
+    equal(i.pos,2);
+    ok(i.end());
+
+    a.push('timeG+jean');
+    var j = a.iterator();
+    equal(j.base64id(),'time1+john');
+    a._splice(j,1,[
+        a.encoder.encode('time4+jay'),
+        a.encoder.encode('timeF+jacques')
+    ]);
+    equal(j.base64id(),'time3+joe');
+    equal(j.pos,2);
+
+    var j2 = j.clone();
+    equal(j2.base64id(),'time3+joe');
+    j2.next();
+    equal(j2.base64id(),'timeG+jean');
+    j2.next();
+    ok(j2.end());
+
+    a._splice(j,0);
+    equal(j.base64id(),'time3+joe');
+    equal(a.toString(),'time4+jay,timeF+jacques,time3+joe,timeG+jean');
+    j.next();
+    equal(j.base64id(),'timeG+jean');
+    j.next();
+    ok(j.end());
+});
