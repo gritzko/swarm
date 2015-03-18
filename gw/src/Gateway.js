@@ -23,14 +23,16 @@ Gateway.prototype.ON = function (type_id, id, listener) {
     lstn.push(listener);
     if (obj._version) {
         listener({
-            name: 'init',
-            value: obj.toPojo()
+            name: 'init',  // FIXME BAD FOR COLLECTIONS
+            target: obj,
+            value: obj.entryType ? obj.toPojoCollection() : obj.toPojo()
         });
     } else {
         obj.on('.init', function(){
             listener({
-                name: 'init',
-                value: obj.toPojo()
+                name: 'init',  // FIXME move to Collection/Model
+                target: obj,
+                value: obj.entryType ? obj.toPojoCollection() : obj.toPojo()
             });
         });
     }

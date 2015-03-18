@@ -2,18 +2,15 @@
 var Swarm = require("../../"); // FIXME multipackage
 var Gateway = require("../");
 var Spec = Swarm.Spec;
+var Color = require('./00_types').Color;
 
+Swarm.env.multihost = true;
 var storage = new Swarm.Storage(false);
 var host = Swarm.env.localhost= new Swarm.Host('gritzko',0,storage);
 
-var Color = Swarm.Model.extend ("Color", {
-    defaults: {
-        rgb: '',
-        name: ''
-    }
-});
 
 test('1.a basic on/off', function (test) {
+    Swarm.env.localhost = host;
     var purple = new Color({rgb:"800080"});
     var gw = new Gateway(host);
     expect(4);
@@ -23,9 +20,11 @@ test('1.a basic on/off', function (test) {
         equal(ev.value.rgb,'800080');
     });
     ok(spec==purple.spec());
+    Swarm.env.localhost = null;
 });
 
 test('1.b set', function (test) {
+    Swarm.env.localhost = host;
     var gw = new Gateway(host);
     var id = gw.ON('Color', 'rgb_blue', function(){});
     var obj = host.get(new Spec(id).filter('/#'));
@@ -33,9 +32,11 @@ test('1.b set', function (test) {
     equal(obj.rgb, '0000ff');
     equal('!'+spec.version(),obj._version);
     equal(spec.id(),obj._id);
+    Swarm.env.localhost = null;
 });
 
 test('1.c submit and listen', function (test) {
+    Swarm.env.localhost = host;
     var gw = new Gateway(host);
     expect(4);
     var spec = gw.SUBMIT("Color", {
@@ -56,4 +57,5 @@ test('1.c submit and listen', function (test) {
     gw.host.deliver(new Spec(spec.filter('/#')+"!"+gw.host.clock.issueTimestamp()+".set"), {
         name: "white"
     });
+    Swarm.env.localhost = null;
 });
