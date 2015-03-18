@@ -135,7 +135,7 @@ test('2.d pojos',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
     var dewey = new Duck({age:0});
-    var json = dewey.pojo();
+    var json = dewey.toPojo();
     var duckJSON = {
         mood: "neutral",
         age: 0,
