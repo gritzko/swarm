@@ -80,20 +80,23 @@ test('2.b insert/remove events, entry event relay', function (test) {
     Swarm.env.localhost = null;
 });
 
-/*test('2.d insert+submit', function (test) {
+test('2.d insert+submit', function (test) {
     Swarm.env.localhost = host;
     var gw = new Gateway(host);
 
     var jamaica = new Palette();
     jamaica.insert(black_pojo);
-    var jamaica_green = new Color({
+    var jamaica_green_pojo = {
         rgb: '009b3a',
         name: 'jamaica green'
-    });
+    };
+    var jamaica_green = new Color(jamaica_green_pojo);
     gw.ON('Palette', jamaica._id, function () {
-
+        // ...
     });
-    var spec = gw.SUBMIT({
+    var spec = gw.SUBMIT(
+        'Color',
+    {
         rgb: 'fed100',
     }, function (ev) {
         if (ev.name==='init') {return;}
@@ -104,14 +107,15 @@ test('2.b insert/remove events, entry event relay', function (test) {
     gold_obj.set({name: 'gold'});
 
     var gold_id = new Spec(spec).id();
+    gw.INSERT(jamaica._id, jamaica_green._id);
     gw.INSERT(jamaica._id, gold_id);
-    deepEqual(jamaica.toPojo(), [
-        black,
-        jamaica_green,
+    deepEqual(jamaica.toPojoCollection(), [
         {
             rgb: 'fed100',
             name: 'gold'
-        }
+        },
+        jamaica_green_pojo,
+        black_pojo
     ]);
     Swarm.env.localhost = null;
-});*/
+});
