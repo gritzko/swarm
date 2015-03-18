@@ -53,9 +53,28 @@ test('1.c submit and listen', function (test) {
             equal(ev.value.name, "white");
         }
     });
-    var id = new Spec(spec).id();
     gw.host.deliver(new Spec(spec.filter('/#')+"!"+gw.host.clock.issueTimestamp()+".set"), {
         name: "white"
     });
     Swarm.env.localhost = null;
+});
+
+test('1.d CSET', function (test) {
+    var purple_pojo = {
+        rgb: '800080',
+        name: 'purple'
+    };
+    Swarm.env.localhost = host;
+    var gw = new Gateway(host);
+    gw.CSET('Color', 'purple', purple_pojo);
+    var purple = host.get("/Color#purple");
+    deepEqual(purple.toPojo(), purple_pojo);
+    var maroon = new Color({
+        rgb: '800000'
+    });
+    gw.CSET('Color', maroon._id, {name: 'maroon'});
+    deepEqual(maroon.toPojo(), {
+        rgb: '800000',
+        name: 'maroon'
+    });
 });

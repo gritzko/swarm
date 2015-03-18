@@ -15,7 +15,7 @@ Gateway.prototype.ON = function (type_id, id, listener) {
     var type = Swarm.Syncable.getType(type_id);
     var obj = new type(id, null, this.host); // FIXME get
     var spec = obj.on4(this.onObjectEvent, this);
-    this.objects[obj._id] = obj;
+    this.objects[obj._id] = obj; // FIXME Host must fetch known objects by id
     var lstn = this.listeners[obj._id];
     if (!lstn) {
         lstn = this.listeners[obj._id] = [];
@@ -81,14 +81,21 @@ Gateway.prototype.SUBMIT = function (type, json, listener) {
     return obj.spec();
 };
 
-Gateway.prototype.SET = function (id_or_spec,json) {
+Gateway.prototype.SET = function (id_or_spec, pojo) {
     var id = new Spec(id_or_spec,'#').id();
     var obj = this.objects[id];
-    var spec = obj.set(json);
+    var spec = obj.set(pojo);
     return spec;
 };
 
-Gateway.prototype.INSERT = function (cid,id,pos) {
+Gateway.prototype.CSET = function (type, id, pojo) {
+    var type_f = Swarm.Syncable.getType(type);
+    var obj = new type_f(id, this.host);
+    var spec = obj.set(pojo);
+    return spec;
+};
+
+Gateway.prototype.INSERT = function (cid, id, pos) {
     var collection = this.objects[cid];
     if (id.prototype===Object) {
         id = this.SUBMIT(cid._entryType, id);
@@ -97,7 +104,7 @@ Gateway.prototype.INSERT = function (cid,id,pos) {
     return spec;
 };
 
-Gateway.prototype.REMOVE = function (cid,id) {
+Gateway.prototype.REMOVE = function (cid, id) {
     var collection = this.objects[cid];
     var spec = collection.remove(id);
     return spec;

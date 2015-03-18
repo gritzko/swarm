@@ -31,6 +31,7 @@ test('2.a basic on/off (+entries)', function (test) {
     gw.ON('Palette', mono._id, function (ev) {
         equal(ev.name, 'init');
         equal(ev.target,mono);
+        ev.value.forEach(function(pojo){delete pojo._id;});
         deepEqual(ev.value, [black_pojo, white_pojo]);
     });
     Swarm.env.localhost = null;
@@ -51,6 +52,7 @@ test('2.b insert/remove events, entry event relay', function (test) {
     gw.ON('Palette', flag._id, function (ev) {
         if (ev.name==='init') {
             console.log("God save the... What?");
+            ev.value.forEach(function(pojo){delete pojo._id;});
             deepEqual(ev.value, [{rgb: 'f00', name:''}]);
         } else if (ev.name==='entry.set') {
             console.log("Great Socialist Revolution!");
@@ -109,7 +111,9 @@ test('2.d insert+submit', function (test) {
     var gold_id = new Spec(spec).id();
     gw.INSERT(jamaica._id, jamaica_green._id);
     gw.INSERT(jamaica._id, gold_id);
-    deepEqual(jamaica.toPojoCollection(), [
+    var pojos = jamaica.toPojoCollection();
+    pojos.forEach(function(pojo){delete pojo._id;});
+    deepEqual(pojos, [
         {
             rgb: 'fed100',
             name: 'gold'
