@@ -81,7 +81,7 @@ host2.availableUplinks = function () {return [storage2]; };
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    expect(5);
+    expect(7);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host2.get('/Duck#hueyA');
@@ -96,6 +96,10 @@ asyncTest('2.a basic listener func', function (test) {
         huey.off('age',lsfn2a);
         equal(huey._lstn.length,2); // only the uplink remains (and the comma)
         start();
+    });
+    huey.on4('set', function (ev) {
+        deepEqual(ev.value, {age: 1});
+        deepEqual(ev.old_value, {age: 0});
     });
     huey.on('.init', function init2a () {
         huey.set({age:1});
