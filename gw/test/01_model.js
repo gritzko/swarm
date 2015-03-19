@@ -28,7 +28,7 @@ test('1.b set', function (test) {
     var gw = new Gateway(host);
     var id = gw.ON('Color', 'rgb_blue', function(){});
     var obj = host.get(new Spec(id).filter('/#'));
-    var spec = gw.SET(id, {rgb:'0000ff'});
+    var spec = gw.SET('Color', id, {rgb:'0000ff'});
     equal(obj.rgb, '0000ff');
     equal('!'+spec.version(),obj._version);
     equal(spec.id(),obj._id);

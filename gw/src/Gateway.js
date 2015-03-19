@@ -81,9 +81,11 @@ Gateway.prototype.SUBMIT = function (type, json, listener) {
     return obj.spec();
 };
 
-Gateway.prototype.SET = function (id_or_spec, pojo) {
-    var id = new Spec(id_or_spec,'#').id();
-    var obj = this.objects[id];
+Gateway.prototype.SET = function (type, id, pojo) {
+    //var id = new Spec(id_or_spec,'#').id();
+    //var obj = this.objects[id];
+    var type_f = Swarm.Syncable.getType(type);
+    var obj = new type_f(id, this.host);
     var spec = obj.set(pojo);
     return spec;
 };
