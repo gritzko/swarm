@@ -28,13 +28,23 @@ Gateway.prototype.ON = function (type_id, id, listener) {
             value: obj.entryType ? obj.toPojoCollection() : obj.toPojo()
         });
     } else {
-        obj.on('.init', function(){
-            listener({
-                name: 'init',  // FIXME move to Collection/Model
-                target: obj,
-                value: obj.entryType ? obj.toPojoCollection() : obj.toPojo()
+        if (obj.entryType) {
+            obj.on4('init', function() {
+                listener({
+                    name: 'init',  // FIXME move to Collection/Model
+                    target: obj,
+                    value:  obj.toPojoCollection()
+                });
             });
-        });
+        } else {
+            obj.on('.init', function(){
+                listener({
+                    name: 'init',  // FIXME move to Collection/Model
+                    target: obj,
+                    value:  obj.toPojo()
+                });
+            });
+        }
     }
     return obj.spec().toString(); //spec;//obj.toPojo();
 };
@@ -82,12 +92,10 @@ Gateway.prototype.SUBMIT = function (type, json, listener) {
 };
 
 Gateway.prototype.SET = function (type, id, pojo) {
-    //var id = new Spec(id_or_spec,'#').id();
-    //var obj = this.objects[id];
-    var type_f = Swarm.Syncable.getType(type);
-    var obj = new type_f(id, this.host);
-    var spec = obj.set(pojo);
-    return spec;
+    var spec = new Spec(type,'/').add(id,'#');
+    var obj = this.host.get(spec);
+    var rspec = obj.set(pojo);
+    return rspec;
 };
 
 Gateway.prototype.CSET = function (type, id, pojo) {

@@ -54,9 +54,9 @@ test('2.b insert/remove events, entry event relay', function (test) {
             console.log("God save the... What?");
             ev.value.forEach(function(pojo){delete pojo._id;});
             deepEqual(ev.value, [{rgb: 'f00', name:''}]);
-        } else if (ev.name==='entry.set') {
+        } else if (ev.name==='entry:set') {
             console.log("Great Socialist Revolution!");
-            equal(ev.name, 'entry.set');
+            equal(ev.name, 'entry:set');
             equal(ev.entry_id, red._id);
             deepEqual(ev.value, {name: 'red'});
         } else if (ev.name==='insert') {
