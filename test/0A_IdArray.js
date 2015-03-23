@@ -235,3 +235,31 @@ test('A.g splice', function(test){
     j.next();
     ok(j.end());
 });
+
+
+test('A.h uncompressed', function (test){
+    var un = new IdArray.Uncompressed();
+    un._push('aaaa');
+    un._push('bbbb');
+    un._push('ccaa');
+    un._push('aadd');
+    un._push('aaaa');
+    equal(un.body,'aaaabbbbccaaaaddaaaa');
+    equal(un._at(3),'aadd');
+    var i = un._find('aaaa');
+    equal(i.pos,0);
+    un._splice(i,2,'bbbbaaaa');
+    var i2 = un._find('aaaa',1);
+    equal(i2.pos, 1);
+    var i3 = un._find('aaaa',2);
+    equal(i3.pos, 4);
+
+    var base = new IdArray.Uncompressed();
+    base.push('time1+src1');
+    base.push('time2+src2');
+    base.push('time3+src3');
+    base.push('time4+src4');
+    base.splice(1,2,['time5+src5']);
+    equal(base.at(1), 'time5+src5');
+    equal(base.at(2), 'time4+src4');
+});
