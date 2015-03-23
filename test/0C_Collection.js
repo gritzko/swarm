@@ -117,6 +117,48 @@ test('C.b serialization', function (test) {
     env.localhost = null;
 });
 
+asyncTest('C.c load&init events', function (test) {
+    console.warn(QUnit.config.current.testName);
+    var storage = new Storage(true);
+    storage.states = {
+        '/UnicodePoint#u262d+src1': JSON.stringify({
+            _version:'time1+src1',
+            code: 0x262d,
+            name: 'Hammer and sickle'
+        }),
+        '/UnicodePoint#u262a+src2': JSON.stringify({
+            _version:'time2+src2',
+            code: 0x262a,
+            name: 'Star and crescent'
+        }),
+        '/UnicodePoint#u2693+src3': JSON.stringify({
+            _version:'time3+src3',
+            code: 0x2693,
+            name: 'Anchor'
+        })
+    };
+    var host = new Host('local~Ca',0,storage);
+    env.localhost = host;
+    var vec = new CodePointVector();
+    var symbols = '';
+    expect(3);
+    vec.onLoad4(function (ev) {
+        equal(symbols,'');
+        equal(ev,null);
+    });
+    vec.on4('entry:init', function (ev) {
+        symbols += ev.entry.getChar();
+    });
+    vec.push('/UnicodePoint#u262d+src1');
+    vec.push('/UnicodePoint#u262a+src2');
+    vec.push('/UnicodePoint#u2693+src3');
+    vec.onLoad4(function (ev) {
+        deepEqual(symbols.match(/./g).sort(),'☭☪⚓'.match(/./g).sort());
+        start();
+    });
+    env.localhost = null;
+});
+
 /*asyncTest('C.c event relay, API events', function (test) {
     console.warn(QUnit.config.current.testName);
     var storage_up = new Storage(true);

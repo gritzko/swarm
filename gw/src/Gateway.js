@@ -7,58 +7,34 @@ var Spec = Swarm.Spec;
 function Gateway (host) {
     this.host = host;
     this.objects = {};
-    this.listeners = {};
 }
 module.exports = Gateway;
 
 Gateway.prototype.ON = function (type_id, id, listener) {
     var type = Swarm.Syncable.getType(type_id);
     var obj = new type(id, null, this.host); // FIXME get
-    var spec = obj.on4(this.onObjectEvent, this);
     this.objects[obj._id] = obj; // FIXME Host must fetch known objects by id
-    var lstn = this.listeners[obj._id];
-    if (!lstn) {
-        lstn = this.listeners[obj._id] = [];
-    }
-    lstn.push(listener);
-    if (obj._version) {
-        listener({
-            name: 'init',  // FIXME BAD FOR COLLECTIONS
-            target: obj,
-            value: obj.entryType ? obj.toPojoCollection() : obj.toPojo()
-        });
+
+    if (obj.entryType) {
+        obj.onLoad4(function() {
+            listener({
+                name: 'load',
+                target: obj,
+                value:  obj.toPojoCollection()
+            });
+            obj.on4(listener);
+        } );
     } else {
-        if (obj.entryType) {
-            obj.on4('init', function() {
-                listener({
-                    name: 'init',  // FIXME move to Collection/Model
-                    target: obj,
-                    value:  obj.toPojoCollection()
-                });
+        obj.onInit4(function() {
+            listener({
+                name: 'init',
+                target: obj,
+                value:  obj.toPojo()
             });
-        } else {
-            obj.on('.init', function(){
-                listener({
-                    name: 'init',  // FIXME move to Collection/Model
-                    target: obj,
-                    value:  obj.toPojo()
-                });
-            });
-        }
+            obj.on4(listener);
+        } );
     }
     return obj.spec().toString(); //spec;//obj.toPojo();
-};
-
-Gateway.prototype.onObjectEvent = function onObjectEvent (ev) {
-    var id = ev.target._id;
-    var lstn = this.listeners[id];
-    if (lstn) {
-        for(var i=0; i<lstn.length; i++) {
-            lstn[i](ev);
-        }
-    } else {
-        ev.target.off4(onObjectEvent,this);
-    }
 };
 
 Gateway.prototype.GET = function (id, callback) {
@@ -74,10 +50,10 @@ Gateway.prototype.GET = function (id, callback) {
     return spec;
 };
 
-Gateway.prototype.OFF = function (id) {
+Gateway.prototype.OFF = function (id, listener) {
     var obj = this.objects[id];
     if (obj) {
-        obj.off4(this);
+        obj.off4(this, listener);
     }
 };
 

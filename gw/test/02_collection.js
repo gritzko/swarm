@@ -29,7 +29,7 @@ test('2.a basic on/off (+entries)', function (test) {
     var gw = new Gateway(host);
     expect(3);
     gw.ON('Palette', mono._id, function (ev) {
-        equal(ev.name, 'init');
+        equal(ev.name, 'load');
         equal(ev.target,mono);
         ev.value.forEach(function(pojo){delete pojo._id;});
         deepEqual(ev.value, [black_pojo, white_pojo]);
@@ -50,7 +50,7 @@ test('2.b insert/remove events, entry event relay', function (test) {
     var gw = new Gateway(host);
     expect(7);
     gw.ON('Palette', flag._id, function (ev) {
-        if (ev.name==='init') {
+        if (ev.name==='load') {
             console.log("God save the... What?");
             ev.value.forEach(function(pojo){delete pojo._id;});
             deepEqual(ev.value, [{rgb: 'f00', name:''}]);
@@ -121,5 +121,19 @@ test('2.d insert+submit', function (test) {
         jamaica_green_pojo,
         black_pojo
     ]);
+    Swarm.env.localhost = null;
+});
+
+asyncTest('2.e async storage', function (test) {
+    var storage = new Swarm.Storage(true);
+    var host = Swarm.env.localhost = new Swarm.Host('gritzko',0,storage);
+    var gw = new Gateway(host);
+
+    expect(1);
+    gw.ON('Palette', "mepty", function (ev) {
+        equal(ev.name,'load');
+        start();
+    });
+
     Swarm.env.localhost = null;
 });
