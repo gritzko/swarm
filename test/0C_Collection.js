@@ -68,6 +68,17 @@ test('C.a vector', function (test) {
     var pop3 = vec.shift();
     ok(pop3===IJ); //9
     equal(vec.toString(),"ⱤⱭ"); //10
+    vec.remove(1);
+    equal(vec.toString(),"Ɽ"); //11
+    vec.push(IJ);
+    vec.remove(R_tail);
+    equal(vec.toString(),"Ĳ"); //12
+    vec.unshift(R_tail);
+    vec.unshift(H_half);
+    vec.push(H_half);
+    equal(vec.toString(),"ⱵⱤĲⱵ"); //13
+    vec.remove(H_half);
+    equal(vec.toString(),"ⱤĲⱵ"); //14
     env.localhost = null;
 });
 
