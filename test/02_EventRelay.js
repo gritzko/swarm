@@ -81,33 +81,33 @@ host2.availableUplinks = function () {return [storage2]; };
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    expect(8);
+    expect(7);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host2.get('/Duck#hueyA');
     //ok(!huey._version); //storage is a?sync
     // listen to a field
-    huey.on('age',function lsfn2a (spec,val){  // FIXME: filtered .set listener!!!
-        equal(val.age,1);
-        equal(spec.op(),'set');
-        equal(spec.toString(),'/Duck#hueyA!'+spec.version()+'.set');
-        var version = spec.token('!');
-        equal(version.ext,'gritzko');
-        huey.off('age',lsfn2a);
-        equal(huey._lstn.length,2); // only the uplink remains (and the comma)
-        start();
+    huey.on4('set:age',function lsfn2a (ev){
+        equal(ev.value.age,1); // 1
+        equal(ev.spec.op(),'set'); // 2
+        equal(ev.spec.toString(),'/Duck#hueyA!'+ev.spec.version()+'.set'); // 3
+        var version = ev.spec.token('!');
+        equal(version.ext,'gritzko'); // 4
+        huey.off4('set:age',lsfn2a);
+        //equal(huey._lstn.length,2); // only the uplink remains (and the comma)
     });
     huey.on4('set', function (ev) {
-        deepEqual(ev.value, {age: 1});
-        deepEqual(ev.old_value, {age: 0});
+        deepEqual(ev.value, {age: 1}); // 5
+        deepEqual(ev.old_value, {age: 0}); // 6
     });
     huey.on4('set:age', function (ev) {
-        equal(ev.value.age, 1);
+        equal(ev.value.age, 1); // 7
+        start();
     });
     huey.on4('set:height', function (ev) {
         ok(false);
     });
-    huey.on('.init', function init2a () {
+    huey.onInit4(function init2a () {
         huey.set({age:1});
     });
 });
@@ -276,25 +276,27 @@ test('2.l partial order', function (test) {
 asyncTest('2.m init push', function (test) {
     env.localhost= host2;
     var scrooge = new Duck({age:105});
-    scrooge.on('.init', function check() {
+    scrooge.onInit4(function check() {
         var tail = storage2.tails[scrooge.spec()];
-        // FIXME equal(scrooge._version.substr(1), scrooge._id);
-        var op = tail && tail[scrooge._version+'.set'];
-        ok(tail) && ok(op) && equal(op.age,105);
+        equal(scrooge._version.substr(1), scrooge._id);
+        var op = tail && JSON.parse(tail[scrooge._version+'.set']);
+        ok(tail);
+        ok(op);
+        equal(op.age,105);
         start();
     });
 });
 
 test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
-    expect(5);
+    expect(4);
     env.localhost= host2;
     var duck = new Duck();
     duck.on('.on', function (spec, val) {
         console.log('triggered by itself, on(init) and host2.on below');
         equal(spec.op(), 'on');
     });
-    duck.on('.init',function gotit(){
+    duck.onInit4(function gotit(){
         console.log('inevitable');
         ok(duck._version);
     });
