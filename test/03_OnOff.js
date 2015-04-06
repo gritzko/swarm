@@ -18,64 +18,69 @@ var Thermometer = Model.extend('Thermometer',{
 
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
+    env.trace = true;
     var storage = new Storage(true);
     var uplink = new Host('swarm~3a',0,storage);
     var downlink = new Host('client~3a',5);
-    // that's the default uplink.getSources = function () {return [storage]};
 
-    uplink.accept('loopback:3a');
-    downlink.connect('loopback:a3'); // TODO possible mismatch
+    uplink.listen('loopback:3a');
+    downlink.connect('loopback:3a'); // TODO possible mismatch
 
     //downlink.getSources = function () {return [lowerPipe]};
+    var room = new Thermometer('room',downlink);
 
-    downlink.on('/Thermometer#room.state',function i(spec,val,obj){
-        obj.set({t:22});
+    room.onInit4(function i(ev){
+        ev.target.set({t:22});
     });
 
     setTimeout(function x(){
-        var o = uplink.objects['/Thermometer#room'];
+        var o = uplink.objects['room'];
         ok(o);
         o && equal(o.t,22);
         //downlink.disconnect(lowerPipe);
         start();
         downlink.disconnect();
+        env.trace = false;
     }, 250);
 
 });
 
 
-asyncTest('3.b pipe reconnect, backoff', function (){
+asyncTest('3.b reconnect', function (){
     console.warn(QUnit.config.current.testName);
     var storage = new Storage(false);
-    var uplink = new Host('swarm~3b', 0, storage);
-    var downlink = new Host('client~3b');
+    var server = new Host('swarm~3b', 0, storage);
+    var client = new Host('client~3b');
+    var disconnects = 0, round = 0;
 
-    uplink.accept('loopback:3b');
-    downlink.connect('loopback:b3'); // TODO possible mismatch
+    server.listen('loopback:3b');
+    client.connect('loopback:3b', {
+        reconnect: true,
+        reconnectDelay: 1
+    });
 
     var thermometer = uplink.get(Thermometer), i=0;
+    var thermometer_replica = client.get(thermometer.spec());
 
-    // OK. The idea is to connect/disconnect it 100 times then
-    // check that the state is OK, there are no zombie listeners
-    // no objects/hosts, log is 1 record long (distilled) etc
 
     var ih = setInterval(function(){
-        thermometer.set({t:i});
-        if (i++==30) {
-            ok(thermometer._lstn.length<=3); // storage and maybe the client
+        if (++round>30) {
             clearInterval(ih);
+            equal(thermometer_replica.t, 30);
+            equal(disconnects,10);
             start();
-            uplink.disconnect();
+        } else {
+            thermometer.set({t:round});
         }
     },100);
 
-    // FIXME sets are NOT aggregated; make a test for that
+    client.on4('disconnect', function(ev) {
+        disconnects++;
+    });
 
-    downlink.on(thermometer.spec().toString() + '.set', function i(spec,val,obj){
-        if (spec.op()==='set') {
-            var loopbackPipes = env.streams.loopback.pipes;
-            var stream = loopbackPipes['b3'];
-            stream && stream.close();
+    thermometer.on4('set', function i(ev){
+        if (ev.value.t%3===0) {
+            Host.clients.loopback.break('3b');
         }
     });
 
@@ -83,42 +88,147 @@ asyncTest('3.b pipe reconnect, backoff', function (){
 
 
 
-asyncTest('3.c Disconnection events', function () {
+asyncTest('3.c (dis)connection events', function () {
     console.warn(QUnit.config.current.testName);
+    expect(10);
 
     var storage = new Storage(true);
-    var uplink = new Host('uplink~C',0,storage);
-    var downlink1 = new Host('downlink~C1');
-    //var downlink2 = new Host('downlink~C2');
-    uplink.getSources = function () {
-        return [storage];
-    };
-    downlink1.getSources = function () {
-        return [uplink];
-    };
-    //downlink2.getSources = function () {return [uplink]};
+    var server = new Host('swarm~3C',0,storage);
+    var client = new Host('client~3C');
 
-    uplink.accept('loopback:3c');
-    downlink1.connect('loopback:c3');
+    server.listen('loopback:3c');
 
-    env.localhost = downlink1;
+    server.on4('connect', function(ev) {
+        equal(ev.peer_id, client.id);
+        equal(ev.spec.op(), 'on');
+        ok(/^[\w+~]\+client~3C$/.test(ev.spec.version()));
+    });
 
-    /*var miceA = downlink1.get('/Mice#mice');
-    var miceB = downlink2.get('/Mice#mice');
-    var mickey1 = downlink1.get('/Mouse');*/
+    server.on4('disconnect', function(ev) {
+        equal(ev.peer_id, client.id);
+        equal(ev.spec.op(), 'on');
+    });
+
+    client.on4('connect', function(ev) {
+        equal(ev.peer_id, server.id);
+        equal(ev.spec.op(), 'on');
+    });
+
+    client.on4('disconnect', function(ev) {
+        equal(ev.peer_id, server.id);
+        equal(ev.spec.op(), 'on');
+    });
+
+    client.connect('loopback:3c');
+
+    setTimeout(function(){
+        client.disconnect('swarm~3C');
+    }, 100);
+    setTimeout(function(){
+        ok(!(client.id in server.sources)); // no reconnect
+        start();
+    }, 200);
+
+});
+
+
+asyncTest('3.d secondary downlinks', function () {
+    console.warn(QUnit.config.current.testName);
 
     expect(3);
 
-    downlink1.on('.reoff', function (spec,val,src) {
-        equal(src, downlink1);
-        ok(!src.isUplinked());
+    /*
+         storage
+           |
+        server
+          |
+        client
+        /   \
+secondaryA secondaryB
+
+    */
+
+    var storage = new Storage();
+    var server = new Host('swarm~3d', 0, storage);
+    server.listen('loopback:3d');
+    var client = new Host('client~3d');
+    client.connect('loopback:3d');
+    client.listen('loopback:3dclient');
+
+    var secondaryA = new Host('client~3d~secondaryA');
+    secondaryA.connect('loopback:3dclient');
+
+    var secondaryB = new Host('client~3d~secondaryB');
+    secondaryB.connect('loopback:3dclient');
+
+    var temp = new Thermometer({
+        t: +35
+    },secondary);
+
+    temp.on4('set', function (ev) {
+        equal(ev.value.t, 34);
         start();
     });
 
-    downlink1.on('.reon', function (spec,val,src) {
-        equal(spec.id(), 'downlink~C1');
-        setTimeout(function(){ //:)
-            downlink1.disconnect('uplink~C');
-        }, 100);
+    var upper_temp = uplink.get(temp.spec());
+    upper_temp.onLoad4(function(ev){
+        equal(upper_temp.t, +35);
+
+        var peer_temp = secondaryB.get(temp.spec());
+        peer_temp.onLoad4(function(ev){
+            equal(peer_temp.t, +35);
+            peer_temp.set({t:+34});
+        });
+
     });
+
+});
+
+asyncTest('3.e shortcut links', function () {
+    console.warn(QUnit.config.current.testName);
+    expect(3);
+
+    /*
+         storage
+           |
+        server
+        X    \
+  clientB <- clientA
+
+    */
+
+    var storage = new Storage();
+    var server = new Host('swarm~3e', 0, storage);
+    server.listen('loopback:3e');
+
+    var clientA = new Host('client~3eA');
+    clientA.connect('loopback:3e');
+    clientA.listen('loopback:3eA');
+
+    var clientB = new Host('client~3eB');
+    // X clientB.connect('loopback:3e');
+    clientB.connect('loopback:3eA');
+
+    var temp = new Thermometer({
+        t: +35
+    }, server);
+
+    var tempA = clientA.get(temp.spec());
+
+    tempA.onLoad4(function(ev){
+        equals(ev.target.t, +35);
+        clientA.share(temp.spec(), 'client~3eB');
+    });
+
+    var tempB = clientB.get(temp.spec());
+    tempB.onLoad4(function(ev){
+        equals(ev.target.t, +35);
+        ev.target.set({t:+36.6});
+    });
+
+    temp.on4('set:t', function(ev){
+        equal(ev.value.t, +36.6);
+        start();
+    });
+
 });
