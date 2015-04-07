@@ -108,24 +108,24 @@ asyncTest('3.c (dis)connection events', function () {
     server.listen('loopback:3c');
 
     server.on4('connect', function(ev) {
-        equal(ev.peer_id, client.id);
+        equal(ev.id, client.id);
         equal(ev.spec.op(), 'on');
-        ok(/^[\w+~]\+client~3C$/.test(ev.spec.version()));
+        equal(ev.spec.author(), 'client');
     });
 
     server.on4('disconnect', function(ev) {
-        equal(ev.peer_id, client.id);
-        equal(ev.spec.op(), 'on');
+        equal(ev.id, client.id);
+        equal(ev.spec.op(), 'off');
     });
 
     client.on4('connect', function(ev) {
-        equal(ev.peer_id, server.id);
-        equal(ev.spec.op(), 'on');
+        equal(ev.id, server.id);
+        equal(ev.spec.op(), 'reon');
     });
 
     client.on4('disconnect', function(ev) {
-        equal(ev.peer_id, server.id);
-        equal(ev.spec.op(), 'on');
+        equal(ev.id, server.id);
+        equal(ev.spec.op(), 'reoff');
     });
 
     client.connect('loopback:3c');
