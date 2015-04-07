@@ -48,18 +48,22 @@ asyncTest('3.a serialized on, reon', function (){
 
 asyncTest('3.b reconnect', function (){
     console.warn(QUnit.config.current.testName);
+    env.logs.net = true;
+    env.logs.logix = true;
     var storage = new Storage(false);
     var server = new Host('swarm~3b', 0, storage);
     var client = new Host('client~3b');
     var disconnects = 0, round = 0;
 
-    server.listen('loopback:3b');
-    client.connect('loopback:3b', {
+    var options = {
         reconnect: true,
         reconnectDelay: 1
-    });
+    };
 
-    var thermometer = uplink.get(Thermometer), i=0;
+    server.listen('loopback:3b');
+    client.connect('loopback:3b', options);
+
+    var thermometer = server.get(Thermometer);
     var thermometer_replica = client.get(thermometer.spec());
 
 
@@ -69,18 +73,23 @@ asyncTest('3.b reconnect', function (){
             equal(thermometer_replica.t, 30);
             equal(disconnects,10);
             start();
+            env.logs.net = false;
+            env.logs.logix = false;
         } else {
             thermometer.set({t:round});
         }
     },100);
 
     client.on4('disconnect', function(ev) {
+        console.warn('disconnect', ev);
         disconnects++;
     });
 
-    thermometer.on4('set', function i(ev){
+    thermometer_replica.on4('set', function i(ev){
         if (ev.value.t%3===0) {
-            Host.clients.loopback.break('3b');
+            console.warn('terror',ev.value,ev);
+            options._delay = undefined;
+            server.disconnect('client~3b');
         }
     });
 
