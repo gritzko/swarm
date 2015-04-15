@@ -32,7 +32,7 @@ test('1.b basic specifier syntax', function (test) {
     var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
     var spec = new Spec(testSpec);
     equal(spec.version(),'7Umum+gritzko~ssn');
-    equal(spec.token('!').ext,'gritzko~ssn');
+    equal(Spec.parseToken(spec.tok('!')).ext,'gritzko~ssn');
     equal(spec.source(),'gritzko~ssn');
     equal(spec.author(),'gritzko');
     var rev = spec.toString();
@@ -65,18 +65,18 @@ test('1.d version vector', function (){
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
     var map = new Spec.Map(vec);
-    ok(map.covers('7AM0f+gritzko'));
-    ok(!map.covers('7AMTd+aleksisha'));
-    ok(!map.covers('6AMTd+maxmaxmax'));
-    ok(map.covers('0ld'));
-    ok(!map.covers('0le'));
-    equal(map.map['swarm'],'0ld');
-    ok(!('garbage' in map.map));
-    equal(map.toString({rot:'6'}),'!7AMTc+aleksisha!7AM0f+gritzko');
-    equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha');
+    ok(map.covers('7AM0f+gritzko')); //1
+    ok(!map.covers('7AMTd+aleksisha')); //2
+    ok(!map.covers('6AMTd+maxmaxmax')); //3
+    ok(map.covers('0ld')); //4
+    ok(!map.covers('0le')); //5
+    equal(map.map['swarm'],'0ld'); //6
+    ok(!('garbage' in map.map)); //7
+    equal(map.toString({rot:'6'}),'!7AMTc+aleksisha!7AM0f+gritzko'); //8
+    equal(map.toString({rot:'6',top:1}),'!7AMTc+aleksisha'); //9
 
     var map2 = new Spec.Map("!1QDpv03+anon000qO!1P7AE05+anon000Bu");
-    equal(!map2.covers(new Spec('!1P7AE05+anon000Bu.in').version()),false);
+    equal(!map2.covers(new Spec('!1P7AE05+anon000Bu.in').version()),false); //10
 });
 
 test('1.e corner cases', function () {

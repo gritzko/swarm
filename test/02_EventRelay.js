@@ -91,7 +91,7 @@ asyncTest('2.a basic listener func', function (test) {
         equal(val.age,1);
         equal(spec.op(),'set');
         equal(spec.toString(),'/Duck#hueyA!'+spec.version()+'.set');
-        var version = spec.token('!');
+        var version = spec.parseToken('!');
         equal(version.ext,'gritzko');
         huey.off('age',lsfn2a);
         equal(huey._lstn.length,2); // only the uplink remains (and the comma)
