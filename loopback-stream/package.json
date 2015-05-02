@@ -1,0 +1,29 @@
+{
+  "name": "loopback-stream",
+  "version": "0.0.1",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "victor.grishchenko@gmail.com",
+  "license": "MIT",
+  "files": [
+    "src/*.js",
+    "test/*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "src/LoopbackStream.js",
+  "devDependencies": {
+    "qunit": "^0.7.5"
+  },
+  "scripts": {
+    "test": "node_modules/.bin/qunit -c src/LoopbackStream.js -t test/01_stream.js",
+    "bro": "browserify test/01_stream.js -o dist/localstream-tests.js"
+  }
+}
