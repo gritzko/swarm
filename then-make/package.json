@@ -1,0 +1,24 @@
+{
+  "name": "then-make",
+  "version": "0.0.1",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "victor.grishchenko@gmail.com",
+  "license": "MIT",
+  "files": [
+    "*.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "then.js",
+  "scripts": {
+    "test": "node test.js"
+  }
+}
