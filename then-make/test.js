@@ -63,13 +63,17 @@ var google = new GoogleJob({
     url: 'github.com/gritzko/swarm',
 });
 google.make('find', function (err, value) {
-    console.log('GOOGLE', err, value);
+    console.log('=========================================');
+    console.log('SWARM', err, value);
+    console.log('=========================================');
 });
 
-/*var then_make = new GoogleJob({
+var then_make = new GoogleJob({
     search: 'then-make',
     url: 'http://npmjs.org/then-make'
 });
 then_make.make('find', function (err, value) {
-    console.log();
-});*/
+    console.log('=========================================');
+    console.log('then-make', err, value);
+    console.log('=========================================');
+});
