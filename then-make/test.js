@@ -44,8 +44,13 @@ var GoogleJob = then( {
 
             var key = 'parse'+i;
             var value = this[key];
-            // generator notation
+
+            // TODO generator notation
             //if (value===undefined) value = yield key;
+            
+            // hip notation (unsafe for falsy values)
+            // var value = this[key] || yield key;
+
             // Ersatz notation
             if (value===undefined) return this.yield(key);
 
@@ -70,7 +75,7 @@ google.make('find', function (err, value) {
 
 var then_make = new GoogleJob({
     search: 'then-make',
-    url: 'http://npmjs.org/then-make'
+    url: 'npmjs.org/package/then-make'
 });
 then_make.make('find', function (err, value) {
     console.log('=========================================');

@@ -5,7 +5,7 @@ your storage is async and your logics is complex, then you hit the
 worst spot. Two popular solutions are promises and async.js.
 Unfortunately, your logics has complex branching patterns and neither
 solution fits well. It is not a waterfall, unfortunately.
-At some point, you understand that good old flowcharts and make files
+At some point, you understand that good old make files and flowcharts
 express your logics much much better than either callbacks or
 promises. OK, it is the case for then-make.
 
