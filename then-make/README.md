@@ -10,7 +10,7 @@ express your logics much much better than either callbacks or
 promises. OK, it is the case for then-make.
 
 Then-make works in terms of *rules* and *targets*. You define rule
-functions that produce target objectss. Rules are *reentrant*
+functions that produce target objects. Rules are *reentrant*
 functions that return their result either by `return result` or by a
 `callback(err,result)`.  A rule may decide that it lacks a
 prerequisite target, then it *yields*: `this.yield(target); return;`
@@ -18,7 +18,7 @@ prerequisite target, then it *yields*: `this.yield(target); return;`
 invoke your rule once again.
 
 Differently from classic makefiles, then-make rules decide on their
-prereqisites at run time. So, you rule tells the system which other
+prereqisites at run time. So, your rule tells the system which other
 prerequsites it needs *this time*.
 
 For an example, see test.js.

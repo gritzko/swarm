@@ -61,8 +61,8 @@ function make_fn (target, callback) {
         } else if (value!==undefined) {
             self[target] = value;
             callback(null, value);
-        } else { // yield or wait
-            callback("what can I do?");
+        } else { // something is broken
+            callback("empty callback call by "+target);
         }
     }, m );
     create.trace && console.log('>return', target, ret);
