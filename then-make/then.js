@@ -6,7 +6,7 @@
 function create (rules) {
     var fn = function (params) {
         this.yield_queue = [];
-        this.wait_for = undefined;
+        this.yield_for = undefined;
         for(var name in rules) {
             this[name] = undefined;
         }
@@ -31,9 +31,10 @@ function create (rules) {
 }
 
 module.exports = create;
+create.trace = false;
 
 function make_fn (target, callback) {
-    console.log('making',target);
+    create.trace && console.log('>make',target);
     var self = this, m = undefined;
     // find a matching rule
     for(var i=0; i<self.rule_keys.length; i++) {
@@ -43,7 +44,6 @@ function make_fn (target, callback) {
         } else {
             m = key.exec(target);
             if (m && m[0]===target) {
-                console.log('\tmatch',m);
                 break;
             }
         }
@@ -54,8 +54,8 @@ function make_fn (target, callback) {
     var rule = self.rule_fns[i];
     // launch a rule
     var ret = rule.call ( self, target, function done (err, value) {
-        console.log('DONE', target, err, (''+value).substr(0,50));
-        // callback exit
+        create.trace && console.log('>callback', target, err, (''+value).substr(0,50));
+        // callback
         if (err) {
             callback(err);
         } else if (value!==undefined) {
@@ -65,12 +65,14 @@ function make_fn (target, callback) {
             callback("what can I do?");
         }
     }, m );
+    create.trace && console.log('>return', target, ret);
     // rules may choose to return values either by return or by callback
     if (ret===undefined) {
-        if (self.wait_for) { // needs something
+        if (self.yield_for) { // needs something
+            create.trace && console.log('>need', self.yield_for);
             // FIXME avoid concurrent call
-            var next = self.wait_for;
-            self.wait_for = undefined;
+            var next = self.yield_for;
+            self.yield_for = undefined;
             //this.yield_queue.push(target);
             self.make(next, function(err, val){
                 self.make(target, callback); // reentry
@@ -86,6 +88,7 @@ function make_fn (target, callback) {
 
 
 function yield_fn (key) {
-    this.wait_for = key;
+    create.trace && console.log('>yield',key);
+    this.yield_for = key;
 }
 

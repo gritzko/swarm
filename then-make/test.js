@@ -1,16 +1,15 @@
 var then = require('./then.js');
 var http = require('http');
 
+then.trace = true;
+
 var GoogleJob = then( {
     
     // asynchronous non-reentrant rule
     '/fetch(\\d+)/': function (target, done, match) {
         var page = match[1];
-        console.log('get');
         var url = "http://www.google.ru/search?q="+this.term+"&start="+page+'0';
-        console.log('loading',url);
         http.get( url, function (res) {
-                console.log('http');
                 if (res.statusCode!==200) {
                     done('status code: '+res.statusCode);
                 } else {
@@ -30,11 +29,13 @@ var GoogleJob = then( {
     '/parse(\\d+)/': function (target, done, match) {
         var page = match[1];
         var key = 'fetch'+page;
-        console.log(match, page, key);
         var html = this[key];
         if (html===undefined) return this.yield(key);
-        console.log('seek',this.url,'pos',html.indexOf(this.url));
-        done(null,html.indexOf(this.url));
+        if (page.charCodeAt(0)&1) {
+            done(null,html.indexOf(this.url));
+        } else {
+            return html.indexOf(this.url);
+        }
     },
 
     // synchronous reentrant rule
