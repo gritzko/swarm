@@ -68,16 +68,29 @@ var DIALOGUES = [
         "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op",
         "&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.error op is out of order"
     ]
-}/*,
+},
 
 {
     query: [
-
+        "&usr2~sn /Host#usr2+sn!time1.on "
     ],
     response: [
-
+        "&usr2~sn /Host#loc~al!time1.reon $TIME"
     ]
-}*/
+},
+
+{
+    query: [
+        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.on "
+    ],
+    response: [
+        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.bundle\n" +
+            " !time1+usr~ssn.state some state 1\n" +
+            " !time2+usr~ssn.op some op\n" +
+            " !time3+usr~ssn.op another op",
+        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.reon time3+usr~ssn"
+    ]
+}
 
 ];
 
