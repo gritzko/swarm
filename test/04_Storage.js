@@ -58,15 +58,15 @@ var DIALOGUES = [
         "&usr~ssn /Type#time1+usr~ssn!time1+usr~ssn.state some state 1",
         "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.on !time1+usr~ssn",
         "&usr~ssn /Type#time1+usr~ssn!time2+usr~ssn.op some op",
-        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op"
-        //"&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.op out-of-order op"
+        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op",
+        "&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.op out-of-order op"
     ],
     response: [
         "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.bundle",
         "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.reon !time1+usr~ssn",
         "&usr~ssn /Type#time1+usr~ssn!time2+usr~ssn.op some op",
-        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op"
-        //"&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.error out of order" TODO
+        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op",
+        "&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.error op is out of order"
     ]
 }/*,
 
