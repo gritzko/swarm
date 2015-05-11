@@ -61,10 +61,10 @@ testrunner.run({
     tests: "test/08_FileStorage.js"
 }, onTest); breaks travis, no idea why */
 
-testrunner.run({
+/*testrunner.run({
     code: "lib/LevelStorage.js",
     tests: "test/09_LevelStorage.js"
-}, onTest);
+}, onTest);*/
 
 testrunner.run({
     code: "lib/IdArray.js",
