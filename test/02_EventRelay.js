@@ -6,9 +6,12 @@ var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var SyncSet = require('../lib/Set');
 var Storage = require('../lib/Storage');
+var levelup = require('levelup');
+var memdown = require('memdown');
 
 env.multihost = true;
 env.debug = console.log;
+env.logs.op = true;
 
 MetricLengthField.metricRe = /(\d+)(mm|cm|m|km)?/g;  // "1m and 10cm"
 MetricLengthField.scale = { m:1, cm:0.01, mm:0.001, km:1000 };
@@ -74,7 +77,8 @@ var Nest = SyncSet.extend('Nest',{
     entryType: Duck
 });
 
-var storage2 = new Storage(false);
+var db2 = levelup('222', { db: memdown });
+var storage2 = new Storage(db2);
 var host2 = env.localhost= new Host('gritzko',0,storage2);
 host2.availableUplinks = function () {return [storage2]; };
 
@@ -92,7 +96,10 @@ host2.availableUplinks = function () {return [storage2]; };
 asyncTest('2.a basic listener func', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
+    env.logs.op = true;
     expect(7);
+    // global objects must be pre-created
+    host2.deliver(new Spec('/Duck#hueyA!time1.state'), '{}');
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host2.get('/Duck#hueyA');
@@ -113,6 +120,7 @@ asyncTest('2.a basic listener func', function (test) {
     });
     huey.on4('set:age', function (ev) {
         equal(ev.value.age, 1); // 7
+        env.logs.op = false;
         start();
     });
     huey.on4('set:height', function (ev) {
