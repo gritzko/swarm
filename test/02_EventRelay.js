@@ -99,7 +99,7 @@ asyncTest('2.a basic listener func', function (test) {
     env.logs.op = true;
     expect(7);
     // global objects must be pre-created
-    host2.deliver(new Spec('/Duck#hueyA!time1.state'), '{}');
+    host2.deliver(new Spec('/Duck#hueyA!0time.state'), '{}');
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host2.get('/Duck#hueyA');
@@ -146,18 +146,22 @@ test('2.b create-by-id', function (test) {
 });
 
 
-test('2.c version ids', function (test) {
+asyncTest('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
+    host2.deliver(new Spec('/Duck#louie!0time.state'), '{}');
     var louie = new Duck('louie');
-    var ts1 = host2.time();
-    louie.set({age:3});
-    var ts2 = host2.time();
-    ok(ts2>ts1);
-    var vid = louie._version.substr(1);
-    ok(ts1<vid);
-    ok(ts2>vid);
-    console.log(ts1,vid,ts2);
+    louie.onInit4(function(){
+        var ts1 = host2.time();
+        louie.set({age:3});
+        var ts2 = host2.time();
+        ok(ts2>ts1);
+        var vv = new Spec.Map(louie._version);
+        ok(vv.covers(ts1));
+        ok(!vv.covers(ts2));
+        console.log(ts1,vv,ts2);
+        start();
+    });
 });
 
 test('2.d pojos',function (test) {
@@ -176,7 +180,7 @@ test('2.d pojos',function (test) {
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    var huey = host2.get('/Duck#huey');
+    var huey = new Duck();
     expect(2);
     var handle = Duck.addReaction('age', function reactionFn(spec,val) {
         console.log('yupee im growing');
@@ -194,7 +198,7 @@ asyncTest('2.e reactions',function (test) {
 test('2.f once',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    var huey = host2.get('/Duck#huey');
+    var huey = new Duck();
     expect(1);
     huey.once4('set:age',function onceAgeCb(ev){
         equal(ev.value.age,4);
@@ -203,15 +207,21 @@ test('2.f once',function (test) {
     huey.set({age:5});
 });
 
-test('2.g custom field type',function (test) {
+asyncTest('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
+    host2.deliver(new Spec('/Duck#huey!0time.state'), '{}');
     var huey = host2.get('/Duck#huey');
-    huey.set({height:'32cm'});
-    ok(Math.abs(huey.height.meters-0.32)<0.0001);
-    var vid = host2.time();
-    host2.deliver(new Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
-    ok(Math.abs(huey.height.meters-0.35)<0.0001);
+    huey.onInit4(function(){ // FIXME onLoad
+        huey.set({height:'32cm'});
+        ok(Math.abs(huey.height.meters-0.32)<0.0001);
+        var vid = host2.time();
+        host2.deliver(new Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
+        huey.on4('set', function(){
+            ok(Math.abs(huey.height.meters-0.35)<0.0001);
+            start();
+        });
+    });
 });
 
 test('2.h state init',function (test) {
@@ -287,8 +297,8 @@ test('2.k distilled log', function (test) {
 test('2.l partial order', function (test) {
     env.localhost= host2;
     var duckling = new Duck();
-    duckling.deliver(new Spec(duckling.spec()+'!time+user2.set'),{height:'2cm'});
-    duckling.deliver(new Spec(duckling.spec()+'!time+user1.set'),{height:'1cm'});
+    duckling.deliver(new Spec(duckling.spec()+'!0time+user2.set'),{height:'2cm'});
+    duckling.deliver(new Spec(duckling.spec()+'!0time+user1.set'),{height:'1cm'});
     equal(duckling.height.toString(), '2cm');
 });
 
