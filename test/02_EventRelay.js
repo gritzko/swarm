@@ -159,7 +159,7 @@ asyncTest('2.c version ids', function (test) {
         var vv = new Spec.Map(louie._version);
         ok(vv.covers(ts1));
         ok(!vv.covers(ts2));
-        console.log(ts1,vv,ts2);
+        console.log(ts1,vv.toString(),ts2);
         start();
     });
 });
@@ -182,13 +182,13 @@ asyncTest('2.e reactions',function (test) {
     env.localhost= host2;
     var huey = new Duck();
     expect(2);
-    var handle = Duck.addReaction('age', function reactionFn(spec,val) {
+    var handle = Duck.addReaction('set', function reactionFn(spec,val) {
         console.log('yupee im growing');
-        equal(val.age,1);
+        equal(val,'{"age":1}');
         start();
     });
     //var version = host2.time(), sp = '!'+version+'.set';
-    huey.deliver(huey.newEventSpec('set'), {age:1});
+    huey.deliver(huey.newEventSpec('set'), '{"age":1}');
     Duck.removeReaction(handle);
     equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
 });
@@ -216,7 +216,7 @@ asyncTest('2.g custom field type',function (test) {
         huey.set({height:'32cm'});
         ok(Math.abs(huey.height.meters-0.32)<0.0001);
         var vid = host2.time();
-        host2.deliver(new Spec('/Duck#huey!'+vid+'.set'),{height:'35cm'});
+        host2.deliver(new Spec('/Duck#huey!'+vid+'.set'),'{"height":"35cm"}');
         huey.on4('set', function(){
             ok(Math.abs(huey.height.meters-0.35)<0.0001);
             start();
@@ -270,39 +270,15 @@ test('2.j basic Set functions (string index)',function (test) {
     strictEqual(sibs2[1],louieClone);
 });*/
 
-test('2.k distilled log', function (test) {
-    function logSize(obj) {
-        var log = obj._oplog, cnt=0;
-        for(var key in log) { // jshint ignore:line
-            cnt++;
-        }
-        return cnt;
-    }
-    console.warn(QUnit.config.current.testName);
-    env.localhost= host2;
-    var duckling1 = host2.get(Duck);
-    duckling1.set({age:1});
-    duckling1.set({age:2});
-    duckling1.distillLog();
-    equal(logSize(duckling1),1);
-    duckling1.set({height:'30cm',age:3});
-    duckling1.set({height:'40cm',age:4});
-    duckling1.distillLog();
-    equal(logSize(duckling1),1);
-    duckling1.set({age:5});
-    duckling1.distillLog();
-    equal(logSize(duckling1),2);
-});
-
 test('2.l partial order', function (test) {
     env.localhost= host2;
     var duckling = new Duck();
-    duckling.deliver(new Spec(duckling.spec()+'!0time+user2.set'),{height:'2cm'});
-    duckling.deliver(new Spec(duckling.spec()+'!0time+user1.set'),{height:'1cm'});
+    duckling.deliver(new Spec(duckling.spec()+'!1time+user2.set'),'{"height":"2cm"}');
+    duckling.deliver(new Spec(duckling.spec()+'!0time+user1.set'),'{"height":"3cm"}');
     equal(duckling.height.toString(), '2cm');
 });
 
-asyncTest('2.m init push', function (test) {
+/*asyncTest('2.m init push', function (test) {
     env.localhost= host2;
     var scrooge = new Duck({age:105});
     scrooge.onInit4(function check() {
@@ -313,7 +289,7 @@ asyncTest('2.m init push', function (test) {
         equal(state.age,105);
         start();
     });
-});
+});*/
 
 /*test('2.n local listeners for on/off', function () {
     console.warn(QUnit.config.current.testName);
