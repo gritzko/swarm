@@ -39,7 +39,7 @@ var DIALOGUES = [
         "&crazy\tAbRA cAdaBra"
     ],
     response: [
-        "&crazy .error invalid spec: AbRA",
+        "&crazy .error malformed spec: AbRA cAdaBra\\n",
         "&crazy:CLOSED"
     ]
 },
@@ -95,7 +95,7 @@ var DIALOGUES = [
 ];
 
 
-asyncTest('4. dialogues', function(test){
+asyncTest('4.D dialogues', function(test){
     console.warn(QUnit.config.current.testName);
 
     var i=0;
