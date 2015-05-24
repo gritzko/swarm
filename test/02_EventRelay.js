@@ -181,7 +181,8 @@ test('2.d pojos',function (test) {
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    var huey = new Duck();
+    host2.deliver( new Op('/Duck#huey2!0time.state', '{}', host2.id) );
+    var huey = new Duck("huey2");
     expect(2);
     var handle = Duck.addReaction('set', function reactionFn(spec,val) {
         console.log('yupee im growing');
@@ -189,9 +190,13 @@ asyncTest('2.e reactions',function (test) {
         start();
     });
     //var version = host2.time(), sp = '!'+version+'.set';
-    host2.deliver(new Op(huey.newEventSpec('set'), '{"age":1}', host2.id));
-    Duck.removeReaction(handle);
-    equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
+    //host2.deliver(new Op(huey.newEventSpec('set'), '{"age":1}', host2.id));
+
+    huey.onInit4(function(){
+        huey.set({age: 1});
+        Duck.removeReaction(handle);
+        equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
+    });
 });
 
 // TODO $$event listener/reaction (Model.on: 'key' > .set && key check)
@@ -274,8 +279,14 @@ test('2.j basic Set functions (string index)',function (test) {
 test('2.l partial order', function (test) {
     env.localhost= host2;
     var duckling = new Duck();
-    duckling.deliver(new Spec(duckling.spec()+'!1time+user2.set'),'{"height":"2cm"}');
-    duckling.deliver(new Spec(duckling.spec()+'!0time+user1.set'),'{"height":"3cm"}');
+    duckling.deliver( new Op(
+            duckling.spec()+'!1time+user2.set',
+            '{"height":"2cm"}',
+            host2.id ));
+    duckling.deliver( new Op(
+            duckling.spec()+'!0time+user1.set',
+            '{"height":"3cm"}',
+            host2.id ));
     equal(duckling.height.toString(), '2cm');
 });
 
