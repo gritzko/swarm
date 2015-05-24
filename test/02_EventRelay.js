@@ -2,6 +2,7 @@
 
 var env = require('../lib/env');
 var Spec = require('../lib/Spec');
+var Op = require('../lib/Op');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var SyncSet = require('../lib/Set');
@@ -99,7 +100,7 @@ asyncTest('2.a basic listener func', function (test) {
     env.logs.op = true;
     expect(7);
     // global objects must be pre-created
-    host2.deliver(new Spec('/Duck#hueyA!0time.state'), '{}');
+    host2.deliver(new Op('/Duck#hueyA!0time.state', '{}', host2.id));
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
     var huey = host2.get('/Duck#hueyA');
@@ -149,7 +150,7 @@ test('2.b create-by-id', function (test) {
 asyncTest('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver(new Spec('/Duck#louie!0time.state'), '{}');
+    host2.deliver(new Op('/Duck#louie!0time.state', '{}', host2.id));
     var louie = new Duck('louie');
     louie.onInit4(function(){
         var ts1 = host2.time();
@@ -188,7 +189,7 @@ asyncTest('2.e reactions',function (test) {
         start();
     });
     //var version = host2.time(), sp = '!'+version+'.set';
-    huey.deliver(huey.newEventSpec('set'), '{"age":1}');
+    host2.deliver(new Op(huey.newEventSpec('set'), '{"age":1}', host2.id));
     Duck.removeReaction(handle);
     equal(Duck.prototype._reactions['set'].length,0); // no house cleaning :)
 });
@@ -210,13 +211,13 @@ test('2.f once',function (test) {
 asyncTest('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver(new Spec('/Duck#huey!0time.state'), '{}');
+    host2.deliver(new Op('/Duck#huey!0time.state', '{}', host2.id));
     var huey = host2.get('/Duck#huey');
     huey.onInit4(function(){ // FIXME onLoad
         huey.set({height:'32cm'});
         ok(Math.abs(huey.height.meters-0.32)<0.0001);
         var vid = host2.time();
-        host2.deliver(new Spec('/Duck#huey!'+vid+'.set'),'{"height":"35cm"}');
+        host2.deliver(new Op('/Duck#huey!'+vid+'.set','{"height":"35cm"}', host2.id));
         huey.on4('set', function(){
             ok(Math.abs(huey.height.meters-0.35)<0.0001);
             start();
