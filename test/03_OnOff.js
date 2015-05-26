@@ -1,6 +1,8 @@
 "use strict";
 
 var env = require('../lib/env');
+var Spec = require('../lib/Spec');
+var Op = require('../lib/Op');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var Storage = require('../lib/Storage');
@@ -8,6 +10,7 @@ require('../lib/AsyncLoopbackConnection');
 
 env.multihost = true;
 env.debug = console.log;
+env.logs.op = true;
 
 var Thermometer = Model.extend('Thermometer',{
     defaults: {
@@ -19,29 +22,30 @@ var Thermometer = Model.extend('Thermometer',{
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
     env.trace = true;
-    var storage = new Storage(true);
+    var storage = new Storage();
     var uplink = new Host('swarm~3a',0,storage);
-    var downlink = new Host('client~3a',5);
+    var downlink = new Host('client~3a',5,new Storage());
 
     uplink.listen('loopback:3a');
     downlink.connect('loopback:3a'); // TODO possible mismatch
 
+    uplink.deliver(new Op('/Thermometer#room!0time.state', '{}', uplink.id));
     //downlink.getSources = function () {return [lowerPipe]};
-    var room = new Thermometer('room',downlink);
+    var room = new Thermometer('room',downlink), room_up;
 
     room.onInit4(function i(ev){
         ev.target.set({t:22});
+
+        room_up = new Thermometer('room', uplink);
+        setTimeout(check, 10); // pipes and storage are async
     });
 
-    setTimeout(function x(){
-        var o = uplink.objects['room'];
-        ok(o);
-        o && equal(o.t,22);
-        //downlink.disconnect(lowerPipe);
+    function check(){
+        equal(room_up.t,22);
         start();
         downlink.disconnect();
         env.trace = false;
-    }, 250);
+    }
 
 });
 
@@ -50,9 +54,9 @@ asyncTest('3.b reconnect', function (){
     console.warn(QUnit.config.current.testName);
     env.logs.net = true;
     env.logs.logix = true;
-    var storage = new Storage(false);
+    var storage = new Storage();
     var server = new Host('swarm~3b', 0, storage);
-    var client = new Host('client~3b');
+    var client = new Host('client~3b', 0, new Storage());
     var disconnects = 0, round = 0;
 
     var options = {
@@ -101,9 +105,9 @@ asyncTest('3.c (dis)connection events', function () {
     console.warn(QUnit.config.current.testName);
     expect(10);
 
-    var storage = new Storage(true);
+    var storage = new Storage();
     var server = new Host('swarm~3C',0,storage);
-    var client = new Host('client~3C');
+    var client = new Host('client~3C', 0, new Storage());
 
     server.listen('loopback:3c');
 
@@ -143,6 +147,7 @@ asyncTest('3.c (dis)connection events', function () {
 
 asyncTest('3.d secondary downlinks', function () {
     console.warn(QUnit.config.current.testName);
+    env.logs.net = true;
 
     expect(3);
 
@@ -165,21 +170,24 @@ secondaryA secondaryB
     client.listen('loopback:3dclient');
 
     var secondaryA = new Host('client~3d~secondaryA');
+    secondaryA.getUplink = function(){ return 'client~3d'; };
     secondaryA.connect('loopback:3dclient');
 
     var secondaryB = new Host('client~3d~secondaryB');
+    secondaryB.getUplink = function(){ return 'client~3d'; };
     secondaryB.connect('loopback:3dclient');
 
     var temp = new Thermometer({
         t: +35
-    },secondary);
+    },secondaryA);
 
     temp.on4('set', function (ev) {
         equal(ev.value.t, 34);
+        env.logs.net = false;
         start();
     });
 
-    var upper_temp = uplink.get(temp.spec());
+    var upper_temp = server.get(temp.spec());
     upper_temp.onLoad4(function(ev){
         equal(upper_temp.t, +35);
 
@@ -210,11 +218,11 @@ asyncTest('3.e shortcut links', function () {
     var server = new Host('swarm~3e', 0, storage);
     server.listen('loopback:3e');
 
-    var clientA = new Host('client~3eA');
+    var clientA = new Host('client~3eA', 0, new Storage());
     clientA.connect('loopback:3e');
     clientA.listen('loopback:3eA');
 
-    var clientB = new Host('client~3eB');
+    var clientB = new Host('client~3eB', 0, new Storage());
     // X clientB.connect('loopback:3e');
     clientB.connect('loopback:3eA');
 
