@@ -52,8 +52,8 @@ asyncTest('3.a serialized on, reon', function (){
 
 asyncTest('3.b reconnect', function (){
     console.warn(QUnit.config.current.testName);
-    env.logs.net = true;
-    env.logs.logix = true;
+    //env.logs.net = true;
+    //env.logs.logix = true;
     var storage = new Storage();
     var server = new Host('swarm~3b', 0, storage);
     var client = new Host('client~3b', 0, new Storage());

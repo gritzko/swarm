@@ -222,11 +222,12 @@ asyncTest('2.g custom field type',function (test) {
         huey.set({height:'32cm'});
         ok(Math.abs(huey.height.meters-0.32)<0.0001);
         var vid = host2.time();
-        host2.deliver(new Op('/Duck#huey!'+vid+'.set','{"height":"35cm"}', host2.id));
         huey.on4('set', function(){
             ok(Math.abs(huey.height.meters-0.35)<0.0001);
             start();
         });
+        huey.set({height:'35cm'});
+        //host2.deliver(new Op('/Duck#huey!'+vid+'.set','{"height":"35cm"}', 'fake_id'));
     });
 });
 
