@@ -150,7 +150,7 @@ test('2.b create-by-id', function (test) {
 asyncTest('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver(new Op('/Duck#louie!0time.state', '{}', host2.id));
+    host2.deliver(new Op('/Duck#louie!0time.state', '{}', '0'));
     var louie = new Duck('louie');
     louie.onInit4(function(){
         var ts1 = host2.time();

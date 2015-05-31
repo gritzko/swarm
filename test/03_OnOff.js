@@ -138,7 +138,7 @@ asyncTest('3.c (dis)connection events', function () {
         client.disconnect('swarm~3C');
     }, 100);
     setTimeout(function(){
-        ok(!(client.id in server.sources)); // no reconnect
+        ok(!(client.id in server.anyid2peerid)); // no reconnect
         start();
     }, 200);
 
@@ -147,7 +147,7 @@ asyncTest('3.c (dis)connection events', function () {
 
 asyncTest('3.d secondary downlinks', function () {
     console.warn(QUnit.config.current.testName);
-    env.logs.net = true;
+    //env.logs.net = true;
 
     expect(3);
 
@@ -165,15 +165,15 @@ secondaryA secondaryB
     var storage = new Storage();
     var server = new Host('swarm~3d', 0, storage);
     server.listen('loopback:3d');
-    var client = new Host('client~3d');
+    var client = new Host('client~3d', 0, new Storage());
     client.connect('loopback:3d');
     client.listen('loopback:3dclient');
 
-    var secondaryA = new Host('client~3d~secondaryA');
+    var secondaryA = new Host('client~3d~A');
     secondaryA.getUplink = function(){ return 'client~3d'; };
     secondaryA.connect('loopback:3dclient');
 
-    var secondaryB = new Host('client~3d~secondaryB');
+    var secondaryB = new Host('client~3d~B');
     secondaryB.getUplink = function(){ return 'client~3d'; };
     secondaryB.connect('loopback:3dclient');
 
@@ -188,11 +188,11 @@ secondaryA secondaryB
     });
 
     var upper_temp = server.get(temp.spec());
-    upper_temp.onLoad4(function(ev){
+    upper_temp.onInit4(function(ev){
         equal(upper_temp.t, +35);
 
         var peer_temp = secondaryB.get(temp.spec());
-        peer_temp.onLoad4(function(ev){
+        peer_temp.onInit4(function(ev){
             equal(peer_temp.t, +35);
             peer_temp.set({t:+34});
         });
