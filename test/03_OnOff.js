@@ -170,11 +170,15 @@ secondaryA secondaryB
     client.listen('loopback:3dclient');
 
     var secondaryA = new Host('client~3d~A');
-    secondaryA.getUplink = function(){ return 'client~3d'; };
+    secondaryA.getUplink = function(){ 
+        return this.src2ppid['client~3d']; 
+    };
     secondaryA.connect('loopback:3dclient');
 
     var secondaryB = new Host('client~3d~B');
-    secondaryB.getUplink = function(){ return 'client~3d'; };
+    secondaryB.getUplink = function(){ 
+        return this.src2ppid['client~3d']; 
+    };
     secondaryB.connect('loopback:3dclient');
 
     var temp = new Thermometer({

@@ -92,14 +92,14 @@ asyncTest('6.a Handshake K pattern', function () {
 
     var storage = new Storage(true);
     var uplink = new Host('uplink~K',0,storage);
-    var downlink = new Host('downlink~K',100);
+    var downlink = new Host('downlink~K',100, new Storage());
     uplink.getSources = function () {return [storage];};
     downlink.getSources = function () {return [uplink];};
     uplink.on(downlink);
 
     env.localhost = uplink;
     var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec()+'.init',function(sp,val,obj){
+    downlink.on(uprepl.spec()+'.state',function(sp,val,obj){
         //  ? register ~ on ?
         //  host ~ event hub
         //    the missing signature: x.emit('event',value),
@@ -167,7 +167,8 @@ asyncTest('6.b Handshake D pattern', function () {
     //  Model.ROTSPAN
     //  Model.COAUTH
 
-    downlink.on('/Mouse#Mickey.init',function(spec,val,obj){
+    var obj = new Mouse('Mickey');
+    obj.onInit4(function(){
         equal(obj._id,'Mickey');
         equal(obj.x,7);
         equal(obj.y,7);
@@ -251,7 +252,7 @@ asyncTest('6.d Handshake R pattern', function () {
     uplink.on(downlink);
     env.localhost = downlink;
 
-    downlink.on('/Mouse#Mickey.init',function(spec,val,dlrepl){
+    downlink.on('/Mouse#Mickey.state',function(spec,val,dlrepl){
         // there is no state in the uplink, dl provided none as well
         ok(!dlrepl.x);
         ok(!dlrepl.y);
@@ -342,19 +343,19 @@ test('6.f Handshake and sync', function () {
 
 
 asyncTest('6.g Cache vs storage',function () {
+    console.warn(QUnit.config.current.testName);
     var storage = new Storage(true);
     var cache = new Storage(false);
+    cache.id = 'some_cache'; // FIXME
     cache.isRoot = false;
     var uplink = new Host('uplink~G',0,storage);
     var downlink = new Host('downlink~G',0,cache);
     downlink.getSources = function () {return [uplink];};
 
-    env.localhost = uplink;
-    var mickey = new Mouse({x:1,y:2});
+    var mickey = new Mouse({x:1,y:2}, uplink);
 
-    //env.localhost = downlink;
     var copy = downlink.get(mickey.spec());
-    copy.on('.init', function (){
+    copy.on('.state', function (){
         equal(copy.x,1);
         equal(copy.y,2);
         start();
