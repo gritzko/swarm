@@ -100,16 +100,18 @@ asyncTest('2.a basic listener func', function (test) {
     env.logs.op = true;
     expect(7);
     // global objects must be pre-created
-    host2.deliver(new Op('/Duck#hueyA!0time.state', '{}', host2.id));
+    //host2.deliver(new Op('/Duck#hueyA!0time.state', '{}', host2.id));
+    var orig_huey = new Duck({}, host2.id);
     // construct an object with an id provided; it will try to fetch
     // previously saved state for the id (which is none)
-    var huey = host2.get('/Duck#hueyA');
+    var huey_ti = orig_huey.spec()+'';
+    var huey = host2.get(huey_ti);
     //ok(!huey._version); //storage is a?sync
     // listen to a field
     huey.on4('set:age',function lsfn2a (ev){
         equal(ev.value.age,1); // 1
         equal(ev.spec.op(),'set'); // 2
-        equal(ev.spec.toString(),'/Duck#hueyA!'+ev.spec.version()+'.set'); // 3
+        equal(ev.spec.toString(),huey_ti+'!'+ev.spec.version()+'.set'); // 3
         var version = ev.spec.token('!');
         equal(version.ext,'gritzko'); // 4
         huey.off4('set:age',lsfn2a);
@@ -150,8 +152,8 @@ test('2.b create-by-id', function (test) {
 asyncTest('2.c version ids', function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver(new Op('/Duck#louie!0time.state', '{}', '0'));
-    var louie = new Duck('louie');
+    //host2.deliver(new Op('/Duck#louie!0time.state', '{}', '0'));
+    var louie = new Duck({});
     louie.onInit4(function(){
         var ts1 = host2.time();
         louie.set({age:3});
@@ -181,8 +183,8 @@ test('2.d pojos',function (test) {
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver( new Op('/Duck#huey2!0time.state', '{}', host2.id) );
-    var huey = new Duck("huey2");
+    //host2.deliver( new Op('/Duck#huey2!0time.state', '{}', host2.id) );
+    var huey = new Duck();
     expect(2);
     var handle = Duck.addReaction('set', function reactionFn(spec,val) {
         console.log('yupee im growing');
@@ -216,8 +218,8 @@ test('2.f once',function (test) {
 asyncTest('2.g custom field type',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
-    host2.deliver(new Op('/Duck#huey!0time.state', '{}', host2.id));
-    var huey = host2.get('/Duck#huey');
+    //host2.deliver(new Op('/Duck#huey!0time.state', '{}', host2.id));
+    var huey = new Duck({}, host2);
     huey.onInit4(function(){ // FIXME onLoad
         huey.set({height:'32cm'});
         ok(Math.abs(huey.height.meters-0.32)<0.0001);

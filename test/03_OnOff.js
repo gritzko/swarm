@@ -29,14 +29,15 @@ asyncTest('3.a serialized on, reon', function (){
     uplink.listen('loopback:3a');
     downlink.connect('loopback:3a'); // TODO possible mismatch
 
-    uplink.deliver(new Op('/Thermometer#room!0time.state', '{}', uplink.id));
+    //uplink.deliver(new Op('/Thermometer#room!0time.state', '{}', uplink.id));
     //downlink.getSources = function () {return [lowerPipe]};
-    var room = new Thermometer('room',downlink), room_up;
+    var room = new Thermometer({},downlink), room_up;
 
     room.onInit4(function i(ev){
-        ev.target.set({t:22});
+        equal(this, room);
+        this.set({t:22});
 
-        room_up = new Thermometer('room', uplink);
+        room_up = new Thermometer(room.spec(), uplink);
         setTimeout(check, 10); // pipes and storage are async
     });
 
@@ -138,7 +139,7 @@ asyncTest('3.c (dis)connection events', function () {
         client.disconnect('swarm~3C');
     }, 100);
     setTimeout(function(){
-        ok(!(client.id in server.anyid2peerid)); // no reconnect
+        ok(!(client.id in server.src2ppid)); // no reconnect
         start();
     }, 200);
 
@@ -236,14 +237,14 @@ asyncTest('3.e shortcut links', function () {
 
     var tempA = clientA.get(temp.spec());
 
-    tempA.onLoad4(function(ev){
-        equals(ev.target.t, +35);
+    tempA.onInit4(function(ev){
+        equal(ev.target.t, +35);
         clientA.share(temp.spec(), 'client~3eB');
     });
 
     var tempB = clientB.get(temp.spec());
-    tempB.onLoad4(function(ev){
-        equals(ev.target.t, +35);
+    tempB.onInit4(function(ev){
+        equal(ev.target.t, +35);
         ev.target.set({t:+36.6});
     });
 
