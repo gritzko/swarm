@@ -7,7 +7,7 @@ var BatServer = require('./BatServer');
 /** 
 A simple duplex loopback stream implementation: everything
 written to a bat_stream gets emitted by bat_stream.pair.
-batStream can connect to BatServers:
+A BatStream can connect to a BatServer:
 
     var srv1 = new BatServer('srv1');
     var in_stream = new BatStream.connect('bat:srv1');
