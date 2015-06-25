@@ -1,4 +1,10 @@
 {
-    "name": "swarm-bat",
-    "version": "0.4.0"
+    "name": "test-bat",
+    "version": "0.4.0",
+    "files": [
+        "src/*.js",
+        "README.md",
+        "LICENSE"
+    ],
+    "main": "bat.js"
 }
