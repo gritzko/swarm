@@ -1,6 +1,7 @@
 "use strict";
 
 
+
 var positives = [
 
 	{
@@ -124,7 +125,7 @@ function test_lc () {
     for(var key in variables) {
     	log(variables[key]===lc.variables[key], key, lc.variables[key]);
     }
-    
+
 }
 
 function test_bat_stream () {

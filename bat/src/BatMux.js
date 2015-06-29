@@ -4,7 +4,7 @@ var BatStream = require('./BatStream');
 /** The class is mostly useful to test text-based, line-based protocols.
     It multiplexes/demultiplexes several text streams to/from a single
     tagged stream. The tag is normally [tag].
-    May also act as a quasi-server, so 
+    May also act as a quasi-server, so
         new TestMux('mux1')
         test_stream.connect('test:mux1#tag')
     will lead to every write
@@ -21,7 +21,7 @@ function BatMux (id, server_uri) {
     this.trunk.pair.on('data', this.onTrunkDataIn.bind(this));
 }
 module.exports = BatMux;
-BatMux.tag_re = /\[([\w\:\/\#\.]+)\]/;
+BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
 
 BatMux.prototype.bat_connect = function (uri, bat_stream) {
     var self = this;
@@ -48,8 +48,8 @@ BatMux.prototype.onBranchEnd = function (tag) {
         this.active_tag_w = tag;
         this.trunk.pair.write('['+tag+']');
     }
-    this.trunk.pair.write('[END]');
-    delete this.branches[tag];
+    this.trunk.pair.write('[EOF]');
+    this.branches[tag] = null;
 };
 
 BatMux.prototype.addBranch = function (tag) {
@@ -73,9 +73,11 @@ BatMux.prototype.onTrunkDataIn = function (data) {
         str = m ? str.substr(m.index + m[0].length) : null;
         if (pre) {
             var stream = this.branches[this.active_tag_r];
-            stream.write(pre);
+            if (stream!==null) {
+                stream.write(pre);
+            }
         }
-        if (tag!==this.active_tag_r) {
+        if (tag && tag!==this.active_tag_r) {
             this.active_tag_r = tag;
             if (!(tag in this.branches)) {
                 this.addBranch(tag);

@@ -12,6 +12,9 @@ env.multihost = true;
 env.debug = console.log;
 env.logs.op = true;
 
+var bat = require('swarm-bat');
+require('./bat-link');
+
 var Thermometer = Model.extend('Thermometer',{
     defaults: {
         t: -20 // Russia :)
@@ -26,8 +29,8 @@ asyncTest('3.a serialized on, reon', function (){
     var uplink = new Host('swarm~3a', 0, storage);
     var downlink = new Host('client~3a', 5, new Storage());
 
-    uplink.listen('loopback:3a');
-    downlink.connect('loopback:3a'); // TODO possible mismatch
+    uplink.listen('bat:3a');
+    downlink.connect('bat:3a'); // TODO possible mismatch
 
     //uplink.deliver(new Op('/Thermometer#room!0time.state', '{}', uplink.id));
     //downlink.getSources = function () {return [lowerPipe]};
@@ -65,8 +68,8 @@ asyncTest('3.b reconnect', function (){
         reconnectDelay: 1
     };
 
-    server.listen('loopback:3b');
-    client.connect('loopback:3b', options);
+    server.listen('bat:3b');
+    client.connect('bat:3b', options);
 
     var thermometer = server.get(Thermometer);
     var thermometer_replica = client.get(thermometer.spec());
@@ -110,7 +113,7 @@ asyncTest('3.c (dis)connection events', function () {
     var server = new Host('swarm~3C',0,storage);
     var client = new Host('client~3C', 0, new Storage());
 
-    server.listen('loopback:3c');
+    server.listen('bat:3c');
 
     server.on4('connect', function(ev) {
         equal(ev.id, client.id);
@@ -125,15 +128,15 @@ asyncTest('3.c (dis)connection events', function () {
 
     client.on4('connect', function(ev) {
         equal(ev.id, server.id);
-        equal(ev.spec.op(), 'reon');
+        equal(ev.spec.op(), 'on');
     });
 
     client.on4('disconnect', function(ev) {
         equal(ev.id, server.id);
-        equal(ev.spec.op(), 'reoff');
+        equal(ev.spec.op(), 'off');
     });
 
-    client.connect('loopback:3c');
+    client.connect('bat:3c');
 
     setTimeout(function(){
         client.disconnect('swarm~3C');
@@ -165,22 +168,22 @@ secondaryA secondaryB
 
     var storage = new Storage();
     var server = new Host('swarm~3d', 0, storage);
-    server.listen('loopback:3d');
+    server.listen('bat:3d');
     var client = new Host('client~3d', 0, new Storage());
-    client.connect('loopback:3d');
-    client.listen('loopback:3dclient');
+    client.connect('bat:3d');
+    client.listen('bat:3dclient');
 
     var secondaryA = new Host('client~3d~A');
-    secondaryA.getUplink = function(){ 
-        return this.src2ppid['client~3d']; 
+    secondaryA.getUplink = function(){
+        return this.src2ppid['client~3d'];
     };
-    secondaryA.connect('loopback:3dclient');
+    secondaryA.connect('bat:3dclient');
 
     var secondaryB = new Host('client~3d~B');
-    secondaryB.getUplink = function(){ 
-        return this.src2ppid['client~3d']; 
+    secondaryB.getUplink = function(){
+        return this.src2ppid['client~3d'];
     };
-    secondaryB.connect('loopback:3dclient');
+    secondaryB.connect('bat:3dclient');
 
     var temp = new Thermometer({
         t: +35
@@ -221,15 +224,15 @@ asyncTest('3.e shortcut links', function () {
 
     var storage = new Storage();
     var server = new Host('swarm~3e', 0, storage);
-    server.listen('loopback:3e');
+    server.listen('bat:3e');
 
     var clientA = new Host('client~3eA', 0, new Storage());
-    clientA.connect('loopback:3e');
-    clientA.listen('loopback:3eA');
+    clientA.connect('bat:3e');
+    clientA.listen('bat:3eA');
 
     var clientB = new Host('client~3eB', 0, new Storage());
     // X clientB.connect('loopback:3e');
-    clientB.connect('loopback:3eA');
+    clientB.connect('bat:3eA');
 
     var temp = new Thermometer({
         t: +35

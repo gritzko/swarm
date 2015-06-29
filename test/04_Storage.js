@@ -3,7 +3,10 @@
 var Swarm = require('../');
 var Host = Swarm.Host;
 var Storage = Swarm.Storage;
-require('../bat/TestServer');
+var TestClock = require('../lib/TestClock');
+
+var bat = require('swarm-bat');
+require('./bat-link');
 
 var levelup = require('levelup');
 var memdown = require('memdown');
@@ -12,16 +15,27 @@ var db = levelup('xxx', { db: memdown });
 Swarm.env.debug = true;
 Swarm.env.multihost = true;
 Swarm.env.logs.op = true;
+Swarm.env.logs.net = true;
 
-var storage = new Storage(db);
-var host = new Host('loc~al', 0, storage);
-host.listen('test:strings');
+var dmp = require('googlediff');
 
-var stream = host.servers['test:strings'].dual_stream;
+QUnit.diff = function (a, b) {
+    var d = new dmp();
+	var diff = d.diff_main(b, a);
+	var ret = '', tag;
+	diff.forEach(function(chunk){
+		switch (chunk[0]) {
+		case 0: tag = 'span'; break;
+		case 1: tag = 'ins'; break;
+		case -1: tag = 'del'; break;
+		}
+		ret += '<'+tag+'>' + chunk[1] + '</'+tag+'>';
+	});
+	return ret;
+}
 
-Swarm.env.logs.op = true;
 /*var host = {
-    resp: '',
+    resp: '',v
     deliver: function (spec, val) {
         this.resp+=spec+'\t'+val+'\n';
     },
@@ -32,70 +46,94 @@ Swarm.env.logs.op = true;
     }
 };*/
 
-var DIALOGUES = [
+var DIALOGUES_4A_BASIC = [
 
 {
-    query: [
-        "&crazy\tAbRA cAdaBra"
-    ],
-    response: [
-        "&crazy .error malformed spec: AbRA cAdaBra\\n",
-        "&crazy:CLOSED"
-    ]
+    query:  "[crazy]\tAbRA cAdaBra\n",
+    response:
+        "[crazy]/Host#loc~al.error\tbad msg format\n"+
+        "[EOF]"
 },
 
 {
-    query: [
-        "&usr~ssn /Host#usr+ssn!time0.on "
-    ],
-    response: [
-        "&usr~ssn /Host#loc~al!time0.reon $TIME"
-    ]
+    query: "[usr~ssn]/Host#usr~ssn!time0+usr~ssn.on\t\n",
+    response: "[usr~ssn]/Host#loc~al!00001+loc~al.on\t0\n"
 },
 
 {
-    query: [
-        "&usr~ssn /Type#time1+usr~ssn!time1+usr~ssn.state some state 1",
-        "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.on !time1+usr~ssn",
-        "&usr~ssn /Type#time1+usr~ssn!time2+usr~ssn.op some op",
-        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op",
-        "&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.op out-of-order op"
-    ],
-    response: [
-        "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.bundle",
-        "&usr~ssn /Type#time1+usr~ssn!time101+usr~ssn.reon !time1+usr~ssn",
-        "&usr~ssn /Type#time1+usr~ssn!time2+usr~ssn.op some op",
-        "&usr~ssn /Type#time1+usr~ssn!time3+usr~ssn.op another op",
-        "&usr~ssn /Type#time1+usr~ssn!time+usr~ssn.error op is out of order"
-    ]
+    query:
+    "/Type#time1+usr~ssn!time1+usr~ssn.state\tsome state 1\n"+
+    "/Type#time1+usr~ssn!time0+usr~ssn.on !time1+usr~ssn\n",
+    response:
+    "/Type#time1+usr~ssn!time0+usr~ssn.bundle\n"+
+    "/Type#time1+usr~ssn!time0+usr~ssn.on\t!time1+usr~ssn\n"
 },
 
 {
-    query: [
-        "&usr2~sn /Host#usr2+sn!time1.on "
-    ],
-    response: [
-        "&usr2~sn /Host#loc~al!time1.reon $TIME"
-    ]
+    query:
+    "/Type#time1+usr~ssn!time2+usr~ssn.op some op\n"+
+    "/Type#time1+usr~ssn!time3+usr~ssn.op another op\n"+
+    "/Type#time1+usr~ssn!time+usr~ssn.op out-of-order op\n",
+    response:
+    "/Type#time1+usr~ssn!time2+usr~ssn.op\tsome op\n"+
+    "/Type#time1+usr~ssn!time3+usr~ssn.op\tanother op\n"+
+    "/Type#time1+usr~ssn!time+usr~ssn.error\top is out of order\n"
+    // FIXME error forwarding
+},
+
+// BIG FIXME  learned comparator: report differences
+//            StreamTest: nicely log differences
+
+{
+    query:
+    "[usr2~sn]/Host#usr2~sn!time1+usr2~sn.on\t\n",
+    response:
+    "[usr2~sn]/Host#loc~al!00002+loc~al.on\t0\n"
 },
 
 {
-    query: [
-        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.on "
-    ],
-    response: [
-        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.bundle\n" +
-            " !time1+usr~ssn.state some state 1\n" +
-            " !time2+usr~ssn.op some op\n" +
-            " !time3+usr~ssn.op another op",
-        "&usr2~sn /Type#time1+usr~ssn!time4+usr2~sn.reon time3+usr~ssn"
-    ]
+    query:
+    "/Type#time1+usr~ssn!time1+usr2~sn.on\t\n",
+    response:
+    "/Type#time1+usr~ssn!time1+usr2~sn.bundle\n" +
+        "\t!time1+usr~ssn.state\tsome state 1\n" +
+        "\t!time2+usr~ssn.op\tsome op\n" +
+        "\t!time3+usr~ssn.op\tanother op\n" +
+    "/Type#time1+usr~ssn!time1+usr2~sn.on\ttime3+usr~ssn\n"
 }
 
 ];
 
+function lc2qunit (cmp) {
+    equal(cmp.ok, true);
+    !cmp.ok && console.log(cmp);
+}
 
-asyncTest('4.D dialogues', function(test){
+asyncTest('4.A basic cases', function(test){
+
+    var storage = new Storage(db);
+    var host = new Host('loc~al', 0, storage);
+    host.clock = new TestClock(host.id);
+    host.listen('bat:4A');
+
+    var mux = new bat.BatMux('mux', 'bat:4A');
+
+    var test = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, equal);
+
+    var result = test.run( function done (positive, results) {
+
+        results && results.forEach(function(cmp){
+            equal(cmp.ok, true);
+        });
+        equal(positive, true);
+        start();
+
+    } );
+
+});
+
+
+/*asyncTest('4.D dialogues', function(test){
     console.warn(QUnit.config.current.testName);
 
     var i=0;
@@ -106,7 +144,7 @@ asyncTest('4.D dialogues', function(test){
     function sendQuery () {
         console.warn(QUnit.config.current.testName + ' round #' + i);
 
-        exchange = DIALOGUES[i];
+        exchange = DIAOLGUES[i];
         stream.write(exchange.query.join('\n')+'\n');
         setTimeout(checkResponse, 10);
     }
@@ -119,7 +157,7 @@ asyncTest('4.D dialogues', function(test){
         /*var responses = response.match(Host.LineBasedSerializer.line_re);
         for(var j=0; j<responses.length; j++) {
             responses[j] = responses[j].replace(/\n$/,'');
-        }*/
+        }*
         var expected = exchange.response.join('\n')+'\n';
 
         equal(response, expected);
@@ -130,4 +168,4 @@ asyncTest('4.D dialogues', function(test){
             start();
         }
     }
-});
+});*/

@@ -2,15 +2,15 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
-/** A server TestStreams can connect to. 
+/** A server TestStreams can connect to.
     test_stream.connect('test:server1') leads to BatServer "server1"
     emitting "connection", test_stream.pair being the argument. */
-function BatServer (id) {
+function BatServer (id, options, callback) {
     EventEmitter.call(this);
     this.id = null;
     this.streams = {};
-    if (id) {
-        this.listen(id);
+    if (id && typeof(callback)==='function') {
+        this.listen(id, callback);
     }
 }
 util.inherits(BatServer, EventEmitter);
@@ -21,7 +21,7 @@ BatServer.prototype._bat_connect = function (uri, bat_stream) {
     this.emit('connection', bat_stream);
 };
 
-BatServer.prototype.listen = function (url, callback){
+BatServer.prototype.listen = function (url){
     if (this.id) {
         throw new Error('can listen one id only');
     }
@@ -39,4 +39,3 @@ BatServer.prototype.listen = function (url, callback){
 BatServer.prototype.close = function (){
     delete BatServer.servers[this.id];
 };
-

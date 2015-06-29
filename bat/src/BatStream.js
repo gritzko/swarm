@@ -4,7 +4,7 @@ var stream = require('stream');
 var BatServer = require('./BatServer');
 //var url = require('url');
 
-/** 
+/**
 A simple duplex loopback stream implementation: everything
 written to a bat_stream gets emitted by bat_stream.pair.
 A BatStream can connect to a BatServer:
@@ -50,8 +50,8 @@ BatStream.prototype.pop = function () {
     return ret;
 };
 
-BatStream.prototype.connect = function (id) {
-    var m = id.toString().match(/^(bat:)?(\w+)/);
+BatStream.prototype.connect = function (id, options, callback) {
+    var m = id.toString().match(/^(bat:)?(\w+)/), self = this;
     if (!m) {
         throw new Error('malformed id/url');
     }
@@ -61,4 +61,8 @@ BatStream.prototype.connect = function (id) {
         throw new Error('server not known');
     }
     srv._bat_connect(id, this.pair);
+    setTimeout(function(){
+        callback && callback(self);
+        self.emit('connect', self);
+    }, 1);
 };
