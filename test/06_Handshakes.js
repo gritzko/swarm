@@ -141,17 +141,6 @@ asyncTest('6.c Handshake Z pattern', function () {
 
     var storage_ul = new Storage(db_up);
     var storage_dl = new Storage(db_down);
-    var uplink = new Host('swarm~6c', 0, storage_ul);
-    var downlink = new Host('client~6c', 0, storage_dl);
-
-    storage_ul.host = {
-        deliver: function (){}
-    };
-    storage_dl.host = {
-        deliver: function (){}
-    };
-
-    var check1 = false, check2 = false;
 
     storage_ul.deliver(
         new Op('/Mouse#Mickey!0eonago.state', '{"x":7,"y":7}', '0')
@@ -166,34 +155,23 @@ asyncTest('6.c Handshake Z pattern', function () {
         new Op('/Mouse#Mickey!12recent+down.set', '{"y":9}', '0')
     );
 
+    var uplink = new Host('swarm~6c', 0, storage_ul);
+    var downlink = new Host('client~6c', 0, storage_dl);
+
+    storage_ul.host = {
+        deliver: function (){}
+    };
+    storage_dl.host = {
+        deliver: function (){}
+    };
+
+    var check1 = false;
+
     my_start();
-
-    /*function init_data_ul () {
-        storage_ul.save('/Mouse#Mickey', [
-            new Op('!0eonago.state', '{"x":7,"y":7}', '0'),
-            new Op('!11recent~up.set', '{"x":8}', '0')
-        ], function(err) {
-            check2 && start();
-            check2 = true;
-        } );
-    }
-
-    function init_data_dl () {
-        storage_dl.save('/Mouse#Mickey', [
-            new Op('!0eonago.state', '{"x":7,"y":7}', '0'),
-            new Op('!12recent~down.set', '{"y":9}', '0')
-        ], function(err) {
-            check2 && start();
-            check2 = true;
-        });
-    }*/
 
     var repl_ul, repl_dl;
 
     function my_start () {
-
-        storage_ul.host = uplink;
-        storage_dl.host = downlink;
 
         repl_ul = new Mouse('Mickey', uplink);
         repl_dl = new Mouse('Mickey', downlink);
@@ -247,31 +225,28 @@ asyncTest('6.c Handshake Z pattern', function () {
 asyncTest('6.d Handshake R pattern', function () {
     console.warn(QUnit.config.current.testName);
 
-    var storage = new Storage(false);
-    var uplink = new Host('uplink~R');
-    var downlink = new Host('downlink~R');
-    uplink.getSources = function () {return [storage];};
-    downlink.getSources = function () {return [uplink];};
-    uplink.on(downlink);
+    var uplink = new Host('swarm~6d');
+    var downlink = new Host('client~6d');
+
+    uplink.listen('bat:6d');
+    downlink.connect('bat:6d');
+
     env.localhost = downlink;
 
-    downlink.on('/Mouse#Mickey.state',function(spec,val,dlrepl){
-        // there is no state in the uplink, dl provided none as well
-        ok(!dlrepl.x);
-        ok(!dlrepl.y);
-        equal(dlrepl._version,'!0'); // auth storage has no state
+    var dlrepl = new Mouse({x:0x6d, y:0x6d}, downlink);
 
-        dlrepl.set({x:18,y:18}); // FIXME this is not R
-        var uprepl = uplink.objects['/Mouse#Mickey'];
-        equal(uprepl.x,18);
+    var uprepl = new Mouse(dlrepl.spec(), uplink);
 
+    uprepl.onInit4(function(){
+        equal(uprepl.x, 0x6d);
+        equal(uprepl.y, 0x6d);
         start();
     });
 
 });
 
 
-asyncTest('6.e Handshake A pattern', function () {
+/*asyncTest('6.e Handshake A pattern', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new Storage(false);
@@ -296,10 +271,10 @@ asyncTest('6.e Handshake A pattern', function () {
         start();
     }, 100);
 
-});
+});*/
 
 
-test('6.f Handshake and sync', function () {
+test('6.f Handshake and dl1-ul-dl2 sync', function () {
     console.warn(QUnit.config.current.testName);
 
     var storage = new Storage(false);
