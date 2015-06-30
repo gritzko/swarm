@@ -142,6 +142,9 @@ asyncTest('6.c Handshake Z pattern', function () {
     var storage_ul = new Storage(db_up);
     var storage_dl = new Storage(db_down);
 
+    var uplink = new Host('swarm~6c', 0, storage_ul);
+    var downlink = new Host('client~6c', 0, storage_dl);
+
     storage_ul.deliver(
         new Op('/Mouse#Mickey!0eonago.state', '{"x":7,"y":7}', '0')
     );
@@ -154,16 +157,6 @@ asyncTest('6.c Handshake Z pattern', function () {
     storage_dl.deliver(
         new Op('/Mouse#Mickey!12recent+down.set', '{"y":9}', '0')
     );
-
-    var uplink = new Host('swarm~6c', 0, storage_ul);
-    var downlink = new Host('client~6c', 0, storage_dl);
-
-    storage_ul.host = {
-        deliver: function (){}
-    };
-    storage_dl.host = {
-        deliver: function (){}
-    };
 
     var check1 = false;
 
@@ -274,52 +267,52 @@ asyncTest('6.d Handshake R pattern', function () {
 });*/
 
 
-test('6.f Handshake and dl1-ul-dl2 sync', function () {
+asyncTest('6.f Handshake and dl1-ul-dl2 sync', function (test) {
     console.warn(QUnit.config.current.testName);
 
-    var storage = new Storage(false);
-    var uplink = new Host('uplink~F',0,storage);
-    var downlink1 = new Host('downlink~F1');
-    var downlink2 = new Host('downlink~F2');
-    uplink.getSources = function () {return [storage];};
-    downlink1.getSources = function () {return [uplink];};
-    downlink2.getSources = function () {return [uplink];};
+    var storage = new Storage();
+    var uplink = new Host('swarm~6f',0,storage);
+    var downlink1 = new Host('client~6f1');
+    var downlink2 = new Host('client~6f2');
 
-    uplink.on(downlink1);
+    uplink.listen('bat:6f');
+    downlink1.connect('bat:6f');
+    downlink2.connect('bat:6f');
 
-    env.localhost = downlink1;
+    var mickey_dl1 = new Mouse({x:1,y:2}, downlink1);
+    var mickey_dl2 = new Mouse(mickey_dl1.spec(), downlink2);
+    var mickey_ul = new Mouse(mickey_dl1.spec(), downlink2);
 
-    var miceA = downlink1.get('/Mice#mice');
-    var miceB = downlink2.get('/Mice#mice');
+    var check = false;
+    expect(5);
 
-    var mickey1 = downlink1.get('/Mouse');
-    var mickey2 = downlink2.get('/Mouse');
-    miceA.addObject(mickey1);
+    mickey_dl2.onInit4(function(){
+        equal(mickey_dl2.x,1);
+        equal(mickey_dl2.y,2);
+        check && try_relay();
+        check = true;
+    });
 
-    uplink.on(downlink2);
+    mickey_ul.onInit4(function(){
+        equal(mickey_ul.x,1);
+        equal(mickey_ul.y,2);
+        check && try_relay();
+        check = true;
+    });
 
-    var mickey1at2 = miceB.objects[mickey1.spec()];
-    ok(miceA.objects[mickey1.spec()]);
-    ok(mickey1at2);
-    miceB.addObject(mickey2);
+    mickey_dl1.on4('set', function(){
+        equal(mickey_dl1.x, 3);
+        start();
+    });
 
-    var mickey2at1 = miceA.objects[mickey2.spec()];
-    ok(miceB.objects[mickey2.spec()]);
-    ok(mickey2at1);
+    function try_relay () { // TODO non-trivial concurrency
+        mickey_dl2.set({x:3});
+    }
 
-    mickey1.set({x:0xA});
-    mickey2.set({x:0xB});
-    equal(mickey1at2.x,0xA);
-    equal(mickey2at1.x,0xB);
-
-    mickey1at2.set({y:0xA});
-    mickey2at1.set({y:0xB});
-    equal(mickey1.y,0xA);
-    equal(mickey2.y,0xB);
 });
 
 
-
+/*
 asyncTest('6.g Cache vs storage',function () {
     console.warn(QUnit.config.current.testName);
     var storage = new Storage(true);
@@ -340,3 +333,4 @@ asyncTest('6.g Cache vs storage',function () {
     });
 
 });
+*/
