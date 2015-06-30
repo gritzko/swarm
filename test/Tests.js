@@ -5,7 +5,7 @@ require('./03_OnOff');
 require('./04_Storage');
 require('./05_LongSpec');
 require('./06_Handshakes');
-require('./07_Vector');
+//require('./07_Vector');
 require('./0A_IdArray.js');
 require('./0B_Ref.js');
 require('./0C_Collection.js');

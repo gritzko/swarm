@@ -1,8 +1,6 @@
 "use strict";
 
 var env = require('../lib/env');
-var Spec = require('../lib/Spec');
-var Op = require('../lib/Op');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var Storage = require('../lib/Storage');
@@ -12,7 +10,6 @@ env.multihost = true;
 env.debug = console.log;
 env.logs.op = true;
 
-var bat = require('swarm-bat');
 require('./bat-link');
 
 var Thermometer = Model.extend('Thermometer',{
@@ -151,7 +148,6 @@ asyncTest('3.c (dis)connection events', function () {
 
 asyncTest('3.d secondary downlinks', function () {
     console.warn(QUnit.config.current.testName);
-    //env.logs.net = true;
 
     expect(3);
 
@@ -191,7 +187,6 @@ secondaryA secondaryB
 
     temp.on4('set', function (ev) {
         equal(ev.value.t, 34);
-        env.logs.net = false;
         start();
     });
 
@@ -209,7 +204,7 @@ secondaryA secondaryB
 
 });
 
-asyncTest('3.e shortcut links', function () {
+/*asyncTest('3.e shortcut links', function () {
     console.warn(QUnit.config.current.testName);
     expect(3);
 
@@ -220,7 +215,7 @@ asyncTest('3.e shortcut links', function () {
         X    \
   clientB <- clientA
 
-    */
+    *
 
     var storage = new Storage();
     var server = new Host('swarm~3e', 0, storage);
@@ -256,4 +251,4 @@ asyncTest('3.e shortcut links', function () {
         start();
     });
 
-});
+});*/

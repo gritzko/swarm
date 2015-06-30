@@ -15,7 +15,6 @@ var db = levelup('xxx', { db: memdown });
 Swarm.env.debug = true;
 Swarm.env.multihost = true;
 Swarm.env.logs.op = true;
-Swarm.env.logs.net = true;
 
 var dmp = require('googlediff');
 
@@ -32,7 +31,7 @@ QUnit.diff = function (a, b) {
 		ret += '<'+tag+'>' + chunk[1] + '</'+tag+'>';
 	});
 	return ret;
-}
+};
 
 /*var host = {
     resp: '',v
@@ -104,10 +103,6 @@ var DIALOGUES_4A_BASIC = [
 
 ];
 
-function lc2qunit (cmp) {
-    equal(cmp.ok, true);
-    !cmp.ok && console.log(cmp);
-}
 
 asyncTest('4.A basic cases', function(test){
 
@@ -118,9 +113,9 @@ asyncTest('4.A basic cases', function(test){
 
     var mux = new bat.BatMux('mux', 'bat:4A');
 
-    var test = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, equal);
+    var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, equal);
 
-    var result = test.run( function done (positive, results) {
+    bt.run( function done (positive, results) {
 
         results && results.forEach(function(cmp){
             equal(cmp.ok, true);
