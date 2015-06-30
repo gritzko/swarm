@@ -8,7 +8,7 @@
 // ways.
 
 var env = require('../lib/env');
-var Spec = require('../lib/Spec');
+var Op = require('../lib/Op');
 var Host = require('../lib/Host');
 var Model = require('../lib/Model');
 var Storage = require('../lib/Storage');
@@ -32,36 +32,8 @@ var Mouse = Model.extend('Mouse', {
         x: 0,
         y: 0
         //name: FullName
-    },
-    // adapted to handle the $$move op
-    /*TODO_distillLog: function () {
-        // explain
-        var sets = [],
-            cumul = {},
-            heads = {},
-            spec;
-        for(spec in this._oplog) {
-            if (Spec.get(spec, '.') === '.set') {
-                sets.push(spec);
-            }
-        }
-        sets.sort();
-        for(var i=sets.length-1; i>=0; i--) {
-            spec = sets[i];
-            var val = this._oplog[spec], notempty=false;
-            for(var key in val) {
-                if (key in cumul) {
-                    delete val[key];
-                } else {
-                    notempty = cumul[key] = true;
-                }
-            }
-            var source = new Spec(key).source();
-            notempty || (heads[source] && delete this._oplog[spec]);
-            heads[source] = true;
-        }
-        return cumul;
-    },*/
+    }
+    /*,
     ops: {
         move: function (spec,d) {
             // To implement your own ops you must understand implications
@@ -82,7 +54,7 @@ var Mouse = Model.extend('Mouse', {
             this.x += d.x||0;
             this.y += d.y||0;
         }
-    }
+    }*/
 });
 
 //    S O  I T  F I T S
@@ -90,69 +62,44 @@ var Mouse = Model.extend('Mouse', {
 asyncTest('6.a Handshake K pattern', function () {
     console.warn(QUnit.config.current.testName);
 
-    var storage = new Storage(true);
-    var uplink = new Host('uplink~K',0,storage);
-    var downlink = new Host('downlink~K',100, new Storage());
-    uplink.getSources = function () {return [storage];};
-    downlink.getSources = function () {return [uplink];};
-    uplink.on(downlink);
+    var storage = new Storage();
+    var uplink = new Host('swarm~6a',0,storage);
+    var downlink = new Host('client~6a',100, new Storage());
+
+    uplink.listen('bat:6a');
+    downlink.connect('bat:6a'); // TODO possible mismatch
 
     env.localhost = uplink;
-    var uprepl = new Mouse({x:3,y:3});
-    downlink.on(uprepl.spec()+'.state',function(sp,val,obj){
-        //  ? register ~ on ?
-        //  host ~ event hub
-        //    the missing signature: x.emit('event',value),
-        //      x.on('event',fn)
-        //    host.on(Mouse,fn)
-        //    host.on(Mouse) -- is actually a value
-        //  on() with a full filter:
-        //    /Mouse#Mickey!now.on   !since.event   callback
-        //  host's completely specd filter
-        //    /Host#local!now.on   /Mouse#Mickey!since.event   callback
-        equal(obj.x,3);
-        equal(obj.y,3);
-        equal(obj._version,uprepl._version);
-        // TODO this happens later ok(storage..init[uprepl.spec()]);
+    var uprepl = new Mouse({x:3,y:3}, uplink);
+    var downrepl = new Mouse(uprepl.spec(), downlink);
+
+    downrepl.onInit4(function(ev){
+        ok(ev.target===downrepl);
+        equal(ev.target.x, 3);
+        equal(ev.target.y, 3);
+        equal(ev.target._version, uprepl._version);
         start();
     });
-    //var dlrepl = downlink.objects[uprepl.spec()];
-
-    // here we have sync retrieval, so check it now
-    //equal(dlrepl.x,3);
-    //equal(dlrepl.y,3);
-    //equal(dlrepl._version,dlrepl._id);
-    // NO WAY, storage is async
 });
 
 
 asyncTest('6.b Handshake D pattern', function () {
     console.warn(QUnit.config.current.testName);
 
-    var storage = new Storage(true);
-    var uplink = new Host('uplink~D',0,storage);
-    var downlink = new Host('downlink~D',10000);
-    uplink.getSources = function () {return [storage];};
-    downlink.getSources = function () {return [uplink];};
-    uplink.on(downlink);
-    env.localhost = downlink;
+    var storage = new Storage();
+    var uplink = new Host('swarm~6b',0,storage);
+    var downlink = new Host('client~6b',10000);
 
-    storage.states['/Mouse#Mickey'] = JSON.stringify({
-        x:7,
-        y:7,
-        _version: '!0eonago',
-        _oplog:{
-            '!0eonago.set': {x:7,y:7}
-        }
-    });
+    storage.deliver(new Op(
+        '/Mouse#Mickey!0eonago.state',
+        '{"x":7,"y":7}',
+        '0'
+    ));
+
+    uplink.listen('bat:6b');
+    downlink.connect('bat:6b');
 
     // TODO
-    //  * _version: !v1!v2
-    //    v * add Spec.Map.toString(trim) {rot:ts,top:count}
-    //      * if new op !vid was trimmed => add manually
-    //      * if new op vid < _version => check the log (.indexOf(src))
-    //    v * sort'em
-    //  * clean $$set
     //  * add testcase: Z-rotten
     //      * old replica with no changes (no rot)
     //      * old repl one-side changes
@@ -161,13 +108,14 @@ asyncTest('6.b Handshake D pattern', function () {
     //  * "can't remember whether this was applied" situation
     //      * high concurrency offline use
     //
-    //  The underlying assumption: either less than 5 entities
+    //  POSSIBLE underlying assumption: either less than 5 entities
     //  touch it or they don't do it at once (if your case is
     //  different consider RPC impl)
     //  Model.ROTSPAN
     //  Model.COAUTH
+    //  (JUST AN OPTION)
 
-    var obj = new Mouse('Mickey');
+    var obj = new Mouse('Mickey', downlink);
     obj.onInit4(function(){
         equal(obj._id,'Mickey');
         equal(obj.x,7);
@@ -175,11 +123,6 @@ asyncTest('6.b Handshake D pattern', function () {
         equal(obj._version,'!0eonago');
         start();
     });
-    var dlrepl = downlink.objects['/Mouse#Mickey'];
-
-    // storage is async, waits a tick
-    ok(!dlrepl.x);
-    ok(!dlrepl.y);
 
 });
 
@@ -187,56 +130,116 @@ asyncTest('6.b Handshake D pattern', function () {
 asyncTest('6.c Handshake Z pattern', function () {
     console.warn(QUnit.config.current.testName);
 
-    var storage = new Storage(false);
-    var oldstorage = new Storage(false);
-    var uplink = new Host('uplink~Z',0,storage);
-    var downlink = new Host('downlink~Z');
-    uplink.getSources = function () {return [storage];};
-    downlink.getSources = function () {return [oldstorage];};
+    var levelup = require('levelup');
+    var memdown = require('memdown');
+    var db_up = levelup('up', { db: memdown }, function (err, db) {
+        //init_data_ul();
+    });
+    var db_down = levelup('dn', { db: memdown }, function (err, db) {
+        //init_data_dl();
+    });
 
-    var oldMickeyState = {
-        x:7,
-        y:7,
-        _version: '!0eonago',
-        _oplog:{
-            '!0eon+ago.set' : {y:7},
-            '!000ld+old.set': {x:7}
-        }
+    var storage_ul = new Storage(db_up);
+    var storage_dl = new Storage(db_down);
+    var uplink = new Host('swarm~6c', 0, storage_ul);
+    var downlink = new Host('client~6c', 0, storage_dl);
+
+    storage_ul.host = {
+        deliver: function (){}
     };
-    storage.states['/Mouse#Mickey'] = JSON.stringify(oldMickeyState);
-    oldstorage.states['/Mouse#Mickey'] = JSON.stringify(oldMickeyState);
+    storage_dl.host = {
+        deliver: function (){}
+    };
 
-    // new ops at the uplink' storage
-    storage.tails['/Mouse#Mickey'] =
-        {
-            '!1ail+old.set': JSON.stringify({y:10})
-        };
+    var check1 = false, check2 = false;
 
-    env.localhost = downlink;
+    storage_ul.deliver(
+        new Op('/Mouse#Mickey!0eonago.state', '{"x":7,"y":7}', '0')
+    );
+    storage_ul.deliver(
+        new Op('/Mouse#Mickey!11recent+up.set', '{"x":8}', '0')
+    );
+    storage_dl.deliver(
+        new Op('/Mouse#Mickey!0eonago.state', '{"x":7,"y":7}', '0')
+    );
+    storage_dl.deliver(
+        new Op('/Mouse#Mickey!12recent+down.set', '{"y":9}', '0')
+    );
 
-    var dlrepl = new Mouse('Mickey',oldMickeyState);
-    uplink.on('/Mouse#Mickey');
-    var uprepl = uplink.objects[dlrepl.spec()];
+    my_start();
 
-    // offline changes at the downlink
-    dlrepl.set({x:12});
+    /*function init_data_ul () {
+        storage_ul.save('/Mouse#Mickey', [
+            new Op('!0eonago.state', '{"x":7,"y":7}', '0'),
+            new Op('!11recent~up.set', '{"x":8}', '0')
+        ], function(err) {
+            check2 && start();
+            check2 = true;
+        } );
+    }
 
-    // ...we see the tail applied, downlink changes not here yet
-    equal(uprepl.x,7);
-    equal(uprepl.y,10);
+    function init_data_dl () {
+        storage_dl.save('/Mouse#Mickey', [
+            new Op('!0eonago.state', '{"x":7,"y":7}', '0'),
+            new Op('!12recent~down.set', '{"y":9}', '0')
+        ], function(err) {
+            check2 && start();
+            check2 = true;
+        });
+    }*/
 
-    // Two uplinks! The "server" and the "cache".
-    downlink.getSources = function () { return [oldstorage,uplink]; };
-    console.warn('connect');
-    uplink.on(downlink);
+    var repl_ul, repl_dl;
 
-    // their respective changes must merge
-    equal(dlrepl.x,12);
-    equal(dlrepl.y,10);
-    equal(uprepl.x,12);
-    equal(uprepl.y,10);
+    function my_start () {
 
-    start();
+        storage_ul.host = uplink;
+        storage_dl.host = downlink;
+
+        repl_ul = new Mouse('Mickey', uplink);
+        repl_dl = new Mouse('Mickey', downlink);
+
+        repl_ul.onInit4(function(){
+            equal(repl_ul.x, 8);
+            equal(repl_ul.y, 7);
+            check1 && merge();
+            check1 = true;
+        });
+        repl_dl.onInit4(function(){
+            equal(repl_dl.x, 7);
+            equal(repl_dl.y, 9);
+            check1 && merge();
+            check1 = true;
+        });
+
+    }
+
+    function merge () {
+        uplink.listen('bat:6c');
+        downlink.connect('bat:6c');
+        setTimeout(mergeCheck, 100);
+    }
+
+    function mergeCheck () {
+        equal(repl_ul.x, 8);
+        equal(repl_ul.y, 9);
+        equal(repl_dl.x, 8);
+        equal(repl_dl.y, 9);
+
+        repl_dl.set({x:11});
+        uplink.clock.checkTimestamp(downlink.clock.lastTimestamp);
+        repl_ul.set({x:10});
+        repl_dl.set({y:12});
+
+        setTimeout(syncCheck, 100);
+    }
+
+    function syncCheck () {
+        equal(repl_ul.x, 10);
+        equal(repl_ul.y, 12);
+        equal(repl_dl.x, 10);
+        equal(repl_dl.y, 12);
+        start();
+    }
 
 });
 

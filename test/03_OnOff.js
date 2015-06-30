@@ -21,7 +21,6 @@ var Thermometer = Model.extend('Thermometer',{
 
 asyncTest('3.a serialized on, reon', function (){
     console.warn(QUnit.config.current.testName);
-    env.trace = true;
     var storage = new Storage();
     var uplink = new Host('swarm~3a', 0, storage);
     var downlink = new Host('client~3a', 5, new Storage());
