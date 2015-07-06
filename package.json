@@ -39,10 +39,13 @@
     "istanbul": "^0.3.2",
     "jshint": "",
     "leveldown": "1.0.0",
+    "levelup": "1.0.0",
+    "memdown": "",
     "minimist": "^1.1.0",
     "nopt": "",
     "qunit": "^0.7.5",
-    "redis": "^0.12.1"
+    "redis": "^0.12.1",
+    "googlediff": ""
   },
   "scripts": {
     "test": "make test"

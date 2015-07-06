@@ -7,6 +7,8 @@ all:: prepare testdist test dist todo
 
 prepare::
 	if [ ! -e dist/ ]; then mkdir dist; fi
+	if [ ! -e node_modules ]; then mkdir node_modules; fi
+	./links.sh
 	npm install
 
 clean:

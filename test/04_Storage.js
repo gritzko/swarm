@@ -5,7 +5,7 @@ var Host = Swarm.Host;
 var Storage = Swarm.Storage;
 var TestClock = require('../lib/TestClock');
 
-var bat = require('swarm-bat');
+var bat = require('test-bat');
 require('./bat-link');
 
 var levelup = require('levelup');
@@ -64,7 +64,7 @@ var DIALOGUES_4A_BASIC = [
     "/Type#time1+usr~ssn!time1+usr~ssn.state\tsome state 1\n"+
     "/Type#time1+usr~ssn!time0+usr~ssn.on !time1+usr~ssn\n",
     response:
-    "/Type#time1+usr~ssn!time0+usr~ssn.bundle\n"+
+    "/Type#time1+usr~ssn!time0+usr~ssn.diff\n"+
     "/Type#time1+usr~ssn!time0+usr~ssn.on\t!time1+usr~ssn\n"
 },
 
@@ -94,7 +94,7 @@ var DIALOGUES_4A_BASIC = [
     query:
     "/Type#time1+usr~ssn!time1+usr2~sn.on\t\n",
     response:
-    "/Type#time1+usr~ssn!time1+usr2~sn.bundle\n" +
+    "/Type#time1+usr~ssn!time1+usr2~sn.diff\n" +
         "\t!time1+usr~ssn.state\tsome state 1\n" +
         "\t!time2+usr~ssn.op\tsome op\n" +
         "\t!time3+usr~ssn.op\tanother op\n" +

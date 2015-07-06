@@ -37,7 +37,7 @@ asyncTest('3.a serialized on, reon', function (){
         this.set({t:22});
 
         room_up = new Thermometer(room.spec(), uplink);
-        setTimeout(check, 10); // pipes and storage are async
+        setTimeout(check, 100); // pipes and storage are async
     });
 
     function check(){

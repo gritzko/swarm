@@ -54,5 +54,5 @@ StreamTest.prototype.run = function ( callback ) {
             self.results.forEach(function(r){ ok &= r.ok; });
             callback(ok, self.results);
         }
-    });
+    }, 100);
 };
