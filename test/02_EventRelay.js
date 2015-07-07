@@ -183,7 +183,11 @@ test('2.d pojos',function (test) {
 asyncTest('2.e reactions',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
+
+    // FIXME plant it!!!!!!!!!!!
     //host2.deliver( new Op('/Duck#huey2!0time.state', '{}', host2.id) );
+
+
     var huey = new Duck();
     expect(2);
     var handle = Duck.addReaction('set', function reactionFn(spec,val) {
@@ -203,13 +207,14 @@ asyncTest('2.e reactions',function (test) {
 
 // TODO $$event listener/reaction (Model.on: 'key' > .set && key check)
 
-test('2.f once',function (test) {
+asyncTest('2.f once',function (test) {
     console.warn(QUnit.config.current.testName);
     env.localhost= host2;
     var huey = new Duck();
     expect(1);
     huey.once4('set:age',function onceAgeCb(ev){
         equal(ev.value.age,4);
+        start();
     });
     huey.set({age:4});
     huey.set({age:5});
