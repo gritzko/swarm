@@ -12,11 +12,12 @@ env.logs.op = true;
 
 require('./bat-link');
 
-var Thermometer = Model.extend('Thermometer',{
+/*var Thermometer = Model.extend('Thermometer',{
     defaults: {
         t: -20 // Russia :)
     }
-});
+});*/
+var Thermometer = Model;
 
 
 asyncTest('3.a serialized on, reon', function (){
@@ -30,13 +31,13 @@ asyncTest('3.a serialized on, reon', function (){
 
     //uplink.deliver(new Op('/Thermometer#room!0time.state', '{}', uplink.id));
     //downlink.getSources = function () {return [lowerPipe]};
-    var room = new Thermometer({},downlink), room_up;
+    var room = new Model({},downlink), room_up;
 
-    room.onInit4(function i(ev){
+    room.onInit(function i(ev){
         equal(this, room);
         this.set({t:22});
 
-        room_up = new Thermometer(room.spec(), uplink);
+        room_up = new Model(room._id, uplink);
         setTimeout(check, 100); // pipes and storage are async
     });
 
@@ -84,12 +85,12 @@ asyncTest('3.b reconnect', function (){
         }
     },100);
 
-    client.on4('disconnect', function(ev) {
+    client.on('disconnect', function(ev) {
         console.warn('disconnect', ev);
         disconnects++;
     });
 
-    thermometer_replica.on4('set', function i(ev){
+    thermometer_replica.on('set', function i(ev){
         if (ev.value.t%3===0) {
             console.warn('terror',ev.value,ev);
             options._delay = undefined;
@@ -111,23 +112,23 @@ asyncTest('3.c (dis)connection events', function () {
 
     server.listen('bat:3c');
 
-    server.on4('connect', function(ev) {
+    server.on('connect', function(ev) {
         equal(ev.id, client.id);
         equal(ev.spec.op(), 'on');
         equal(ev.spec.author(), 'client');
     });
 
-    server.on4('disconnect', function(ev) {
+    server.on('disconnect', function(ev) {
         equal(ev.id, client.id);
         equal(ev.spec.op(), 'off');
     });
 
-    client.on4('connect', function(ev) {
+    client.on('connect', function(ev) {
         equal(ev.id, server.id);
         equal(ev.spec.op(), 'on');
     });
 
-    client.on4('disconnect', function(ev) {
+    client.on('disconnect', function(ev) {
         equal(ev.id, server.id);
         equal(ev.spec.op(), 'off');
     });
@@ -184,17 +185,17 @@ secondaryA secondaryB
         t: +35
     },secondaryA);
 
-    temp.on4('set', function (ev) {
+    temp.on('set', function (ev) {
         equal(ev.value.t, 34);
         start();
     });
 
     var upper_temp = server.get(temp.spec());
-    upper_temp.onInit4(function(ev){
+    upper_temp.onInit(function(ev){
         equal(upper_temp.t, +35);
 
         var peer_temp = secondaryB.get(temp.spec());
-        peer_temp.onInit4(function(ev){
+        peer_temp.onInit(function(ev){
             equal(peer_temp.t, +35);
             peer_temp.set({t:+34});
         });

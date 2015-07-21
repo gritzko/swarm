@@ -119,7 +119,7 @@ asyncTest('2.a basic listener func', function (test) {
         equal(ev.spec.toString(),huey_ti+'!'+ev.spec.version()+'.set'); // 3
         var version = ev.spec.token('!');
         equal(version.ext,'gritzko'); // 4
-        huey.off4('set:age',lsfn2a);
+        huey.off('set:age',lsfn2a);
         //equal(huey._lstn.length,2); // only the uplink remains (and the comma)
     });
     huey.on('set', function (ev) {
