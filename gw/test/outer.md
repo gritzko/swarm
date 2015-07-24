@@ -9,7 +9,9 @@ with some simplifications. The key change is that the state is only passed
 around as a snapshot (the outer state, no ops and no CRDT metadata included)
 
 All operations are uppercase to distinguish them from "regular" Swarm ops
-(.on, .state, .off, etc).
+(.on, .state, .off, etc). Every op is a specifier-value pair.
+The specifier format is the same: /Type#id!timestamp.operation see
+[the post](http://swarmjs.github.io/articles/lamport/) for details.
 
 ## Unabbreviated full-specifier dialog
 
@@ -55,7 +57,7 @@ chain of unsubscription events all along the chain up to the root server.
 
     -> /Model#2wADf+gritzko~web~app!2whC2+gritzko~dev~app.OFF
 
-## Abbreviated version
+## Abbreviated-specifier dialog
 
 The full-specifier protocol is a bit painful to read. We may create an
 abbreviated version based on simple line-by-line abbreviation rules:
@@ -66,7 +68,7 @@ abbreviated version based on simple line-by-line abbreviation rules:
 * no #id => assume the !stamp is the #id for a new object
 * creation of a new object also implies a subscription
 
-Dialog:
+The same dialog, abbreviated:
 
     -> /Host#solu!2whC2+gritzko~dev~app.ON
     <- /Host#solu!2whC2001+gritzko~dev.ON
