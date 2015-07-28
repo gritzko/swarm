@@ -22,9 +22,13 @@ test('01.B simple serialization', function (test) {
     var str = op.toString();
     equal(str, '/Type#id!ver.op\tvalue\n');
     var parsed = Op.parse(str, 'source');
-    equal(parsed.spec.constructor, Spec);
+    equal(parsed.remainder, '');
+    var ops = parsed.ops;
+    equal(ops.length, 1);
+    var pop = ops[0];
+    equal(pop.spec.constructor, Spec);
     equal(op.spec.constructor, Spec);
-    equal(parsed.spec.toString(), op.spec.toString());
-    equal(parsed.value, op.value);
-    equal(parsed.source, 'source');
+    equal(pop.spec.toString(), op.spec.toString());
+    equal(pop.value, op.value);
+    equal(pop.source, 'source');
 });

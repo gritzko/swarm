@@ -13,15 +13,18 @@ function StreamTest (stream, scenario, compare) {
     this.results = [];
     this.lc = new LearnedComparator();
     this.turn_num = -1;
+    if (compare===undefined && typeof('equal')==='function') {
+        compare = equal;
+    }
     this.compare = compare || cmp;
 }
 
 function cmp (act, exp) {
-    return {
-        ok: act===exp,
-        actual: act,
-        expected: exp
-    };
+    if (act===exp) {
+        console.log('OK');
+    } else {
+        console.warn('FAIL', act, exp);
+    }
 }
 
 module.exports = StreamTest;
@@ -36,7 +39,7 @@ StreamTest.prototype.query = function (query, on_response) {
     }, StreamTest.default_interval);
 };
 
-StreamTest.prototype.runScenario = function ( callback ) {
+StreamTest.prototype.runScenario = function ( done ) {
     var turn = 0, self = this;
     next_query();
     function next_query () {
@@ -52,10 +55,5 @@ StreamTest.prototype.runScenario = function ( callback ) {
                 setTimeout(next_query, 1);
             }
         });
-    }
-    function done () {
-        var ok = true;
-        self.results.forEach(function(r){ ok &= r.ok; });
-        callback(ok, self.results);
     }
 };

@@ -64,7 +64,7 @@ var DIALOGUES_4A_BASIC = [
     "/Type#time1+usr~ssn!time1+usr~ssn.state\tsome state 1\n"+
     "/Type#time1+usr~ssn!time0+usr~ssn.on !time1+usr~ssn\n",
     response:
-    "/Type#time1+usr~ssn!time0+usr~ssn.diff\n"+
+    "/Type#time1+usr~ssn!time0+usr~ssn.diff\n\n"+
     "/Type#time1+usr~ssn!time0+usr~ssn.on\t!time1+usr~ssn\n"
 },
 
@@ -97,7 +97,7 @@ var DIALOGUES_4A_BASIC = [
     "/Type#time1+usr~ssn!time1+usr2~sn.diff\n" +
         "\t!time1+usr~ssn.state\tsome state 1\n" +
         "\t!time2+usr~ssn.op\tsome op\n" +
-        "\t!time3+usr~ssn.op\tanother op\n" +
+        "\t!time3+usr~ssn.op\tanother op\n\n" +
     "/Type#time1+usr~ssn!time1+usr2~sn.on\ttime3+usr~ssn\n"
 }
 
@@ -115,15 +115,7 @@ asyncTest('4.A basic cases', function(test){
 
     var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, equal);
 
-    bt.run( function done (positive, results) {
-
-        results && results.forEach(function(cmp){
-            equal(cmp.ok, true);
-        });
-        equal(positive, true);
-        start();
-
-    } );
+    bt.runScenario( start );
 
 });
 
