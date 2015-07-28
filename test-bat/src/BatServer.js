@@ -9,8 +9,11 @@ function BatServer (id, options, callback) {
     EventEmitter.call(this);
     this.id = null;
     this.streams = {};
-    if (id && typeof(callback)==='function') {
-        this.listen(id, callback);
+    if (id) {
+        this.listen(id);
+    }
+    if (typeof(callback)==='function') {
+        this.on('connection',  callback);
     }
 }
 util.inherits(BatServer, EventEmitter);

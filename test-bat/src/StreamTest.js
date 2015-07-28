@@ -13,46 +13,49 @@ function StreamTest (stream, scenario, compare) {
     this.results = [];
     this.lc = new LearnedComparator();
     this.turn_num = -1;
-    this.compare = compare;
+    this.compare = compare || cmp;
+}
+
+function cmp (act, exp) {
+    return {
+        ok: act===exp,
+        actual: act,
+        expected: exp
+    };
 }
 
 module.exports = StreamTest;
+StreamTest.default_interval = 100;
 
-StreamTest.prototype.turn = function (){
+StreamTest.prototype.query = function (query, on_response) {
     var self = this;
-    if (this.turn_num>=0) {
+    self.stream.write(query);
+    setTimeout(function checkResponse() {
         var response = self.stream.read() || '';
-        this.compare(response.toString(), self.scenario[this.turn_num].response);
-        /*var compare = self.lc.compare
-                (response, self.scenario[this.turn_num].response);
-        this.results.push(compare);
-        if (!compare.ok) {
-            console.warn(QUnit.diff(response, self.scenario[this.turn_num].response));
-            console.warn(
-                'MATCH\t', compare.matched, '\n',
-                'EXPCT\t', compare.expected, '\n',
-                'FACTL\t', compare.fact);
-        }*/
-    }
-    if (++this.turn_num<this.scenario.length) {
-        var query = self.scenario[this.turn_num].query;
-        self.stream.write(query);
-    }
+        on_response(response.toString());
+    }, StreamTest.default_interval);
 };
 
-StreamTest.prototype.run = function ( callback ) {
-    var self = this;
-    var interval = setInterval(function () {
-        try{
-            self.turn();
-        } catch (ex) {
-            console.error(ex.message, ex.stack);
-        }
-        if (self.turn_num===self.scenario.length) {
-            clearInterval(interval);
-            var ok = true;
-            self.results.forEach(function(r){ ok &= r.ok; });
-            callback(ok, self.results);
-        }
-    }, 100);
+StreamTest.prototype.runScenario = function ( callback ) {
+    var turn = 0, self = this;
+    next_query();
+    function next_query () {
+        var exchange = self.scenario[turn];
+        var query = exchange.query;
+        var expected_response = exchange.response;
+        self.query(query, function onResponse (response) {
+            var res = self.compare(response, expected_response);
+            self.results.push(res);
+            if (++turn===self.scenario.length) {
+                done();
+            } else {
+                setTimeout(next_query, 1);
+            }
+        });
+    }
+    function done () {
+        var ok = true;
+        self.results.forEach(function(r){ ok &= r.ok; });
+        callback(ok, self.results);
+    }
 };

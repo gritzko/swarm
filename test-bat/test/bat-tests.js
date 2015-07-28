@@ -147,6 +147,7 @@ function test_bat_server () {
 		});
 	});
 	var stream = new BatStream();
+
 	stream.connect('srv1');
 	stream.write(''+step);
 	stream.write(''+(++step));
@@ -174,11 +175,34 @@ function test_bat_mux () {
 	log(response==='[stream1]111[stream2]222', 'mux/demux', response);
 }
 
+function test_black_box () {
+	var responder = new BatStream();
+	responder.on('data', function(data) {
+		var str = data.toString();
+		var int = parseInt(str);
+		responder.write(''+(int<<1));
+	});
+	var requester = responder.pair;
+	var test = new StreamTest(requester, [
+		{'query':'1', 'response': '2'},
+		{'query':'12', 'response': '24'}
+	]);
+	test.runScenario( function (ok, results) {
+		log(ok, '...', results);
+
+		test.query('3', function(response){
+			log(response==='6', '6', response);
+		});
+
+	} );
+}
+
 function run_tests () {
 	test_bat_stream();
 	test_bat_server();
 	test_bat_mux();
 	test_lc();
+	test_black_box();
 }
 
 // isomorphic, yeah
@@ -188,6 +212,7 @@ if (typeof(require)==='function') {
 	var BatStream = require('../src/BatStream');
 	var BatServer = require('../src/BatServer');
 	var BatMux = require('../src/BatMux');
+	var StreamTest = require('../src/StreamTest');
 }
 
 if (typeof(document)==='object') {
