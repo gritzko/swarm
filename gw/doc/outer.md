@@ -71,8 +71,8 @@ abbreviated version based on simple line-by-line abbreviation rules:
 
 The same dialog, abbreviated:
 
-    -> /Host#solu!2whC2+gritzko~dev~app.ON
-    <- /Host#solu!2whC2001+gritzko~dev.ON
+    -> .ON
+    <- !2whC2001+gritzko~dev.ON
 
     -> #2wADf+gritzko~web~app.ON
     <- #2wADf+gritzko~web~app.STATE {"x":10,"y":20}
@@ -81,6 +81,32 @@ The same dialog, abbreviated:
     -> #2wADf+gritzko~web~app.STATE {"x":11, "y":22}
 
     -> .STATE {"x":1, "y":2}
-    <- #2whId+gritzko~dev~app!2whId+gritzko~dev~app.STATE {"x":1, "y":2}
+    <- #2whId+gritzko~dev~app.STATE {"x":1, "y":2}
 
     -> #2whId+gritzko~dev~app.OFF
+
+## Collections
+
+Collections are a bit too heavy to pass them by value on every change. Hence, objects are serialized as their ids:
+
+    <- /Collection#2wA4k+gritzko~dev.STATE {"ids": ["#2wADf+gritzko~web~app", "#2whId+gritzko~dev~app"], keys: null}
+
+On collection change (elements added/removed) the entire data structure is resent.
+Objects are sent separately:
+
+    <- #2whId+gritzko~dev~app!2whId+gritzko~dev~app.STATE {"x":1, "y":2}
+    <- #2wADf+gritzko~web~app.STATE {"x":11, "y":22}
+
+Collection elements require no individual subscriptions. As long as an object is in a collection, its change events trigger state resend. Warning: in case an object is an element of two collections, the client will receive a change twice. In case that object is individually subscribed to, there will be three  messages.
+
+When creating a new object or subscribing to a collection, the client may have difficulties matching request and responses. Thus, a client can add optional request ids to track which data corresponds to which request:
+
+    -> !arbitrary_stamp.STATE {"x":1, "y":2}
+    <- #2whId+gritzko~dev~app!arbitrary_stamp.STATE {"x":1, "y":2}
+
+Note that duplicate messages will have different request ids corresponding to their original subscriptions.
+
+## Inconsistencies (TODO)
+
+* client assigns no ids as it has no clocks (everything ~dev~app)
+* no version ids are communicated to a naive client (TODO optionally add Syncable.lastChange() to the state snapshot)
