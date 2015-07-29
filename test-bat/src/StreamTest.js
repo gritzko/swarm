@@ -13,6 +13,7 @@ function StreamTest (stream, scenario, compare) {
     this.results = [];
     this.lc = new LearnedComparator();
     this.turn_num = -1;
+    this.busy = false;
     if (compare===undefined && typeof('equal')==='function') {
         compare = equal;
     }
@@ -32,8 +33,13 @@ StreamTest.default_interval = 100;
 
 StreamTest.prototype.query = function (query, on_response) {
     var self = this;
+    if (self.busy) {
+        throw new Error('busy running a query');
+    }
     self.stream.write(query);
+    self.busy = true;
     setTimeout(function checkResponse() {
+        self.busy = false;
         var response = self.stream.read() || '';
         on_response(response.toString());
     }, StreamTest.default_interval);

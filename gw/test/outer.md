@@ -6,7 +6,8 @@ the client only consumes snapshots.
 
 The protocol is mostly based on the regular line-based Swarm protocol,
 with some simplifications. The key change is that the state is only passed
-around as a snapshot (the outer state, no ops and no CRDT metadata included)
+around as a snapshot (the outer state only, with no ops and no CRDT metadata
+included)
 
 All operations are uppercase to distinguish them from "regular" Swarm ops
 (.on, .state, .off, etc). Every op is a specifier-value pair.
@@ -65,7 +66,7 @@ abbreviated version based on simple line-by-line abbreviation rules:
 * no !stamp => assume the connection's !timestamp
 * no .op => asuume .ON
 * no /Type => assume /Model
-* no #id => assume the !stamp is the #id for a new object
+* no #id => assume creation of a new object
 * creation of a new object also implies a subscription
 
 The same dialog, abbreviated:
@@ -79,6 +80,7 @@ The same dialog, abbreviated:
     <- #2wADf+gritzko~web~app.STATE {"x":11, "y":21}
     -> #2wADf+gritzko~web~app.STATE {"x":11, "y":22}
 
-    -> !2whId+gritzko~dev~app.STATE {"x":1, "y":2}
+    -> .STATE {"x":1, "y":2}
+    <- #2whId+gritzko~dev~app!2whId+gritzko~dev~app.STATE {"x":1, "y":2}
 
     -> #2whId+gritzko~dev~app.OFF
