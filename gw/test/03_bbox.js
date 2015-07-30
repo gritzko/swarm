@@ -21,7 +21,7 @@ var gw = new Gateway(host.logics);
 // NO MUX var mux = new bat.BatMux('mux', 'bat:3A');
 
 var stream = new BatStream();
-gw.addStream('time+client', stream);
+gw.addStream('test_stream', stream);
 var bat = new StreamTest(stream.pair);
 
 var new_id;
@@ -60,6 +60,53 @@ test('3.B Gateway - update', function (tap) {
         tap.equal(reop.op(), 'STATE');
         tap.equal(reop.id(), new_id);
         tap.ok(reop.stamp() > new_id);
+        tap.end();
     });
 
 });
+
+if (typeof(require)==='function' && require('net')) {
+    test('3.C Gateway TCP server', tcp_test);
+} else {
+    test.skip('3.C Gateway TCP server', tcp_test);
+}
+
+var server;
+var sock;
+
+function tcp_test (tap) {
+    tap.plan(11);
+    var syncable = host.logics.create('Model');
+    syncable.set({x:0});
+    var net = require('net');
+    var port = 10000 + (new Date().getTime())%1000;
+    server = net.createServer (on_connection);
+    server.listen(port, 'localhost', start_tcp);
+    function start_tcp(err) {
+        sock = net.connect(port, 'localhost', start_test);
+    }
+    function on_connection(conn) {
+        conn.write('.ON\t\n');
+        gw.addStream('tcp_stream', conn);
+    }
+    function start_test () {
+        sock.on('data', on_server_msg);
+        sock.write(syncable.spec()+'.ON\t\n');
+    }
+    function on_server_msg (data) {
+        console.log('RECV', data.toString());
+        var m = /"x":\s*(\d+)/.exec(data.toString());
+        if (m) {
+            var x = parseInt(m[1]);
+            tap.equal(x, syncable.x);
+            if (x<10) {
+                syncable.set({x: x+1 });
+            } else {
+                sock.destroy();
+                server.close(function(){
+                    tap.end();
+                });
+            }
+        }
+    }
+}
