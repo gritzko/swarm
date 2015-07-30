@@ -4,12 +4,15 @@ var Op = Swarm.Op;
 var Gateway = require("../");
 
 var TestClock = require('../../lib/TestClock');
-
 var BAT = require('test-bat');
 var BatStream = BAT.BatStream;
 var StreamTest = BAT.StreamTest;
 
 var test = require('tape');
+if (typeof(window)==='object') {
+    var tape_dom = require('tape-dom');
+    tape_dom(test);
+}
 
 var storage = new Swarm.Storage();
 var host = new Swarm.Host('loc~al', 0, storage);
@@ -58,6 +61,12 @@ test('3.B Gateway - update', function (tap) {
         var reop = response.ops[0];
         tap.equal(reop.value, '{"x":2}');
         tap.equal(reop.op(), 'STATE');
+        /*tap.ok(false, 'bogus');
+        tap.deepEqual({a:1, b:2}, {b:2});
+        tap.equal(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaa\n  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaAaa\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        );*/
         tap.equal(reop.id(), new_id);
         tap.ok(reop.stamp() > new_id);
         tap.end();
@@ -65,7 +74,8 @@ test('3.B Gateway - update', function (tap) {
 
 });
 
-if (typeof(require)==='function' && require('net')) {
+if (typeof(require)==='function' && require('net') &&
+        typeof(require('net').createServer)==='function') {
     test('3.C Gateway TCP server', tcp_test);
 } else {
     test.skip('3.C Gateway TCP server', tcp_test);

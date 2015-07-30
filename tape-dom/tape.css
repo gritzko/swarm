@@ -1,0 +1,65 @@
+div.test {
+    width: 100%;
+    border-top: 1px dotted grey;
+    margin-top: 1em;
+    background: #eef;
+    font-weight: bold;
+}
+p.assert {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    font-weight: normal;
+    width: 100%;
+}
+p.assert.ok {
+    background: #efe;
+    color: grey;
+}
+p.assert.fail {
+    background: #faa;
+}
+p.diff {
+    background: #ffe;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding-top: 0.25em;
+    padding-bottom: 0.25em;
+    padding-left: 4em;
+    font-weight: normal;
+    white-space: pre-wrap;
+}
+ins {
+    background: #afa;
+}
+del {
+    background: #faa;
+    text-decoration: strike;
+}
+span.ok {
+    font-weight: bold;
+}
+span.actual, span.expected, span.name {
+    padding-left: 1em;
+    font-style: italic;
+    max-width: 25em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+}
+p.assert.fail span.name {
+    color: #555;
+}
+span.expected:before {
+    content: '≠';
+    padding-right: 1em;
+}
+span.line {
+    padding-left: 1em;
+    float: right;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: monospace;
+    color: #888;
+}
