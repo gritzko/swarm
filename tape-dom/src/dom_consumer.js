@@ -97,6 +97,8 @@ function assertFailDiv (row, assert_element) {
         var file_line = m[1];
         line.innerText = file_line;
         assert_element.appendChild(line);
+        // this way the user may meaningfully navigate the code
+        console.warn(row.error.stack);
     }
 
     if (actual && expected &&

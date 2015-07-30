@@ -6,7 +6,7 @@ if (typeof(window)==='object') {
     tape_dom(tape);
 }
 
-tape('trivial matches', function (tap) {
+tape('trivial matches', function perfect_matches (tap) {
     tap.plan(5);
     tap.equal(5,5);
     tap.equal("string","string");
@@ -18,9 +18,9 @@ tape('trivial matches', function (tap) {
     tap.comment("all those are OK");
 });
 
-tape('simple mismatches', function (tap) {
+tape('simple mismatches', function complete_mismatches (tap) {
     tap.plan(4);
-    tap.equal(5,6);
+    tap.equal(5,6, 'comparing 5 to 6');
     tap.equal("string","");
     tap.deepEqual({x:1, y:{z:3}}, {x:1, y:{z:2}});
     tap.ok(false);
