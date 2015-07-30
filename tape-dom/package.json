@@ -1,6 +1,6 @@
 {
   "name": "tape-dom",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -15,6 +15,7 @@
   "files": [
     "src/*.js",
     "test/*.js",
+    "test/index.html",
     "LICENSE",
     "README.md",
     "tape.css"
