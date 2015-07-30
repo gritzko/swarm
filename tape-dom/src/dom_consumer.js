@@ -54,6 +54,21 @@ function assertDiv (row, root) {
     return p;
 }
 
+function commentDiv (row, root) {
+    var p = document.createElement('P');
+    p.setAttribute('class', 'comment');
+    p.innerText = row;
+    root.appendChild(p);
+    return p;
+}
+
+function endDiv(row, current_test) {
+    var p = document.createElement('P');
+    p.setAttribute('class', 'end');
+    //p.innerText = row;
+    current_test.appendChild(p);
+    return p;
+}
 
 function assertFailDiv (row, assert_element) {
     var actual = row.actual;
@@ -106,16 +121,18 @@ var test_root = document.getElementById('tests') || document.body;
 var current_test = test_root;
 
 function add_some_dom (row) {
-    switch(row.type) {
-    case 'test':
-        current_test = startTestDiv(row, test_root);
-    break;
-    case 'assert':
+    if (row.type==='test') {
+        current_test = startTestDiv(row, current_test);
+    } else if (row.type==='assert') {
         var assert_element = assertDiv(row, current_test);
 
         if (!row.ok) {
             assertFailDiv(row, assert_element);
         }
-    break;
+    } else if (row.type==='end') {
+        endDiv(row, current_test);
+        current_test = current_test.parentNode;
+    } else if (row.constructor===String) {
+        commentDiv(row, current_test);
     }
 }

@@ -1,6 +1,6 @@
 {
   "name": "tape-dom",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -22,11 +22,12 @@
   "main": "src/dom_consumer.js",
   "browser": "src/dom_consumer.js",
   "dependencies": {
-      "tape": "^4.0.1",
+      "googlediff": "^0.1.0",
       "tap-parser": "^1.1.6"
   },
   "devDependencies": {
-    "browserify": ""
+    "browserify": "",
+    "tape": "^4.0.1"
   },
   "scripts": {
     "pretest": "browserify test/test.js -o test/test-dist.js",

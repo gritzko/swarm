@@ -18,6 +18,21 @@ p.assert.ok {
 p.assert.fail {
     background: #faa;
 }
+p.comment {
+    background: #eef;
+    color: grey;
+    font-style: italic;
+    margin-top: 0.2em;
+    margin-bottom: 0.2em;
+    padding-left: 2.4em;
+}
+p.end {
+    border-bottom: 1px dotted grey;
+    margin-top: 1em;
+    background: #eef;
+    margin-top: 0.2em;
+    margin-bottom: 0.2em;
+}
 p.diff {
     background: #ffe;
     margin-top: 0px;
