@@ -1,0 +1,34 @@
+{
+  "name": "lamp64",
+  "version": "0.4.1",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "src/*.js",
+    "test/*.js",
+    "test/index.html",
+    "LICENSE",
+    "README.md"
+  ],
+  "main": "index.js",
+  "browser": "index.js",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "browserify": "",
+    "tape": "^4.0.1"
+  },
+  "scripts": {
+    "pretest": "browserify test/test.js -o test/test-dist.js",
+    "test": "firefox test/index.html"
+  }
+}
