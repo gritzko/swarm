@@ -102,7 +102,10 @@ Gateway.prototype.ONCE = function (op, stream_id) {
 
 // Unsubscribe
 Gateway.prototype.OFF = function (op, stream_id) {
-    var spec = op.filter('/#');
+    var spec = op.spec.filter('/#');
+    if (spec.pattern()!=='/#') {
+        throw new Error('malformed request');
+    }
     var subs = this.subscribers[spec];
     if (!subs) { return; }
     var i = subs.indexOf(stream_id);

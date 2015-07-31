@@ -31,48 +31,66 @@ var new_id;
 
 test('3.A Gateway - create', function (tap) {
 
-    tap.plan(4);
+    //tap.plan(4);
 
     bat.query('.STATE\t{"x":1}\n', function(response_str) {
         var response = Op.parse(response_str, 'src');
-        tap.equal(response.ops.length, 1);
-        if (response.ops.length == 1) {
-            var reop = response.ops[0];
-            tap.equal(reop.value, '{"x":1}');
-            tap.equal(reop.op(), 'STATE');
-            tap.ok(reop.stamp() > reop.id());
-            new_id = reop.id();
+        tap.equal(response.ops.length, 1, 'returns the created object (only)');
+        var reop = response.ops[0];
+        tap.equal(reop.op(), 'STATE', 'it is a state op');
+        tap.equal(reop.value, '{"x":1}', 'and the state is right');
+        tap.ok(reop.stamp() > reop.id(), 'timestamp order is right');
+        new_id = reop.id();
+
+        bat.query('#'+new_id+'.OFF\t\n', function(off_response) {
+            tap.equal(off_response, '', 'no response to .OFF');
+            tap.end();
+        });
+    });
+
+});
+
+test('3.B Gateway - fetch', function (tap) {
+
+    tap.plan(2);
+
+    // TODO tolerant parsing .ON\n
+
+    bat.query('#'+new_id+'.ON\t\n', function(response_str) {
+        var response = Op.parse(response_str, 'src');
+        if (response.ops.length!==1) {
+            tap.fail('one op only');
+            return;
         }
+        var reop = response.ops[0];
+        tap.equal(reop.op(), 'STATE', 'it is a state');
+        tap.equal(reop.value, '{"x":1}', 'exactly as created');
         tap.end();
     });
 
 });
 
-test('3.B Gateway - update', function (tap) {
+test('3.C Gateway - change', function (tap) {
 
-    tap.plan(4);
+    tap.plan(3);
+
+    var obj = host.logics.get('/Model#'+new_id);
 
     bat.query('#'+new_id+'.STATE\t{"x":2}\n', function(response_str) {
         var response = Op.parse(response_str, 'src');
         if (response.ops.length!==1) {
-            tap.fail();
+            tap.fail('one op only');
             return;
         }
         var reop = response.ops[0];
-        tap.equal(reop.value, '{"x":2}');
-        tap.equal(reop.op(), 'STATE');
-        /*tap.ok(false, 'bogus');
-        tap.deepEqual({a:1, b:2}, {b:2});
-        tap.equal(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaa\n  aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaAaa\naaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        );*/
-        tap.equal(reop.id(), new_id);
-        tap.ok(reop.stamp() > new_id);
+        tap.equal(reop.op(), 'STATE', 'it is a state');
+        tap.equal(reop.value, '{"x":2}', 'exactly as we set it');
+        tap.equal(obj.x, 2, 'the value is set server-side');
         tap.end();
     });
 
 });
+
 
 if (typeof(require)==='function' && require('net') &&
         typeof(require('net').createServer)==='function') {

@@ -37,9 +37,9 @@ StreamTest.prototype.query = function (query, on_response) {
         throw new Error('busy running a query');
     }
     self.stream.write(query);
-    self.busy = true;
+    self.busy = query;
     setTimeout(function checkResponse() {
-        self.busy = false;
+        self.busy = null;
         var response = self.stream.read() || '';
         on_response(response.toString());
     }, StreamTest.default_interval);
