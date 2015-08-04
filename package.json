@@ -31,14 +31,14 @@
   "main": "lib/NodeServer.js",
   "browser": "lib/Html5Client.js",
   "dependencies": {
-    "ws": "~0.4.31"
+    "ws": "~0.4.31",
+    "level": "^1.3.0"
   },
   "devDependencies": {
     "async": "^0.9.0",
     "browserify": "",
     "istanbul": "^0.3.2",
     "jshint": "",
-    "level": "^1.3.0",
     "memdown": "",
     "minimist": "^1.1.0",
     "nopt": "",
