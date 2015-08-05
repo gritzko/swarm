@@ -1,9 +1,11 @@
 "use strict";
 var sync = require('..');
 var Spec = sync.Spec;
+var Op = sync.Op;
 var tape = require('tape');
 if (typeof(window)==='object') {
     var tape_dom = require('tape-dom');
+    tape_dom.installCSS();
     tape_dom.stream(tape);
 }
 
@@ -36,6 +38,7 @@ tape('1.c spec filters', function (tap) {
     tap.end();
 });
 
+
 tape('1.e corner cases', function (tap) {
     var empty = new Spec('');
     tap.equal(empty.type()||empty.id()||empty.op()||empty.version(),'');
@@ -48,4 +51,27 @@ tape('1.e corner cases', function (tap) {
     tap.equal(fieldSet.version(),'7AMTc+gritzko', 'version()');
     tap.equal(fieldSet.op(),'set');
     tap.end();
+});
+
+tape('1.f ops', function (tap) {
+
+    var diff = new Op('/Model#test!timeX+author~ssn.diff',
+        '\t!time0.set\t{"x":1}\n' +
+        '\t!time1.set\t{"y":2}\n' );
+
+    tap.equal(diff.origin(), 'author~ssn', 'originating session');
+    tap.equal(diff.stamp(), 'timeX+author~ssn', 'lamport timestamp');
+    tap.equal(diff.author(), 'author', 'author (user id)');
+    tap.equal(diff.id(), 'test', '#id');
+    tap.equal(diff.op(), 'diff', 'op()');
+    tap.equal(''+diff.version(), '!timeX+author~ssn');
+
+    tap.equal(diff.toString(),
+        '/Model#test!timeX+author~ssn.diff\n' +
+        '\t!time0.set\t{"x":1}\n' +
+        '\t!time1.set\t{"y":2}\n\n',
+        'diff serialization');
+
+    tap.end();
+
 });
