@@ -37,6 +37,8 @@ Key classes and methods of the package are listed below. Please rely on comments
 
 The class is a thin wrapper around a serialized specifier. API is based on *quants* (/#!.) and base64 tokens.
 
+TODO syntax
+
 See *Spec.Parsed* for a parsed specifier.
 
 ### Op
@@ -59,20 +61,20 @@ Essentially, the inner object is a state machine that consumes ops and produces 
 
 The primary Syncable object workflow is to
 
-# call its API methods (like `Model.set`) that
-# prepare CRDT ops and submit them to the Host that
-# feeds ops to the object's inner state that
-# regenerates the outer state based on those changes.
-# (later on, the Host relays new ops to other replicas)
+1. call its API methods (like `Model.set`) that
+2. prepare CRDT ops and submit them to the Host that
+3. feeds ops to the object's inner state that
+4. regenerates the outer state based on those changes.
+5. (later on, the Host relays new ops to other replicas)
 
 An alternative workflow is to
 
-# change the object's fields directly and
-# invoke the save() method that makes a diff of the original and the existing state to
-# prepare ops and submit them to the Host that
-# feeds them to the inner state machine that
-# changes its state and
-# regenerates the outer state.
+1. change the object's fields directly and
+2. invoke the save() method that makes a diff of the original and the existing state to
+3. prepare ops and submit them to the Host that
+4. feeds them to the inner state machine that
+5. changes its state and
+6. regenerates the outer state.
 
 The inner-outer state duo has some advantages often associated with immutability.
 In particular, it is trivial to check whether a syncable has changed by looking at its `_version` field.
