@@ -1,5 +1,5 @@
 "use strict";
-var bat = require('test-bat');
+var bat = require('swarm-bat');
 var env = require('../lib/env');
 
 env.clients.bat = function (url, options, callback, err_callback) {

@@ -1,9 +1,7 @@
 "use strict";
 
-var Swarm = require('../');
-var Host = Swarm.Host;
-var Storage = Swarm.Storage;
-var TestClock = require('../lib/TestClock');
+var Storage = require('..');
+var TestClock = require('swarm-stamp').TestClock;
 
 var bat = require('swarm-bat');
 require('./bat-link');
@@ -12,38 +10,6 @@ var levelup = require('levelup');
 var memdown = require('memdown');
 var db = levelup('xxx', { db: memdown });
 
-Swarm.env.debug = true;
-Swarm.env.multihost = true;
-Swarm.env.logs.op = true;
-
-var dmp = require('googlediff');
-
-QUnit.diff = function (a, b) {
-    var d = new dmp();
-	var diff = d.diff_main(b, a);
-	var ret = '', tag;
-	diff.forEach(function(chunk){
-		switch (chunk[0]) {
-		case 0: tag = 'span'; break;
-		case 1: tag = 'ins'; break;
-		case -1: tag = 'del'; break;
-		}
-		ret += '<'+tag+'>' + chunk[1] + '</'+tag+'>';
-	});
-	return ret;
-};
-
-/*var host = {
-    resp: '',v
-    deliver: function (spec, val) {
-        this.resp+=spec+'\t'+val+'\n';
-    },
-    response: function () {
-        var ret = this.resp;
-        this.resp = '';
-        return ret;
-    }
-};*/
 
 var DIALOGUES_4A_BASIC = [
 

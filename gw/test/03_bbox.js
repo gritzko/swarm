@@ -4,7 +4,7 @@ var Op = Swarm.Op;
 var Gateway = require("../");
 
 var TestClock = require('../../lib/TestClock');
-var BAT = require('test-bat');
+var BAT = require('swarm-bat');
 var BatStream = BAT.BatStream;
 var StreamTest = BAT.StreamTest;
 
