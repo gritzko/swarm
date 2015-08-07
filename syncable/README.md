@@ -16,11 +16,11 @@ Op delivery and storage as well as subscription management is performed by Route
 
 An op is serialized as a key-value pair where the key specifies all the generic features of an op, while everything type-specific is isolated into the value.
 
-The key (also named a *specifier*) is a compound op identifier that contains:
+The key (also named a *specifier*) is a compound op identifier that contains *tokens* for:
 
 * data type name (like "Model" or "Set"),
 * object's id,
-* Lamport timestamp (time + process id),
+* Lamport timestamp (time + process id), and
 * operation name.
 
 Object's id is typically a Lamport timestamp of the object creation event, although arbitrary [Base64 ids][base64] are possible.
@@ -36,8 +36,13 @@ Key classes and methods of the package are listed below. Please rely on comments
 ### Spec
 
 The class is a thin wrapper around a serialized specifier. API is based on *quants* (/#!.) and base64 tokens.
+Quants are separators for parts of a specifier:
 
-TODO syntax
+* / precedes type name
+* # precedes object id
+* ! precedes Lamport timestamp
+* . precedes operation name
+* + separates parts of a token (i.e. time and process id)
 
 See *Spec.Parsed* for a parsed specifier.
 
@@ -46,8 +51,8 @@ See *Spec.Parsed* for a parsed specifier.
 Op is a clas for a single operation, containing the spec -- value pair and a reference to the source the op was received from.
 It also contains routines to serialize/deserialize an op into/from a line-based format:
 
-* op.toString()
-* Op.parse()
+* op.toString() - convert the op into the line based format string
+* Op.parse() - parse a string, create an array of Ops
 
 ### Syncable
 
