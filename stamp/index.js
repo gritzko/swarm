@@ -1,6 +1,6 @@
 "use strict";
 
-module.exports = {
+var exports = {
     base64: require('./src/base64'),
     VVector: require('./src/VVector'),
 //    OrdVVector: require('./src/OrdVVector'),
@@ -9,3 +9,7 @@ module.exports = {
     MinutePreciseClock: require('./src/MinutePreciseClock')
 //    AdaptableClock: require('./src/AdaptableClock')
 };
+
+exports.Clock = exports.SecondPreciseClock;
+
+module.exports = exports;

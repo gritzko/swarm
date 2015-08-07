@@ -1,4 +1,5 @@
-# Base64 Lamport timestamps
+Base64 Lamport timestamps
+=========================
 
 ![events](https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Vector_Clock.svg/750px-Vector_Clock.svg.png)
 
@@ -26,7 +27,7 @@ Classes:
 
 Base64 timestamps obey alphanumeric order, that's why the package employs its own variety of base64. In common [base64 variants][base64], numeric order does not match alphanumeric order (i.e. the order for numbers and their base64 serializations differs).
 
-lamp64 base64: `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~`
+swarm base64: `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~`
 
 The package also implements two varieties of version vector based on Base64 Lamport timestamps:
 

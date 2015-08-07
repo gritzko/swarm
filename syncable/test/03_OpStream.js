@@ -12,7 +12,7 @@ if (typeof(window)==='object') {
     tape_dom.stream(tape);
 }
 
-tape('3.A corner cases', function (t) {
+tape('3.A simple cases', function (t) {
     var stream = new BatStream();
 
     var pair = new OpStream(stream.pair, 'stream', {});
@@ -35,12 +35,28 @@ tape('3.A corner cases', function (t) {
         var next = expect_ops.pop();
         t.equal(''+op.spec, ''+next.spec, 'spec matches');
         t.equal(''+op.value, ''+next.value, 'value matches');
-        t.equal(op.source, 'pair');
+        t.equal(op.source, 'pair', 'source is correct');
     });
 
     while (send_ops.length) {
         var op = send_ops.shift();
         expect_ops.unshift(op);
         pair.write(op);
+        pair.flush(); // keepalive must cause no reaction
+    }
+});
+
+tape('3.B defragmentation', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair, 'stream', {});
+    var op = new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'stream');
+    var str = op.toString();
+    t.plan(2);
+    opstream.on('op', function(recv_op){
+        t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
+        t.equal(recv_op.value, op.value, 'value matches');
+    });
+    for(var i=0; i<str.length; i++) {
+        stream.write(str.charAt(i));
     }
 });
