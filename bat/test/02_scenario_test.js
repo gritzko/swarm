@@ -107,7 +107,7 @@ var variables = {
 	MONARCH: "King"
 };
 
-tape.skip ('a. LearnedComparator', function (t) {
+tape.skip ('2.a. LearnedComparator', function (t) {
     var lc = new LearnedComparator();
     positives.forEach(function (sc) {
         t.equal(sc.fact, sc.expected);
@@ -120,7 +120,7 @@ tape.skip ('a. LearnedComparator', function (t) {
     }
 });
 
-tape ('b. BatStream', function (t) {
+tape ('2.b. BatStream', function (t) {
 	var stream = new BatStream();
     var date = new Date().toString();
 	stream.on('data', function(data) {
@@ -131,7 +131,7 @@ tape ('b. BatStream', function (t) {
 	stream.pair.write(date);
 });
 
-tape ('c. BatServer', function (t) {
+tape ('2.c. BatServer', function (t) {
 	var step = 1, count=3;
     t.plan(3);
 	var server = new BatServer('bat:srv1');
@@ -150,7 +150,7 @@ tape ('c. BatServer', function (t) {
     }
 });
 
-tape ('d. BatMux', function (t) {
+tape ('2.d. BatMux', function (t) {
 	var srv2 = new BatServer('srv2');
 	var mux = new BatMux('mux1');
 	var response = '';
@@ -182,7 +182,7 @@ tape ('d. BatMux', function (t) {
     mux.trunk.end();
 });
 
-tape ('e. Black box', function (t) {
+tape ('2.e. Black box', function (t) {
 	var responder = new BatStream();
 	responder.on('data', function(data) {
 		var str = data.toString();
