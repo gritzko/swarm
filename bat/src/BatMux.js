@@ -1,5 +1,6 @@
 "use strict";
 var BatStream = require('./BatStream');
+var stream_url = require('stream-url');
 
 /** The class is mostly useful to test text-based, line-based protocols.
     It multiplexes/demultiplexes several text streams to/from a single
@@ -12,8 +13,8 @@ var BatStream = require('./BatStream');
     being sent into mux1 trunk as
         '[tag]something'
 */
-function BatMux (id, server_uri) {
-    this.server_uri = server_uri;
+function BatMux (id, server_url) {
+    this.server_url = server_url;
     this.trunk = new BatStream();
     this.branches = {};
     this.active_tag_r = '';
@@ -64,7 +65,8 @@ BatMux.prototype.onBranchEnd = function (tag) {
 };
 
 BatMux.prototype.addBranch = function (tag) {
-    var stream = new BatStream(), self = this;
+    var self = this;
+    var stream = stream_url.connect(tag);
     this.branches[tag] = stream;
     stream.on('data', function(data){
         self.onBranchDataIn(tag, data);
@@ -72,7 +74,6 @@ BatMux.prototype.addBranch = function (tag) {
     stream.on('end', function(){
         self.onBranchEnd(tag);
     });
-    stream.connect(this.server_uri);
 };
 
 BatMux.prototype.onTrunkDataIn = function (data) {

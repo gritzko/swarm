@@ -63,7 +63,7 @@ BatStream.prototype.connect = function (id, options, callback) {
     var srv_id = m[2];
     var srv = BatServer.servers[srv_id];
     if (!srv) {
-        throw new Error('server not known');
+        throw new Error('server not known: '+id+', '+srv_id);
     }
     srv._bat_connect(id, this.pair);
     setTimeout(function(){
