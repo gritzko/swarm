@@ -30,9 +30,14 @@ exports = module.exports = BatStream;
 BatStream.prototype._pair = function (pair) {
     var self = this;
     this.pair = pair;
+
+    
+    /*
     pair.on('finish', function(){
         self.emit('end');
     });
+    */
+
 };
 
 BatStream.prototype._read = function (size) {};
@@ -65,4 +70,9 @@ BatStream.prototype.connect = function (id, options, callback) {
         callback && callback(self);
         self.emit('connect', self);
     }, 1);
+};
+
+BatStream.prototype.end = function () {
+    stream.Duplex.prototype.end.apply(this,arguments);
+    this.pair && this.pair.push(null);
 };

@@ -18,7 +18,9 @@ function BatMux (id, server_uri) {
     this.branches = {};
     this.active_tag_r = '';
     this.active_tag_w = '';
+    this.end = false;
     this.trunk.pair.on('data', this.onTrunkDataIn.bind(this));
+    this.trunk.pair.on('end', this.onTrunkDataEnd.bind(this));
 }
 module.exports = BatMux;
 BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
@@ -50,6 +52,15 @@ BatMux.prototype.onBranchEnd = function (tag) {
     }
     this.trunk.pair.write('[EOF]');
     this.branches[tag] = null;
+    if (this.end) {
+        var tags = Object.keys(this.branches), self=this;
+        var have_more = tags.some(function(tag){
+            return self.branches[tag]!==null;
+        });
+        if (!have_more) {
+            this.trunk.pair.end();
+        }
+    }
 };
 
 BatMux.prototype.addBranch = function (tag) {
@@ -84,4 +95,11 @@ BatMux.prototype.onTrunkDataIn = function (data) {
             }
         }
     }
+};
+
+BatMux.prototype.onTrunkDataEnd = function (data) {
+    for(var tag in this.branches) {
+        this.branches[tag].end();
+    }
+    this.end = true;
 };

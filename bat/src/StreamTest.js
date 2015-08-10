@@ -56,7 +56,7 @@ StreamTest.prototype.runScenario = function ( done ) {
             var res = self.compare(response, expected_response);
             self.results.push(res);
             if (++turn===self.scenario.length) {
-                done();
+                done && done();
             } else {
                 setTimeout(next_query, 1);
             }

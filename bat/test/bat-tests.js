@@ -1,6 +1,16 @@
 "use strict";
+var bat = require('..');
+var LearnedComparator = bat.LearnedComparator;
+var BatServer = bat.BatServer;
+var BatMux = bat.BatMux;
+var BatStream = bat.BatStream;
+var StreamTest = bat.StreamTest;
 
-
+var tape = require('tape');
+if (typeof(window)==='object') {
+    var tape_dom = require('tape-dom');
+    tape_dom.stream(tape);
+}
 
 var positives = [
 
@@ -97,64 +107,50 @@ var variables = {
 	MONARCH: "King"
 };
 
-function log (ok, title, value) {
-	if (ok) {
-		console.log("OK", title.substr(0,80));
-	} else {
-		console.warn("FAIL", title.substr(0,80), value);
-	}
-	if (dom_log) {
-		var record = window.document.createElement('P');
-		record.setAttribute('class', 'test ' + (ok ? 'ok' : 'fail') ) ;
-		record.innerHTML = '<b>' + (ok ? 'OK' : 'FAIL') +
-			'</b> <i>' + title + '</i> <tt>' + (ok?'':value) + '</tt>';
-		dom_log.appendChild(record);
-	}
-}
-
-function test_lc () {
+tape.skip ('a. LearnedComparator', function (t) {
     var lc = new LearnedComparator();
     positives.forEach(function (sc) {
-        var ret = lc.compare(sc.fact, sc.expected);
-        log(ret.ok, sc.expected, ret);
+        t.equal(sc.fact, sc.expected);
     });
     negatives.forEach(function (sc) {
-        var ret = lc.compare(sc.fact, sc.expected);
-        log(!ret.ok, sc.expected, ret);
+        t.equal(sc.fact, sc.expected);
     });
     for(var key in variables) {
-    	log(variables[key]===lc.variables[key], key, lc.variables[key]);
+    	t.equal(lc.variables[key], variables[key], key);
     }
+});
 
-}
-
-function test_bat_stream () {
+tape ('b. BatStream', function (t) {
 	var stream = new BatStream();
+    var date = new Date().toString();
 	stream.on('data', function(data) {
 		var str = data.toString();
-		log(str==='data', 'loopback stream', data);
+		t.equal(str, date, 'loopback stream');
+        t.end();
 	});
-	stream.pair.write('data');
-}
+	stream.pair.write(date);
+});
 
-function test_bat_server () {
-	var step = 1;
+tape ('c. BatServer', function (t) {
+	var step = 1, count=3;
+    t.plan(3);
 	var server = new BatServer('bat:srv1');
 	server.on('connection', function (in_stream) {
 		in_stream.on('data', function (data) {
 			var int = parseInt(data.toString());
-			log(int===step, 'stream #'+step, data);
+			t.equal(int, step, 'stream #'+(step++));
+            if (step>count) { t.end(); }
 		});
 	});
 	var stream = new BatStream();
 
 	stream.connect('srv1');
-	stream.write(''+step);
-	stream.write(''+(++step));
-	stream.write(''+(++step));
-}
+    for(var i=step; i<=count; i++) {
+	    stream.write(''+i);
+    }
+});
 
-function test_bat_mux () {
+tape ('d. BatMux', function (t) {
 	var srv2 = new BatServer('srv2');
 	var mux = new BatMux('mux1', 'srv2');
 	var response = '';
@@ -166,16 +162,26 @@ function test_bat_mux () {
 				replace(/./g, ''+stream_no);
 			stream.write(out_data);
 		});
+        stream.on('end', function () {
+            stream.end();
+        });
 	});
 	mux.trunk.on('data', function (data) {
 		response += data.toString();
 	});
+    mux.trunk.on('end', function (data) {
+        t.equal(
+            response,
+            '[stream1]111[stream2]222[stream1][EOF][stream2][EOF]',
+            'mux/demux and stream end events');
+        t.end();
+    });
 	mux.trunk.write('[stream1]one[stream2]');
 	mux.trunk.write('two');
-	log(response==='[stream1]111[stream2]222', 'mux/demux', response);
-}
+    mux.trunk.end();
+});
 
-function test_black_box () {
+tape ('e. Black box', function (t) {
 	var responder = new BatStream();
 	responder.on('data', function(data) {
 		var str = data.toString();
@@ -183,44 +189,17 @@ function test_black_box () {
 		responder.write(''+(int<<1));
 	});
 	var requester = responder.pair;
-	var test = new StreamTest(requester, [
-		{'query':'1', 'response': '2'},
-		{'query':'12', 'response': '24'}
-	]);
+	var test = new StreamTest(requester,
+        [ {'query':'1', 'response': '2'},
+	      {'query':'12', 'response': '24'} ],
+        t.equal.bind(t)
+    );
 	test.runScenario( function (ok, results) {
-		log(ok, '...', results);
 
 		test.query('3', function(response){
-			log(response==='6', '6', response);
+			t.equal(response, '6', 'manual step');
+            t.end();
 		});
 
 	} );
-}
-
-function run_tests () {
-	test_bat_stream();
-	test_bat_server();
-	test_bat_mux();
-	test_lc();
-	test_black_box();
-}
-
-// isomorphic, yeah
-
-if (typeof(require)==='function') {
-	var LearnedComparator = require('../src/LearnedComparator');
-	var BatStream = require('../src/BatStream');
-	var BatServer = require('../src/BatServer');
-	var BatMux = require('../src/BatMux');
-	var StreamTest = require('../src/StreamTest');
-}
-
-if (typeof(document)==='object') {
-	var dom_log = window.document.createElement('DIV');
-	window.onload = function () {
-		window.document.body.appendChild(dom_log);
-		run_tests();
-	};
-} else {
-	run_tests();
-}
+});

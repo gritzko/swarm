@@ -7,5 +7,17 @@
         "README.md",
         "LICENSE"
     ],
-    "main": "bat.js"
+    "main": "bat.js",
+    "devDependencies": {
+        "browserify": "",
+        "tape": "^4.0.1"
+    },
+    "devDependencies": {
+        "tape": "^4.0.2",
+        "tap-spec": "^4.0.2",
+        "tape-dom": "^0.0.4"
+    },
+    "scripts": {
+        "test": "tape test/*.js | tap-spec"
+    }
 }
