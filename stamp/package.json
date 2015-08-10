@@ -24,11 +24,11 @@
   "dependencies": {
   },
   "devDependencies": {
-    "browserify": "",
-    "tape": "^4.0.1"
+    "tape": "^4.0.2",
+    "tap-spec": "^4.0.2",
+    "tape-dom": "^0.0.4"
   },
   "scripts": {
-    "pretest": "browserify test/test.js -o test/test-dist.js",
-    "test": "firefox test/index.html"
+    "test": "tape test/*.js | tap-spec"
   }
 }
