@@ -60,3 +60,16 @@ tape('3.B defragmentation', function (t) {
         stream.write(str.charAt(i));
     }
 });
+
+tape('3.C error', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair, 'stream', {});
+    t.plan(1);
+    opstream.on('op', function(recv_op){
+        t.ok(false, 'no ops');
+    });
+    opstream.on('error', function(msg) {
+        t.ok(true, msg);
+    });
+    stream.write("!не операция\n");
+});

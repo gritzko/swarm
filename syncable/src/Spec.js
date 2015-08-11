@@ -46,6 +46,9 @@ function Spec(str, quant) {
             this.value = quant + str;
         } else {
             this.value = '';
+            if (str) {
+                throw new Error('malformed spec');
+            }
         }
     }
 }

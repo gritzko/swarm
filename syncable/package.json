@@ -1,6 +1,6 @@
 {
   "name": "swarm-syncable",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -27,7 +27,8 @@
   "devDependencies": {
     "tape": "^4.0.2",
     "tap-spec": "^4.0.2",
-    "tape-dom": "^0.0.4"
+    "tape-dom": "^0.0.4",
+    "swarm-bat": "^0.4.0"
   },
   "scripts": {
     "test": "tape test/*.js | tap-spec"

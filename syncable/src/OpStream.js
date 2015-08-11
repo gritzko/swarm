@@ -6,14 +6,15 @@ var EventEmitter = require("events").EventEmitter;
 // buffered
 // accept/respond to the given stream
 // emits 'op' event
+// FIXME move reconnection/keepalives to Router
 function OpStream (source_stream, source_id, options) {
     EventEmitter.call(this);
-    this.options = options || {};
+    this.options = options = options || {};
     this.pending_s = [];
-    this.id = null;
     this.closed = false;
-    this.uri = options.uri;
+    this.uri = this.options.uri;
     this.source_id = source_id || 'unknown';
+    this.id = this.source_id; // FIXME
     this.stream = source_stream;
     this.remainder = '';
     this.bound_flush = this.flush.bind(this);
@@ -74,7 +75,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
         parsed = Op.parse(this.remainder, this.source_id);
     } catch (ex) {
         console.error(ex.message, ex.stack);
-        this.deliver(new Op('/Host#'+this.source_id+'.error', 'bad msg format'));
+        this.emit('error', 'bad op format');
         this.close(); // crude DDoS protection TODO
         return;
     }
@@ -112,7 +113,7 @@ OpStream.prototype.onStreamClosed = function () {
 
 OpStream.prototype.onStreamError = function (err) {
     OpStream.debug && console.error('stream error', this.source_id, err);
-    this.emit('error');
+    this.emit('error', err);
     if (!this.closed) {
         this.close();
     }
