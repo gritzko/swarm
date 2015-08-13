@@ -1,0 +1,39 @@
+{
+  "name": "swarm-level-store",
+  "version": "0.4.1",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "src/*.js",
+    "test/*.js",
+    "LICENSE",
+    "README.md",
+    "index.js"
+  ],
+  "main": "index.js",
+  "browser": "index.js",
+  "dependencies": {
+      "swarm-syncable": "^0.4.0",
+      "level": "^1.3.0",
+      "stream-url": "^0.0.5",
+      "swarm-bat": "^0.4.3"
+  },
+  "devDependencies": {
+    "memdown": "^1.0.0",
+    "tape": "^4.0.2",
+    "tap-spec": "^4.0.2",
+    "tape-dom": "^0.0.4"
+  },
+  "scripts": {
+    "test": "tape test/*.js | tap-spec"
+  }
+}

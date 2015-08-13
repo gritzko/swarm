@@ -4,25 +4,26 @@ var Storage = require('..');
 var TestClock = require('swarm-stamp').TestClock;
 
 var bat = require('swarm-bat');
-require('./bat-link');
 
-var levelup = require('levelup');
-var memdown = require('memdown');
-var db = levelup('xxx', { db: memdown });
+var tape = require('tape');
+if (typeof(window)==='object') {
+    var tape_dom = require('tape-dom');
+    tape_dom.stream(tape);
+}
 
 
 var DIALOGUES_4A_BASIC = [
 
 {
-    query:  "[crazy]\tAbRA cAdaBra\n",
+    query:  "[loopback:lvl1A#crazy]\tAbRA cAdaBra\n",
     response:
-        "[crazy]/Host#loc~al.error\tbad msg format\n"+
+        "[loopback:lvl1A#crazy].error\tbad msg format\n"+
         "[EOF]"
 },
 
 {
-    query: "[usr~ssn]/Host#usr~ssn!time0+usr~ssn.on\t\n",
-    response: "[usr~ssn]/Host#loc~al!00001+loc~al.on\t0\n"
+    query:    "[loopback:lvl1A#usr~ssn]/Swarm#db!stamp+usr~ssn.on\t\n",
+    response: "[loopback:lvl1A#usr~ssn]/Swarm#db!stamp+store.on\t\n"
 },
 
 {
@@ -51,9 +52,9 @@ var DIALOGUES_4A_BASIC = [
 
 {
     query:
-    "[usr2~sn]/Host#usr2~sn!time1+usr2~sn.on\t\n",
+    "[loopback:lvl1A#usr2~sn]/Swarm#db!time1+usr2~sn.on\t\n",
     response:
-    "[usr2~sn]/Host#loc~al!00002+loc~al.on\t0\n"
+    "[loopback:lvl1A#usr2~sn]/Swarm#db!time1+store.on\t\n"
 },
 
 {
@@ -70,18 +71,19 @@ var DIALOGUES_4A_BASIC = [
 ];
 
 
-asyncTest('4.A basic cases', function(test){
+tape('1.A basic cases', function(t){
 
-    var storage = new Storage(db);
-    var host = new Host('loc~al', 0, storage);
-    host.clock = new TestClock(host.id);
-    host.listen('bat:4A');
+    var storage = new Storage();
 
-    var mux = new bat.BatMux('mux', 'bat:4A');
+    storage.listen('loopback:lvl1A');
 
-    var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, equal);
+    var mux = new bat.BatMux('mux', 'loopback:lvl1A');
 
-    bt.runScenario( start );
+    var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, t.equal.bind(t));
+
+    bt.runScenario( function () {
+        t.end();
+    } );
 
 });
 
