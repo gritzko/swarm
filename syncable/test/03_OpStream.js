@@ -31,7 +31,7 @@ tape('3.A simple cases', function (t) {
 
     t.plan(send_ops.length*3);
 
-    opstream.on('op', function(op) {
+    opstream.on('data', function(op) {
         var next = expect_ops.pop();
         t.equal(''+op.spec, ''+next.spec, 'spec matches');
         t.equal(''+op.value, ''+next.value, 'value matches');
@@ -52,7 +52,7 @@ tape('3.B defragmentation', function (t) {
     var op = new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'stream');
     var str = op.toString();
     t.plan(2);
-    opstream.on('op', function(recv_op){
+    opstream.on('data', function(recv_op){
         t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
         t.equal(recv_op.value, op.value, 'value matches');
     });
@@ -65,11 +65,49 @@ tape('3.C error', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair, 'stream', {});
     t.plan(1);
-    opstream.on('op', function(recv_op){
+    opstream.on('data', function(recv_op){
         t.ok(false, 'no ops');
     });
     opstream.on('error', function(msg) {
         t.ok(true, msg);
     });
     stream.write("!не операция\n");
+});
+
+tape('3.D handshake', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair, undefined);
+    t.plan(4);
+    opstream.on('data', function(recv_op){
+        t.equal(recv_op.source, 'swarm~ssn');
+        t.equal(''+recv_op.spec, '/Model#stamp!time.on');
+    });
+    opstream.on('id', function(id, op) {
+        t.equal(opstream.id, 'swarm~ssn');
+        t.equal(opstream.db_id, 'db+cluster');
+    });
+    opstream.on('error', function(msg) {
+        t.ok(false, 'no error');
+    });
+    stream.write("/Swarm#db+cluster!stamp+swarm~ssn.on\t\n");
+    stream.write("/Model#stamp!time.on\t\n");
+});
+
+tape('3.E handshake error', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair);
+    t.plan(1);
+    opstream.on('data', function(recv_op){
+        t.ok(false);
+    });
+    opstream.on('id', function(spec) {
+        t.ok(false);
+    });
+    opstream.on('error', function(msg) {
+        t.equal(opstream.id, undefined, 'no handshake');
+    });
+    stream.write("/Model#stamp!time.on\t\n");
+});
+
+tape.skip('3.F stream end', function (t) {
 });

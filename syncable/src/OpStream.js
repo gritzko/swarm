@@ -3,18 +3,25 @@ var Op = require('./Op');
 var util         = require("util");
 var EventEmitter = require("events").EventEmitter;
 
-// buffered
-// accept/respond to the given stream
-// emits 'op' event
-// FIXME move reconnection/keepalives to Router
+// Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
+// router, host - all consume op streams. To make all those part able to run
+// remotely all the op serialization logic is put into a generic OpStream.
+// OpStream runs on top of any regular byte stream (1st argument).
+// All arriving operations are marked with source id (2nd argument).
+// In case source_id is undefined, OpStream expect the first op to be
+// a handshake, like `/Swarm#db+cluster!stamp+swarm~ssn.on`.
+// Note that sending a handshake out is not a responsibility of an OpStream.
+// Apart from regular 'data', 'end' and 'error' events, OpStream emits
+// a special handshake event 'id' (parameters: peer id, handshake specifier).
 function OpStream (source_stream, source_id, options) {
     EventEmitter.call(this);
     this.options = options = options || {};
     this.pending_s = [];
     this.closed = false;
     this.uri = this.options.uri;
-    this.source_id = source_id || 'unknown';
-    this.id = this.source_id; // FIXME
+    this.id = this.source_id = source_id; // undefined => expect a handshake
+    this.db_id = null;
+    this.peer_pipe_id = null;
     this.stream = source_stream;
     this.remainder = '';
     this.bound_flush = this.flush.bind(this);
@@ -81,12 +88,17 @@ OpStream.prototype.onStreamDataReceived = function (data) {
     }
 
     this.remainder = parsed.remainder;
-
     var ops = parsed.ops;
-    var author = this.options.restrictAuthor || undefined;
-    for(var i=0; i<ops.length; i++) {
-        var op = ops[i];
-        try {
+
+    try {
+
+        if (this.id===undefined) { // we expect a handshake
+            this.onHandshake(ops.shift());
+        }
+
+        var author = this.options.restrictAuthor || undefined;
+        for(var i=0; i<ops.length; i++) {
+            var op = ops[i];
             if (op.spec.isEmpty()) {
                 throw new Error('malformed spec: '+snippet(op));
             }
@@ -96,13 +108,26 @@ OpStream.prototype.onStreamDataReceived = function (data) {
             if (author!==undefined && op.spec.author()!==author) {
                 throw new Error('access violation: '+op.spec);
             }
-            this.emit("op", op);
-        } catch (ex) {
-            console.error('error processing '+op.spec, ex.message, ex.stack);
-            this.close();
-            break;
+            this.emit('data', op);
         }
+
+    } catch (ex) {
+        console.error('processing error', ex.message, ex.stack);
+        this.emit("error", "processing error");
+        this.close();
     }
+
+};
+
+OpStream.prototype.onHandshake = function (op) {
+    if (op.spec.pattern()!=='/#!.' || op.spec.type()!=='Swarm' ||
+        op.op().toLowerCase()!=='on') {
+        throw new Error("not a handshake");
+    }
+    this.db_id = op.id();
+    this.id = this.source_id = op.origin();
+    this.peer_pipe_id = op.stamp();
+    this.emit('id', this.id, op);
 };
 
 OpStream.prototype.onStreamClosed = function () {
