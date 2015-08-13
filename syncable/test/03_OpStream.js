@@ -66,10 +66,10 @@ tape('3.C error', function (t) {
     var opstream = new OpStream(stream.pair, 'stream', {});
     t.plan(1);
     opstream.on('data', function(recv_op){
-        t.ok(false, 'no ops');
+        t.fail('no ops here');
     });
     opstream.on('error', function(msg) {
-        t.ok(true, msg);
+        t.pass(msg);
     });
     stream.write("!не операция\n");
 });
@@ -87,7 +87,7 @@ tape('3.D handshake', function (t) {
         t.equal(opstream.db_id, 'db+cluster');
     });
     opstream.on('error', function(msg) {
-        t.ok(false, 'no error');
+        t.fail('no error here');
     });
     stream.write("/Swarm#db+cluster!stamp+swarm~ssn.on\t\n");
     stream.write("/Model#stamp!time.on\t\n");
@@ -98,10 +98,10 @@ tape('3.E handshake error', function (t) {
     var opstream = new OpStream(stream.pair);
     t.plan(1);
     opstream.on('data', function(recv_op){
-        t.ok(false);
+        t.fail('no valid data here');
     });
     opstream.on('id', function(spec) {
-        t.ok(false);
+        t.fail('handshake must fail');
     });
     opstream.on('error', function(msg) {
         t.equal(opstream.id, undefined, 'no handshake');
