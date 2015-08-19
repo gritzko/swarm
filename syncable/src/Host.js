@@ -31,6 +31,10 @@ Host.prototype.close = function () {
     }
 };
 
+Host.prototype.time = function () {
+    return this.clock.issueTimestamp();
+};
+
 // An innner state getter; needs /type#id spec for the object.
 Host.prototype.getInnerState = function (obj) {
     if (obj._owner!==this) {
@@ -142,10 +146,6 @@ Host.prototype.acl = function (op) {
     return true;
 };
 
-Host.prototype.time = function () {
-    return this.clock.time();
-};
-
 // Inner state lifecycle:
 // * unknown (outer: default, '')
 // * created fresh: construcor, sent
@@ -172,7 +172,9 @@ Host.prototype.linkSyncable = function (obj) {
         // for newly created objects, the 0 state is pushed ahead of the
         // handshake as the uplink certainly has nothing
         var state_op = new Op(ev_spec, '', this.id);
-        this.router.storage.deliver(state_op); // FIXME
+
+        this.router && this.router.storage.deliver(state_op); // FIXME
+
         // TODO state push @router
         this.inner_states[obj.spec()] = new obj.constructor.Inner(state_op, this);
     }
