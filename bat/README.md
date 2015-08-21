@@ -1,5 +1,5 @@
-BAT - beat the bugs out of your apps
-====================================
+# BAT - beat the bugs out of your apps
+
 Stream-based [blackbox testing][bbt] toolkit.
 
 BAT feeds the prescribed input into a stream, then listens to the

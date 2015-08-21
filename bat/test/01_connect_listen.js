@@ -5,6 +5,7 @@ var bat = require('..'); // register loopback:
 var tape = require('tape');
 if (typeof(window)==='object') {
     var tape_dom = require('tape-dom');
+    tape_dom.installCSS();
     tape_dom.stream(tape);
 }
 
@@ -23,4 +24,9 @@ tape ('1.A listen-connect loopback stream', function (t) {
             t.ok(true, 'stream ends'); // TODO
         });
     });
+});
+
+
+tape.skip ('1.B listen-connect local stream', function (t) {
+    
 });
