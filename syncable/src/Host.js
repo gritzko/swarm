@@ -1,25 +1,44 @@
 'use strict';
 
+var stream_url = require('stream-url');
 var lamp64 = require('swarm-stamp');
-var Spec = require('./Spec');
+var Spec =  require('./Spec');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
+var OpStream =  require('./OpStream');
+var util         = require("util");
+var EventEmitter = require("events").EventEmitter;
 
 // Host is the world of actual Syncable CRDT objects of various types.
 // A (full) Swarm node is Host+Storage+Router.
-function Host (id, router, offset_ms) {
-    this.id = id;
-    this.clock = new lamp64.Clock(this.id, offset_ms||0);
-    this.router = router;
-    if (router) {
-        router.id = 'X+'+this.id;
-    }
+function Host (options) {
+    EventEmitter.call(this);
+    // id, router, offset_ms
+    this.options = options;
+    this.ssn_id = null;
+    this.db_id = null;
+    this.clock = null;
+    this.router = null;
     this.syncables = {};
     this.inner_states = {};
+    if (options.ssn_id) {
+        this.ssn_id = options.ssn_id;
+        this.clock = new lamp64.Clock(this.ssn_id, options.offset_ms||0);
+    }
+    if (options.db_id) {
+        this.db_id = options.db_id;
+    }
+    if (options.router_url) {
+        this.setRouter(options.router_url);
+    }
     if (!Host.multihost) {
+        if (Host.localhost) {
+            throw new Error('not in multihost mode');
+        }
         Host.localhost = this;
     }
 }
+util.inherits(Host, EventEmitter);
 module.exports = Host;
 Host.debug = false;
 Host.multihost = false;
@@ -31,8 +50,61 @@ Host.prototype.close = function () {
     }
 };
 
+Host.prototype.setRouter = function (url, options) {
+    var self = this;
+    if (self.router) {
+        throw new Error('router is already set');
+    }
+    stream_url.connect ( url, options, on_connected );
+    function on_connected (err, stream) {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        var op_stream = new OpStream(stream);
+        op_stream.on('id', on_handshake);
+        var hs = self.handshake();
+        if (hs) {
+            op_stream.write(hs);
+        }
+    }
+    function on_handshake (op, op_stream) {
+        var router_ssn_id = op.origin();
+        var router_db_id = op.id();
+        var hsed = self.ssn_id && self.db_id;
+        if (hsed) {
+            // Host must listen to it's session router.
+            // A Router may listen to other Routers, of course.
+            if (router_ssn_id!==self.ssn_id || router_db_id!==self.db_id) {
+                console.error('router serves a different db/session');
+                op_stream.end();
+                return;
+            }
+        } else {
+            self.ssn_id = router_ssn_id;
+            self.db_id = router_db_id;
+            self.clock = new lamp64.Clock
+                (self.ssn_id, self.options.offset_ms||0);
+            op_stream.write(self.handshake());
+        }
+        self.router = op_stream;
+        var ids = Object.keys(self.inner_states);
+        while (ids.length) {
+            var is = self.inner_states[ids.pop()];
+            self.opUp(is, 'on', is._version);
+        }
+    }
+};
+
+Host.prototype.handshake = function () {
+    if (!this.ssn_id || !this.db_id) { return null; }
+    var key = new Spec('/Swarm+Host').add(this.db_id, '#')
+        .add(this.time(),'!').add('.on');
+    return new Op(key, '');
+};
+
 Host.prototype.time = function () {
-    return this.clock.issueTimestamp();
+    return this.clock ? this.clock.issueTimestamp() : null;
 };
 
 // An innner state getter; needs /type#id spec for the object.
@@ -195,15 +267,16 @@ Host.prototype.linkSyncable = function (obj) {
         // we'll repeat rebuild() on state arrival
     }
 
-    // Unified local and remote subscriptions:
-    //   !0 fictive subscription (like we are root, but send a preon)
-    //   !0+myself subscription by the local logix ("zero pipe")
-    //   !time+peer incoming (downstream) pipe subscription
-    //   !time+myself outgoing (upstream) subscription
-    var on_spec = obj.spec().add(this.id,'!').add('.on');
-    var on = new Op (on_spec, obj._version || '', this.id);
-    this.router && this.router.deliver(on);
+    if (this.router) {
+        this.opUp(obj, 'on', obj._version);
+    }
     return obj;
+};
+
+Host.prototype.opUp = function (obj, op_name, value) {
+    var spec = obj.spec().add('H+'+this.ssn_id, '!').add(op_name, '.');
+    var op = new Op (spec, value || '');
+    this.router.write(op);
 };
 
 Host.prototype.unlinkSyncable = function (obj) {
@@ -213,9 +286,7 @@ Host.prototype.unlinkSyncable = function (obj) {
             throw new Error('the registered object is different');
         }
         delete this.syncables[id];
-        var off_spec = obj.spec().add('!0').add('.off');
-        var off_op = new Op(off_spec, '', this.id);
-        this.router && this.router.deliver(off_op);
+        this.opUp(obj, 'off');
     }
 };
 
@@ -248,7 +319,8 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     }
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
     var op = new Op(spec, value, this.id);
-    if (this.deliver(op) && this.router) {
+    this.deliver(op);
+    if (this.router) {
         this.router.deliver(op, this);
     }
 };
