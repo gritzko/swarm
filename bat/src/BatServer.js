@@ -1,4 +1,5 @@
 "use strict";
+var url_pkg = require('url');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
@@ -10,10 +11,7 @@ function BatServer (id, options, callback) {
     this.id = null;
     this.streams = {};
     if (id) {
-        this.listen(id);
-    }
-    if (typeof(callback)==='function') {
-        this.on('connection',  callback);
+        this.listen(id, options, callback);
     }
 }
 util.inherits(BatServer, EventEmitter);
@@ -24,19 +22,19 @@ BatServer.prototype._bat_connect = function (uri, bat_stream) {
     this.emit('connection', bat_stream);
 };
 
-BatServer.prototype.listen = function (url){
+BatServer.prototype.listen = function (id, nothing, callback){
+    var error = null, self=this;
     if (this.id) {
-        throw new Error('can listen one id only');
+        error = 'can listen one id only';
+    } else if (this.id in BatServer.servers) {
+        error = 'id is taken already';
+    } else {
+        this.id = id;
+        BatServer.servers[this.id] = this;
     }
-    var m = url.toString().match(/^(bat:)?(\w+)/);
-    if (!m) {
-        throw new Error('malformed id/url');
-    }
-    this.id = m[2];
-    if (this.id in BatServer.servers) {
-        throw new Error('id is taken already');
-    }
-    BatServer.servers[this.id] = this;
+    setTimeout(function(){
+        callback && callback(error, self);
+    }, 1);
 };
 
 BatServer.prototype.close = function (){

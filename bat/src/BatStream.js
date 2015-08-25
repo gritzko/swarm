@@ -31,13 +31,11 @@ BatStream.prototype._pair = function (pair) {
     var self = this;
     this.pair = pair;
 
-    
     /*
     pair.on('finish', function(){
         self.emit('end');
     });
     */
-
 };
 
 BatStream.prototype._read = function (size) {};
@@ -55,8 +53,8 @@ BatStream.prototype.pop = function () {
     return ret;
 };
 
-BatStream.prototype.connect = function (id, options, callback) {
-    var srv_id = m[2], attempt = 0;
+BatStream.prototype.connect = function (srv_id, options, callback) {
+    var attempt = 0, self=this;
 
     function connect_to_server(){
         var srv = BatServer.servers[srv_id];
@@ -64,17 +62,17 @@ BatStream.prototype.connect = function (id, options, callback) {
             if (++attempt<10) {
                 setTimeout(connect_to_server, 10);
             } else {
-                console.error('server not known: '+id+', '+srv_id);
+                console.error('server not known: '+srv_id);
                 callback && callback("server not known");
             }
         } else {
-            srv._bat_connect(id, this.pair);
+            srv._bat_connect(srv_id, self.pair);
             callback && callback(null, self);
             self.emit('connect', self);
         }
     }
-        
-    var timer = setTimeout(connect_to_server, 1);
+
+    setTimeout(connect_to_server, 1);
 };
 
 BatStream.prototype.end = function () {

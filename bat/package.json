@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "0.4.3",
+    "version": "0.4.5",
     "files": [
         "src/*.js",
         "bat.js",

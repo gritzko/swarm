@@ -1,6 +1,8 @@
 "use strict";
 var BatStream = require('./BatStream');
 var stream_url = require('stream-url');
+var util         = require("util");
+var EventEmitter = require("events").EventEmitter;
 
 /** The class is mostly useful to test text-based, line-based protocols.
     It multiplexes/demultiplexes several text streams to/from a single
@@ -14,15 +16,19 @@ var stream_url = require('stream-url');
         '[tag]something'
 */
 function BatMux (id, server_url) {
+    EventEmitter.call(this);
     this.server_url = server_url;
     this.trunk = new BatStream();
     this.branches = {};
-    this.active_tag_r = '';
+    this.data = [];
+    this.chop = '';
+    this.url_r = '';
     this.active_tag_w = '';
     this.end = false;
     this.trunk.pair.on('data', this.onTrunkDataIn.bind(this));
     this.trunk.pair.on('end', this.onTrunkDataEnd.bind(this));
 }
+util.inherits(BatMux, EventEmitter);
 module.exports = BatMux;
 BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
 
@@ -64,41 +70,83 @@ BatMux.prototype.onBranchEnd = function (tag) {
     }
 };
 
-BatMux.prototype.addBranch = function (tag) {
+BatMux.prototype.connect = function (url) {
     var self = this;
-    var stream = stream_url.connect(tag);
-    this.branches[tag] = stream;
-    stream.on('data', function(data){
-        self.onBranchDataIn(tag, data);
-    });
-    stream.on('end', function(){
-        self.onBranchEnd(tag);
+    stream_url.connect(url, function(err, stream){
+        if (err) {
+            self.emit('error', err);
+            self.data = null;
+            return;
+        }
+        self.branches[url] = stream;
+        stream.on('data', function(data){
+            self.onBranchDataIn(url, data);
+        });
+        stream.on('end', function(){
+            self.onBranchEnd(url);
+        });
+        self.drain();
     });
 };
 
 BatMux.prototype.onTrunkDataIn = function (data) {
-    var str = data.toString();
-    while ( str ) { // todo  "[str" "eam]"
-        var m = BatMux.tag_re.exec(str);
-        var tag = m ? m[1] : null;
-        var pre = m ? str.substr(0, m.index) : str;
-        str = m ? str.substr(m.index + m[0].length) : null;
-        if (pre) {
-            var stream = this.branches[this.active_tag_r];
-            if (stream!==null) {
-                stream.write(pre);
-            }
+    if (this.data===null) {
+        throw new Error('this muxer is broken');
+    }
+    var chop = data.toString(), m, li=0;
+    var re = /\[([^\]]+)\]/mg;
+    while (m = re.exec(chop)) {
+        if (m.index>li) {
+            this.data.push(chop.substring(li,m.index));
         }
-        if (tag && tag!==this.active_tag_r) {
-            this.active_tag_r = tag;
-            if (!(tag in this.branches)) {
-                this.addBranch(tag);
+        this.data.push(new BatMux.To(m[1]));
+        li = m.index + m[0].length;
+    }
+    if (li<chop.length) {
+        this.data.push(chop.substr(li));
+    }
+    this.drain();
+};
+
+BatMux.To = function MuxTo(url) {
+    this.url = url;
+};
+
+BatMux.To.prototype.toString = function () {
+    return '[' + this.url + ']';
+};
+
+
+BatMux.prototype.drain = function () {
+    while (this.data.length) {
+        var next = this.data.shift();
+        if (next.constructor===BatMux.To) {
+            this.url_r = next.url.toString();
+            if (!(this.url_r in this.branches)) {
+                this.connect(this.url_r);
+                break;
+            }
+        } else {
+            if (!this.url_r) {
+                this.emit('error', 'no active stream');
+                this.data = null;
+                return;
+            }
+            var stream = this.branches[this.url_r];
+            if (stream) {
+                stream.write(next);
+            } else { // the stream is not ready yet
+                this.data.unshift(next);
+                break;
             }
         }
     }
+    if (!this.data.length && this.end) {
+        this.onTrunkDataEnd();
+    }
 };
 
-BatMux.prototype.onTrunkDataEnd = function (data) {
+BatMux.prototype.onTrunkDataEnd = function () {
     for(var tag in this.branches) {
         this.branches[tag].end();
     }

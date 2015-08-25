@@ -5,10 +5,12 @@ var BatServer = bat.BatServer;
 var BatMux = bat.BatMux;
 var BatStream = bat.BatStream;
 var StreamTest = bat.StreamTest;
+var url = require('url');
 
 var tape = require('tape');
 if (typeof(window)==='object') {
     var tape_dom = require('tape-dom');
+    tape_dom.installCSS();
     tape_dom.stream(tape);
 }
 
@@ -134,7 +136,7 @@ tape ('2.b. BatStream', function (t) {
 tape ('2.c. BatServer', function (t) {
 	var step = 1, count=3;
     t.plan(3);
-	var server = new BatServer('bat:srv1');
+	var server = new BatServer('srv1');
 	server.on('connection', function (in_stream) {
 		in_stream.on('data', function (data) {
 			var int = parseInt(data.toString());
@@ -155,6 +157,11 @@ tape ('2.d. BatMux', function (t) {
 	var mux = new BatMux('mux1');
 	var response = '';
 	var stream_count = 0;
+    mux.on('error', function(err){
+        console.error('mux error', err);
+        t.fail();
+        t.end();
+    });
 	srv2.on('connection', function (stream) {
 		var stream_no = ++stream_count;
 		stream.on('data', function (in_data) {
@@ -178,7 +185,7 @@ tape ('2.d. BatMux', function (t) {
         t.end();
     });
 	mux.trunk.write('[loopback:srv2#A]one[loopback:srv2#B]');
-	mux.trunk.write('two');
+    mux.trunk.write('two');
     mux.trunk.end();
 });
 
