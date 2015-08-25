@@ -11,5 +11,6 @@ var exports = {
 };
 
 exports.Clock = exports.SecondPreciseClock;
+exports.TestClock = exports.LamportClock;
 
 module.exports = exports;

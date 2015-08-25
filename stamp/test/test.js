@@ -48,14 +48,14 @@ tape('c. Minute-precise clox', function(tap){
     var prevts = '';
     for(var i=0; i<64; i++) {
         var ts = clock.issueTimestamp();
-        tap.ok(/^[0-9a-zA-Z_~]{5}\+min$/.test(ts));
-        tap.ok(ts>prevts);
+        tap.ok(/^[0-9a-zA-Z_~]{5}\+min$/.test(ts), 'timestamp is valid');
+        tap.ok(ts>prevts, 'order is monotonous');
         prevts = ts;
     }
     for(i=0; i<130; i++) {
         ts = clock.issueTimestamp();
     }
-    tap.ok(/^[0-9a-zA-Z_~]{7}\+min$/.test(ts));
+    tap.ok(/^[0-9a-zA-Z_~]{7}\+min$/.test(ts), 'yeah, valid');
     tap.end();
     // tick 60 times
     // check the last char is changing
