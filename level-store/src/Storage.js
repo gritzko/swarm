@@ -1,4 +1,5 @@
 "use strict";
+var stamp = require('swarm-stamp');
 var sync = require('swarm-syncable');
 var Spec = sync.Spec;
 var Op = sync.Op;
@@ -17,49 +18,175 @@ var later = false, done = true;
 // Namely, it tracks no subscriptions, all new ops are simply echoed back.
 // Storage supports both network (see `listen()`) and immediate procedural
 // invocation (see `deliver()`).
-function Storage(db, options) {
-    if (!db) {
+function Storage(options) {
+    var self = this;
+    this.options = options = options || {};
+    if (!options.db) {
         var memdown = require('memdown');
         if (!memdown) { throw new Error('no memdown!'); }
-        db = levelup(memdown);
+        this.db = levelup(memdown);
+    } else {
+        this.db = options.db;
     }
-    if (!options) { options = {}; }
-    this.id = options.id || 'store';
-    this.db_id = options.db_id || 'db';
-    this.options = options || {};
-    this.host = null; // local client (host or router alike)
+    this.conn_count = 0;
+    this.ssn_id = options.ssn_id || null;
+    this.db_id = options.db_id || null;
+    //this.host = null; // local client (host or router alike)
     this.my_servers = []; // servers for remote clients
-    this.db = db;
-    this.clients = null; // remote clients {id: stream}
+    this.clients = {}; // remote clients {id: stream}
     // ops for the same object are processed sequentially
     this.pending = {
         queue: [],
         busy: false
     };
+    // check if session_id/db_id are recorded in the db
+    this.db.createReadStream({gt:'/Swarm ', lt:'/Swarm/', limit:1})
+    .on('data', function (data) {  // the database is not empty
+        var handshake = new Spec(data.key);
+        if (self.db_id) {
+            if (self.db_id!==handshake.id()) {
+                console.error('wrong db');
+                self.db.close();
+                self.db = null;
+            }
+        } else {
+            self.db_id = handshake.id();
+        }
+        if (self.ssn_id) {
+            if (self.ssn_id!==handshake.source()) {
+                console.error('wrong session');
+                self.db.close();
+                self.db = null;
+            }
+        } else {
+            self.ssn_id = handshake.source();
+        }
+        var opts = JSON.parse(data.value);
+        for(var key in opts) {
+            if (key in self.options) {
+                console.warn('option overridden:', key);
+            }
+            self.options[key] = opts[key];
+        }
+    }).on('error', function (err) {
+        console.error(err);
+        self.db.close();
+        self.db = null;
+    }).on('end', function(){
+        if (!self.db_id) {// the database is empty
+            if (!options.db_id || !options.ssn_id) {
+                console.error('uninitialized db');
+                self.db.close();
+                self.db = null;
+                return;
+            }
+            self.db_id = options.db_id;
+            self.ssn_id = options.ssn_id;
+            self.db.put(this.handshake());
+        }
+        if (options.listen_url) {
+            self.listen(options.listen_url);
+        }
+    });
 }
 module.exports = Storage;
 Storage.debug = false;
 
+Storage.prototype.handshake = function () {
+    if (!this.db_id || !this.ssn_id) {
+        return null;
+    }
+    var handshake_spec = new Spec('/Swarm')
+        .add(this.db_id, '#')
+        // generate stream stamp
+        .add('0S'+stamp.base64.int2base(++this.conn_count,1)+'+'+this.ssn_id, '!')
+        .add('.on');
+    return new Op(handshake_spec, ''); // TODO options
+};
+
+// In case we read our ids from the db asynchronously, we may
+// not be able to send handshakes immediately.
+Storage.prototype.send_handshakes = function (client_id)  {
+    var hs = this.handshake();
+    for(var id in this.clients) {
+        var opstream = this.clients[id];
+        opstream.write(hs);
+    }
+};
+/*
+Storage.prototype.load_settings = function (op) {
+    var handshake = op.spec, self = this;
+    if (self.db_id) {
+        if (self.db_id!==handshake.id()) {
+            console.error('wrong db');
+            self.db.close();
+            self.db = null;
+        }
+    } else {
+        self.db_id = handshake.id();
+    }
+    if (self.ssn_id) {
+        if (self.ssn_id!==handshake.source()) {
+            console.error('wrong session');
+            self.db.close();
+            self.db = null;
+        }
+    } else {
+        self.ssn_id = handshake.source();
+    }
+    var options = JSON.parse(op.value);
+    for(var key in options) {
+        if (key in this.options) {
+            console.warn('option overridden:', key);
+        }
+        this.options[key] = options[key];
+    }
+};
+*/
 // TODO handshakes, host_id
-Storage.prototype.listen = function (url) {
-    var deliver = this._deliver.bind(this), self=this;
-    if (!this.clients) { this.clients = {}; }
-    this.my_servers = stream_url.listen(url, function (stream){
-        // handshake is required
-        var op_stream = new OpStream(stream, undefined, {});
-        op_stream.on('id', function (id, op) {
-            self.clients[op_stream.id] = op_stream;
-            // Storage has no own clocks, echoes incoming timestamps
-            var stamp = op.spec.token('!').bare;
-            var handshake_spec = new Spec('/Swarm').add
-                (this.db_id, '#').add(stamp+'+'+self.id, '!').add('.on');
-            op_stream.write(new Op(handshake_spec, ''));
-        });
-        op_stream.on('data', deliver);
-        op_stream.on('error', function(msg) {
-            stream.end('.error\tbad msg format\n');
-        });
+Storage.prototype.listen = function (url, options, on_ready) {
+    var self=this;
+    if (url in self.my_servers) {
+        throw new Error('I listen that url already');
+    }
+    if (options && options.constructor===Function) {
+        on_ready = options;
+        options = null;
+    }
+
+    stream_url.listen(url, options, function (err, server){
+        if (err) {
+            console.error('can not listen', err);
+            on_ready && on_ready(err);
+        } else {
+            self.my_servers[url] = server;
+            server.on('connection', on_incoming_connection);
+            on_ready && on_ready(null, server);
+        }
     });
+
+    function on_incoming_connection (stream) {
+
+        var op_stream = new OpStream(stream, undefined, {});
+        op_stream.sendHandshake(self.handshake());
+
+        op_stream.on('id', function (op) {
+            var client_ssn_id = op.origin();
+            var client_db_id = op.id();
+            if (self.db_id && self.db_id!==client_db_id) {
+                op_stream.end(new Op('.error', 'wrong database id'));
+            } else if (self.ssn_id && self.ssn_id!==client_ssn_id) {
+                op_stream.end(new Op('.error', 'wrong session id'));
+            } else {
+                self.clients[op_stream.id] = op_stream;
+                op_stream.on('data', self._deliver.bind(this));
+            }
+        });
+        op_stream.on('error', function(msg) {
+            op_stream.end(new Op('.error', msg));
+        });
+    }
+
 };
 
 Storage.prototype.deliver = function (op) {
@@ -366,6 +493,11 @@ Request.prototype.patch = function () {
         this.error = "base expression not understood";
     }
     if (tail) {
+
+        // HERE WE MAY WANT TO QUERY Host!!!!!!!!!!!!!!
+        // to host:  !st.on !st.diff !st.off
+        // response:  pick .diff (1 .state)
+
         var bundle = tail.map( function(op) {
             return '\t' + op.spec + '\t' + op.value + '\n';
         });
