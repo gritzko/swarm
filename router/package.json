@@ -1,0 +1,37 @@
+{
+  "name": "swarm-",
+  "version": "0.4.1",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "src/*.js",
+    "test/*.js",
+    "LICENSE",
+    "README.md",
+    "index.js"
+  ],
+  "main": "src/Router.js",
+  "browser": "src/Router.js",
+  "dependencies": {
+      "swarm-stamp": "^0.4.0",
+      "stream-url": "^0.0.8"
+  },
+  "devDependencies": {
+    "tape": "^4.0.2",
+    "tap-spec": "^4.0.2",
+    "tape-dom": "^0.0.4",
+    "swarm-level-store": "^0.4.0"
+  },
+  "scripts": {
+    "test": "tape test/*.js | tap-spec"
+  }
+}
