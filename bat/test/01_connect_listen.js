@@ -11,12 +11,14 @@ if (typeof(window)==='object') {
 
 tape ('1.A listen-connect loopback stream', function (t) {
     t.plan(3);
-    var server = su.listen('loopback:string', function(stream) {
-        t.ok(true, 'incoming connection');
-        stream.write('OK');
-        stream.end();
+    var server = su.listen('0:string', function(error, server) {
+        server.on('connection', function (stream) {
+            t.ok(true, 'incoming connection');
+            stream.write('OK');
+            stream.end();
+        });
     });
-    var one = su.connect('loopback:string', function (stream) {
+    var one = su.connect('0:string', function (error, stream) {
         stream.on('data', function (data) {
             t.equal(''+data, 'OK', 'data match');
         });

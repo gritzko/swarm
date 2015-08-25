@@ -56,20 +56,25 @@ BatStream.prototype.pop = function () {
 };
 
 BatStream.prototype.connect = function (id, options, callback) {
-    var m = id.toString().match(/^(bat:)?(\w+)/), self = this;
-    if (!m) {
-        throw new Error('malformed id/url');
+    var srv_id = m[2], attempt = 0;
+
+    function connect_to_server(){
+        var srv = BatServer.servers[srv_id];
+        if (!srv) {
+            if (++attempt<10) {
+                setTimeout(connect_to_server, 10);
+            } else {
+                console.error('server not known: '+id+', '+srv_id);
+                callback && callback("server not known");
+            }
+        } else {
+            srv._bat_connect(id, this.pair);
+            callback && callback(null, self);
+            self.emit('connect', self);
+        }
     }
-    var srv_id = m[2];
-    var srv = BatServer.servers[srv_id];
-    if (!srv) {
-        throw new Error('server not known: '+id+', '+srv_id);
-    }
-    srv._bat_connect(id, this.pair);
-    setTimeout(function(){
-        callback && callback(self);
-        self.emit('connect', self);
-    }, 1);
+        
+    var timer = setTimeout(connect_to_server, 1);
 };
 
 BatStream.prototype.end = function () {

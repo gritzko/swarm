@@ -21,3 +21,4 @@ function loopback_connect (stream_url, callback) {
     stream.connect(stream_url.host, {}, callback);
     return stream;
 }
+
