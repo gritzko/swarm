@@ -3,13 +3,14 @@ var base64 = require('./base64');
 var LamportTimestamp = require('./LamportTimestamp');
 
 /** Pure logical-time Lamport clocks. */
-var LamportClock = function (processId, initTime) {
+var LamportClock = function (processId, initTime, prefix) {
     if (!base64.reTok.test(processId)) {
         throw new Error('invalid process id: '+processId);
     }
     this.id = processId;
+    this.prefix = prefix || '';
     // sometimes we assume our local clock has some offset
-    this.seq = 0;
+    this.seq = initTime || 0;
 };
 
 LamportClock.prototype.adjustTime = function () {
@@ -17,10 +18,17 @@ LamportClock.prototype.adjustTime = function () {
 
 LamportClock.prototype.issueTimestamp = function time () {
     var base = base64.int2base(this.seq++, 5);
-    return base + '+' + this.id;
+    return this.prefix + base + '+' + this.id;
 };
 
 LamportClock.prototype.parseTimestamp = function parse (ts) {
+    if (this.prefix) {
+        var p = ts.substr(0, this.prefix.length);
+        if (p!==this.prefix) {
+            throw new Error('missing prefix');
+        }
+        ts = ts.substr(this.prefix.length);
+    }
     var m = ts.match(LamportTimestamp.reTokExt);
     if (!m) {throw new Error('malformed timestamp: '+ts);}
     return {
