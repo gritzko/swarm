@@ -66,8 +66,8 @@ function Router (options) { //(id, ms, storage) {
     // TODO guarantee non-overlapping timestamps (no practical value, but...)
     if (options.ssn_id) { // user~ssn
         this.ssn_id = options.ssn_id;
-        var clock_fn = options.clock || stamp.Clock;
-        this.clock = new clock_fn(this.ssn_id);
+        //var clock_fn = options.clock || stamp.Clock;
+        this.clock = new stamp.LamportClock(this.ssn_id, 0, '0X~');
     }
     if (options.db_id) { // db+cluster
         this.db_id = options.db_id;
@@ -76,7 +76,7 @@ function Router (options) { //(id, ms, storage) {
         this.setStorage(options.storage_url);
     } else if (options.storage) {
         var store = options.storage, self = this;
-        var random = stamp.base64.int2base(Math.floor(Math.random()*10000));
+        var random = 'storage' + Math.floor(Math.random()*10000);
         store.listen('0:'+random, function () {
             self.setStorage('0:'+random);
         });
@@ -137,7 +137,7 @@ Router.prototype.handshake = function () {
     if (!this.db_id || !this.ssn_id) {
         return null;
     }
-    var hs = new Spec('/Swarm').add(this.db_id, '#')
+    var hs = new Spec('/Swarm+X').add(this.db_id, '#')
         .add(this.time(), '!').add('.on');
     return new Op(hs, '');
 };
@@ -152,10 +152,10 @@ Router.prototype.setStorage = function (url, options) {
             return;
         }
         self.storage = new OpStream(stream);
+        self.storage.on('id', init_ids);
         if (hs) { // we know who we are
             self.storage.sendHandshake(hs);
         }
-        self.storage.on('id', init_ids);
     });
     function init_ids (op){
         var store_ssn_id = op.origin();
@@ -167,8 +167,8 @@ Router.prototype.setStorage = function (url, options) {
         } else {
             self.db_id = store_db_id;
             self.ssn_id = store_ssn_id;
-            var clock_fn = self.options.clock || stamp.Clock;
-            self.clock = new clock_fn(self.ssn_id);
+            //var clock_fn = self.options.clock || stamp.LamportClock;
+            self.clock = new stamp.LamportClock(self.ssn_id, 0, '0X~');
             if (!hs) {
                 hs = self.handshake();
                 self.storage.sendHandshake(hs);
@@ -178,7 +178,7 @@ Router.prototype.setStorage = function (url, options) {
         if (self.options.listen_url) {
             self.listen(self.options.listen_url);
         }
-        self.emit('ready', this);
+        self.emit('ready', self);
     }
     function fail () {
         self.storage && self.storage.end();
@@ -208,7 +208,7 @@ Router.prototype.newEventSpec = function (evname) {
 };
 
 Router.prototype.spec = function () {
-    return new Spec('/Router').add(this.id,'#');
+    return new Spec('/Swarm+Router').add(this.db_id,'#');
 };
 
 /********************* op dispatching *********************
@@ -229,7 +229,7 @@ Router.prototype.deliver = function (op, pipe) {// TODO "synchronized"
     var ti = op.spec.filter('/#');
     var id = op.spec.id();
 
-    Router.debug && console.log((op.source||'unknown')+'>'+this.id, op.toString());
+    //Router.debug && console.log((op.source||'unknown')+'>'+this.id, op.toString());
 
     /*if (op.spec.type() === 'Router') { // handshake from a (remote) Router
         return this.dispatchRouterHandshake(op, pipe);
@@ -892,7 +892,7 @@ Router.prototype.addStream = function RouterAddPipe(stream) {
         var new_peer_stamp = op_stream.peer_stamp;
         if (old_peer_stamp) {
             var old = self.peers[old_peer_stamp];
-            old.deliver( new Op(self.spec().add(old.stamp, '!').add('.off')) );
+            old.deliver( new Op(self.spec().add(old.stamp, '!').add('.off'), '') );
             delete self.ssn2peer_stamp[op_stream.peer_ssn_id];
             delete self.stamp2peer_stamp[old.stamp];
             delete self.peers[old_peer_stamp];
@@ -1075,6 +1075,18 @@ Router.hashDistance = function hashDistance(pipe, obj) {
     return dist;
 };
 
+/** a really simplistic default hash function */
+Router.hashfn = function djb2Hash(str) {
+    if (str===undefined) {
+        throw new Error('XYZ');
+    }
+    var hash = 5381;
+    for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    }
+    return hash;
+};
+
  /* This default
  * implementation uses a simple consistent hashing scheme.
  * Note that a client may be connected to many servers
@@ -1085,7 +1097,7 @@ Router.hashDistance = function hashDistance(pipe, obj) {
 Router.prototype.getUplink = function (id) {
     var mindist = 4294967295,
         reServer = /^swarm~/, // pipes, not clients
-        target = env.hashfn(id),
+        target = Router.hashfn(id),
         closestpipe = null;
 
     if (reServer.test(this.id)) { // just in case we're the root

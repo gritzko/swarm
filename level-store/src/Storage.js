@@ -34,6 +34,7 @@ function Storage(options) {
     this.conn_count = 0;
     this.ssn_id = options.ssn_id || null;
     this.db_id = options.db_id || null;
+    this.clock = null;
     //this.host = null; // local client (host or router alike)
     this.my_servers = []; // servers for remote clients
     this.clients = {}; // remote clients {id: stream}
@@ -85,8 +86,9 @@ function Storage(options) {
             }
             self.db_id = options.db_id;
             self.ssn_id = options.ssn_id;
-            self.db.put(this.handshake());
+            self.db.put(self.handshake());
         }
+        self.clock = new stamp.LamportClock(self.ssn_id, 0, '0S~');
         if (options.listen_url) {
             self.listen(options.listen_url);
         }
@@ -103,7 +105,7 @@ Storage.prototype.handshake = function () {
     var handshake_spec = new Spec('/Swarm+LvlStore')
         .add(this.db_id, '#')
         // generate stream stamp
-        .add('0S'+stamp.base64.int2base(++this.conn_count,1)+'+'+this.ssn_id, '!')
+        .add(this.clock.issueTimestamp(), '!')
         .add('.on');
     return new Op(handshake_spec, ''); // TODO options
 };
@@ -175,8 +177,6 @@ Storage.prototype.listen = function (url, options, on_ready) {
     function on_incoming_connection (stream) {
 
         var op_stream = new OpStream (stream, undefined, {});
-        op_stream.sendHandshake(self.handshake());
-
         op_stream.on('id', function (op) {
             var client_ssn_id = op.origin();
             var client_db_id = op.id();
@@ -192,6 +192,9 @@ Storage.prototype.listen = function (url, options, on_ready) {
         op_stream.on('error', function(msg) {
             op_stream.end(new Op('.error', msg));
         });
+
+        op_stream.sendHandshake(self.handshake());
+
     }
 
 };

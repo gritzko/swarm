@@ -44,13 +44,11 @@ tape ('1.a handshake all the things', function (t){
     var server_router = new Router({
         storage_url: "0:store1a",
         ssn_id: "swarm",
-        db_id: "db",
-        clock: stamp.TestClock
+        db_id: "db"
     });
     var client_router = new Router({ // will learn ssn_id from storage
         storage: client_store,
-        listen_url: '0:client3a',
-        clock: stamp.TestClock
+        listen_url: '0:client3a'
     });
 
     var ready = 0;
@@ -70,45 +68,55 @@ tape ('1.a handshake all the things', function (t){
     });
 
     // test router-to-router handshakes
-    server_router.on('connect', function (op_stream){
+    server_router.once('connect', function (op_stream){
         t.equal(op_stream.peer_ssn_id, client_router.ssn_id);
         t.equal(op_stream.peer_db_id, client_router.db_id);
         // storage ssn_id -> router ssn_id -> opstream peer_stamp
-        t.equal(op_stream.peer_stamp, '00001+client~3a');
+        t.equal(op_stream.peer_stamp, '0X~00001+client~3a');
     });
 
-    client_router.on('connect', function (op_stream){
+    client_router.once('connect', function (op_stream){
         t.equal(op_stream.peer_ssn_id, server_router.ssn_id, 'srv ssn id recvd');
         t.equal(op_stream.peer_db_id, server_router.db_id, 'srv db id recvd');
-        t.equal(op_stream.peer_stamp, '00000+swarm', 'got stamp too');
+        t.equal(op_stream.peer_stamp, '0X~00000+swarm', 'got stamp too');
     });
 
     // FIXME use loopback:
     function connect_routers () {
         server_router.listen ('0:swarm3a');
         client_router.connect('0:swarm3a');
+        start_hosts();
     }
 
-    /*var client_host = new Host({
-        router_url: '0://client3a/',
-        ssn_id: 'client3a',
-        db_id: 'db'
-    });
-    client_host.setRouter('0:client3a');
-    var server_host = new Host({
-        router_url: '0:swarm3a'
-    });
+    var client_host, server_host;
 
-    var room = new Model({}, client_host);
-    var room_up;
+    function start_hosts () {
+        client_host = new Host({
+            ssn_id: 'client~3a',
+            db_id: 'db'
+        });
+        client_host.on('ready', create_object);
+        client_host.setUpstream('0://client3a/');
 
-    room.onInit(function i(ev){
-        t.equal(this, room, '"this" of a listener if the object');
-        this.set({t:22});
+        server_host = new Host({
+            upstream_url: '0:swarm3a'
+        });
 
-        room_up = new Model(room._id, server_host);
-        setTimeout(check, 100); // pipes and storage are async
-    });
+    }
+
+    var room, room_up;
+
+    function create_object () {
+        room = new Model({t: -20}, client_host);
+
+        room.onInit(function i(ev){
+            t.equal(this, room, '"this" of a listener if the object');
+            this.set({t:22});
+
+            room_up = new Model(room._id, server_host);
+            setTimeout(check, 100); // pipes and storage are async
+        });
+    }
 
     function check(){
         t.equal(room_up.t, 22, 'value synced upwards');
@@ -118,7 +126,7 @@ tape ('1.a handshake all the things', function (t){
         Host.debug = false;
         Router.debug = false;
         OpStream.debug = false;
-    }*/
+    }
 
 });
 

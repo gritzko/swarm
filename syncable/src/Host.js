@@ -18,7 +18,7 @@ function Host (options) {
     this.ssn_id = null;
     this.db_id = null;
     this.clock = null;
-    this.router = null;
+    this.upstream = null;
     this.syncables = {};
     this.inner_states = {};
     if (options.ssn_id) {
@@ -28,8 +28,8 @@ function Host (options) {
     if (options.db_id) {
         this.db_id = options.db_id;
     }
-    if (options.router_url) {
-        this.setRouter(options.router_url);
+    if (options.upstream_url) {
+        this.setUpstream(options.upstream_url);
     }
     if (!Host.multihost) {
         if (Host.localhost) {
@@ -50,10 +50,10 @@ Host.prototype.close = function () {
     }
 };
 
-Host.prototype.setRouter = function (url, options) {
+Host.prototype.setUpstream = function (url, options) {
     var self = this;
-    if (self.router) {
-        throw new Error('router is already set');
+    if (self.upstream) {
+        throw new Error('upstream is already set');
     }
     stream_url.connect ( url, options, on_connected );
     function on_connected (err, stream) {
@@ -69,30 +69,31 @@ Host.prototype.setRouter = function (url, options) {
         }
     }
     function on_handshake (op, op_stream) {
-        var router_ssn_id = op.origin();
-        var router_db_id = op.id();
+        var upstream_ssn_id = op.origin();
+        var upstream_db_id = op.id();
         var hsed = self.ssn_id && self.db_id;
         if (hsed) {
             // Host must listen to it's session router.
             // A Router may listen to other Routers, of course.
-            if (router_ssn_id!==self.ssn_id || router_db_id!==self.db_id) {
-                console.error('router serves a different db/session');
+            if (upstream_ssn_id!==self.ssn_id || upstream_db_id!==self.db_id) {
+                console.error('upstream serves a different db/session');
                 op_stream.end();
                 return;
             }
         } else {
-            self.ssn_id = router_ssn_id;
-            self.db_id = router_db_id;
+            self.ssn_id = upstream_ssn_id;
+            self.db_id = upstream_db_id;
             self.clock = new lamp64.Clock
                 (self.ssn_id, self.options.offset_ms||0);
             op_stream.write(self.handshake());
         }
-        self.router = op_stream;
+        self.upstream = op_stream;
         var ids = Object.keys(self.inner_states);
         while (ids.length) {
             var is = self.inner_states[ids.pop()];
             self.opUp(is, 'on', is._version);
         }
+        self.emit('ready');
     }
 };
 
@@ -165,9 +166,9 @@ Host.prototype.deliver = function (op) {
 //
 Host.prototype.deliverOp = function (op) {
 
-    Host.debug && console.log('#'+op.id()+
-        (Host.multihost?'@'+this.id:''),
-        op.spec.toString(), op.value);
+    //Host.debug && console.log('#'+op.id()+
+    //    (Host.multihost?'@'+this.id:''),
+    //    op.spec.toString(), op.value);
 
     // sanity checks
     if (op.spec.pattern() !== '/#!.') {
@@ -245,7 +246,10 @@ Host.prototype.linkSyncable = function (obj) {
         // handshake as the uplink certainly has nothing
         var state_op = new Op(ev_spec, '', this.id);
 
-        this.router && this.router.storage.deliver(state_op); // FIXME
+        if (!this.upstream) {
+            throw new Error('no upstream - no write ops');
+        }
+        this.upstream.deliver(state_op);
 
         // TODO state push @router
         this.inner_states[obj.spec()] = new obj.constructor.Inner(state_op, this);
@@ -267,7 +271,7 @@ Host.prototype.linkSyncable = function (obj) {
         // we'll repeat rebuild() on state arrival
     }
 
-    if (this.router) {
+    if (this.upstream) {
         this.opUp(obj, 'on', obj._version);
     }
     return obj;
@@ -276,7 +280,7 @@ Host.prototype.linkSyncable = function (obj) {
 Host.prototype.opUp = function (obj, op_name, value) {
     var spec = obj.spec().add('H+'+this.ssn_id, '!').add(op_name, '.');
     var op = new Op (spec, value || '');
-    this.router.write(op);
+    this.upstream.write(op);
 };
 
 Host.prototype.unlinkSyncable = function (obj) {
@@ -320,12 +324,18 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
     var op = new Op(spec, value, this.id);
     this.deliver(op);
-    if (this.router) {
-        this.router.deliver(op, this);
+    if (!this.upstream) {
+        throw new Error('no upstream - can not write');
     }
+    this.upstream.deliver(op, this);
 };
 
+
+// FIXME  UNIFY CREATION !!!!
 Host.prototype.create = function (spec) {
+    if (!this.upstream) {
+        throw new Error('no upstream connection');
+    }
     var type = new Spec(spec, '/').type();
     var type_constructor = Syncable.types[type];
     if (!type_constructor) {
@@ -336,6 +346,6 @@ Host.prototype.create = function (spec) {
     var op = new Op(state, '', this.id);
     var inner = new type_constructor.Inner(op);
     this.inner_states[op.spec.filter('/#')] = inner;
-    this.router && this.router.deliver(op, this);
+    this.upstream.deliver(op, this);
     return new type_constructor(stamp, this);
 };

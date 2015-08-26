@@ -117,6 +117,7 @@ Syncable.registerType = function (name, type) {
     }
     Syncable.types[name] = type;
     type.prototype._type = name; // TODO multiple-reg
+    type.Inner.prototype._type = name; // TODO multiple-reg
 };
 
 Syncable.reMethodName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
@@ -203,6 +204,7 @@ Syncable.prototype.hasState = function () {
     return !!this._version;
 };
 
+// FIXME move to Inner!!!
 Syncable.prototype.rebuild = function (inner) {
     inner = inner || this.getInnerState();
     this._id = inner ? inner._id : this._id;
@@ -345,6 +347,8 @@ Inner.prototype.dispatch = function (op) {
 Inner.prototype.unimplemented = function (op) {
     console.warn("method not implemented:", op.spec);
 };
+
+Inner.prototype.spec = Syncable.prototype.spec;
 
 Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
 

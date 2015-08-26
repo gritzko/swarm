@@ -131,9 +131,6 @@ OpStream.prototype.onStreamDataReceived = function (data) {
             if (op.spec.isEmpty()) {
                 throw new Error('malformed spec');
             }
-            if (!/\/?#!*\./.test(op.spec.pattern())) {
-                throw new Error('invalid spec pattern: '+op.spec);
-            }
             if (author!==undefined && op.spec.author()!==author) {
                 throw new Error('access violation: '+op.spec);
             }
