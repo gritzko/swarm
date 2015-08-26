@@ -38,6 +38,8 @@ tape('3.A simple cases', function (t) {
         t.equal(op.source, 'pair', 'source is correct');
     });
 
+    pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+
     while (send_ops.length) {
         var op = send_ops.shift();
         expect_ops.unshift(op);
@@ -49,10 +51,10 @@ tape('3.A simple cases', function (t) {
 tape('3.B defragmentation', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair, 'stream', {});
-    var op = new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'stream');
+    var op = new Op('/Swarm#db+cluster!stream.on', '', 'pair');
     var str = op.toString();
     t.plan(2);
-    opstream.on('data', function(recv_op){
+    opstream.on('id', function(recv_op){
         t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
         t.equal(recv_op.value, op.value, 'value matches');
     });
@@ -79,12 +81,12 @@ tape('3.D handshake', function (t) {
     var opstream = new OpStream(stream.pair, undefined);
     t.plan(4);
     opstream.on('data', function(recv_op){
-        t.equal(recv_op.source, 'swarm~ssn');
+        t.equal(recv_op.source, 'stamp+swarm~ssn');
         t.equal(''+recv_op.spec, '/Model#stamp!time.on');
     });
     opstream.on('id', function(id, op) {
-        t.equal(opstream.id, 'swarm~ssn');
-        t.equal(opstream.db_id, 'db+cluster');
+        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
+        t.equal(opstream.peer_db_id, 'db+cluster');
     });
     opstream.on('error', function(msg) {
         t.fail('no error here');

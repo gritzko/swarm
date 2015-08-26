@@ -116,6 +116,9 @@ OpStream.prototype.onStreamDataReceived = function (data) {
     this.remainder = parsed.remainder;
     var ops = parsed.ops;
 
+    if (!ops || !ops.length)
+        return;
+
     try {
 
         if (!this.peer_stamp) { // we expect a handshake
@@ -159,10 +162,11 @@ OpStream.prototype.sendHandshake = function (op) {
 OpStream.prototype.onHandshake = function (op) {
     if (op.spec.pattern()!=='/#!.' || op.spec.token('/').bare!=='Swarm' ||
         op.op().toLowerCase()!=='on') {
-            console.error('not a handshake:', op);
+        console.error('not a handshake:', op);
         this.stream.end();
         this.stream = null;
         this.emit('error', 'invalid handshake: ');
+        return;
     }
     this.peer_db_id = op.id();
     this.peer_ssn_id = op.origin();
@@ -201,7 +205,7 @@ OpStream.prototype.onTimer = function () {
 
 OpStream.prototype.close = function () {
     if (this.stream) {
-        this.stream.close();
+        this.stream.end();
     }
     this.stream = null;
 };
