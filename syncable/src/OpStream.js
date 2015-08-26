@@ -49,7 +49,7 @@ function OpStream (stream, options) {
     this.stream.on('error', this.onStreamError.bind(this));
     options.maxSendFreq;
     options.burstWaitTime;
-    OpStream.debug && console.log("OpStream open", this.options);
+    //OpStream.debug && console.log("OpStream open", this.options);
 }
 util.inherits(OpStream, EventEmitter);
 module.exports = OpStream;
@@ -73,7 +73,8 @@ OpStream.prototype.flush = function () {
     var parcel = this.pending_s.join('');
     this.pending_s = [];
     try {
-        OpStream.debug && console.log(this.peer_stamp, '<', parcel);
+        OpStream.debug && console.log
+            (this.peer_stamp||'unknown', '<', this.stamp||'undecided', parcel);
         this.stream.write(parcel);
         this.lastSendTime = new Date().getTime();
     } catch(ioex) {
@@ -101,8 +102,6 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 
     this.remainder += data.toString();
 
-    OpStream.debug && console.log (this.peer_stamp, '>', data.toString());
-
     var parsed;
 
     try {
@@ -119,9 +118,12 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 
     try {
 
-        if (this.id===undefined) { // we expect a handshake
+        if (!this.peer_stamp) { // we expect a handshake
             this.onHandshake(ops.shift());
         }
+
+        OpStream.debug && console.log
+            (this.peer_stamp||'unknown', '>', this.stamp||'undecided', data.toString());
 
         var author = this.options.restrictAuthor || undefined;
         for(var i=0; i<ops.length; i++) {
@@ -169,7 +171,7 @@ OpStream.prototype.onHandshake = function (op) {
     this.peer_ssn_id = op.origin();
     this.peer_options = op.value ? JSON.parse(op.value) : null;
     this.peer_stamp = op.stamp();
-    this.emit('id', op);
+    this.emit('id', op, this);
 };
 
 OpStream.prototype.onStreamClosed = function () {
@@ -198,6 +200,13 @@ OpStream.prototype.onTimer = function () {
             this.flush();
         }
     }
+};
+
+OpStream.prototype.close = function () {
+    if (this.stream) {
+        this.stream.close();
+    }
+    this.stream = null;
 };
 
 /*function snippet (o) {

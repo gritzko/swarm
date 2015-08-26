@@ -53,7 +53,7 @@ StreamTest.prototype.runScenario = function ( done ) {
         var query = exchange.query;
         var expected_response = exchange.response;
         self.query(query, function onResponse (response) {
-            var res = self.compare(response, expected_response);
+            var res = self.compare(response, expected_response, exchange.comment);
             self.results.push(res);
             if (++turn===self.scenario.length) {
                 done && done();

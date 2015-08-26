@@ -6,6 +6,8 @@ var Op = sync.Op;
 var OpStream = sync.OpStream;
 var levelup = require('level');
 var stream_url = require('stream-url');
+var util         = require("util");
+var EventEmitter = require("events").EventEmitter;
 
 // Our poor man's async/await is *reentrant functions*.
 // Return values for reentrant functions are
@@ -19,6 +21,7 @@ var later = false, done = true;
 // Storage supports both network (see `listen()`) and immediate procedural
 // invocation (see `deliver()`).
 function Storage(options) {
+    EventEmitter.call(this);
     var self = this;
     this.options = options = options || {};
     if (!options.db) {
@@ -89,6 +92,7 @@ function Storage(options) {
         }
     });
 }
+util.inherits(Storage, EventEmitter);
 module.exports = Storage;
 Storage.debug = false;
 
@@ -96,7 +100,7 @@ Storage.prototype.handshake = function () {
     if (!this.db_id || !this.ssn_id) {
         return null;
     }
-    var handshake_spec = new Spec('/Swarm')
+    var handshake_spec = new Spec('/Swarm+LvlStore')
         .add(this.db_id, '#')
         // generate stream stamp
         .add('0S'+stamp.base64.int2base(++this.conn_count,1)+'+'+this.ssn_id, '!')
@@ -146,6 +150,9 @@ Storage.prototype.load_settings = function (op) {
 // TODO handshakes, host_id
 Storage.prototype.listen = function (url, options, on_ready) {
     var self=this;
+    if (!self.db_id || !self.ssn_id) {
+        throw new Error('not initialized yet');
+    }
     if (url in self.my_servers) {
         throw new Error('I listen that url already');
     }
@@ -167,7 +174,7 @@ Storage.prototype.listen = function (url, options, on_ready) {
 
     function on_incoming_connection (stream) {
 
-        var op_stream = new OpStream(stream, undefined, {});
+        var op_stream = new OpStream (stream, undefined, {});
         op_stream.sendHandshake(self.handshake());
 
         op_stream.on('id', function (op) {
@@ -178,8 +185,8 @@ Storage.prototype.listen = function (url, options, on_ready) {
             } else if (self.ssn_id && self.ssn_id!==client_ssn_id) {
                 op_stream.end(new Op('.error', 'wrong session id'));
             } else {
-                self.clients[op_stream.id] = op_stream;
-                op_stream.on('data', self._deliver.bind(this));
+                self.clients[op_stream.peer_stamp] = op_stream;
+                op_stream.on('data', self._deliver.bind(self));
             }
         });
         op_stream.on('error', function(msg) {
@@ -190,13 +197,14 @@ Storage.prototype.listen = function (url, options, on_ready) {
 };
 
 Storage.prototype.deliver = function (op) {
+
+    // FIXME direct
+
     var local_op = new Op(op.spec, op.value, this.host.id);
     this._deliver(local_op);
 };
 
 Storage.prototype._deliver = function (op) {
-    Storage.debug && console.log('@store', op.toString());
-
     if (op.spec.op()==='diff') {
         var ops = op.unbundle();
         if (ops.length===0) {return;} // empty diff is OK
@@ -236,14 +244,20 @@ Storage.prototype.process = function (op) {
         if (request.need_mark===null) {
             throw new Error('no mark provided');
         }
-        var gte_key = self.id + request.prefix + request.need_mark;
-        var lt_key = self.id + request.prefix + request.mark;
+
+        // FIXME id
+
+        var gte_key = self.ssn_id + request.prefix + request.need_mark;
+        var lt_key = self.ssn_id + request.prefix + request.mark;
         self.db.createReadStream({
             gte: gte_key, // start at the mark (inclusive)
             lt: lt_key // don't read the next object's ops
         })
         .on('data', function (data){
-            var key = data.key.substr(self.id.length + request.prefix.length);
+
+            // FIXME id
+
+            var key = data.key.substr(self.ssn_id.length + request.prefix.length);
             request.ops.push( {
                 spec: key,
                 value: data.value===' ' ? '' : data.value // leveldb issue #223
@@ -282,7 +296,7 @@ Storage.prototype.process = function (op) {
         var writes = request.writes.map( function(o) {
             return {
                 type: o.value===undefined ? 'del' : 'put',
-                key: self.id + request.prefix + o.spec,
+                key: self.ssn_id + request.prefix + o.spec, // FIXME id
                 value: o.value || ' '
             };
         });
@@ -335,7 +349,7 @@ function Request ( op, store ) {
     this.the_op = op;
     this.id = this.spec.id();
     this.version = this.spec.version();
-    this.store_id = store.id;
+    this.store_id = store.ssn_id;
     this.options = this.options;
     this.ops = [];
     this.meta = {};
@@ -545,6 +559,7 @@ Request.prototype.on = function () {
     }
     var origin = this.the_op.origin();
     if (origin===this.store_id) { // reon
+        // FIXME bad cross-component logic
         return done;
     }
     // send back a reciprocal .on

@@ -8,6 +8,7 @@ var bat = require('swarm-bat');
 var tape = require('tape');
 if (typeof(window)==='object') {
     var tape_dom = require('tape-dom');
+    tape_dom.installCSS();
     tape_dom.stream(tape);
 }
 
@@ -15,18 +16,22 @@ if (typeof(window)==='object') {
 var DIALOGUES_4A_BASIC = [
 
 {
+    comment: "crazy client",
     query:  "[loopback:lvl1A#crazy]\tAbRA cAdaBra\n",
     response:
-        "[loopback:lvl1A#crazy].error\tbad msg format\n"+
+        "[loopback:lvl1A#crazy]/Swarm+LvlStore#db!0S1+local~ssn.on\t\n" +
+        ".error\tbad op format\n"+
         "[EOF]"
 },
 
 {
-    query:    "[loopback:lvl1A#usr~ssn]/Swarm#db!stamp+usr~ssn.on\t\n",
-    response: "[loopback:lvl1A#usr~ssn]/Swarm#db!stamp+store.on\t\n"
+    comment:  "client 1 handshake",
+    query:    "[loopback:lvl1A#local~ssn]/Swarm#db!stamp+local~ssn.on\t\n",
+    response: "[loopback:lvl1A#local~ssn]/Swarm+LvlStore#db!0S2+local~ssn.on\t\n"
 },
 
 {
+    comment: "(remote) state push + on",
     query:
     "/Type#time1+usr~ssn!time1+usr~ssn.state\tsome state 1\n"+
     "/Type#time1+usr~ssn!time0+usr~ssn.on !time1+usr~ssn\n",
@@ -36,6 +41,7 @@ var DIALOGUES_4A_BASIC = [
 },
 
 {
+    comment: "feeding ops",
     query:
     "/Type#time1+usr~ssn!time2+usr~ssn.op some op\n"+
     "/Type#time1+usr~ssn!time3+usr~ssn.op another op\n"+
@@ -49,15 +55,17 @@ var DIALOGUES_4A_BASIC = [
 
 // BIG FIXME  learned comparator: report differences
 //            StreamTest: nicely log differences
-
+/*
 {
+    comment: "second client handshake",
     query:
-    "[loopback:lvl1A#usr2~sn]/Swarm#db!time1+usr2~sn.on\t\n",
+    "[loopback:lvl1A#local~ssn2]/Swarm#db!time1+usr~ssn2.on\t\n",
     response:
-    "[loopback:lvl1A#usr2~sn]/Swarm#db!time1+store.on\t\n"
-},
+    "[loopback:lvl1A#local~ssn2]/Swarm#db!0S3+local~ssn.on\t\n"
+},*/
 
 {
+    comment: "second client on",
     query:
     "/Type#time1+usr~ssn!time1+usr2~sn.on\t\n",
     response:
@@ -73,17 +81,24 @@ var DIALOGUES_4A_BASIC = [
 
 tape('1.A basic cases', function(t){
 
-    var storage = new Storage();
+    var storage = new Storage({
+        ssn_id: 'local~ssn',
+        db_id: 'db'
+    });
 
-    storage.listen('loopback:lvl1A');
+    storage.listen('loopback:lvl1A', testit );
 
-    var mux = new bat.BatMux('mux', 'loopback:lvl1A');
+    function testit () {
 
-    var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, t.equal.bind(t));
+        var mux = new bat.BatMux('mux', 'loopback:lvl1A');
 
-    bt.runScenario( function () {
-        t.end();
-    } );
+        var bt = new bat.StreamTest(mux.trunk, DIALOGUES_4A_BASIC, t.equal.bind(t));
+
+        bt.runScenario( function () {
+            t.end();
+        } );
+
+    }
 
 });
 
