@@ -134,8 +134,8 @@ tape ('2.b. BatStream', function (t) {
 });
 
 tape ('2.c. BatServer', function (t) {
-	var step = 1, count=3;
-    t.plan(3);
+	var step = 1, count = 3;
+    t.plan(count);
 	var server = new BatServer('srv1');
 	server.on('connection', function (in_stream) {
 		in_stream.on('data', function (data) {
@@ -146,10 +146,11 @@ tape ('2.c. BatServer', function (t) {
 	});
 	var stream = new BatStream();
 
-	stream.connect('srv1');
-    for(var i=step; i<=count; i++) {
-	    stream.write(''+i);
+	stream.connect('srv1', null, function (error, stream) {
+    for (var i=step; i<=count; i++) {
+      stream.write(''+i);
     }
+  });
 });
 
 tape ('2.d. BatMux', function (t) {

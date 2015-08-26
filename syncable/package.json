@@ -22,6 +22,7 @@
   "main": "index.js",
   "browser": "index.js",
   "dependencies": {
+      "stream-url": "^0.0.12",
       "swarm-stamp": "^0.4.0"
   },
   "devDependencies": {

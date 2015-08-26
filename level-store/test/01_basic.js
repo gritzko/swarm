@@ -19,7 +19,7 @@ var DIALOGUES_4A_BASIC = [
     comment: "crazy client",
     query:  "[loopback:lvl1A#crazy]\tAbRA cAdaBra\n",
     response:
-        "[loopback:lvl1A#crazy]/Swarm+LvlStore#db!0S1+local~ssn.on\t\n" +
+        "[loopback:lvl1A#crazy]/Swarm+LvlStore#db!0S~00000+local~ssn.on\t\n" +
         ".error\tbad op format\n"+
         "[EOF]"
 },
@@ -27,7 +27,7 @@ var DIALOGUES_4A_BASIC = [
 {
     comment:  "client 1 handshake",
     query:    "[loopback:lvl1A#local~ssn]/Swarm#db!stamp+local~ssn.on\t\n",
-    response: "[loopback:lvl1A#local~ssn]/Swarm+LvlStore#db!0S2+local~ssn.on\t\n"
+    response: "[loopback:lvl1A#local~ssn]/Swarm+LvlStore#db!0S~00001+local~ssn.on\t\n"
 },
 
 {
