@@ -249,11 +249,8 @@ Spec.Map.prototype.add = function (versionVector) {
 // for each source on either side, keep the lower ts
 Spec.Map.lowerUnion = function (mapB) {
 };
-Spec.Map.prototype.has = function (version) {
-    Spec.reTokExt.lastIndex = 0;
-    var m = Spec.reTokExt.exec(version);
-    var src = m[2] || 'swarm';
-    return src in this.map;
+Spec.Map.prototype.has = function (source) {
+    return source in this.map;
 };
 Spec.Map.prototype.covers = function (version) {
     Spec.reTokExt.lastIndex = 0;
