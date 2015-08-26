@@ -1,5 +1,5 @@
 {
-  "name": "swarm-",
+  "name": "swarm-router",
   "version": "0.4.1",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
@@ -16,8 +16,7 @@
     "src/*.js",
     "test/*.js",
     "LICENSE",
-    "README.md",
-    "index.js"
+    "README.md"
   ],
   "main": "src/Router.js",
   "browser": "src/Router.js",
