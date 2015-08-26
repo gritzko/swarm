@@ -22,7 +22,7 @@
   "browser": "src/Router.js",
   "dependencies": {
       "swarm-stamp": "^0.4.0",
-      "stream-url": "^0.0.8"
+      "stream-url": "^0.0.12"
   },
   "devDependencies": {
     "tape": "^4.0.2",

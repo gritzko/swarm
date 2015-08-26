@@ -10,7 +10,7 @@
     ],
     "main": "bat.js",
     "dependencies": {
-        "stream-url": "^0.0.5"
+        "stream-url": "^0.0.12"
     },
     "devDependencies": {
         "tape": "^4.0.2",
