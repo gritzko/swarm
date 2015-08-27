@@ -1,7 +1,7 @@
 "use strict";
 
 var Storage = require('..');
-var TestClock = require('swarm-stamp').TestClock;
+var stamp = require('swarm-stamp');
 
 var bat = require('swarm-bat');
 
@@ -19,37 +19,55 @@ var DIALOGUES_4A_BASIC = [
     comment: "crazy client",
     query:  "[loopback:lvl1A#crazy]\tAbRA cAdaBra\n",
     response:
-        "[loopback:lvl1A#crazy]/Swarm+LvlStore#db!0S1+local~ssn.on\t\n" +
+        "[loopback:lvl1A#crazy]/Swarm+LvlStore#db!store0+local~ssn.on\t\n" +
         ".error\tbad op format\n"+
         "[EOF]"
 },
 
 {
-    comment:  "client 1 handshake",
-    query:    "[loopback:lvl1A#local~ssn]/Swarm#db!stamp+local~ssn.on\t\n",
-    response: "[loopback:lvl1A#local~ssn]/Swarm+LvlStore#db!0S2+local~ssn.on\t\n"
+    comment:  "host handshake",
+    query:    "[loopback:lvl1A#local]/Swarm#db!host0+local~ssn.on\t\n",
+    response: "[loopback:lvl1A#local]/Swarm+LvlStore#db!store1+local~ssn.on\t\n"
 },
 
 {
     comment: "(remote) state push + on",
     query:
-    "/Type#time1+usr~ssn!time1+usr~ssn.state\tsome state 1\n"+
-    "/Type#time1+usr~ssn!time0+usr~ssn.on !time1+usr~ssn\n",
+        "/Type#time1+remote~ssn!time1+remote~ssn.state\tsome state 1\n"+
+        "/Type#time1+remote~ssn!stream+remote~ssn.on !time1+remote~ssn\n",
     response:
-    "/Type#time1+usr~ssn!time0+usr~ssn.diff\n\n"+
-    "/Type#time1+usr~ssn!time0+usr~ssn.on\t!time1+usr~ssn\n"
+        "/Type#time1+remote~ssn!stream+remote~ssn.diff\n\n"+
+        "/Type#time1+remote~ssn!stream+remote~ssn.on\t!time1+remote~ssn\n"
 },
 
 {
-    comment: "feeding ops",
+    comment: "local op submission (stamp added)",
     query:
-    "/Type#time1+usr~ssn!time2+usr~ssn.op some op\n"+
-    "/Type#time1+usr~ssn!time3+usr~ssn.op another op\n"+
-    "/Type#time1+usr~ssn!time+usr~ssn.op out-of-order op\n",
+        "/Type#time1+remote~ssn.op\tlocal op\n",
     response:
-    "/Type#time1+usr~ssn!time2+usr~ssn.op\tsome op\n"+
-    "/Type#time1+usr~ssn!time3+usr~ssn.op\tanother op\n"+
-    "/Type#time1+usr~ssn!time+usr~ssn.error\top is out of order\n"
+        "/Type#time1+remote~ssn!00000+local~ssn.op\tlocal op\n"
+},
+
+{
+    comment: "another remote .on (diff with the new op)",
+    query:
+        "/Type#time1+remote~ssn!stream2+remote~ssn.on\t!time1+remote~ssn\n",
+    response:
+        "/Type#time1+remote~ssn!stream2+remote~ssn.diff\n" +
+            "\t!00000+local~ssn.op\tlocal op\n\n" +
+        "/Type#time1+remote~ssn!stream2+remote~ssn.on\t!time1+remote~ssn\n"
+},
+
+{
+    comment: "feeding remote ops",
+    query:
+        "/Type#time1+remote~ssn!time2+remote~ssn.op some op\n"+
+        "/Type#time1+remote~ssn!time3+remote~ssn.op another op\n"+
+        "/Type#time1+remote~ssn!time+remote~ssn.op out-of-order op\n",
+    response:
+        "/Type#time1+remote~ssn!time2+remote~ssn.op\tsome op\n"+
+        "/Type#time1+remote~ssn!time3+remote~ssn.op\tanother op\n"+
+        "/Type#time1+remote~ssn!time+remote~ssn.error\top is out of order\n"
     // FIXME error forwarding
 },
 
@@ -59,7 +77,7 @@ var DIALOGUES_4A_BASIC = [
 {
     comment: "second client handshake",
     query:
-    "[loopback:lvl1A#local~ssn2]/Swarm#db!time1+usr~ssn2.on\t\n",
+    "[loopback:lvl1A#local~ssn2]/Swarm#db!time1+remote~ssn2.on\t\n",
     response:
     "[loopback:lvl1A#local~ssn2]/Swarm#db!0S3+local~ssn.on\t\n"
 },*/
@@ -67,13 +85,13 @@ var DIALOGUES_4A_BASIC = [
 {
     comment: "second client on",
     query:
-    "/Type#time1+usr~ssn!time1+usr2~sn.on\t\n",
+    "/Type#time1+remote~ssn!time1+usr2~sn.on\t\n",
     response:
-    "/Type#time1+usr~ssn!time1+usr2~sn.diff\n" +
-        "\t!time1+usr~ssn.state\tsome state 1\n" +
-        "\t!time2+usr~ssn.op\tsome op\n" +
-        "\t!time3+usr~ssn.op\tanother op\n\n" +
-    "/Type#time1+usr~ssn!time1+usr2~sn.on\ttime3+usr~ssn\n"
+    "/Type#time1+remote~ssn!time1+usr2~sn.diff\n" +
+        "\t!time1+remote~ssn.state\tsome state 1\n" +
+        "\t!time2+remote~ssn.op\tsome op\n" +
+        "\t!time3+remote~ssn.op\tanother op\n\n" +
+    "/Type#time1+remote~ssn!time1+usr2~sn.on\ttime3+remote~ssn\n"
 }
 
 ];
@@ -83,7 +101,8 @@ tape('1.A basic cases', function(t){
 
     var storage = new Storage({
         ssn_id: 'local~ssn',
-        db_id: 'db'
+        db_id: 'db',
+        clock: new stamp.TestClock('local~ssn', {start:'now00'})
     });
 
     storage.listen('loopback:lvl1A', testit );

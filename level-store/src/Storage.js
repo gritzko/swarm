@@ -34,7 +34,11 @@ function Storage(options) {
     this.conn_count = 0;
     this.ssn_id = options.ssn_id || null;
     this.db_id = options.db_id || null;
-    this.clock = null;
+    this.hs_clock = new stamp.LamportClock(self.ssn_id, {
+        start: 0,
+        prefix: 'store',
+        length: 1
+    });
     //this.host = null; // local client (host or router alike)
     this.my_servers = []; // servers for remote clients
     this.clients = {}; // remote clients {id: stream}
@@ -88,7 +92,7 @@ function Storage(options) {
             self.ssn_id = options.ssn_id;
             self.db.put(self.handshake());
         }
-        self.clock = new stamp.LamportClock(self.ssn_id, 0, '0S~');
+        self.clock = options.clock || new stamp.SecondPreciseClock (self.ssn_id);
         if (options.listen_url) {
             self.listen(options.listen_url);
         }
@@ -105,7 +109,7 @@ Storage.prototype.handshake = function () {
     var handshake_spec = new Spec('/Swarm+LvlStore')
         .add(this.db_id, '#')
         // generate stream stamp
-        .add(this.clock.issueTimestamp(), '!')
+        .add(this.hs_clock.issueTimestamp(), '!')
         .add('.on');
     return new Op(handshake_spec, ''); // TODO options
 };
@@ -215,6 +219,10 @@ Storage.prototype._deliver = function (op) {
         this.pending.queue = this.pending.queue.concat(ops.reverse());
     }
 
+    if (!op.spec.has('!')) {
+        op.spec = op.spec.add(this.clock.issueTimestamp(), '!').sort();
+    }
+
     // ops may be processed asynchronously in parallel, except that
     // we must ensure same-id ops are sequential (to avoid data races)
     if (this.pending.busy) {
@@ -249,6 +257,8 @@ Storage.prototype.process = function (op) {
         }
 
         // FIXME id
+
+        //    DB NAME IS THE PREFIX
 
         var gte_key = self.ssn_id + request.prefix + request.need_mark;
         var lt_key = self.ssn_id + request.prefix + request.mark;
