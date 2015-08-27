@@ -33,41 +33,41 @@ var DIALOGUES_4A_BASIC = [
 {
     comment: "(remote) state push + on",
     query:
-        "/Type#time1+remote~ssn!time1+remote~ssn.state\tsome state 1\n"+
-        "/Type#time1+remote~ssn!stream+remote~ssn.on !time1+remote~ssn\n",
+        "/Type#now00+remote~ssn!now00+remote~ssn.state\tsome state 1\n"+
+        "/Type#now00+remote~ssn!stream+remote~ssn.on !now00+remote~ssn\n",
     response:
-        "/Type#time1+remote~ssn!stream+remote~ssn.diff\n\n"+
-        "/Type#time1+remote~ssn!stream+remote~ssn.on\t!time1+remote~ssn\n"
+        "/Type#now00+remote~ssn!stream+remote~ssn.diff\n\n"+
+        "/Type#now00+remote~ssn!stream+remote~ssn.on\t!now00+remote~ssn\n"
 },
 
 {
     comment: "local op submission (stamp added)",
     query:
-        "/Type#time1+remote~ssn.op\tlocal op\n",
+        "/Type#now00+remote~ssn.op\tlocal op\n",
     response:
-        "/Type#time1+remote~ssn!now00+local~ssn.op\tlocal op\n"
+        "/Type#now00+remote~ssn!now10+local~ssn.op\tlocal op\n"
 },
 
 {
     comment: "another remote .on (diff with the new op)",
     query:
-        "/Type#time1+remote~ssn!stream2+remote~ssn.on\t!time1+remote~ssn\n",
+        "/Type#now00+remote~ssn!stream2+remote~ssn.on\t!now00+remote~ssn\n",
     response:
-        "/Type#time1+remote~ssn!stream2+remote~ssn.diff\n" +
-            "\t!00000+local~ssn.op\tlocal op\n\n" +
-        "/Type#time1+remote~ssn!stream2+remote~ssn.on\t!time1+remote~ssn\n"
+        "/Type#now00+remote~ssn!stream2+remote~ssn.diff\n" +
+            "\t!now10+local~ssn.op\tlocal op\n\n" +
+        "/Type#now00+remote~ssn!stream2+remote~ssn.on\t!now10+local~ssn!now00+remote~ssn\n"
 },
 
 {
     comment: "feeding remote ops",
     query:
-        "/Type#time1+remote~ssn!time2+remote~ssn.op some op\n"+
-        "/Type#time1+remote~ssn!time3+remote~ssn.op another op\n"+
-        "/Type#time1+remote~ssn!time+remote~ssn.op out-of-order op\n",
+        "/Type#now00+remote~ssn!now22+remote~ssn.op some op\n"+
+        "/Type#now00+remote~ssn!now23+remote~ssn.op another op\n"+
+        "/Type#now00+remote~ssn!now19+remote~ssn.op out-of-order op\n",
     response:
-        "/Type#time1+remote~ssn!time2+remote~ssn.op\tsome op\n"+
-        "/Type#time1+remote~ssn!time3+remote~ssn.op\tanother op\n"+
-        "/Type#time1+remote~ssn!time+remote~ssn.error\top is out of order\n"
+        "/Type#now00+remote~ssn!now22+remote~ssn.op\tsome op\n"+
+        "/Type#now00+remote~ssn!now23+remote~ssn.op\tanother op\n"+
+        "/Type#now00+remote~ssn!now19+remote~ssn.error\top is out of order\n"
     // FIXME error forwarding
 },
 
@@ -85,13 +85,14 @@ var DIALOGUES_4A_BASIC = [
 {
     comment: "second client on",
     query:
-    "/Type#time1+remote~ssn!time1+usr2~sn.on\t\n",
+    "/Type#now00+remote~ssn!stamp+usr2~sn.on\t\n",
     response:
-    "/Type#time1+remote~ssn!time1+usr2~sn.diff\n" +
-        "\t!time1+remote~ssn.state\tsome state 1\n" +
-        "\t!time2+remote~ssn.op\tsome op\n" +
-        "\t!time3+remote~ssn.op\tanother op\n\n" +
-    "/Type#time1+remote~ssn!time1+usr2~sn.on\ttime3+remote~ssn\n"
+    "/Type#now00+remote~ssn!stamp+usr2~sn.diff\n" +
+        "\t!now00+remote~ssn.state\tsome state 1\n" +
+        "\t!now10+local~ssn.op\tlocal op\n" +
+        "\t!now22+remote~ssn.op\tsome op\n"+
+        "\t!now23+remote~ssn.op\tanother op\n\n"+
+    "/Type#now00+remote~ssn!stamp+usr2~sn.on\tnow23+remote~ssn\n"
 }
 
 ];
@@ -102,7 +103,7 @@ tape('1.A basic cases', function(t){
     var storage = new Storage({
         ssn_id: 'local~ssn',
         db_id: 'db',
-        clock: new stamp.TestClock('local~ssn', {start:'now00'})
+        clock: new stamp.TestClock('local~ssn', {start:'now10'})
     });
 
     storage.listen('loopback:lvl1A', testit );
