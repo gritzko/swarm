@@ -13,6 +13,7 @@
   "email": "swarm.js@gmail.com",
   "license": "MIT",
   "files": [
+    "index.js",
     "src/*.js",
     "test/*.js",
     "test/index.html",

@@ -32,7 +32,8 @@
     "memdown": "^1.0.0",
     "tape": "^4.0.2",
     "tap-spec": "^4.0.2",
-    "tape-dom": "^0.0.4"
+    "tape-dom": "^0.0.4",
+    "swarm-stamp": "0.4.2"
   },
   "scripts": {
     "test": "tape test/*.js | tap-spec"

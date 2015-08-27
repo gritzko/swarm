@@ -45,7 +45,7 @@ var DIALOGUES_4A_BASIC = [
     query:
         "/Type#time1+remote~ssn.op\tlocal op\n",
     response:
-        "/Type#time1+remote~ssn!00000+local~ssn.op\tlocal op\n"
+        "/Type#time1+remote~ssn!now00+local~ssn.op\tlocal op\n"
 },
 
 {
