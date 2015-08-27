@@ -3,21 +3,23 @@ var base64 = require('./base64');
 var LamportTimestamp = require('./LamportTimestamp');
 
 /** Pure logical-time Lamport clocks. */
-var LamportClock = function (processId, initTime, prefix) {
+var LamportClock = function (processId, options) { 
     if (!base64.reTok.test(processId)) {
         throw new Error('invalid process id: '+processId);
     }
+    options = options || {};
     this.id = processId;
-    this.prefix = prefix || '';
+    this.prefix = options.prefix || '';
     // sometimes we assume our local clock has some offset
-    this.seq = initTime || 0;
+    this.seq = options.start || 0;
+    this.length = options.length || 5;
 };
 
 LamportClock.prototype.adjustTime = function () {
 };
 
 LamportClock.prototype.issueTimestamp = function time () {
-    var base = base64.int2base(this.seq++, 5);
+    var base = base64.int2base(this.seq++, this.length);
     return this.prefix + base + '+' + this.id;
 };
 

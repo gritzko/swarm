@@ -97,9 +97,13 @@ tape('f. Lamport clocks', function(tap){
     clock.checkTimestamp('00004+leslie');
     tap.equal(clock.issueTimestamp(),'00005+leslie');
 
-    var prefixed = new lamp64.LamportClock('chimera', 4, '0PRE_');
+    var prefixed = new lamp64.LamportClock('chimera', {
+        start: 4, 
+        prefix: '0PRE_',
+        length: 3
+    });
     var ch1 = prefixed.issueTimestamp();
-    tap.equal(ch1,'0PRE_00004+chimera');
+    tap.equal(ch1,'0PRE_004+chimera', 'heavily customized clocks');
 
     tap.end();
 });
