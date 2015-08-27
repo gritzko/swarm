@@ -25,7 +25,8 @@
       "swarm-syncable": "^0.4.0",
       "level": "^1.3.0",
       "stream-url": "^0.0.12",
-      "swarm-bat": "^0.4.3"
+      "swarm-bat": "^0.4.3",
+      "swarm-stamp": "^0.4.3"
   },
   "devDependencies": {
     "memdown": "^1.0.0",
