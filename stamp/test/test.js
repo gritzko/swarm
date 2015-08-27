@@ -105,5 +105,10 @@ tape('f. Lamport clocks', function(tap){
     var ch1 = prefixed.issueTimestamp();
     tap.equal(ch1,'0PRE_004+chimera', 'heavily customized clocks');
 
+    var preset = new lamp64.LamportClock('src', { start: 'now00' });
+    tap.equal(preset.issueTimestamp(), 'now00+src', 'string preset OK');
+    tap.equal(preset.issueTimestamp(), 'now01+src', 'incs well');
+    tap.equal(preset.issueTimestamp(), 'now02+src');
+
     tap.end();
 });

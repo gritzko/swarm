@@ -11,6 +11,9 @@ var LamportClock = function (processId, options) {
     this.id = processId;
     this.prefix = options.prefix || '';
     // sometimes we assume our local clock has some offset
+    if (options.start && options.start.constructor===String) {
+        options.start = base64.base2int(options.start);
+    }
     this.seq = options.start || 0;
     this.length = options.length || 5;
 };
