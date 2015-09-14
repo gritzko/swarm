@@ -53,23 +53,53 @@ tape('1.e corner cases', function (tap) {
     tap.end();
 });
 
-tape('1.f ops', function (tap) {
 
-    var diff = new Op('/Model#test!timeX+author~ssn.diff',
-        '\t!time0.set\t{"x":1}\n' +
-        '\t!time1.set\t{"y":2}\n' );
+tape('1.f op regexes', function (t) {
+    var reSpec = new RegExp(Op.rsSpec);
+    t.ok(reSpec.test('/Swarm#db!stamp+user~ssn.on'), '.on spec');
+    Op.reOp.lastIndex = 0;
+    t.ok(Op.reOp.exec('/Swarm#db!stamp+user~ssn.on\ta b c\n\n'), 'empty .on');
+    Op.reOp.lastIndex = 0;
+    t.ok(Op.reOp.exec('/Model#id!stamp+user~ssn.set\t{"a":"b"}\n'), 'set');
+    Op.reOp.lastIndex = 0;
+    t.ok(Op.reOp.exec('/Swarm#db!stamp+user~ssn.on\tabc\n'+
+        '\t!time0.set {}\n' +
+        '\t!time1.set {"x":"y"}\n' +
+        '\n'), '.on patch');
+    t.end();
+});
+
+
+tape ('1.g parse ops', function (tap) {
+
+    var parsed = Op.parse (
+        '/Model#test!timeX+author~ssn.on\t\n'+
+            '\t!time0.set\t{"x":1}\n' +
+            '\t!time1.set\t{"y":2}\n\n' +
+        '/Model#id!stamp.set\t{"x":"y"}\n' );
+    tap.equal(parsed.ops.length, 2);
+    var diff = parsed.ops[0];
+    var set = parsed.ops[1];
+
+    tap.equal(set.name(), 'set');
+    tap.equal(set.value, '{"x":"y"}');
 
     tap.equal(diff.origin(), 'author~ssn', 'originating session');
     tap.equal(diff.stamp(), 'timeX+author~ssn', 'lamport timestamp');
     tap.equal(diff.author(), 'author', 'author (user id)');
     tap.equal(diff.id(), 'test', '#id');
-    tap.equal(diff.op(), 'diff', 'op()');
+    tap.equal(diff.op(), 'on', 'op()');
     tap.equal(''+diff.version(), '!timeX+author~ssn');
+    tap.ok(diff.patch, 'patch');
+    tap.equal(diff.patch.length, 2);
+    tap.equal(diff.patch[0].spec+'', '!time0.set');
+    tap.equal(diff.patch[1].spec+'', '!time1.set');
+    tap.equal(diff.patch[1].value, '{"y":2}');
 
     tap.equal(diff.toString(),
-        '/Model#test!timeX+author~ssn.diff\n' +
-        '\t!time0.set\t{"x":1}\n' +
-        '\t!time1.set\t{"y":2}\n\n',
+        '/Model#test!timeX+author~ssn.on\t\n' +
+            '\t!time0.set\t{"x":1}\n' +
+            '\t!time1.set\t{"y":2}\n\n',
         'diff serialization');
 
     tap.end();

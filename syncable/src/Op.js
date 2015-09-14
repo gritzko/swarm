@@ -1,38 +1,50 @@
 "use strict";
 var Spec = require('./Spec');
 
-// immutable op
+// *immutable* op: specifier, value and a patch (nested ops).
 // empty value is '', not null, not undefined
-function Op (spec, value, source) { // FIXME source -> peer
-    if (value!==undefined) { // construct
-        this.spec = new Spec(spec);
-        this.value = value.toString();
-        if (!source) { source = ''; }
-        if (source.id) { source = source.id; }
-        this.source = source.toString();
-    } else if (spec && spec.spec) { // clone
+function Op (spec, value, source, patch) { // FIXME source -> peer
+    if (spec && spec.constructor===Op) {
         var orig = spec;
-        this.spec = new Spec(orig.spec);
-        this.value = orig.value.toString();
-        this.source = orig.source;
-    } else {
-        throw new Error('args not ok');
+        spec = orig.spec;
+        value = orig.value;
+        source = orig.source;
+        patch = orig.patch;
     }
+    this.spec = new Spec(spec);
+    this.value = value ? value.toString() : '';
+    this.source = source ? source.id || source.toString() : '';
+    this.patch = patch || null;
 }
 module.exports = Op;
-Op.handshake_ops = {on:1, diff:1, off:1};
+Op.handshake_ops = {on:1, off:1};
 
-Op.ext_line_re = /[ \t]+(\S+)[ \t]*(.*)\n/mg;
-Op.diff_line_re = /^(\S+\.diff)\n/g;
-Op.plain_line_re = /^(\S+)[ \t]+.*\n/g;
-Op.op_re = /^(\S+)(?:[ \t]+(.*)\n|\n((?:[ \t]+\S+[ \t]+.*\n)*\n))/mg;
+// Epically monumental op-parsing regexes.
+Op.rsSpec = '(?:'+Spec.rsQuant+'=(?:\\+=)?)+'.replace(/=/g, Spec.rT);
+Op.rsPatchOp =  '\\n[ \\t]+' + Op.rsSpec + '[ \\t]+.*';
+Op.rsPatchOpB = '\\n[ \\t]+(' + Op.rsSpec + ')[ \\t]+(.*)';
+Op.rsOp = '(' + Op.rsSpec+')[ \\t]+(.*)((?:' + Op.rsPatchOp + ')*)(\\n+)';
+Op.reOp = new RegExp(Op.rsOp, 'mg');
+Op.rePatchOp = new RegExp(Op.rsPatchOpB, 'mg');
 
+//
 Op.parse = function (str, source) {
-    Op.op_re.lastIndex = 0;
-    var rem = str, m, ops = [], d=0;
-    while (m = Op.op_re.exec(rem)) {
-        var s = new Spec(m[1]), v = m[2] || m[3] || '';
-        ops.push(new Op(s, v, source));
+    Op.reOp.lastIndex = 0;
+    var rem = str, m, mm, ops = [], d=0;
+    while (m = Op.reOp.exec(rem)) {
+        var spec = new Spec(m[1]), value = m[2], patch_str = m[3], end = m[4];
+        var patch = null;
+        if (patch_str) {
+            if (end.length<2) { // need \n\n termination
+                break;
+            }
+            patch = [];
+            Op.rePatchOp.lastIndex = 0;
+            while (mm = Op.rePatchOp.exec(patch_str)) {
+                patch.push(new Op(mm[1], mm[2], source));
+            }
+        }
+        ops.push(new Op(spec, value, source, patch));
         d = m.index + m[0].length;
     }
     rem = rem.substr(d);
@@ -40,18 +52,7 @@ Op.parse = function (str, source) {
     var next_nl = /\n+/g.exec(rem);
     if ( next_nl && next_nl.index===0 ) {
         rem = rem.substr(next_nl[0].length);
-    } else if ( next_nl && next_nl.index>0 ) {
         // TODO detect unparseable strings
-        m = Op.plain_line_re.exec(rem) || Op.diff_line_re.exec(rem);
-        if (!m || m.index>0) {
-            throw new Error('the input is definitely malformed: '+rem);
-        }
-        if (m.index>0) {
-            throw new Error('garbage in the input: '+rem);
-        }
-        if (!Spec.is(m[1])) {
-            throw new Error('the spec is definitely malformed: '+m[0]);
-        }
     }
     if (rem.length>(1<<23)) { // 8MB op size limit? TODO
         throw new Error("large unparseable input");
@@ -72,9 +73,11 @@ Op.prototype.author = function () {
 Op.prototype.id = function () {
     return this.spec.id();
 };
-Op.prototype.op = function () {
+Op.prototype.name = function () {
     return this.spec.op();
 };
+Op.prototype.op = Op.prototype.name;
+
 Op.prototype.version = function () {
     return this.spec.filter('!');
 };
@@ -89,20 +92,21 @@ Op.prototype.unbundle = function () {
     return ops;
 };
 
+// FIXME make efficient
+Op.prototype.bundleLength = function () {
+    return this.unbundle().length;
+};
+
 Op.prototype.toString = function () {
-    var ret = this.spec.toString();
+    var sp = this.spec.toString();
     var val = this.value.toString();
-    if (this.spec.op()==='diff') {
-        ret += '\n' + val.replace(/\n(\S)/g, '\n\t$1') + '\n';
-    } else {
-        ret += '\t' + val + '\n';
-    }
-    return ret;
+    var patch = this.patch ? '\n\t' + this.patch.join('\t') : '';
+    return sp + '\t' + val + patch  + '\n';
 };
 
 Op.prototype.error = function (msg, src) {
     var msg50 = msg.toString().replace(/\n/g, ' ').substr(0,50);
-    return new Op(this.spec.set('.error'), msg50, src);
+    return new Op(this.spec.set('.error'), msg50, src||this.source);
 };
 
 /** handshake ops */
