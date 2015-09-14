@@ -154,8 +154,8 @@ tape ('2.c. BatServer', function (t) {
 });
 
 tape ('2.d. BatMux', function (t) {
-	var srv2 = new BatServer('srv2');
-	var mux = new BatMux('mux1');
+	var srv2 = new BatServer('srv2d');
+	var mux = new BatMux('lo:srv2d');
 	var response = '';
 	var stream_count = 0;
     mux.on('error', function(err){
@@ -180,12 +180,13 @@ tape ('2.d. BatMux', function (t) {
     mux.trunk.on('end', function (data) {
         t.equal(
             response,
-            '[loopback:srv2#A]111[loopback:srv2#B]222'+
-            '[loopback:srv2#A][EOF][loopback:srv2#B][EOF]',
+            '[loopback:srv2d#A]111[B]222'+
+            '[loopback:srv2d#A][EOF][B][EOF]',
             'mux/demux and stream end events');
         t.end();
     });
-	mux.trunk.write('[loopback:srv2#A]one[loopback:srv2#B]');
+    // both URL and default server
+	mux.trunk.write('[loopback:srv2d#A]one[B]');
     mux.trunk.write('two');
     mux.trunk.end();
 });

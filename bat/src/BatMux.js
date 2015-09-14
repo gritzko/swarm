@@ -15,8 +15,12 @@ var EventEmitter = require("events").EventEmitter;
     being sent into mux1 trunk as
         '[tag]something'
 */
-function BatMux (id, server_url) {
+function BatMux (server_url) {
     EventEmitter.call(this);
+    /*if (id && id.constructor===String && id.indexOf(':')!==-1) {
+        server_url = id;
+        id = undefined;
+    }*/
     this.server_url = server_url;
     this.trunk = new BatStream();
     this.branches = {};
@@ -31,18 +35,6 @@ function BatMux (id, server_url) {
 util.inherits(BatMux, EventEmitter);
 module.exports = BatMux;
 BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
-
-BatMux.prototype.bat_connect = function (uri, bat_stream) {
-    var self = this;
-    var tag = uri; // TODO parse
-    this.branches[tag] = bat_stream;
-    bat_stream.on('data', function(data){
-        self.onBranchDataIn(tag, data);
-    });
-    bat_stream.on('end', function(){
-        self.onBranchEnd(tag);
-    });
-};
 
 BatMux.prototype.onBranchDataIn = function (tag, data) {
     if (this.active_tag_w!==tag) {
@@ -72,7 +64,8 @@ BatMux.prototype.onBranchEnd = function (tag) {
 
 BatMux.prototype.connect = function (url) {
     var self = this;
-    stream_url.connect(url, function(err, stream){
+    var conn_url = url.indexOf(':')===-1 ? this.server_url : url;
+    stream_url.connect(conn_url, function(err, stream){
         if (err) {
             self.emit('error', err);
             self.data = null;

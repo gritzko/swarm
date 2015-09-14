@@ -11,6 +11,7 @@ bat.servers = {};
 
 // register URL adaptors for loopback streams
 stream_url.register('loopback:', loopback_listen, loopback_connect);
+stream_url.register('lo:', loopback_listen, loopback_connect);
 
 function loopback_listen (stream_url, no_options, callback) {
     return new bat.BatServer(stream_url.hostname, {}, callback);
