@@ -98,10 +98,14 @@ Op.prototype.bundleLength = function () {
 };
 
 Op.prototype.toString = function () {
-    var sp = this.spec.toString();
-    var val = this.value.toString();
-    var patch = this.patch ? '\n\t' + this.patch.join('\t') : '';
-    return sp + '\t' + val + patch  + '\n';
+    var line = this.spec.toString() + '\t' + this.value + '\n';
+    if (this.name()==='on') {
+        if (this.patch) {
+            line += '\t' + this.patch.join('\t');
+        }
+        line += '\n';
+    }
+    return line;
 };
 
 Op.prototype.error = function (msg, src) {

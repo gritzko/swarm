@@ -76,10 +76,12 @@ tape ('1.g parse ops', function (tap) {
         '/Model#test!timeX+author~ssn.on\t\n'+
             '\t!time0.set\t{"x":1}\n' +
             '\t!time1.set\t{"y":2}\n\n' +
-        '/Model#id!stamp.set\t{"x":"y"}\n' );
-    tap.equal(parsed.ops.length, 2);
+        '/Model#id!stamp.set\t{"x":"y"}\n' +
+        '/Model#other!stamp.on\t\n\n' );
+    tap.equal(parsed.ops.length, 3);
     var diff = parsed.ops[0];
     var set = parsed.ops[1];
+    var short_on = parsed.ops[2];
 
     tap.equal(set.name(), 'set');
     tap.equal(set.value, '{"x":"y"}');
@@ -101,6 +103,11 @@ tape ('1.g parse ops', function (tap) {
             '\t!time0.set\t{"x":1}\n' +
             '\t!time1.set\t{"y":2}\n\n',
         'diff serialization');
+
+    tap.equal(short_on.toString(), '/Model#other!stamp.on\t\n\n');
+    tap.equal(short_on.value, '');
+    tap.equal(short_on.name(), 'on');
+    tap.equal(short_on.patch, null);
 
     tap.end();
 
