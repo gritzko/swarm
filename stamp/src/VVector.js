@@ -42,10 +42,6 @@ VVector.prototype.add = function (vvec) {
     }
 };
 
-// for each source on either side, keep the lower ts
-VVector.prototype.lowerUnion = function (mapB) {
-};
-
 VVector.prototype.has = function (source) {
     if (source.indexOf('+')!==-1) {
         source = new LamportTimestamp(source).source;

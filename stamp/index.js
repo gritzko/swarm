@@ -3,7 +3,8 @@
 var exports = {
     base64: require('./src/base64'),
     VVector: require('./src/VVector'),
-//    OrdVVector: require('./src/OrdVVector'),
+    VV: require('./src/VV'),
+    AnchoredVV: require('./src/AnchoredVV'),
     LamportClock: require('./src/LamportClock'),
     SecondPreciseClock: require('./src/SecondPreciseClock'),
     MinutePreciseClock: require('./src/MinutePreciseClock')

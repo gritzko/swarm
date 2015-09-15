@@ -123,9 +123,9 @@ SecondPreciseClock.unparseTimestamp = function unparse (parsed) {
 };
 SecondPreciseClock.prototype.unparseTimestamp = SecondPreciseClock.unparseTimestamp;
 
-/** Freshly issued Lamport logical timestamps must be greater than
-    any timestamps previously seen. */
-SecondPreciseClock.prototype.checkTimestamp = function see (ts) {
+// Freshly issued Lamport logical timestamps must be greater than
+// any timestamps previously seen.
+SecondPreciseClock.prototype.seeTimestamp = function see (ts) {
     if (ts<this.lastTimestamp) { return true; }
     var parsed = this.parseTimestamp(ts);
     if (parsed.time<this.lastTimeSeen) { return true; }
@@ -137,6 +137,7 @@ SecondPreciseClock.prototype.checkTimestamp = function see (ts) {
     this.lastSeqSeen = parsed.seq;
     return true;
 };
+ SecondPreciseClock.prototype.checkTimestamp =  SecondPreciseClock.prototype.seeTimestamp;
 
 SecondPreciseClock.prototype.timestamp2date = function (ts) {
     var parsed = this.parseTimestamp(ts);
