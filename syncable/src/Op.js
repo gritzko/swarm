@@ -70,6 +70,9 @@ Op.prototype.stamp = function () {
 Op.prototype.author = function () {
     return this.spec.author();
 };
+Op.prototype.typeid = function () {
+    return this.spec.filter('/#').toString();
+};
 Op.prototype.id = function () {
     return this.spec.id();
 };
@@ -83,13 +86,7 @@ Op.prototype.version = function () {
 };
 
 Op.prototype.unbundle = function () {
-    var ops = [], m;
-    var prefix = this.spec.filter('/#').toString();
-    while (m=Op.ext_line_re.exec(this.value)) {
-        var pp = new Spec(m[1]);
-        ops.push(new Op(prefix+pp, m[2], this.source));
-    }
-    return ops;
+    return this.patch;
 };
 
 // FIXME make efficient
