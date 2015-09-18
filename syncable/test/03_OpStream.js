@@ -18,24 +18,24 @@ tape('3.A simple cases', function (t) {
     var pair = new OpStream(stream.pair, 'stream', {});
     var opstream = new OpStream(stream, 'pair', {});
 
-    var send_ops = [
-        new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'stream'),
-        new Op('/Host#db+cluster!time2+user2~ssn.on', '12345', 'stream'),
-        new Op('/Model#stamp+author!time3+user3~ssn.diff',
-            '\t!stamp+source.op\tvalue\n'+
-            '\t!stamp2+source2.op\tvalue2\n'+
-            '\n',  // FIXME
-            'stream')
-    ];
-    var expect_ops = [];
+    var send_ops = Op.parse(
+        '/Host#db+cluster!time1+user1~ssn.on\t\n\n'+
+        '/Host#db+cluster!time2+user2~ssn.set\t12345\n'+
+        '/Model#stamp+author!time3+user3~ssn.on\tpos\n'+
+               '\t!stamp+source.op\tvalue\n'+
+               '\t!stamp2+source2.op\tvalue2\n\n',
+        'pair'
+    ).ops;
+    var expect_ops = [], i=1;
 
-    t.plan(send_ops.length*3);
+    t.plan(send_ops.length*4);
 
     opstream.on('data', function(op) {
         var next = expect_ops.pop();
-        t.equal(''+op.spec, ''+next.spec, 'spec matches');
+        t.equal(''+op.spec, ''+next.spec, 'spec matches ('+(i++)+')');
         t.equal(''+op.value, ''+next.value, 'value matches');
         t.equal(op.source, 'pair', 'source is correct');
+        t.deepEqual(op.patch, next.patch, 'patch matches');
     });
 
     pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
@@ -111,5 +111,6 @@ tape('3.E handshake error', function (t) {
     stream.write("/Model#stamp!time.on\t\n");
 });
 
-tape.skip('3.F stream end', function (t) {
+tape.skip('3.F patch: partial read', function (t) {
+    // FIXME
 });

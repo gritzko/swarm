@@ -28,7 +28,7 @@
   "devDependencies": {
     "tape": "^4.0.2",
     "tap-spec": "^4.0.2",
-    "tape-dom": "^0.0.4",
+    "tape-dom": "^0.0.9",
     "swarm-bat": "^0.4.0"
   },
   "scripts": {

@@ -1,8 +1,12 @@
 "use strict";
+var stamp = require('swarm-stamp');
 var sync = require('..');
 var Op = sync.Op;
 var Model = sync.Model;
 var Host = sync.Host;
+var bat = require('swarm-bat');
+
+Host.multihost = true;
 
 var tape = require('tape');
 if (typeof(window)==='object') {
@@ -13,7 +17,18 @@ if (typeof(window)==='object') {
 
 
 tape('4.A set/get', function (t) {
-    var host = new Host('anon~4A', null);
+    t.plan(5);
+    var host = new Host({
+        ssn_id: 'anon~4A',
+        db_id: 'db',
+        clock: new stamp.LamportClock('anon~4A')
+    });
+    var collect = '';
+    var stream = new bat.BatStream();
+    host.setUpstream(stream);
+    stream.pair.on('data', function(op){
+        collect += op.toString();
+    });
     var m = new Model({x:1}, host);
     t.equal(m.x, 1);
     m.set({y:2});
@@ -22,11 +37,26 @@ tape('4.A set/get', function (t) {
     m.set({x:3});
     t.equal(m.x, 3);
     t.equal(m.y, 2);
-    t.end();
+    stream.pair.on('end', function() {
+        t.equal(collect,
+            '/Swarm+Host#db!STAMP+anon~4A.on\t\n' +
+            '/Model#00000+anon~4A!00000+anon~4A.state\t\n' +
+            '/Model#00000+anon~4A!STAMP+anon~4A.on\t???\n' +
+            '/Model#00000+anon~4A!00001+anon~4A.set' +
+                '\t{}' +
+            '/Model#00000+anon~4A!00001+anon~4A.set' +
+                '\t{}'
+        );
+        t.end();
+    });
+    stream.end();
 });
 
 tape('4.B concurrent ops', function (t) {
-    var host = new Host('anon~4B', null);
+    t.plan(1);
+    var host = new Host({
+        ssn_id: 'anon~4B'
+    });
     var duckling = new Model({}, host);
     host.deliver( new Op(
             duckling.spec()+'!1time+user2.set',
@@ -37,5 +67,4 @@ tape('4.B concurrent ops', function (t) {
             '{"height":"3cm"}',
             host.id ));
     t.equal(duckling.height.toString(), '2cm');
-    t.end();
 });

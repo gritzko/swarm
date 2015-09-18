@@ -18,8 +18,8 @@ function LamportTimestamp (time, source) {
     if (source && !base64.reTok.test(source)) {
         throw new Error("invalid source format");
     }
-    this.time = time || '0';
-    this.source = source || '';
+    this._time = time || '0';
+    this._source = source || '';
 }
 
 LamportTimestamp.prototype.toString = function () {
@@ -34,5 +34,8 @@ LamportTimestamp.parse = function parseArbitraryString (str) {
     }
     return ret;
 };
+
+LamportTimestamp.prototype.time = function () {return this._time;};
+LamportTimestamp.prototype.source = function () {return this._source;};
 
 module.exports = LamportTimestamp;

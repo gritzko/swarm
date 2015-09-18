@@ -157,7 +157,7 @@ Spec.prototype.add = function (spec, quant) {
 };
 Spec.prototype.toString = function () { return this.value; };
 
-
+/*
 Spec.int2base = function (i, padlen) {
     if (i < 0 || i >= (1 << 30)) {
         throw new Error('out of range');
@@ -167,7 +167,7 @@ Spec.int2base = function (i, padlen) {
         ret = Spec.base64.charAt(i & 63) + ret;
     }
     return ret;
-};
+};*/
 
 Spec.prototype.fits = function (specFilter) {
     var myToks = this.value.match(Spec.reQTokExt);
@@ -213,9 +213,6 @@ Spec.reQTokExt = new RegExp(Spec.rsQTokExt, 'g');
 Spec.reSpec = new RegExp('^(?:'+Spec.rsQTokExt+')*$');
 Spec.rsExt = '\\+(=)'.replace(/=/g, Spec.rT);
 Spec.reExt = new RegExp(Spec.rsExt, 'g');
-/** 4000Hz is our limit for event frequency (4000 ops per object per second)
- *  FIXME move to clocks; has no rel to Spec in general */
-Spec.MAX_SEQ = Spec.int2base(3999,2);
 Spec.is = function (str) {
     if (str === null || str === undefined) {
         return false;
@@ -299,18 +296,21 @@ Spec.Map.prototype.toString = function (trim) {
     return ret.join('') || '!0';
 };
 
+
+var stamp = require('swarm-stamp');
+
 //
-Spec.Parsed = function (spec, context) {
-    this.type = null;
-    this.id = null;
-    this.stamp = null;
-    this.vv = null;
-    this.op = null;
+function ParsedSpec (spec, context) {
     if (context) {
-        this.type = context.type;
-        this.id = context.id;
-        this.stamp = context.stamp;
-        this.op = context.op;
+        this._type = context.type || null;
+        this._id = context.id || null;
+        this._stamp = context.stamp || null;
+        this._op = context.op || null;
+    } else {
+        this._type = null;
+        this._id = null;
+        this._stamp = null;
+        this._op = null;
     }
     if (!spec) { return; }
     Spec.reQTokExt.lastIndex = 0;
@@ -318,41 +318,57 @@ Spec.Parsed = function (spec, context) {
     while (m = Spec.reQTokExt.exec(str)) {
         var quant = m[1], tok = m[2];
         switch (quant) {
-        case '/': this.type = tok; break;
-        case '#': this.id = tok; break;
-        case '!':
-            if (this.vv===null) {
-                this.stamp = tok;
-                this.vv = '';
-            } else {
-                this.vv += m[0];
-            }
-            break;
-        case '.': this.op = tok; break;
+        case '/': this._type = tok; break;
+        case '#': this._id = tok; break;
+        case '!': this._stamp = tok; break;
+        case '.': this._op = tok; break;
         }
     }
-};
+}
+Spec.Parsed = ParsedSpec;
 
-Spec.Parsed.prototype.toString = function (context) {
+
+ParsedSpec.prototype.toString = function (context) {
     var ret = '';
-    var type = this.type || (context && context.type);
+    var type = this._type || (context && context.type);
     if (type) {
         ret+='/'+type;
     }
-    var id = this.id || (context && context.id);
+    var id = this._id || (context && context.id);
     if (id) {
         ret+='#'+id;
     }
-    var stamp = this.stamp || (context && context.stamp);
+    var stamp = this._stamp || (context && context.stamp);
     if (stamp) {
         ret+='!'+stamp;
     }
-    if (this.vv) {
-        ret += this.vv;
-    }
-    var op = this.op || (context && context.op);
+    var op = this._op || (context && context.op);
     if (op) {
         ret+='.'+op;
     }
     return ret;
+};
+
+
+ParsedSpec.prototype.type = function () { return this._type; };
+ParsedSpec.prototype.id = function () { return this._id; };
+ParsedSpec.prototype.stamp = function () { return this._stamp; };
+ParsedSpec.prototype.version = function () { return '!'+this._stamp; };
+ParsedSpec.prototype.op = function () { return this._op; };
+ParsedSpec.prototype.typeid = function () {
+    return '/'+this._type+'#'+this._id;
+};
+ParsedSpec.prototype.source = function () {
+    if (!this._stamp) {return null;}
+    var parsed = new stamp.LamportTimestamp(this._stamp);
+    return parsed.source();
+};
+ParsedSpec.prototype.author = function () {
+    var source = this.source();
+    var i = source.indexOf('~');
+    return i===-1 ? source : source.substring(0,i);
+};
+ParsedSpec.prototype.pattern = function () {
+    return  (this._type?'/':'')+(this._id?'#':'')+
+            (this._stamp?'!':'')+(this._op?'.':'');
 };

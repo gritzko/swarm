@@ -94,6 +94,7 @@ OpStream.prototype.end = function (something) {
     this.stream = null;
 };
 
+
 OpStream.prototype.onStreamDataReceived = function (data) {
     if (this.closed) {
         throw new Error('the OpStream is closed');
@@ -105,7 +106,9 @@ OpStream.prototype.onStreamDataReceived = function (data) {
     var parsed;
 
     try {
-        parsed = Op.parse(this.remainder, this.peer_stamp);
+
+        parsed = Op.parse(this.remainder, this.peer_stamp, this.context);
+
     } catch (ex) {
         console.error(ex.message, ex.stack);
         this.emit('error', 'bad op format');
@@ -116,8 +119,9 @@ OpStream.prototype.onStreamDataReceived = function (data) {
     this.remainder = parsed.remainder;
     var ops = parsed.ops;
 
-    if (!ops || !ops.length)
+    if (!ops || !ops.length) {
         return;
+    }
 
     try {
 
@@ -131,9 +135,6 @@ OpStream.prototype.onStreamDataReceived = function (data) {
         var author = this.options.restrictAuthor || undefined;
         for(var i=0; i<ops.length; i++) {
             var op = ops[i];
-            if (op.spec.isEmpty()) {
-                throw new Error('malformed spec');
-            }
             if (author!==undefined && op.spec.author()!==author) {
                 throw new Error('access violation: '+op.spec);
             }
@@ -149,7 +150,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 };
 
 OpStream.prototype.sendHandshake = function (op) {
-    if (op.spec.pattern()!=='/#!.' || op.spec.token('/').bare!=='Swarm' ||
+    if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
         op.op().toLowerCase()!=='on') {
         throw new Error('not a handshake');
     }
@@ -160,7 +161,7 @@ OpStream.prototype.sendHandshake = function (op) {
 };
 
 OpStream.prototype.onHandshake = function (op) {
-    if (op.spec.pattern()!=='/#!.' || op.spec.token('/').bare!=='Swarm' ||
+    if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
         op.op().toLowerCase()!=='on') {
         console.error('not a handshake:', op);
         this.stream.end();

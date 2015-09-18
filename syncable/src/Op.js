@@ -11,7 +11,7 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
         source = orig.source;
         patch = orig.patch;
     }
-    this.spec = new Spec(spec);
+    this.spec = new Spec.Parsed(spec);
     this.value = value ? value.toString() : '';
     this.source = source ? source.id || source.toString() : '';
     this.patch = patch || null;
@@ -28,11 +28,12 @@ Op.reOp = new RegExp(Op.rsOp, 'mg');
 Op.rePatchOp = new RegExp(Op.rsPatchOpB, 'mg');
 
 //
-Op.parse = function (str, source) {
+Op.parse = function (str, source, context) {
     Op.reOp.lastIndex = 0;
     var rem = str, m, mm, ops = [], d=0;
     while (m = Op.reOp.exec(rem)) {
-        var spec = new Spec(m[1]), value = m[2], patch_str = m[3], end = m[4];
+        var spec = new Spec.Parsed(m[1], context);
+        var value = m[2], patch_str = m[3], end = m[4];
         var patch = null;
         if (patch_str) {
             if (end.length<2) { // need \n\n termination
@@ -54,6 +55,9 @@ Op.parse = function (str, source) {
         rem = rem.substr(next_nl[0].length);
         // TODO detect unparseable strings
     }
+    if (rem.indexOf('\n')!==-1 && !Op.reOp.exec(rem)) {
+        throw new Error('unparseable input');
+    }
     if (rem.length>(1<<23)) { // 8MB op size limit? TODO
         throw new Error("large unparseable input");
     }
@@ -65,7 +69,7 @@ Op.prototype.origin = function () {
     return this.spec.source();
 };
 Op.prototype.stamp = function () {
-    return this.spec.version(); // TODO .4 rename consistently
+    return this.spec.stamp();
 };
 Op.prototype.author = function () {
     return this.spec.author();
@@ -82,7 +86,7 @@ Op.prototype.name = function () {
 Op.prototype.op = Op.prototype.name;
 
 Op.prototype.version = function () {
-    return this.spec.filter('!');
+    return this.spec.version();
 };
 
 Op.prototype.unbundle = function () {
