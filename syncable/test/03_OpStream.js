@@ -15,8 +15,8 @@ if (typeof(window)==='object') {
 tape('3.A simple cases', function (t) {
     var stream = new BatStream();
 
-    var pair = new OpStream(stream.pair, 'stream', {});
-    var opstream = new OpStream(stream, 'pair', {});
+    var pair = new OpStream(stream.pair, {});
+    var opstream = new OpStream(stream, {});
 
     var send_ops = Op.parse(
         '/Host#db+cluster!time1+user1~ssn.on\t\n\n'+
@@ -50,22 +50,24 @@ tape('3.A simple cases', function (t) {
 
 tape('3.B defragmentation', function (t) {
     var stream = new BatStream();
-    var opstream = new OpStream(stream.pair, 'stream', {});
+    var opstream = new OpStream(stream.pair, {});
     var op = new Op('/Swarm#db+cluster!stream.on', '', 'pair');
     var str = op.toString();
+
     t.plan(2);
+
     opstream.on('id', function(recv_op){
         t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
         t.equal(recv_op.value, op.value, 'value matches');
     });
-    for(var i=0; i<str.length; i++) {
+    for (var i = 0; i < str.length; i++) {
         stream.write(str.charAt(i));
     }
 });
 
 tape('3.C error', function (t) {
     var stream = new BatStream();
-    var opstream = new OpStream(stream.pair, 'stream', {});
+    var opstream = new OpStream(stream.pair, {});
     t.plan(1);
     opstream.on('data', function(recv_op){
         t.fail('no ops here');
@@ -78,7 +80,7 @@ tape('3.C error', function (t) {
 
 tape('3.D handshake', function (t) {
     var stream = new BatStream();
-    var opstream = new OpStream(stream.pair, undefined);
+    var opstream = new OpStream(stream.pair);
     t.plan(4);
     opstream.on('data', function(recv_op){
         t.equal(recv_op.source, 'stamp+swarm~ssn');
@@ -111,6 +113,107 @@ tape('3.E handshake error', function (t) {
     stream.write("/Model#stamp!time.on\t\n");
 });
 
-tape.skip('3.F patch: partial read', function (t) {
-    // FIXME
+
+tape('3.F stream end', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair);
+    t.plan(3);
+
+    opstream.on('id', function(id, op) {
+        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
+        t.equal(opstream.peer_db_id, 'db+cluster');
+    });
+    opstream.on('end', function () {
+        t.ok(true, 'Got end event');
+    });
+    stream.write("/Swarm#db+cluster!stamp+swarm~ssn.on\t\n");
+    stream.write("/Model#stamp!time.on\t\n");
+    stream.end();
+});
+
+tape('3.G dialog', function (t) {
+    var stream = new BatStream();
+    var pair = new OpStream(stream.pair, {});
+    var opstream = new OpStream(stream, {});
+    var sample_op = new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'pair');
+
+    t.plan(5);
+
+    opstream.on('id', function (op) {
+        t.equal(''+op.spec, '/Swarm#db+cluster!pair.on', 'spec matches');
+        opstream.sendHandshake(new Op('/Swarm#db+cluster!stream.on', '', 'pair'));
+        opstream.write(sample_op);
+    });
+
+    pair.on('id', function (op) {
+        t.equal(''+op.spec, '/Swarm#db+cluster!stream.on', 'spec matches');
+    });
+
+    pair.on('data', function(op) {
+        t.equal(''+op.spec, ''+sample_op.spec, 'spec matches');
+        t.equal(''+op.value, ''+sample_op.value, 'value matches');
+        t.equal(op.source, 'stream', 'source is correct');
+    });
+
+    pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+});
+
+tape('3.H write to closed stream', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair);
+    t.plan(3);
+
+    opstream.on('id', function(id, op) {
+        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
+        t.equal(opstream.peer_db_id, 'db+cluster');
+    });
+    opstream.on('end', function () {
+        t.ok(true, 'Got end event');
+        opstream.sendHandshake(new Op('/Swarm#db+cluster!stream.on', '', 'pair'));
+    });
+    stream.write("/Swarm#db+cluster!stamp+swarm~ssn.on\t\n");
+    stream.end();
+});
+
+
+tape.skip('3.I stream .write()/.read() interface', function (t) {
+    var stream = new BatStream();
+    var pair = new OpStream(stream.pair, {});
+    var opstream = new OpStream(stream, {});
+    var op, index = 0;
+    var send_ops = Op.parse(
+        '/Model#id!time1+user1~ssn.on\t\n\n'+
+        '/Mode#some!time2+user2~ssn.set\t12345\n'+
+        '/Model#stamp+author!time3+user3~ssn.on\tpos\n'+
+               '\t!stamp+source.op\tvalue\n'+
+               '\t!stamp2+source2.op\tvalue2\n\n',
+        'pair'
+    ).ops;
+
+    function check_op(op) {
+        var next = send_ops[index++];
+        t.equal(''+op.spec, ''+next.spec, 'spec matches');
+        t.equal(''+op.value, ''+next.value, 'value matches');
+        t.equal(op.source, 'pair', 'source is correct');
+    }
+
+    t.plan(send_ops.length * 3 + 2);
+    pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+
+    pair.write(send_ops[0]);
+    pair.write(send_ops[1]);
+
+    while (op = opstream.read()) {
+        check_op(op);
+    }
+
+    t.equal(op, null, 'No more operations available for now');
+    t.equal(index, 2, 'Two operations processed');
+
+    pair.write(send_ops[2]);
+    check_op(opstream.read());
+});
+
+
+tape.skip('3.J patch: partial read', function (t) {
 });
