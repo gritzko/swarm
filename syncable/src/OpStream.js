@@ -2,6 +2,7 @@
 var Op = require('./Op');
 var util         = require("util");
 var EventEmitter = require("events").EventEmitter;
+var Duplex       = require("stream").Duplex;
 
 // Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
 // router, host - all consume op streams. To make all those part able to run
@@ -23,39 +24,46 @@ var EventEmitter = require("events").EventEmitter;
 //
 // options object:
 function OpStream (stream, options) {
-    EventEmitter.call(this);
     if (!stream || !stream.on) {
         throw new Error('no stream provided');
     }
+    Duplex.call(this, {objectMode: true});
     this.stream = stream;
     this.options = options = options || {};
     this.pending_s = [];
+
+    // Local session/database/timestamp
     this.ssn_id = options.ssn_id || null;
     this.db_id = options.db_id || null;
     this.stamp = options.stamp || '0';
+    // Peer session/database/timestamp
     this.peer_ssn_id = null;
     this.peer_db_id = null;
-    this.peer_options = null;
     this.peer_stamp = null;
+    // Peer options received in handshake
+    this.peer_options = null;
+
     this.remainder = '';
     this.bound_flush = this.flush.bind(this);
+    this.flush_timeout = null;
     this.lastSendTime = 0;
     //this.serializer = options.serializer || LineBasedSerializer;
     if (options.keepAlive) {
         this.timer = setInterval(this.onTimer.bind(this), 1000);
     }
     this.stream.on('data', this.onStreamDataReceived.bind(this));
-    this.stream.on('end', this.onStreamClosed.bind(this));
+    this.stream.on('end', this.onStreamEnded.bind(this));
     this.stream.on('error', this.onStreamError.bind(this));
-    options.maxSendFreq;
-    options.burstWaitTime;
+    //options.maxSendFreq;
+    //options.burstWaitTime;
     //OpStream.debug && console.log("OpStream open", this.options);
+    this.readable = false;
 }
-util.inherits(OpStream, EventEmitter);
+util.inherits(OpStream, Duplex);
 module.exports = OpStream;
 OpStream.debug = false;
 
-OpStream.prototype.write = function (op) {
+OpStream.prototype._write = function (op, encoding, callback) {
     this.pending_s.push(op);
     if (this.asyncFlush) {
         if (!this.flush_timeout) {
@@ -65,7 +73,9 @@ OpStream.prototype.write = function (op) {
     } else {
         this.flush();
     }
+    callback();
 };
+
 OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
 
 OpStream.prototype.flush = function () {
@@ -77,9 +87,8 @@ OpStream.prototype.flush = function () {
             (this.peer_stamp||'unknown', '<', this.stamp||'undecided', parcel);
         this.stream.write(parcel);
         this.lastSendTime = new Date().getTime();
-    } catch(ioex) {
-        console.error(ioex.message, ioex.stack);
-        this.close();
+    } catch (ioex) {
+        this.onStreamError(ioex);
     }
 };
 
@@ -95,9 +104,8 @@ OpStream.prototype.end = function (something) {
 };
 
 OpStream.prototype.onStreamDataReceived = function (data) {
-    if (this.closed) {
-        throw new Error('the OpStream is closed');
-    }
+    if (!this.stream)
+        return;
     if (!data) {return;} // keep-alive
 
     this.remainder += data.toString();
@@ -107,9 +115,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
     try {
         parsed = Op.parse(this.remainder, this.peer_stamp);
     } catch (ex) {
-        console.error(ex.message, ex.stack);
-        this.emit('error', 'bad op format');
-        this.close(); // crude DDoS protection TODO
+        this.onStreamError(new Error('bad op format'));
         return;
     }
 
@@ -129,23 +135,20 @@ OpStream.prototype.onStreamDataReceived = function (data) {
             (this.peer_stamp||'unknown', '>', this.stamp||'undecided', data.toString());
 
         var author = this.options.restrictAuthor || undefined;
-        for(var i=0; i<ops.length; i++) {
+        for(var i = 0; i < ops.length; i++) {
             var op = ops[i];
             if (op.spec.isEmpty()) {
-                throw new Error('malformed spec');
+                return this.onStreamError(new Error('malformed spec'));
             }
             if (author!==undefined && op.spec.author()!==author) {
-                throw new Error('access violation: '+op.spec);
+                return this.onStreamError(new Error('access violation: ' + op.spec));
             }
-            this.emit('data', op);
+            this.push(op);
         }
 
     } catch (ex) {
-        console.error('processing error', ex.message, ex.stack);
-        this.emit("error", "processing error");
-        this.close();
+        this.onStreamError(ex);
     }
-
 };
 
 OpStream.prototype.sendHandshake = function (op) {
@@ -163,10 +166,7 @@ OpStream.prototype.onHandshake = function (op) {
     if (op.spec.pattern()!=='/#!.' || op.spec.token('/').bare!=='Swarm' ||
         op.op().toLowerCase()!=='on') {
         console.error('not a handshake:', op);
-        this.stream.end();
-        this.stream = null;
-        this.emit('error', 'invalid handshake: ');
-        return;
+        return this.onStreamError(new Error('invalid handshake'));
     }
     this.peer_db_id = op.id();
     this.peer_ssn_id = op.origin();
@@ -175,16 +175,19 @@ OpStream.prototype.onHandshake = function (op) {
     this.emit('id', op, this);
 };
 
-OpStream.prototype.onStreamClosed = function () {
+OpStream.prototype.onStreamEnded = function () {
     this.stream = null;
-    this.emit('close');
+    this.emit('end');
 };
 
 OpStream.prototype.onStreamError = function (err) {
-    OpStream.debug && console.error('stream error', this.source_id, err);
-    this.emit('error', err);
+    OpStream.debug && console.error('stream error', err);
     if (this.stream) {
-        this.end();
+        this.emit('error', err);
+        if (this.stream) {
+            this.end();
+            this.stream = null;
+        }
     }
 };
 
@@ -203,13 +206,4 @@ OpStream.prototype.onTimer = function () {
     }
 };
 
-OpStream.prototype.close = function () {
-    if (this.stream) {
-        this.stream.end();
-    }
-    this.stream = null;
-};
-
-/*function snippet (o) {
-    return (o||'<empty>').toString().replace(/\n/g,'\\n').substr(0,50);
-}*/
+OpStream.prototype._read = function () {};
