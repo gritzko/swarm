@@ -35,16 +35,16 @@ VVector.prototype.add = function (vvec) {
         if (stamp.constructor!==LamportTimestamp) {
             stamp = new LamportTimestamp(stamp);
         }
-        var existing = this.map[stamp.source] || '';
-        if (stamp.time > existing) {
-            this.map[stamp.source] = stamp.time;
+        var existing = this.map[stamp.source()] || '';
+        if (stamp.time() > existing) {
+            this.map[stamp.source()] = stamp.time();
         }
     }
 };
 
 VVector.prototype.has = function (source) {
     if (source.indexOf('+')!==-1) {
-        source = new LamportTimestamp(source).source;
+        source = new LamportTimestamp(source).source();
     }
     return source in this.map;
 };
@@ -53,7 +53,7 @@ VVector.prototype.covers = function (version) {
     if (version.constructor!==LamportTimestamp) {
         version = new LamportTimestamp(version);
     }
-    return version.time <= (this.map[version.source] || '');
+    return version.time() <= (this.map[version.source()] || '');
 };
 
 VVector.prototype.coversAll = function (vv) {

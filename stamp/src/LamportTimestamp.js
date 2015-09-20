@@ -23,7 +23,7 @@ function LamportTimestamp (time, source) {
 }
 
 LamportTimestamp.prototype.toString = function () {
-    return this.time + (this.source ? '+' + this.source : '');
+    return this._time + (this._source ? '+' + this._source : '');
 };
 
 LamportTimestamp.parse = function parseArbitraryString (str) {
