@@ -94,8 +94,8 @@ tape ('1.g parse ops', function (tap) {
     tap.equal(''+diff.version(), '!timeX+author~ssn', 'version');
     tap.ok(diff.patch, 'patch');
     tap.equal(diff.patch.length, 2);
-    tap.equal(diff.patch[0].spec+'', '!time0.set');
-    tap.equal(diff.patch[1].spec+'', '!time1.set');
+    tap.equal(diff.patch[0].spec+'', '/Model#test!time0.set');
+    tap.equal(diff.patch[1].spec+'', '/Model#test!time1.set');
     tap.equal(diff.patch[1].value, '{"y":2}');
 
     tap.equal(diff.toString(),
