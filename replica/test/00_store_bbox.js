@@ -26,28 +26,26 @@ var BASIC = [
 },
 {
     comment: 'push a new object in',
-    query:   '[down]/Model#timeO1+user~ssn~app!XXXXX+user~ssn~app.on\t0\n'+
-                 '\t!timeO1+user~ssn~app.state\tsome state\n\n',
-    response:'/Model#timeO1+user~ssn~app!XXXXX+user~ssn~app.on\ttimeO1+user~ssn~app\n\n'
+    query:   '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\t0\n'+
+                 '\t!time1+user~ssn~app.~state\tsome state\n\n',
+    response:'[up]/Model#time1+user~ssn~app!00001+user~ssn.on\t0\n'+
+                 '\t!time1+user~ssn~app.~state\tsome state\n\n'+
+             '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\ttime1+user~ssn~app\n\n'
 },
 {
     comment: 'induct an upstream subscription (no local data)',
-    query:   '[down]/Model#id!YYYYY+user~ssn~app.on \n\n',
-    response:'/Model#id!XXXXX+user~ssn~app.on \n\n'
+    query:   '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n',
+    response:'[up]/Model#stamp2+remote!00003+user~ssn.on\t0\n\n'
 },
 {
-    comment: 'server response (.on is not relayed)',
-    query:   '[up]/Model#id!stamp+swarm.on \n' +
-                ' !time0+user.state initial root state\n\n',
-    response:'[down]...relay'
+    comment: 'server response (downstream .on responded)',
+    query:   '[up]/Model#stamp2+remote!00003+user~ssn.on\t0\n' +
+                '\t!stamp2+remote.state\tinitial root state\n\n',
+    response:'[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n' +
+                '\t!stamp2+remote.state\tinitial root state\n\n'
 },
 
-{
-    comment: 'downstream .on responded',
-    query:   '@user~ssn/Model#id!stamp+user~ssn.on \n',
-    response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time0+user~b.state initial root state\n\n',
-},
+
 {
     comment: 'downstream .on (bogus bookmark) responded',
     query:   '@user~ssn/Model#id!stamp+user~ssn.on !stale~ancient\n',
@@ -99,11 +97,12 @@ var BASIC = [
 tape('1.A basic cases', function(t){
 
     var replica = new Replica({
-        ssn_id: 'user~ssn',
-        db_id: 'db',
-        clock: new stamp.LamportClock('user~ssn'),
-        listen: 'loopback:1A',
-        prefix: true
+        ssn_id:     'user~ssn',
+        db_id:      'db',
+        upstream:   'swarm',
+        clock:      new stamp.LamportClock('user~ssn'),
+        listen:     'loopback:1A',
+        prefix:     true
     }, start_tests);
 
     function start_tests () {
@@ -118,6 +117,15 @@ tape('1.A basic cases', function(t){
 
 });
 
+
+var ERRORS = [
+    // patch for an unknown object
+    // ack in the future (unknown op)
+    // invalid specs
+    // state 0 (correct)
+    // state in a race (ignored)
+    // db error => graceful termination
+];
 
 var REORDERS = [
 {
@@ -186,7 +194,7 @@ var REORDERS = [
     response:'/Model#id2!0+swarm.on !time4+userC\n\n'
 },
 {
-    comment: '',
+    comment: 'important: ack of a compound-stamp op',
     query:   '',
     response:''
 },

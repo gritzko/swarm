@@ -19,8 +19,8 @@
         "README.md",
         "index.js"
     ],
-    "main": "index.js",
-    "browser": "index.js",
+    "main": "src/Replica.js",
+    "browser": "src/Replica.js",
     "dependencies": {
         "swarm-stamp": "^0.4.3",
         "swarm-syncable": "^0.4.0",

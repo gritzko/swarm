@@ -5,157 +5,331 @@ var VVector = stamp.VVector;
 var sync = require('swarm-syncable');
 var Op = sync.Op;
 
+// a single syncable
+// subscribers, state metadata
+function EntryState () {
+    this.subscribers = [];
+    // own progress
+    this.tip = '0';
+    this.state = '0';
+    // upstream progress
+    this.last = '0';
+    this.avv = new AnchoredVV('0');
+    // e.g. non-upstream bookmarks
+    this.other = null;
+}
 
-function Request (replica, meta, op) {
-    this.meta = meta;
-    this.subscriptions = meta.subscriptions;
-    this.op = op;
-    this.typeid = op.typeid();
+// while an op is being processed
+function Entry (replica, typeid, state, ops) {
     this.replica = replica;
+    this.typeid = typeid;
+    this.state = state || null;
+    // the in-progress op
+    this.op = null;
+    // queued ops
+    this.pending_ops = ops || [];
+    // cache of db records (some tail)
+    this.records = [];
+    // the tail staring position (inclusive?)
+    this.tail_start_key = '~';
+    // ops to be saved/sent
     this.save_queue = [];
     this.send_queue = [];
+    if (this.state===null) {
+        this.replica.loadTail(this);
+    } else {
+        this.next();
+    }
 }
-module.exports = Request;
+Entry.State = EntryState;
+module.exports = Entry;
 
 
-Request.prototype.saveMeta = function (key, value) {
-    this.meta[key] = value;
-    this.save_queue.push(new Op('.'+key, value));
+Entry.prototype.parseMetadata = function () {
+    if (this.state) { throw new Error('repeated metadata read'); }
+    var state = this.state = new Entry.State();
+    this.records.forEach(function(op){
+        switch (op.spec.toString()) {
+        case '.tip':   state.tip = op.value; break;
+        case '.last':  state.last = op.value; break;
+        case '.avv':   state.avv = op.value; break;
+        case '.state': state.state = op.value; break;
+        //case '.subs': meta. = op.value; break;
+        default: console.warn('what is this?', op);
+        }
+    });
+    this.records = [];
+};
+
+Entry.prototype.setTip = function (stamp) {
+    this.state.tip = stamp;
+    this.save_queue.push(new Op('.tip', stamp));
+};
+Entry.prototype.setUpstreamLast = function (stamp) {
+    this.state.last = stamp;
+    this.save_queue.push(new Op('.last', stamp));
+};
+Entry.prototype.setUpstreamAVV = function (avv) {
+    this.state.avv = avv.toString();
+    this.save_queue.push(new Op('.avv', avv.toString()));
+};
+Entry.prototype.setBaseState = function (stamp) {
+    this.state.state = stamp;
+    this.save_queue.push(new Op('.state', stamp));
 };
 
 
-Request.prototype.send = function (op, to_ssn) {
-    if (to_ssn || op.source!==this.op.source) {
-        op = op.relay(to_ssn||this.op.source);
+Entry.prototype.queueOps = function (new_ops) {
+    if (this.pending_ops===null) {
+        this.pending_ops = new_ops.slice();
+        this.next();
+    } else { // there are some ops in flight
+        this.pending_ops = this.pending_ops.concat(new_ops);
+    }
+};
+
+
+Entry.prototype.next = function () {
+    if (this.state===null) {
+        this.parseMetadata();
+    }
+    if (this.pending_ops.length) {
+        this.op = this.pending_ops.shift();
+        this.process();
+    } else {
+        this.pending_ops = null;
+        this.replica.done(this);
+    }
+};
+
+
+Entry.prototype.loadMoreData = function (mark) {
+    if (this.save_queue.length || this.send_queue.length) {
+        console.error('some i/o was made before loadMoreData() call');
+    }
+    this.pending_ops.unshift(this.op);
+    this.op = null;
+    this.replica.loadTail(this, mark);
+};
+
+
+Entry.prototype.send = function (op, to_ssn) {
+    var to = to_ssn || this.op.source;
+    if (op.source!==to) {
+        op = op.relay(to);
     }
     this.send_queue.push(op);
 };
 
 
-Request.prototype.save = function (op) {
+Entry.prototype.relay = function () {
+    var subs = this.state.subscribers;
+    for(var i=0; i<subs.length; i++) {
+        this.send(this.op.relay(subs[i]));
+    }
+};
+
+
+Entry.prototype.save = function (op) {
+    if (this.records.length && op.stamp()<=this.records[this.records.length-1].stamp()) {
+        throw new Error('screw you');
+    }
+    this.records.push(op);
     this.save_queue.push(op);
 };
 
 
-Request.prototype.done = function () {
-    this.replica.done(this);
+Entry.prototype.upstream = function () {
+    return this.replica.upstream_ssn;
+};
+Entry.prototype.ssn_id = function () {
+    return this.replica.ssn_id;
 };
 
 
-Request.prototype.process = function () {
-    switch (this.op.name()) {
-    case 'on':    this.processOn(); break;
-    case 'off':   this.processOff(); break;
-    case 'state': this.processState(this.op); break;
-    default:      this.processOp(this.op); break;
+Entry.prototype.process = function () {
+    //var is_source_upstream = this.current.source === this.upstream();
+    var op = this.op;
+    switch (op.name()) {
+    case 'on':      if (op.origin()===this.ssn_id()) {
+                        this.processUpstreamOn();
+                    } else {
+                        this.processDownstreamOn();
+                    }
+                    break;
+    case 'off':     this.processOff(); break;
+    case '~state':  this.processState(this.op); break;
+    default:        this.processOp(this.op); break;
     }
 };
 
 
-Request.prototype.processOn = function () {
-    var source = this.op.origin(); // FIXME not op.source (there are .on hints)
-    var is_source_upstream = source === this.upstream;
-    var ack_vv = new VVector();
-
-    // first, process the patch
-    var ops = this.op.unbundle();
-    for (var i=0; ops && i<ops.length; i++) {
-        var diff_op = ops[i];
-        switch (diff_op.op()) {
-        case 'on':
-        case 'off':
-            this.send(this.op.error('invalid patch'));
-        return;
-        case 'state':
-            if (this.meta.tip!=='0' && this.op.source!==this.upstream) {
-                this.send(this.op.error('state overwrite from a downstream'));
-                this.done();
-                return;
-            }
-            this.processState(diff_op);
-            ack_vv.add(diff_op.stamp());
-        break;
-        default:
-
-            // FIXME asynchronous
-
-            this.processOp(diff_op);
-            ack_vv.add(diff_op.stamp());
-        }
+Entry.prototype.processUpstreamOn = function () {
+    var op = this.op;
+    if (op.source !== this.upstream()) {
+        console.error('something fishy is going on');
     }
 
-    // remember upstream acknowledgements
-    if (is_source_upstream) {
-        var new_avv = new AnchoredVV(this.meta.up_avv);
-        new_avv.vv.addAll(this.op.value);
-        this.saveMeta('up_avv', new_avv.toString());
-    }
+    //var new_avv = new AnchoredVV(this.state.up_avv);
+    //new_avv.vv.addAll(this.op.value);
+    //this.saveMeta('up_avv', new_avv.toString());
+    this.addUpstreamAVV(op.value);
 
-    // make a response if needed
-    if ( this.op.origin() === this.replica.ssn_id ) { // response to our .on
-        this.done();
-    } else if ( is_source_upstream ) { // a hint for an upstream .on
-        this.sendPatchUpstream();
-    } else { // we are the upstream, send back a patch
-        this.sendPatchDownstream(ack_vv);
-    }
-
+    // upstream .on needs no response
+    this.next(); // FIXME call stack length => change to return LATER
 };
+
+
+// As an upstream, we send a patch based on the provided position in
+// our arrival order. We also add an acknowledgement for the received patch.
+Entry.prototype.processDownstreamOn = function () {
+    var upstream = this.upstream();
+    var op = this.op;
+    var subs = this.state.subscribers;
+    // subscribe to the uplink
+    var patch_up, patch_down;
+
+    if (subs.length===0 && upstream) {
+        patch_up = this.patchUpstream();
+        if (patch_up===LATER) { return; }
+    }
+
+    if (subs.indexOf(op.source)===-1) {
+        patch_down = this.patchDownstream();
+        if (patch_down===LATER) { return; }
+    }
+
+    if (patch_up) {
+        this.send( patch_up, upstream );
+        subs.push(upstream);
+    }
+
+    if (patch_down) {
+        this.send( patch_down, op.source );
+        subs.push(op.source);
+    }
+
+    this.next();
+};
+var LATER=null;
 
 // As a downstream, we are responsible for remembering the upstream's
 // arrival order and progress. Hence, we compose the patch based on
 // our local info.
-Request.prototype.sendPatchUpstream = function () {
-    var self = this;
-    var origin = this.op.origin();
-    var avv;
-    var avv_key = 'avv*' + origin;
-    var pos_key = 'last*' + origin;
-    this.meta[avv_key];
-    this.meta[pos_key];
-    this.replica.loadTail(this.typeid, avv.anchor, function respond (error, ops) {
-        var patch = [];
-        var continuous = true;
-        for(var i=0; i<ops.length; i++) {
-            var op = ops[i];
-            var stamp = op.stamp();
-            if (!avv.vv.covers(stamp)) {
-                patch.push(op);
-                continuous = false;
-            } else if (continuous) {
-                avv.anchor = stamp;
-                if (avv.vv.get(stamp)<=stamp) { // anchor eats vector
-                    avv.vv.remove(stamp); // TODO + args
-                }
-            }
-        }
+Entry.prototype.patchUpstream = function () {
 
-        if (avv!==self.meta[avv_key]) {
-            self.saveMeta(avv_key, avv.toString());
+    var avv = new AnchoredVV(this.state.avv);
+    var anchor = avv.anchor, add_state = false;
+
+    if (anchor==='0') {
+        anchor = this.state.state;
+        add_state = true;
+    }
+
+    if (this.mark>anchor) {
+        this.loadMoreData(anchor);
+        return LATER;
+    }
+
+    var patch = this.makePatch(anchor, null, add_state);
+
+    var ops = this.records;
+    var i=0;
+    while (i<ops.length && ops[i].stamp()!==anchor) { i++; }
+    while (i<ops.length) {
+        var op = ops[i++];
+        if (op.name()==='~state') { continue; }
+        var stamp = op.stamp();
+        if (!avv.vv.covers(stamp)) {
+            break;
         }
-        var patch_op = new Op(self.op.spec, pos_key);
-        patch_op.bundle(patch);
-        self.send(patch_op);
-        self.done();
-    });
+        avv.anchor = stamp;
+        if (avv.vv.get(stamp)<=stamp) { // anchor eats vector
+            avv.vv.remove(stamp);
+        }
+    }
+
+    // correctness of this write does not depend on the current op
+    // so we'll do it even if patchDownstream says LATER
+    this.setUpstreamAVV(avv.toString());
+
+    var patch_op = new Op(
+        this.op.spec.typeId().setStamp(this.replica.upstream_stamp).setOp('on'),
+        this.state.last,
+        '',
+        patch
+    );
+    return patch_op;
 };
 
 // As an upstream, we send a patch based on the provided position in
 // our arrival order. We also add an acknowledgement for the received patch.
-Request.prototype.sendPatchDownstream = function (ack_vv) {
-    var self = this;
-    var pos = self.op.value;
-    // TODO format check
-    this.replica.loadTail(self.typeid, pos, function respond(err, patch) {
-        var patch_op = new Op(self.op.spec, ack_vv.toString(), null, patch);
-        self.send(patch_op);
-        self.done();
-    });
+Entry.prototype.patchDownstream = function () {
+    var pos = this.op.value, add_state = false;
+    // TODO format check FIXME new Lamp();
+
+    var ack_vv = new VVector();
+    if (this.op.patch) {
+        this.op.patch.forEach(function(o){
+            ack_vv.add(o.stamp());
+        });
+    }
+
+    if (pos==='0') { // the client has nothing
+        // this.state.state is defined as we are stateful
+        pos =  this.state.state;
+        add_state = ! ack_vv.covers(pos);
+        // don't send them back their own state
+    }
+
+    if (pos<this.mark) {
+        this.loadMoreData(pos);
+        return LATER;
+    }
+
+
+    var patch = this.makePatch(pos, ack_vv, add_state);
+    if (patch===null) {
+        return this.op.error('cann not produce a patch');
+    } else {
+        return new Op(this.op.spec, ack_vv.toString(), null, patch);
+    }
+
 };
 
 
+Entry.prototype.makePatch = function (base, filter, add_state) {
+    var i=0;
+    var ops = this.records;
+    var patch = [];
+    while (i<ops.length && ops[i].stamp()!==base) { i++; }
+    if (i===ops.length) {
+        //return this.op.error('position not found');
+        console.error('position not found');
+        return null;
+    } else if (ops[i].name()!=='~state') {
+        i++; // base is known to the peer, hence not included
+    }
+    if (add_state) {
+        if (i<ops.length && ops[i].name()==='~state') {
+            patch.push(ops[i]);
+            i++;
+        } else {
+            console.error('cannot find state', base);
+            return null;
+        }
+    }
+    while (i<ops.length) {
+        var next = ops[i++];
+        if (next.name()==='~state') { continue; }
+        if (filter && filter.covers(next.stamp())) { continue; }
+        patch.push(next);
+    }
+    return patch;
+};
 
-Request.prototype.processOff = function () {
+
+Entry.prototype.processOff = function () {
     if (this.op.source===this.upstream) {
         "life is difficult; TODO";
     } else {
@@ -170,82 +344,83 @@ Request.prototype.processOff = function () {
 };
 
 
-Request.prototype.processState = function () {
+Entry.prototype.processState = function () {
     var pos = this.op.stamp();
-    if (this.meta.tip==='0') { // new object
+    if (this.state.tip!=='0' && this.op.source!==this.upstream) {
+        this.send(this.op.error('state overwrite from a downstream'));
+    } else if (this.state.tip==='0') { // new object
         this.save(this.op);
-        this.saveMeta('tip', pos);
-        this.saveMeta('state', pos);
+        this.setTip(pos);
+        this.setBaseState(pos);
         if (this.op.source===this.upstream) {
-            this.saveMeta('last', pos);
-            this.saveMeta('avv', pos);
+            this.setUpstreamLast(pos);
+            this.setUpstreamAVV(pos);
         }
+        this.relay();
+        this.mark = pos;
     } else {
-        console.error('state o/w not impl yet');
+        // TODO check conditions are perfect (==tip, no compound)
+        this.send(this.op.error('state o/w not impl yet'));
     }
+    this.next();
 };
 
 
-Request.prototype.processOp = function () {
-    var is_new = true, is_error = null, self = this;
+Entry.prototype.processOp = function () {
+    var is_known = false, is_error = null;
     var op = this.op;
     var stamp = op.stamp();
     var origin = op.origin();
-    var meta = this.meta;
-    // fast path: new op or echo
+    var meta = this.state;
 
-    // track the upstream's progress and arrival order
-    if ( meta.upstream === op.source ) {
-        self.saveMeta('last', stamp);
-        var avv = new AnchoredVV(self.meta.up_avv);
-        avv.vv.add(stamp);
-        self.saveMeta('up_avv', avv.toString());
-    }
 
     // deal with our arrival order
-    if ( stamp > meta.tip ) { // fast track
-        self.saveMeta('tip', stamp);
-        self.done();
-    } else if ( stamp === meta.tip ) { // replay/echo
-        is_new = false;
-        self.done();
+    if ( stamp > meta.tip ) { // fast track: new op
+        this.setTip(stamp);
+    } else if ( stamp === meta.tip ) { // fast track: replay/echo
+        is_known = true;
     } else { // need a replay check
 
-        // adjust tip
+        // IMPORTANT: no i/o before this check
+        if (this.mark>stamp) {
+            // TODO use tip to skip scans
+            return this.loadMoreData(stamp);
+        }
+
+        is_known = this.records.some(function (o) {
+            var stored_stamp = o.stamp();
+            if (stored_stamp>stamp && o.origin()===origin) {
+                is_error = "causality violation";
+                return true;
+            }
+            return stored_stamp===stamp; // FIXME replay/echo
+        });
+
+        // make a compound tip
         var tip = meta.tip.split('!');
         while (tip.length && tip[tip.length-1]<stamp) {
             tip.pop();
         }
         tip.push(stamp);
         var new_tip = tip.join('!');
-        // TODO big reordered patch (long offline) => n^2 reads
-        // use tip to skip scans
-        self.replica.scanTail(self.typeid, stamp, logCheck, respond);
+
+
     }
 
-    function logCheck (stored_op) {
-        var stored_stamp = stored_op.stamp();
-        if (stored_stamp===stamp) { // replay/echo
-            is_new = false;
-        } else if (stored_stamp>stamp && stored_op.origin()===origin) {
-            is_error = "causality violation";
-        }
+    // track the upstream's progress and arrival order
+    if ( meta.upstream === op.source ) {
+        this.setUpstreamLast(stamp);
+        this.addUpstreamAVV(stamp);
     }
 
-    function respond () {
-        if (is_error) {
-            self.send(op.error(is_error));
-        } else if (is_new) {
-            self.saveMeta('tip', new_tip);
-            for(var i=0; i<self.subscribers.length; i++) {
-                self.send(op, self.subscribers[i]);
-            }
-            if (op.source!==self.upstream) {
-                self.send(op, self.upstream);
-            }
-            self.save(op);
+    if (!is_known) {
+        this.setTip(new_tip);
+        for(var i=0; i<this.subscribers.length; i++) {
+            this.send(op.relay(this.subscribers[i]));
         }
-        self.done();
+        this.save(op);
     }
+
+    this.next();
 
 };

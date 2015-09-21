@@ -15,6 +15,9 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
     this.value = value ? value.toString() : '';
     this.source = source ? source.id || source.toString() : '';
     this.patch = patch || null;
+    if (patch && patch.constructor!==Array) {
+        throw new Error('need a patch as an array of Ops');
+    }
 }
 module.exports = Op;
 Op.handshake_ops = {on:1, off:1};
@@ -75,7 +78,7 @@ Op.prototype.author = function () {
     return this.spec.author();
 };
 Op.prototype.typeid = function () {
-    return this.spec.filter('/#').toString();
+    return this.spec.typeid();
 };
 Op.prototype.id = function () {
     return this.spec.id();
@@ -101,7 +104,7 @@ Op.prototype.bundleLength = function () {
 Op.prototype.toString = function () {
     var line = this.spec.toString() + '\t' + this.value + '\n';
     if (this.name()==='on') {
-        if (this.patch) {
+        if (this.patch && this.patch.length) {
             line += '\t' + this.patch.join('\t');
         }
         line += '\n';
@@ -116,9 +119,9 @@ Op.prototype.error = function (msg, src) {
 
 /** handshake ops */
 Op.prototype.reply = function (opname, value) {
-    return new Op( this.spec.set('.'+opname), value||'', this.stamp() );
+    return new Op( this.spec.set('.'+opname), value||'', this.source, this.patch );
 };
 
 Op.prototype.relay = function (to_pipe) {
-    return new Op(this.spec, this.value, to_pipe);
+    return new Op(this.spec, this.value, to_pipe, this.patch );
 };

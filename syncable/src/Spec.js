@@ -358,6 +358,11 @@ ParsedSpec.prototype.op = function () { return this._op; };
 ParsedSpec.prototype.typeid = function () {
     return '/'+this._type+'#'+this._id;
 };
+ParsedSpec.prototype.typeId = function () {
+    var clone = this.clone();
+    clone._stamp = clone._op = null;
+    return clone;
+};
 ParsedSpec.prototype.source = function () {
     if (!this._stamp) {return null;}
     var parsed = new stamp.LamportTimestamp(this._stamp);
@@ -371,4 +376,31 @@ ParsedSpec.prototype.author = function () {
 ParsedSpec.prototype.pattern = function () {
     return  (this._type?'/':'')+(this._id?'#':'')+
             (this._stamp?'!':'')+(this._op?'.':'');
+};
+ParsedSpec.prototype.set = function (tok, quant) {
+    if (tok.charAt(0)<'0') {
+        quant = tok.charAt(0);
+        tok = tok.substr(1);
+    }
+    var clone = this.clone();
+    switch (quant) {
+    case '/': clone._type = tok; break;
+    case '#': clone._id = tok; break;
+    case '!': clone._stamp = tok; break;
+    case '.': clone._op = tok; break;
+    }
+    return clone;
+};
+ParsedSpec.prototype.setStamp = function (stamp) {
+    var clone = this.clone();
+    clone._stamp = stamp;
+    return clone;
+};
+ParsedSpec.prototype.setOp = function (op_name) {
+    var clone = this.clone();
+    clone._op = op_name;
+    return clone;
+};
+ParsedSpec.prototype.clone = function () {
+    return new ParsedSpec(this);
 };

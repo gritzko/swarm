@@ -3,18 +3,22 @@ var stream_url = require('stream-url');
 var levelup = require('level');
 var stamp = require('swarm-stamp');
 var AnchoredVV = stamp.AnchoredVV;
+var LamportTimestamp = stamp.LamportTimestamp;
 
 var sync     = require('swarm-syncable');
 var Spec = sync.Spec;
 var Op = sync.Op;
 var OpStream = sync.OpStream;
-var Request  = require('./Request');
+var Entry  = require('./Entry');
 
 // Swarm database node backed by an ordered op storage
 // Has an object stream based interface.
 // Consumes ops, emits ops that need to be delivered to their op.source.
 // For the actual object subscription/ op propagation
 // logic see Subscription.js.
+// Provides general infrastructure: db access, network connections.
+// Any actual replication logic is scoped to a replicated object (syncable)
+// see Entry.js.
 function Replica (options, callback) {
     var self = this;
     this.options = options = options || {};
@@ -26,11 +30,20 @@ function Replica (options, callback) {
     } else {
         db = options.db;
     }
-    this.entries = {};
-    this.servers = {};
-    this.streams = {};
+    //
     this.ssn_id = options.ssn_id || null;
     this.db_id = options.db_id || null;
+    // TODO offline - ?
+    this.upstream = options.upstream || 'swarm';
+    this.upstream_ssn = null;
+    this.upstream_stamp = null;
+    //
+    this.entries = {};
+    this.entry_states = {};
+    //
+    this.servers = {};
+    this.streams = {};
+    //
     if (options.clock) {
         this.clock = options.clock;
     } else if (this.ssn_id) {
@@ -38,10 +51,11 @@ function Replica (options, callback) {
     } else { // wait db read
         this.clock = null;
     }
+    // db related stuff
     this.prefix = options.prefix || '';
     this.bound_write = self.write.bind(self);
     this.db = null;
-    db.get( '.hs', function onDbRead (err, value) {
+    db.get( '.on', function onDbRead (err, value) {
         if (err) {
             if (err.name!=='NotFoundError') {
                 callback && callback('db error: '+err.name);
@@ -68,7 +82,7 @@ function Replica (options, callback) {
         if (self.prefix===true) {
             self.prefix = '*'+self.db_id;
         }
-        db.put('.hs', self.handshake());
+        db.put('.on', self.handshake());
         if (options.listen) {
             self.listen(options.listen, options, callback);
         } else {
@@ -77,21 +91,6 @@ function Replica (options, callback) {
     });
 }
 module.exports = Replica;
-
-
-function ObjectMetaInfo (map) {
-    this.subscriptions = [];
-    this.pending_ops = null;
-    // own progress
-    this.tip = '0';
-    this.state = '';
-    // upstream progress
-    this.last = '0';
-    this.avv = '0';
-    // e.g. non-upstream bookmarks
-    this.other = null;
-}
-
 
 
 // Q  upstream selection, subs maintainance
@@ -114,33 +113,37 @@ Replica.prototype.gc = function () {
 };
 
 //
-Replica.prototype.write = function (op, callback) {
+Replica.prototype.write = function (op) {
     if (op.constructor!==Op) {
-        throw new Error('consumes swarm-syncable.Op objects only');
+        throw new Error('consumes swarm-syncable Op objects only');
     }
-    if (op.spec.pattern()!=='/#!.') {
+    if (op.spec.pattern()!=='/#!.') { // TODO validate nested patterns
         this.send(op.error('invalid op'));
         this.removeStream(op.source);
         return;
     }
     var typeid = op.typeid();
-    var meta = this.entries[typeid];
-    if (meta===undefined) {
-        meta = this.entries[typeid] = new ObjectMetaInfo();
-        meta.pending_ops = [op];
-        this.loadMeta(typeid, meta);
-    } else if (meta.pending_ops===null) {
-        meta.pending_ops = [op];
-        this.next(meta);
+
+    // TREE:   subscribe to the upstream
+    // make .on pending
+    var new_ops = op.name()==='on' && op.patch ? op.patch.slice() : [];
+    new_ops.push(op);
+
+    var entry = this.entries[typeid];
+    if (entry===undefined) {
+        entry = new Entry(this, typeid, this.entry_states[typeid], new_ops);
+        this.entries[typeid] = entry;
     } else {
-        meta.pending_ops.push(op);
+        entry.queueOps(new_ops);
     }
-    callback && callback(); // TODO [op], callback on commit/response
 };
 
 
 Replica.prototype.send = function (op) {
     var stream = this.streams[op.source];
+
+    // TREE for all the subscribers and the upstream !!!
+
     if (stream) {
         stream.write(op);
     } else {
@@ -180,48 +183,41 @@ Replica.prototype.done = function (request) {
                 self.send(queue[i]);
             }
         }
-        self.next(typeid);
     }
-};
 
+    // FIXME prevent concurrency
 
-Replica.prototype.next = function (typeid) {
-    var meta = this.entries[typeid];
-    if (meta.pending_ops!==null && meta.pending_ops.length) {
-        var next_req = new Request(this, meta, meta.pending_ops.shift());
-        next_req.process();
-    } else {
-        meta.pending_ops = null;
-    }
-};
-
-
-Replica.prototype.loadMeta = function (typeid, meta) {
-    var self = this;
-    this.loadTail(typeid, '.', parseMeta);
-    function parseMeta (error, ops) {
-        if (error) {
-            console.error('db read error', error);
-            self.close();
-        }
-        ops.forEach(function(op){
-            switch (op.spec.toString()) {
-            case '.tip':   meta.tip = op.value; break;
-            case '.last':  meta.last = op.value; break;
-            case '.avv':   meta.avv = op.value; break;
-            case '.state': meta.state = op.value; break;
-            //case '.subs': meta. = op.value; break;
-            default: console.warn();
-            }
-        });
-        self.next(typeid);
-    }
 };
 
 
 Replica.prototype.close = function (err, callback) {
-    this.db.close();
-    this.db = null;
+
+    // TODO FINISH processing all ops,
+    // don't accept any further ops
+    var err_op = err ? new Op('.error', err) : null;
+
+    var stamps = Object.keys(this.streams);
+    var closing = 0;
+    while (stamps.length) {
+        var stream = this.streams[stamps.pop()];
+        closing++;
+        stream.pause();
+        stream.end(err?err_op:undefined, function () {
+
+            // FIXME some requests are still in progress
+            // this.terminate_on_done
+            // on error, still invoke done()!
+
+            if (!--closing) {
+                this.db.close(function () {
+                    process.exit(err?1:0);
+                });
+                this.db = null;
+            }
+
+        });
+    }
+
 };
 
 
@@ -269,25 +265,29 @@ Replica.prototype.loadInitData = function () {
     });
 };
 
-
-Replica.prototype.loadTail = function (typeid, mark, callback) {
+//   [mark, log_end) - we need to see the starting point
+Replica.prototype.loadTail = function (activeEntry, mark) {
+    var db_mark = mark ? '!'+mark : '.';
+    var typeid = activeEntry.typeid;
     var key_prefix = this.prefix + typeid;
-    var gte_key = key_prefix + mark;
+    var gte_key = key_prefix + db_mark;
     var lt_key = key_prefix + typeid + '~';
     var error = null;
-    var data = [];
+    var ops = [];
     this.db.createReadStream({
         gte: gte_key, // start at the mark (inclusive)
         lt: lt_key // don't read the next object's ops
     }).on('data', function (data){
         var key = data.key.substr(key_prefix.length);
-        data.push(new Op(key, data.value));
+        // FIXME strip stack prefix
+        ops.push(new Op(key, data.value));
     }).on('error', function(err){
         console.error('data load failed', typeid, mark, error);
         error = err;
         // TODO EXIT stop all processing, exit
     }).on('end', function () {
-        callback(error, data);
+        activeEntry.mark = mark || '~';
+        activeEntry.next();
     });
 
 };
@@ -316,6 +316,13 @@ Replica.prototype.addStream = function (stream) {
 
     function onStreamHandshake (op) {
         //var client_ssn_id = op.origin();
+        var default_stamp = op_stream.peer_stamp === self.upstream ?
+            op_stream.stamp : op_stream.peer_stamp; // TODO less guessing
+        op_stream.setContext(new Spec.Parsed({
+            type:  '/Model',
+            stamp: default_stamp,
+            op:    'on'
+        }));
         var client_db_id = op.id();
         if (self.db_id && self.db_id!==client_db_id) {
             onHandshakeResult('wrong database id');
@@ -343,6 +350,11 @@ Replica.prototype.addStream = function (stream) {
             op_stream.end(new Op('.error', error));
         } else {
             self.streams[op_stream.peer_stamp] = op_stream;
+            var lamp = new LamportTimestamp(op_stream.peer_stamp);
+            if (lamp.author()===self.upstream) {
+                self.upstream_ssn = lamp.toString();
+                self.upstream_stamp = op_stream.stamp;
+            }
             op_stream.on('data', self.bound_write);
             op_stream.on('end', function () {
                 self.removeStream(op_stream);
@@ -369,6 +381,10 @@ Replica.prototype.removeStream = function (op_stream) {
     }
     if (!op_stream) { return; }
     var stamp = op_stream.peer_stamp;
+    if (stamp===this.upstream_ssn) {
+        this.upstream_ssn = null;
+        this.upstream_stamp = null;
+    }
     if (stamp in this.streams) {
         op_stream.removeAllListeners();
         delete this.streams[stamp];

@@ -37,5 +37,9 @@ LamportTimestamp.parse = function parseArbitraryString (str) {
 
 LamportTimestamp.prototype.time = function () {return this._time;};
 LamportTimestamp.prototype.source = function () {return this._source;};
+LamportTimestamp.prototype.author = function () {
+    var i = this._source.indexOf('~');
+    return i===-1 ? this._source : this._source.substr(0,i);
+};
 
 module.exports = LamportTimestamp;

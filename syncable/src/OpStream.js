@@ -44,6 +44,7 @@ function OpStream (stream, options) {
     this.peer_options = null;
 
     this.remainder = '';
+    this.context = null;
     this.bound_flush = this.flush.bind(this);
     this.flush_timeout = null;
     this.lastSendTime = 0;
@@ -88,6 +89,7 @@ OpStream.prototype.flush = function () {
         this.stream.write(parcel);
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
+        console.error(ioex);
         this.onStreamError(ioex);
     }
 };
@@ -105,8 +107,10 @@ OpStream.prototype.end = function (something) {
 
 
 OpStream.prototype.onStreamDataReceived = function (data) {
-    if (!this.stream)
+    if (!this.stream) {
         return;
+    }
+
     if (!data) {return;} // keep-alive
 
     this.remainder += data.toString();
@@ -148,6 +152,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
         }
 
     } catch (ex) {
+        console.error(ex);
         this.onStreamError(ex);
     }
 };
@@ -208,3 +213,8 @@ OpStream.prototype.onTimer = function () {
 };
 
 OpStream.prototype._read = function () {};
+
+
+OpStream.prototype.setContext = function (context) {
+    this.context = context;
+};
