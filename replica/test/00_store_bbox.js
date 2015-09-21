@@ -27,24 +27,24 @@ var BASIC = [
 
 {
     comment: 'push a new object in',
-    query:   '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\t0\n'+
+    query:   '[down]#time1+user~ssn~app\t0\n'+
                  '\t!time1+user~ssn~app.~state\tsome state\n\n',
-    response:'[up]/Model#time1+user~ssn~app!00001+user~ssn.on\t0\n'+
+    response:'[up]#time1+user~ssn~app\t0\n'+
                  '\t!time1+user~ssn~app.~state\tsome state\n\n'+
-             '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\ttime1+user~ssn~app\n\n'
+             '[down]#time1+user~ssn~app\ttime1+user~ssn~app\n\n'
 },
 
 {
     comment: 'induct an upstream subscription (no local data)',
     query:   '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n',
-    response:'[up]/Model#stamp2+remote!00001+user~ssn.on\t0\n\n' +
-             '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n'
+    response:'[up]#stamp2+remote\t0\n\n' +
+             '[down]#stamp2+remote!YYYYY+user~ssn~app\t0\n\n'
 },
 {
     comment: 'server response (downstream .on responded)',
-    query:   '[up]/Model#stamp2+remote!00001+user~ssn.on\t0\n' +
+    query:   '[up]#stamp2+remote!00001+user~ssn.on\t0\n' +
                 '\t!stamp2+remote.~state\tinitial root state\n\n',
-    response:'/Model#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
+    response:'#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
 },
 
 

@@ -42,7 +42,7 @@ Op.parse = function (str, source, context) {
             if (end.length<2) { // need \n\n termination
                 break;
             }
-            var typeid = spec.typeid();
+            var typeid = spec.typeid(); // FIXME use context
             patch = [];
             Op.rePatchOp.lastIndex = 0;
             while (mm = Op.rePatchOp.exec(patch_str)) {
@@ -103,8 +103,9 @@ Op.prototype.bundleLength = function () {
     return this.unbundle().length;
 };
 
-Op.prototype.toString = function () {
-    var line = this.spec.toString() + '\t' + this.value + '\n';
+Op.prototype.toString = function (context) {
+    var spec = context ? this.spec.scoped(context) : this.spec;
+    var line = spec.toString() + '\t' + this.value + '\n';
     if (this.name()==='on') {
         if (this.patch) {
             this.patch.forEach(function(o){

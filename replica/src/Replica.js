@@ -315,16 +315,16 @@ Replica.prototype.handshake = function () {
 Replica.prototype.addStream = function (stream) {
     var self = this;
     var op_stream = new OpStream (stream, undefined, {});
+    var is_upstream = false;
 
     function onStreamHandshake (op) {
         //var client_ssn_id = op.origin();
-        var default_stamp = op_stream.peer_stamp === self.upstream ?
+        var lamp = new LamportTimestamp(op_stream.peer_stamp);
+        is_upstream = lamp.author()===self.upstream;
+        var default_stamp = is_upstream ?
             op_stream.stamp : op_stream.peer_stamp; // TODO less guessing
-        op_stream.setContext(new Spec.Parsed({
-            type:  '/Model',
-            stamp: default_stamp,
-            op:    'on'
-        }));
+        op_stream.setContext( new Spec.Parsed( '/Model!'+
+            default_stamp + '.on' ));
         var client_db_id = op.id();
         if (self.db_id && self.db_id!==client_db_id) {
             onHandshakeResult('wrong database id');
@@ -352,9 +352,8 @@ Replica.prototype.addStream = function (stream) {
             op_stream.end(new Op('.error', error));
         } else {
             self.streams[op_stream.peer_stamp] = op_stream;
-            var lamp = new LamportTimestamp(op_stream.peer_stamp);
-            if (lamp.author()===self.upstream) {
-                self.upstream_ssn = lamp.toString();
+            if (is_upstream) {
+                self.upstream_ssn = op_stream.peer_stamp;
                 self.upstream_stamp = op_stream.stamp;
             }
             op_stream.on('data', self.bound_write);

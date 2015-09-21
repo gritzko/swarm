@@ -81,7 +81,10 @@ OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
 
 OpStream.prototype.flush = function () {
     if (!this.stream) {return;}
-    var parcel = this.pending_s.join('');
+    var parcel = '', context=this.context||undefined;
+    this.pending_s.forEach(function(o){
+        parcel += o.toString(context);
+    });
     this.pending_s = [];
     try {
         OpStream.debug && console.log

@@ -302,10 +302,10 @@ var stamp = require('swarm-stamp');
 //
 function ParsedSpec (spec, context) {
     if (context) {
-        this._type = context.type || null;
-        this._id = context.id || null;
-        this._stamp = context.stamp || null;
-        this._op = context.op || null;
+        this._type = context._type || null;
+        this._id = context._id || null;
+        this._stamp = context._stamp || null;
+        this._op = context._op || null;
     } else {
         this._type = null;
         this._id = null;
@@ -327,24 +327,28 @@ function ParsedSpec (spec, context) {
 }
 Spec.Parsed = ParsedSpec;
 
+ParsedSpec.prototype.scoped = function (scope) {
+    var clone = this.clone();
+    if (this._type===scope._type) { clone._type=null; }
+    if (this._id===scope._id) { clone._id=null; }
+    if (this._stamp===scope._stamp) { clone._stamp=null; }
+    if (this._op===scope._op) { clone._op=null; }
+    return clone;
+};
 
-ParsedSpec.prototype.toString = function (context) {
+ParsedSpec.prototype.toString = function () {
     var ret = '';
-    var type = this._type || (context && context.type);
-    if (type) {
-        ret+='/'+type;
+    if (this._type) {
+        ret+='/'+this._type;
     }
-    var id = this._id || (context && context.id);
-    if (id) {
-        ret+='#'+id;
+    if (this._id) {
+        ret+='#'+this._id;
     }
-    var stamp = this._stamp || (context && context.stamp);
-    if (stamp) {
-        ret+='!'+stamp;
+    if (this._stamp) {
+        ret+='!'+this._stamp;
     }
-    var op = this._op || (context && context.op);
-    if (op) {
-        ret+='.'+op;
+    if (this._op) {
+        ret+='.'+this._op;
     }
     return ret;
 };
