@@ -42,10 +42,12 @@ Op.parse = function (str, source, context) {
             if (end.length<2) { // need \n\n termination
                 break;
             }
+            var typeid = spec.typeid();
             patch = [];
             Op.rePatchOp.lastIndex = 0;
             while (mm = Op.rePatchOp.exec(patch_str)) {
-                patch.push(new Op(mm[1], mm[2], source));
+                // FIXME no /# in patch ops
+                patch.push(new Op(typeid+mm[1], mm[2], source));
             }
         }
         ops.push(new Op(spec, value, source, patch));
@@ -104,12 +106,18 @@ Op.prototype.bundleLength = function () {
 Op.prototype.toString = function () {
     var line = this.spec.toString() + '\t' + this.value + '\n';
     if (this.name()==='on') {
-        if (this.patch && this.patch.length) {
-            line += '\t' + this.patch.join('\t');
+        if (this.patch) {
+            this.patch.forEach(function(o){
+                line += '\t' + o.toShortString();
+            });
         }
         line += '\n';
     }
     return line;
+};
+
+Op.prototype.toShortString = function () {
+    return this.spec.stampop() + '\t' + this.value + '\n';
 };
 
 Op.prototype.error = function (msg, src) {

@@ -1,6 +1,6 @@
 "use strict";
 var base64 = require('./base64');
-var VV = require('./VV');
+var VV = require('./VVector');
 
 // Version vectors are a correct, but expensive way of dealing with partial
 // orders. Size of a version vector depends on the number of event sources

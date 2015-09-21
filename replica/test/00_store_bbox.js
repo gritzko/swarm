@@ -24,6 +24,7 @@ var BASIC = [
     query:   '[down]/Swarm+Client#db!timedn+user~ssn~app.on\t\n\n',
     response:'[down]/Swarm+Replica#db!00002+user~ssn.on\t\n\n'
 },
+
 {
     comment: 'push a new object in',
     query:   '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\t0\n'+
@@ -32,17 +33,18 @@ var BASIC = [
                  '\t!time1+user~ssn~app.~state\tsome state\n\n'+
              '[down]/Model#time1+user~ssn~app!XXXXX+user~ssn~app.on\ttime1+user~ssn~app\n\n'
 },
+
 {
     comment: 'induct an upstream subscription (no local data)',
     query:   '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n',
-    response:'[up]/Model#stamp2+remote!00003+user~ssn.on\t0\n\n'
+    response:'[up]/Model#stamp2+remote!00001+user~ssn.on\t0\n\n' +
+             '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n'
 },
 {
     comment: 'server response (downstream .on responded)',
-    query:   '[up]/Model#stamp2+remote!00003+user~ssn.on\t0\n' +
-                '\t!stamp2+remote.state\tinitial root state\n\n',
-    response:'[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n' +
-                '\t!stamp2+remote.state\tinitial root state\n\n'
+    query:   '[up]/Model#stamp2+remote!00001+user~ssn.on\t0\n' +
+                '\t!stamp2+remote.~state\tinitial root state\n\n',
+    response:'/Model#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
 },
 
 
@@ -50,7 +52,7 @@ var BASIC = [
     comment: 'downstream .on (bogus bookmark) responded',
     query:   '@user~ssn/Model#id!stamp+user~ssn.on !stale~ancient\n',
     response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time0+user~b.state initial root state\n\n',
+                ' !time0+user~b.~state initial root state\n\n',
 },
 {
     comment: 'new op from the upstream (echoed)',
@@ -81,14 +83,14 @@ var BASIC = [
 {
     comment: 'a new state from the upstream',
     query:   '@swarm/Model#id!stamp+swarm.on \n' +
-                ' !time1+user~b.state second root state\n\n',
+                ' !time1+user~b.~state second root state\n\n',
     response:''
 },
 {
     comment: 'downstream subscription (responded with the new state)',
     query:   '@user~ssn/Model#id!stamp+user~ssn.on !time0+user~b\n',
     response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time1+user~b.state second root state\n\n'
+                ' !time1+user~b.~state second root state\n\n'
 }
 
 ];

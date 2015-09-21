@@ -62,6 +62,9 @@ Entry.prototype.parseMetadata = function () {
 };
 
 Entry.prototype.setTip = function (stamp) {
+    if (!stamp) {
+        throw new Error('BS!');
+    }
     this.state.tip = stamp;
     this.save_queue.push(new Op('.tip', stamp));
 };
@@ -122,10 +125,12 @@ Entry.prototype.send = function (op, to_ssn) {
 };
 
 
-Entry.prototype.relay = function () {
+Entry.prototype.relay = function (except) {
     var subs = this.state.subscribers;
     for(var i=0; i<subs.length; i++) {
-        this.send(this.op.relay(subs[i]));
+        if (!except || subs[i]!==except) {
+            this.send(this.op, subs[i]);
+        }
     }
 };
 
@@ -166,14 +171,19 @@ Entry.prototype.process = function () {
 
 Entry.prototype.processUpstreamOn = function () {
     var op = this.op;
-    if (op.source !== this.upstream()) {
+    if (op.source !== this.replica.upstream_ssn) {
         console.error('something fishy is going on');
     }
-
-    //var new_avv = new AnchoredVV(this.state.up_avv);
-    //new_avv.vv.addAll(this.op.value);
-    //this.saveMeta('up_avv', new_avv.toString());
-    this.addUpstreamAVV(op.value);
+    // remember everything the upstream sent or acknowledged to us
+    var new_avv = new AnchoredVV(this.state.avv);
+    new_avv.vv.addAll(this.op.value);
+    var patch = this.op.patch;
+    if (patch){
+        for(var i=0; i<patch.length; i++) {
+            new_avv.vv.add(patch[i].stamp());
+        }
+    }
+    this.setUpstreamAVV(new_avv.toString());
 
     // upstream .on needs no response
     this.next(); // FIXME call stack length => change to return LATER
@@ -186,6 +196,7 @@ Entry.prototype.processDownstreamOn = function () {
     var upstream = this.upstream();
     var op = this.op;
     var subs = this.state.subscribers;
+    var stateful = '0'!==this.state.state;
     // subscribe to the uplink
     var patch_up, patch_down;
 
@@ -195,8 +206,12 @@ Entry.prototype.processDownstreamOn = function () {
     }
 
     if (subs.indexOf(op.source)===-1) {
-        patch_down = this.patchDownstream();
-        if (patch_down===LATER) { return; }
+        if (stateful) {
+            patch_down = this.patchDownstream();
+            if (patch_down===LATER) { return; }
+        } else {
+            patch_down = this.op.reply('on', '0');
+        }
     }
 
     if (patch_up) {
@@ -352,11 +367,11 @@ Entry.prototype.processState = function () {
         this.save(this.op);
         this.setTip(pos);
         this.setBaseState(pos);
-        if (this.op.source===this.upstream) {
+        if (this.op.source===this.upstream()) {
             this.setUpstreamLast(pos);
             this.setUpstreamAVV(pos);
         }
-        this.relay();
+        this.relay(this.op.source);
         this.mark = pos;
     } else {
         // TODO check conditions are perfect (==tip, no compound)
@@ -415,9 +430,7 @@ Entry.prototype.processOp = function () {
 
     if (!is_known) {
         this.setTip(new_tip);
-        for(var i=0; i<this.subscribers.length; i++) {
-            this.send(op.relay(this.subscribers[i]));
-        }
+        this.relay(op);
         this.save(op);
     }
 

@@ -42,6 +42,13 @@ VVector.prototype.add = function (vvec) {
     }
 };
 
+VVector.prototype.addAll = function (new_ts) {
+    var stamps = LamportTimestamp.parse(new_ts);
+    for(var i=0; i<stamps.length; i++) {
+        this.add(stamps[i]);
+    }
+};
+
 VVector.prototype.has = function (source) {
     if (source.indexOf('+')!==-1) {
         source = new LamportTimestamp(source).source();

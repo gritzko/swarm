@@ -154,12 +154,15 @@ Replica.prototype.send = function (op) {
 
 Replica.prototype.done = function (request) {
     var self = this;
-    var typeid = request.typeid;
+    var save_queue = request.save_queue;
+    var send_queue = request.send_queue;
+    request.save_queue = [];
+    request.send_queue = [];
     // first, save to db
-    if (request.save_queue.length) {
+    if (save_queue.length) {
         var batch = [];
         var key_prefix = this.prefix + request.typeid;
-        request.save_queue.forEach(function(o){
+        save_queue.forEach(function(o){
             batch.push({
                 type:  o.value===null ? 'del' : 'put',
                 key:   key_prefix+o.spec.toString(),
@@ -178,9 +181,8 @@ Replica.prototype.done = function (request) {
             self.send(request.op.error('db write error'));
             // TODO EXIT stop everything, terminate the process
         } else {
-            var queue = request.send_queue;
-            for(var i=0; i<queue.length; i++) {
-                self.send(queue[i]);
+            for(var i=0; i<send_queue.length; i++) {
+                self.send(send_queue[i]);
             }
         }
     }

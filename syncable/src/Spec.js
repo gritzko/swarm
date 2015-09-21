@@ -358,6 +358,9 @@ ParsedSpec.prototype.op = function () { return this._op; };
 ParsedSpec.prototype.typeid = function () {
     return '/'+this._type+'#'+this._id;
 };
+ParsedSpec.prototype.stampop = function () {
+    return '!'+this._stamp+'.'+this._op;
+};
 ParsedSpec.prototype.typeId = function () {
     var clone = this.clone();
     clone._stamp = clone._op = null;

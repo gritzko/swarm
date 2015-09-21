@@ -1,5 +1,6 @@
 "use strict";
 var base64 = require('./base64');
+var LamportTimestamp = require('./LamportTimestamp');
 VV.reCheck = new RegExp('^(\\!=\\+=)*$'.replace(/=/g, base64.rT));
 VV.reTokG = new RegExp('\\!((=)\\+(=))'.replace(/=/g, base64.rT), 'g');
 VV.reBareTok = new RegExp('^(=)\\+(=)$'.replace(/=/g, base64.rT));
@@ -91,7 +92,10 @@ VV.prototype.set = function (timestamp) {
 };
 
 VV.prototype.add = function (new_ts) {
-    var m = VV.reBareTok.exec(new_ts);
+    if (new_ts.toString()==='0') {
+        return;
+    }
+    var m = VV.reBareTok.exec(new_ts.toString()); // FIXME LAMP
     if (!m) {
         throw new Error('malformed timestamp (add)');
     }
@@ -105,6 +109,13 @@ VV.prototype.add = function (new_ts) {
         return this;
     } else {
         return new VV( vv.slice(0, l.start+1) + new_ts + vv.slice(l.end), 1 );
+    }
+};
+
+VV.prototype.addAll = function (new_ts) {
+    var stamps = LamportTimestamp.parse(new_ts);
+    for(var i=0; i<stamps.length; i++) {
+        this.add(stamps[i]);
     }
 };
 
