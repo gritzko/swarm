@@ -34,7 +34,7 @@ tape ('b. Version vector', function (tap){
     tap.ok(!map.covers('0le'));
     tap.equal(map.map[''],'0ld');
     tap.ok('garbage' in map.map);
-    tap.equal('!'+map.toString('!'),
+    tap.equal('!'+map.toString(),
         '!some+garbage!7AMTc+aleksisha!7AM0f+gritzko!0longago+krdkv!0ld');
 
     var map2 = new lamp64.VVector("!1QDpv03+anon000qO!1P7AE05+anon000Bu");

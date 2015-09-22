@@ -70,7 +70,7 @@ tape ('2.D mutations', function (tap) {
     an.addTip('time3+srcB');
     tap.equal(an.toString(), 'time1+srcA!time4+srcB!time0+srcA', 'vv grows');
     tap.equal(an.getTip('srcB'), 'time4+srcB', 'get tip entries');
-    tap.equal(an.getTip('srcC'), '');
+    tap.equal(an.getTip('srcC'), '0');
     tap.equal(an.vv.covers('time4+srcB'), true, 'covers()');
     tap.equal(an.vv.covers('time+srcA'), true);
     tap.equal(an.vv.covers('time2+srcA'), false);

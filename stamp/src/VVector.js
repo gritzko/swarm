@@ -12,7 +12,7 @@ function VVector(vec) {
 module.exports = VVector;
 
 // simple string serialization of the vector
-VVector.prototype.toString = function (delim) {
+VVector.prototype.toString = function () {
     var stamps = [];
     var sources = Object.keys(this.map);
     for(var i=0; i<sources.length; i++) {
@@ -20,7 +20,8 @@ VVector.prototype.toString = function (delim) {
         stamps.push(source ? time+'+'+source : time);
     }
     stamps.sort().reverse();
-    return stamps.join(delim);
+    stamps.unshift(stamps.length?'':'0');
+    return stamps.join('!');
 };
 
 //
@@ -40,13 +41,38 @@ VVector.prototype.add = function (vvec) {
             this.map[stamp.source()] = stamp.time();
         }
     }
+    return this;
 };
+
+VVector.prototype.remove = function (source) {
+    // FIXME!!!
+    if (source.indexOf('+')!==-1) {
+        source = new LamportTimestamp(source).source();
+    }
+    delete this.map[source];
+    return this;
+};
+
+VVector.prototype.isEmpty = function () {
+    var keys = Object.keys(this.map);  // FIXME!!!
+    return !keys.length || (keys.length===1 && keys[0]==='');
+};
+
 
 VVector.prototype.addAll = function (new_ts) {
     var stamps = LamportTimestamp.parse(new_ts);
     for(var i=0; i<stamps.length; i++) {
         this.add(stamps[i]);
     }
+    return this;
+};
+
+VVector.prototype.get = function (source) {
+    if (source.indexOf('+')!==-1) {
+        source = new LamportTimestamp(source).source();
+    }
+    var time = this.map[source];
+    return time ? time + '+' + source : '0';
 };
 
 VVector.prototype.has = function (source) {

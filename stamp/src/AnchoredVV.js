@@ -37,7 +37,7 @@ AnchoredVV.reCheck = new RegExp
     ('^(0|=\\+=)((?:\\!=\\+=)*)$'.replace(/=/g, base64.rT));
 
 AnchoredVV.prototype.toString = function () {
-    return this.anchor +( this.vv.vv ? this.vv.toString() : '');
+    return this.anchor +( this.vv.isEmpty() ? '' : this.vv.toString());
 };
 
 AnchoredVV.prototype.setAnchor = function (a) {
