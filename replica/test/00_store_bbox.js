@@ -20,9 +20,14 @@ var BASIC = [
     response:'[up]/Swarm+Replica#db!00001+user~ssn.on\t\n\n'
 },
 {
-    comment: 'handshake - downstream',
+    comment: 'handshake - downstream I',
     query:   '[down]/Swarm+Client#db!timedn+user~ssn~app.on\t\n\n',
     response:'[down]/Swarm+Replica#db!00002+user~ssn.on\t\n\n'
+},
+{
+    comment: 'handshake - downstream II',
+    query:   '[down2]/Swarm+Client#db!timedn2+user~ssn~two.on\t\n\n',
+    response:'[down2]/Swarm+Replica#db!00003+user~ssn.on\t\n\n'
 },
 
 {
@@ -47,18 +52,20 @@ var BASIC = [
     response:'#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
 },
 
-
 {
     comment: 'downstream .on (bogus bookmark) responded',
-    query:   '@user~ssn/Model#id!stamp+user~ssn.on !stale~ancient\n',
-    response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time0+user~b.~state initial root state\n\n',
+    query:   '[down2]#stamp2+remote\t!stale~ancient\n\n',
+    response:'[down2]#stamp2+remote\t!0\n' +
+                '\t!stamp2+remote.~state\tinitial root state\n\n',
 },
+
 {
     comment: 'new op from the upstream (echoed)',
-    query:   '@swarm/Model#id!time1+user~b.op something happens\n',
-    response:'@swarm/Model#id!time1+user~b.op something happens\n'
+    query:   '[up]#stamp2+remote!stamp3+user~b.op something happens\n',
+    response:'[down]#stamp2+remote!stamp3+user~b.op\tsomething happens\n'+
+             '[down2]#stamp2+remote!stamp3+user~b.op\tsomething happens\n'
 },
+
 {
     comment: 'replay (ignored)',
     query:   '@swarm/Model#id!time1+user~b.op something happens\n',

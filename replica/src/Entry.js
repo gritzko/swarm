@@ -125,7 +125,7 @@ Entry.prototype.send = function (op, to_ssn) {
 };
 
 
-Entry.prototype.relay = function (except) {
+Entry.prototype.relay = function (except) { // FIXME saveAndRelay
     var subs = this.state.subscribers;
     for(var i=0; i<subs.length; i++) {
         if (!except || subs[i]!==except) {
@@ -205,23 +205,25 @@ Entry.prototype.processDownstreamOn = function () {
         if (patch_up===LATER) { return; }
     }
 
-    if (subs.indexOf(op.source)===-1) {
-        if (stateful) {
-            patch_down = this.patchDownstream();
-            if (patch_down===LATER) { return; }
-        } else {
-            patch_down = this.op.reply('on', '0');
-        }
+    if (stateful) {
+        patch_down = this.patchDownstream();
+        if (patch_down===LATER) { return; }
+    } else {
+        patch_down = this.op.reply('on', '0');
     }
 
     if (patch_up) {
         this.send( patch_up, upstream );
-        subs.push(upstream);
+        if (subs.indexOf(upstream)===-1) {
+            subs.push(upstream);
+        }
     }
 
     if (patch_down) {
         this.send( patch_down, op.source );
-        subs.push(op.source);
+        if (subs.indexOf(op.source)===-1) {
+            subs.push(op.source);
+        }
     }
 
     this.next();
@@ -304,8 +306,14 @@ Entry.prototype.patchDownstream = function () {
 
 
     var patch = this.makePatch(pos, ack_vv, add_state);
+
+    if (patch===null && pos!==this.state.state) {
+        // can not figure out the bookmark, send back a full state
+        patch = this.makePatch(this.state.state, null, true);
+    }
+
     if (patch===null) {
-        return this.op.error('cann not produce a patch');
+        return this.op.error('can not produce a patch');
     } else {
         return new Op(this.op.spec, ack_vv.toString(), null, patch);
     }
@@ -386,13 +394,13 @@ Entry.prototype.processOp = function () {
     var op = this.op;
     var stamp = op.stamp();
     var origin = op.origin();
-    var meta = this.state;
-
+    var state = this.state;
+    var upstream = this.upstream();
 
     // deal with our arrival order
-    if ( stamp > meta.tip ) { // fast track: new op
+    if ( stamp > state.tip ) { // fast track: new op
         this.setTip(stamp);
-    } else if ( stamp === meta.tip ) { // fast track: replay/echo
+    } else if ( stamp === state.tip ) { // fast track: replay/echo
         is_known = true;
     } else { // need a replay check
 
@@ -412,25 +420,27 @@ Entry.prototype.processOp = function () {
         });
 
         // make a compound tip
-        var tip = meta.tip.split('!');
+        var tip = state.tip.split('!');
         while (tip.length && tip[tip.length-1]<stamp) {
             tip.pop();
         }
         tip.push(stamp);
         var new_tip = tip.join('!');
 
+        this.setTip(new_tip);
 
     }
 
     // track the upstream's progress and arrival order
-    if ( meta.upstream === op.source ) {
+    if (upstream === op.source ) {
         this.setUpstreamLast(stamp);
-        this.addUpstreamAVV(stamp);
+        var avv = new AnchoredVV(this.state.avv);
+        avv.vv.add(stamp);
+        this.setUpstreamAVV(avv.toString());
     }
 
     if (!is_known) {
-        this.setTip(new_tip);
-        this.relay(op);
+        this.relay(op.source===upstream?upstream:undefined);
         this.save(op);
     }
 
