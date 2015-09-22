@@ -74,6 +74,7 @@ Entry.prototype.setUpstreamLast = function (stamp) {
 };
 Entry.prototype.setUpstreamAVV = function (avv) {
     this.state.avv = avv.toString();
+    var check = new AnchoredVV(this.state.avv);
     this.save_queue.push(new Op('.avv', avv.toString()));
 };
 Entry.prototype.setBaseState = function (stamp) {
@@ -136,7 +137,7 @@ Entry.prototype.relay = function (except) { // FIXME saveAndRelay
 
 
 Entry.prototype.save = function (op) {
-    if (this.records.length && op.stamp()<=this.records[this.records.length-1].stamp()) {
+    if (this.records.length && op.stamp()<this.records[this.records.length-1].stamp()) {
         throw new Error('screw you');
     }
     this.records.push(op);
@@ -315,7 +316,9 @@ Entry.prototype.patchDownstream = function () {
     if (patch===null) {
         return this.op.error('can not produce a patch');
     } else {
-        return new Op(this.op.spec, ack_vv.toString(), null, patch);
+        return new Op(
+            this.op.spec, ack_vv.toString(), null, patch
+        );
     }
 
 };
@@ -356,20 +359,21 @@ Entry.prototype.processOff = function () {
     if (this.op.source===this.upstream) {
         "life is difficult; TODO";
     } else {
-        var i = this.subscribers.indexOf(this.op.source);
+        var i = this.state.subscribers.indexOf(this.op.source);
         if (i===-1) {
             this.send(this.op.error('not subscribed'));
         } else {
-            this.subscribers.splice(i,1);
-            this.send(this.op.response('off'));
+            this.state.subscribers.splice(i,1);
+            this.send(this.op.reply('off'));
         }
     }
+    this.next();
 };
 
 
 Entry.prototype.processState = function () {
     var pos = this.op.stamp();
-    if (this.state.tip!=='0' && this.op.source!==this.upstream) {
+    if (this.state.tip!=='0' && this.op.source!==this.upstream()) {
         this.send(this.op.error('state overwrite from a downstream'));
     } else if (this.state.tip==='0') { // new object
         this.save(this.op);
@@ -381,9 +385,20 @@ Entry.prototype.processState = function () {
         }
         this.relay(this.op.source);
         this.mark = pos;
+    } else if (this.op.source===this.upstream()) {
+        // check conditions are perfect (==tip, no compound)
+        var avv = new AnchoredVV(this.state.avv);
+        var patch = this.makePatch(avv.anchor, avv.vv);
+        if (!patch.length && this.state.tip===this.state.last &&
+            pos===this.state.tip) {
+            this.save(this.op);
+            this.setBaseState(pos);
+            this.relay(this.upstream());
+        } else {
+            console.warn('upstream state skipped');
+        }
     } else {
-        // TODO check conditions are perfect (==tip, no compound)
-        this.send(this.op.error('state o/w not impl yet'));
+        this.send(this.op.error('state o/w impossible'));
     }
     this.next();
 };
@@ -419,15 +434,18 @@ Entry.prototype.processOp = function () {
             return stored_stamp===stamp; // FIXME replay/echo
         });
 
-        // make a compound tip
-        var tip = state.tip.split('!');
-        while (tip.length && tip[tip.length-1]<stamp) {
-            tip.pop();
-        }
-        tip.push(stamp);
-        var new_tip = tip.join('!');
+        if (!is_known) {
+            // FIXME convert tip to AVV
+            // make a compound tip
+            var tip = state.tip.split('!');
+            while (tip.length && tip[tip.length-1]<stamp) {
+                tip.pop();
+            }
+            tip.push(stamp);
+            var new_tip = tip.join('!');
 
-        this.setTip(new_tip);
+            this.setTip(new_tip);
+        }
 
     }
 

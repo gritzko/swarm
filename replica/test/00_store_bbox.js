@@ -36,7 +36,7 @@ var BASIC = [
                  '\t!time1+user~ssn~app.~state\tsome state\n\n',
     response:'[up]#time1+user~ssn~app\t0\n'+
                  '\t!time1+user~ssn~app.~state\tsome state\n\n'+
-             '[down]#time1+user~ssn~app\ttime1+user~ssn~app\n\n'
+             '[down]#time1+user~ssn~app\t!time1+user~ssn~app\n\n'
 },
 
 {
@@ -61,43 +61,67 @@ var BASIC = [
 
 {
     comment: 'new op from the upstream (echoed)',
-    query:   '[up]#stamp2+remote!stamp3+user~b.op something happens\n',
-    response:'[down]#stamp2+remote!stamp3+user~b.op\tsomething happens\n'+
-             '[down2]#stamp2+remote!stamp3+user~b.op\tsomething happens\n'
+    query:   '[up]#stamp2+remote!stampA+user~b.op something happens (A)\n',
+    response:'[down]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'+
+             '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
+},
+{
+    comment: 'replay (ignored)',
+    query:   '[down2]#stamp2+remote!stampA+user~b.op something happens (A)\n',
+    response:''
+},
+{
+    comment: 'unsubscription',
+    query:   '#stamp2+remote.off\t\n',
+    response:'#stamp2+remote.off\t\n'
 },
 
 {
-    comment: 'replay (ignored)',
-    query:   '@swarm/Model#id!time1+user~b.op something happens\n',
-    response:''
+    comment: 'subscription+push (new op is the tip)',
+    query:   '#stamp2+remote\tstampA+user~b\n'+
+                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n\n',
+    response:
+     '[up]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n' +
+     '[down]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n' +
+     '[down2]#stamp2+remote\t!stampB+user~ssn~two\n\n'
 },
 {
-    comment: 'invited upstream subscription (new op is the tip)',
-    query:   '/Model#id!0+swarm.on \n',
-    response:'/Model#id!0+swarm.on !time1+user~b\n'
+    comment: 'repeated subscription, responded with a patch',
+    query:   '[down]#stamp2+remote\tstampA+user~b\n',
+    response:'[down]#stamp2+remote\t!0\n' +
+                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n\n'
 },
 {
-    comment: 'downstream subscription diff (responded with the op)',
-    query:   '@user~ssn/Model#id!stamp+user~ssn.on !time0+user~b\n',
-    response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time1+user~b.op something happens\n\n'
+    comment: 'downstream op (no double relay)',
+    query:   '[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n',
+    response:
+        '[up]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
+        '[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
+        '[down2]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n'
+},
+
+{
+    comment: 'acks, then a new state from the upstream',
+    query:
+        '[up]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n'+
+        '#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
+        '#stamp2+remote!stampC+user~ssn~two.~state\tup to the C\n',
+    response:'[down]#stamp2+remote!stampC+user~ssn~two.~state\tup to the C\n' +
+             '[down2]#stamp2+remote!stampC+user~ssn~two.~state\tup to the C\n'
 },
 {
-    comment: 'invited subscription again (same simple vector)',
-    query:   '/Model#id!0+swarm.on \n',
-    response:'/Model#id!0+swarm.on !time1+user~b\n'
+    comment: 'tail-seeking subscription (responded with the tail)',
+    query:   '[down]#stamp2+remote\tstamp2+remote\n',
+    response:'[down]#stamp2+remote\t!0\n' +
+                '\t!stampA+user~b.op\tsomething happens (A)\n'+
+                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n'+
+                '\t!stampC+user~ssn~two.op\tsomething (C)\n\n'
 },
 {
-    comment: 'a new state from the upstream',
-    query:   '@swarm/Model#id!stamp+swarm.on \n' +
-                ' !time1+user~b.~state second root state\n\n',
-    response:''
-},
-{
-    comment: 'downstream subscription (responded with the new state)',
-    query:   '@user~ssn/Model#id!stamp+user~ssn.on !time0+user~b\n',
-    response:'@user~ssn/Model#id!stamp+user~ssn.on \n' +
-                ' !time1+user~b.~state second root state\n\n'
+    comment: 'blanc subscription (responded with the state)',
+    query:   '[down2]#stamp2+remote\t0\n',
+    response:'[down2]#stamp2+remote\t!0\n' +
+                '\t!stampC+user~ssn~two.~state\tup to the C\n\n'
 }
 
 ];
@@ -155,18 +179,18 @@ var REORDERS = [
 },
 {
     comment: 'feed reordered ops (echo)',
-    query:   '/Model#id!time1+user~b.op something happens\n' +
+    query:   '/Model#id!time1+user~b.op something happens (A)\n' +
              '/Model#id!time0+user~b.op something else happens\n',
-    response:'/Model#id!time1+user~b.op something happens\n' +
+    response:'/Model#id!time1+user~b.op something happens (A)\n' +
              '/Model#id!time0+user~b.op something else happens\n' +
-             '[swarm]/Model#id!time1+user~b.op something happens\n' +
+             '[swarm]/Model#id!time1+user~b.op something happens (A)\n' +
              '/Model#id!time0+user~b.op something else happens\n'
 },
 {
     comment: 'order preservation in a patch',
     query:   '/Model#id!stamp2+user~ssn.on \n\n',
     response:'[client]/Model#id!stamp2+user~ssn.on \n' +
-                ' !time1+user~b.op something happens\n' +
+                ' !time1+user~b.op something happens (A)\n' +
                 ' !time0+user~b.op something else happens\n\n'
 },
 {

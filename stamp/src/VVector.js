@@ -20,7 +20,7 @@ VVector.prototype.toString = function () {
         stamps.push(source ? time+'+'+source : time);
     }
     stamps.sort().reverse();
-    stamps.unshift(stamps.length?'':'0');
+    stamps.unshift(stamps.length?'':'!0');
     return stamps.join('!');
 };
 
@@ -33,6 +33,7 @@ VVector.prototype.add = function (vvec) {
     for(var i=0; i<vvec.length; i++) {
         var stamp = vvec[i];
         if (!stamp) {continue;}
+        if (!stamp.source()) { continue; }
         if (stamp.constructor!==LamportTimestamp) {
             stamp = new LamportTimestamp(stamp);
         }
