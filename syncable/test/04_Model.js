@@ -16,7 +16,7 @@ if (typeof(window)==='object') {
 }
 
 
-tape('4.A set/get', function (t) {
+tape('4.A Model set/get - Host protocol', function (t) {
     t.plan(5);
     var host = new Host({
         ssn_id: 'anon~4A',
@@ -30,7 +30,7 @@ tape('4.A set/get', function (t) {
         collect += op.toString();
     });
     var m = new Model({x:1}, host);
-    t.equal(m.x, 1);
+    t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
     t.equal(m.x, 1);
     t.equal(m.y, 2);
@@ -39,13 +39,13 @@ tape('4.A set/get', function (t) {
     t.equal(m.y, 2);
     stream.pair.on('end', function() {
         t.equal(collect,
-            '/Swarm+Host#db!STAMP+anon~4A.on\t\n' +
-            '/Model#00000+anon~4A!00000+anon~4A.state\t\n' +
-            '/Model#00000+anon~4A!STAMP+anon~4A.on\t???\n' +
-            '/Model#00000+anon~4A!00001+anon~4A.set' +
-                '\t{}' +
-            '/Model#00000+anon~4A!00001+anon~4A.set' +
-                '\t{}'
+            '/Swarm+Host#db!00000+anon~4A.on\t\n' +
+            '/Model#00001+anon~4A!00000+anon~4A.on\t0\n' +
+                '\t!00001+anon~4A.~state\t\n\n' +
+            '/Model#00001+anon~4A!00002+anon~4A.set\t{"x":1}\n' +
+            '/Model#00001+anon~4A!00003+anon~4A.set\t{"y":2}\n' +
+            '/Model#00001+anon~4A!00004+anon~4A.set\t{"x":3}\n',
+            'full upstream output'
         );
         t.end();
     });

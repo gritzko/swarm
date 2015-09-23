@@ -11,7 +11,8 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
         source = orig.source;
         patch = orig.patch;
     }
-    this.spec = new Spec.Parsed(spec);
+    this.spec = spec && spec.constructor===Spec.Parsed ?
+        spec : new Spec.Parsed(spec);
     this.value = value ? value.toString() : '';
     this.source = source ? source.id || source.toString() : '';
     this.patch = patch || null;
@@ -35,19 +36,19 @@ Op.parse = function (str, source, context) {
     Op.reOp.lastIndex = 0;
     var rem = str, m, mm, ops = [], d=0;
     while (m = Op.reOp.exec(rem)) {
-        var spec = new Spec.Parsed(m[1], context);
+        var spec = new Spec.Parsed(m[1], null, context);
         var value = m[2], patch_str = m[3], end = m[4];
         var patch = null;
         if (patch_str) {
             if (end.length<2) { // need \n\n termination
                 break;
             }
-            var typeid = spec.typeid(); // FIXME use context
+            var typeId = spec.typeId();
             patch = [];
             Op.rePatchOp.lastIndex = 0;
             while (mm = Op.rePatchOp.exec(patch_str)) {
-                // FIXME no /# in patch ops
-                patch.push(new Op(typeid+mm[1], mm[2], source));
+                var op_spec = new Spec.Parsed(mm[1], typeId);
+                patch.push(new Op(op_spec, mm[2], source));
             }
         }
         ops.push(new Op(spec, value, source, patch));
