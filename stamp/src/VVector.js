@@ -1,11 +1,11 @@
 "use strict";
-var LamportTimestamp = require('./LamportTimestamp');
+var LT = require('./LamportTimestamp');
 
 // Version vector represented as a {source: time} map.
 function VVector(vec) {
     this.map = {};
     if (vec) {
-        this.add(vec);
+        this.addAll(vec);
     }
 }
 
@@ -25,43 +25,41 @@ VVector.prototype.toString = function () {
 };
 
 //
-VVector.prototype.add = function (vvec) {
-    if (!vvec) { return; }
-    if (vvec.constructor!==Array) {
-        vvec = LamportTimestamp.parse(vvec.toString());
+VVector.prototype.add = function (stamp) {
+    if (!stamp) {return;}
+    if (stamp.constructor!==LT) {
+        stamp = new LT(stamp.toString());
     }
-    for(var i=0; i<vvec.length; i++) {
-        var stamp = vvec[i];
-        if (!stamp) {continue;}
-        if (!stamp.source()) { continue; }
-        if (stamp.constructor!==LamportTimestamp) {
-            stamp = new LamportTimestamp(stamp);
-        }
-        var existing = this.map[stamp.source()] || '';
-        if (stamp.time() > existing) {
-            this.map[stamp.source()] = stamp.time();
-        }
+    var existing = this.map[stamp.source()] || '';
+    if (stamp.time()>existing && stamp.time()!=='0') {
+        this.map[stamp.source()] = stamp.time();
     }
     return this;
 };
 
-VVector.prototype.remove = function (source) {
-    // FIXME!!!
-    if (source.indexOf('+')!==-1) {
-        source = new LamportTimestamp(source).source();
+VVector.norm_src = function (source) {
+    if (source.constructor===String && source.indexOf('+')!==-1) {
+        return new LT(source).source();
+    } else {
+        return source;
     }
+};
+
+
+VVector.prototype.remove = function (source) {
+    source = VVector.norm_src(source);
     delete this.map[source];
     return this;
 };
 
 VVector.prototype.isEmpty = function () {
-    var keys = Object.keys(this.map);  // FIXME!!!
-    return !keys.length || (keys.length===1 && keys[0]==='');
+    var keys = Object.keys(this.map);
+    return !keys.length;
 };
 
 
 VVector.prototype.addAll = function (new_ts) {
-    var stamps = LamportTimestamp.parse(new_ts);
+    var stamps = LT.parse(new_ts);
     for(var i=0; i<stamps.length; i++) {
         this.add(stamps[i]);
     }
@@ -69,25 +67,21 @@ VVector.prototype.addAll = function (new_ts) {
 };
 
 VVector.prototype.get = function (source) {
-    if (source.indexOf('+')!==-1) {
-        source = new LamportTimestamp(source).source();
-    }
+    source = VVector.norm_src(source);
     var time = this.map[source];
     return time ? time + '+' + source : '0';
 };
 
 VVector.prototype.has = function (source) {
-    if (source.indexOf('+')!==-1) {
-        source = new LamportTimestamp(source).source();
-    }
-    return source in this.map;
+    source = VVector.norm_src(source);
+    return this.map.hasOwnProperty(source);
 };
 
 VVector.prototype.covers = function (version) {
-    if (version.constructor!==LamportTimestamp) {
-        version = new LamportTimestamp(version);
+    if (version.constructor!==LT) {
+        version = new LT(version);
     }
-    return version.time() <= (this.map[version.source()] || '');
+    return version.time() <= (this.map[version.source()] || '0');
 };
 
 VVector.prototype.coversAll = function (vv) {
@@ -95,12 +89,10 @@ VVector.prototype.coversAll = function (vv) {
     if (vv.constructor!==VVector) {
         vv = new VVector(vv);
     }
-    for(var source in vv.map) {
-        if (!this.map[source] || this.map[source]<vv.map[source]) {
-            return false;
-        }
-    }
-    return true;
+    var keys = Object.keys(vv.map), map=this.map;
+    return keys.every(function(key){
+        return map.hasOwnProperty(key) && map[key] > vv.map[key];
+    });
 };
 
 VVector.prototype.maxTs = function () {

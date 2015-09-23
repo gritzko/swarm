@@ -6,17 +6,23 @@ LamportTimestamp.rsTokExt = '(=)(?:\\+(=))?'.replace(/=/g, base64.rT);
 LamportTimestamp.reTokExt = new RegExp('^'+LamportTimestamp.rsTokExt+'$');
 LamportTimestamp.reTokExtMG = new RegExp(LamportTimestamp.rsTokExt, 'mg');
 
+// A Lamport timestamp is a pair of a time value and a process id (source).
+// The order is lexicographic both for time values and timestamps.
+// Constructor examples: new LT("0time","author"), new LT("0time+author").
+// new LT("author") is understood as "0+author"; empty source is not valid,
+// unless the time value is 0 (new LT() is "0").
 function LamportTimestamp (time, source) {
-    var plus = time.indexOf('+');
-    if (plus>0) {
-        source = time.substr(plus+1);
-        time = time.substr(0, plus);
+    if (!source) {
+        var m = LamportTimestamp.reTokExt.exec(time);
+        if (!m) {
+            throw new Error('malformed Lamport timestamp');
+        }
+        time = m[1];
+        source = m[2] || '';
     }
-    if (!base64.reTok.test(time)) {
-        throw new Error("invalid time format");
-    }
-    if (source && !base64.reTok.test(source)) {
-        throw new Error("invalid source format");
+    if (!source && time!=='0') {
+        source = time;
+        time = '0';
     }
     this._time = time || '0';
     this._source = source || '';
@@ -24,6 +30,26 @@ function LamportTimestamp (time, source) {
 
 LamportTimestamp.prototype.toString = function () {
     return this._time + (this._source ? '+' + this._source : '');
+};
+
+LamportTimestamp.prototype.isZero = function () {
+    return this._time === '0';
+};
+
+// Is greater than the other stamp, according to the the lexicographic order
+LamportTimestamp.prototype.gt = function (stamp) {
+    if (stamp.constructor!==LamportTimestamp) {
+        stamp = new LamportTimestamp(stamp);
+    }
+    return this._stamp > stamp._stamp ||
+        (this._stamp===stamp._stamp && this._source>stamp._source);
+};
+
+LamportTimestamp.prototype.eq = function (stamp) {
+    if (stamp.constructor!==LamportTimestamp) {
+        stamp = new LamportTimestamp(stamp);
+    }
+    return this._stamp===stamp._stamp && this._source===stamp._source;
 };
 
 LamportTimestamp.parse = function parseArbitraryString (str) {

@@ -3,8 +3,29 @@ var lamp64 = require('..');
 var tape = require('tape');
 if (typeof(window)==='object') {
     var tape_dom = require('tape-dom');
+    tape_dom.installCSS();
     tape_dom.stream(tape);
 }
+var Lamp = lamp64.LamportTimestamp;
+
+
+tape('0. Lamport timestamp', function(tap){
+    var lamp1 = new Lamp('0');
+    tap.equal(lamp1.isZero(), true, 'zero OK');
+    tap.equal(lamp1.toString(), '0', 'zero str OK');
+    var lamp2 = new Lamp('gritzko');
+    tap.equal(lamp2.isZero(), true, 'sourced zero OK');
+    tap.equal(lamp2.toString(), '0+gritzko', 'zero str OK');
+    tap.ok(lamp2.gt(lamp1), 'fancy order');
+    tap.ok(lamp2.eq('gritzko'), 'fancy equals');
+    tap.ok(lamp2.eq('0+gritzko'), 'fancy equals');
+    tap.ok(lamp2.eq(lamp2), 'fancy equals');
+    var lamp3 = new Lamp('time+src');
+    tap.ok(lamp3.eq('time+src'));
+    tap.ok(lamp3.toString()==='time+src');
+    tap.end();
+});
+
 
 tape ('a. SecondPreciseClock sequence test', function (tap) {
     var clock = new lamp64.SecondPreciseClock('gritzko');
@@ -27,18 +48,22 @@ tape ('b. Version vector', function (tap){
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
     var map = new lamp64.VVector(vec, '!');
-    tap.ok(map.covers('7AM0f+gritzko'));
-    tap.ok(!map.covers('7AMTd+aleksisha'));
-    tap.ok(!map.covers('6AMTd+maxmaxmax'));
+    tap.ok(map.covers('7AM0f+gritzko'), 'covers');
     tap.ok(map.covers('0ld'));
-    tap.ok(!map.covers('0le'));
-    tap.equal(map.map[''],'0ld');
+    tap.ok(!map.covers('7AMTd+aleksisha'), '!covers');
+    tap.ok(!map.covers('6AMTd+maxmaxmax'));
+    tap.ok(!map.covers('1+0ld'));
     tap.ok('garbage' in map.map);
-    tap.equal('!'+map.toString(),
-        '!some+garbage!7AMTc+aleksisha!7AM0f+gritzko!0longago+krdkv!0ld');
+    tap.equal(map.toString(),
+        '!some+garbage!7AMTc+aleksisha!7AM0f+gritzko!0longago+krdkv');
 
     var map2 = new lamp64.VVector("!1QDpv03+anon000qO!1P7AE05+anon000Bu");
     tap.equal(map2.covers('1P7AE05+anon000Bu'), true, 'covers the border');
+
+    // funny constructors TODO
+    tap.ok(map.coversAll('source'));
+    tap.ok(map.coversAll('0'));
+    tap.ok(map.coversAll('!0!source'));
 
     tap.end();
 });
@@ -98,7 +123,7 @@ tape('f. Lamport clocks', function(tap){
     tap.equal(clock.issueTimestamp(),'00005+leslie');
 
     var prefixed = new lamp64.LamportClock('chimera', {
-        start: 4, 
+        start: 4,
         prefix: '0PRE_',
         length: 3
     });
