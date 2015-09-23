@@ -300,41 +300,46 @@ Spec.Map.prototype.toString = function (trim) {
 var stamp = require('swarm-stamp');
 
 //
-function ParsedSpec (spec, context) {
-    if (context) {
-        this._type = context._type || null;
-        this._id = context._id || null;
-        this._stamp = context._stamp || null;
-        this._op = context._op || null;
+function ParsedSpec (spec, scope, defaults) {
+    if (defaults) {
+        if (defaults.constructor!==ParsedSpec) {
+            defaults = new ParsedSpec(defaults);
+        }
+        this._type = defaults._type;
+        this._id = defaults._id;
+        this._stamp = defaults._stamp;
+        this._op = defaults._op;
     } else {
         this._type = null;
         this._id = null;
         this._stamp = null;
         this._op = null;
     }
-    if (!spec) { return; }
-    Spec.reQTokExt.lastIndex = 0;
-    var m, str = spec.toString();
-    while (m = Spec.reQTokExt.exec(str)) {
-        var quant = m[1], tok = m[2];
-        switch (quant) {
-        case '/': this._type = tok; break;
-        case '#': this._id = tok; break;
-        case '!': this._stamp = tok; break;
-        case '.': this._op = tok; break;
+    if (spec) {
+        Spec.reQTokExt.lastIndex = 0;
+        var m, str = spec.toString();
+        while (m = Spec.reQTokExt.exec(str)) {
+            var quant = m[1], tok = m[2];
+            switch (quant) {
+            case '/': this._type = tok; break;
+            case '#': this._id = tok; break;
+            case '!': this._stamp = tok; break;
+            case '.': this._op = tok; break;
+            }
         }
+    }
+    if (scope) {
+        if (scope.constructor!==ParsedSpec) {
+            scope = new ParsedSpec(scope);
+        }
+        if (scope._type) { this._type = scope._type; }
+        if (scope._id) { this._id = scope._id; }
+        if (scope._stamp) { this._stamp = scope._stamp; }
+        if (scope._op) { this._op = scope._op; }
     }
 }
 Spec.Parsed = ParsedSpec;
 
-ParsedSpec.prototype.scoped = function (scope) {
-    var clone = this.clone();
-    if (this._type===scope._type) { clone._type=null; }
-    if (this._id===scope._id) { clone._id=null; }
-    if (this._stamp===scope._stamp) { clone._stamp=null; }
-    if (this._op===scope._op) { clone._op=null; }
-    return clone;
-};
 
 ParsedSpec.prototype.toString = function () {
     var ret = '';

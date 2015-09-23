@@ -30,6 +30,20 @@ tape ('1.b basic specifier syntax', function (tap) {
 });
 
 
+tape ('1.b.2 parsed specifier (scopes and defaults)', function (tap) {
+    var spec = new Spec.Parsed('!stamp', '/Type#id', '.on');
+    tap.equal(spec.toString(), '/Type#id!stamp.on', 'scope/default');
+    tap.equal(spec.type(), 'Type');
+    tap.equal(spec.id(), 'id');
+    tap.equal(spec.stamp(), 'stamp');
+    tap.equal(spec.op(), 'on');
+    var spec2 = new Spec.Parsed('!stamp2.off',null,spec);
+    tap.equal(spec2.toString(), '/Type#id!stamp2.off', 'default (parsed)');
+    var spec3 = new Spec.Parsed('',null,spec);
+    tap.equal(spec3.toString(), spec.toString());
+    tap.end();
+});
+
 tape('1.c spec filters', function (tap) {
     var filter = '.on';
     tap.equal (new Spec('!abc.on/Class').fits(filter), true);
