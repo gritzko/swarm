@@ -315,7 +315,12 @@ function ParsedSpec (spec, scope, defaults) {
         this._stamp = null;
         this._op = null;
     }
-    if (spec) {
+    if (spec && spec.constructor===ParsedSpec) {
+        this._type = spec._type;
+        this._id = spec._id;
+        this._stamp = spec._stamp;
+        this._op = spec._op;
+    } else if (spec) {
         Spec.reQTokExt.lastIndex = 0;
         var m, str = spec.toString();
         while (m = Spec.reQTokExt.exec(str)) {

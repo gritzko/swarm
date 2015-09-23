@@ -41,6 +41,8 @@ tape ('1.b.2 parsed specifier (scopes and defaults)', function (tap) {
     tap.equal(spec2.toString(), '/Type#id!stamp2.off', 'default (parsed)');
     var spec3 = new Spec.Parsed('',null,spec);
     tap.equal(spec3.toString(), spec.toString());
+    var spec4 = new Spec.Parsed(spec2);
+    tap.equal(spec4.toString(), spec2.toString());
     tap.end();
 });
 
