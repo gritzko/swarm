@@ -151,113 +151,214 @@ tape('1.A basic cases', function(t){
 });
 
 
-var ERRORS = [
-    // patch for an unknown object
-    // ack in the future (unknown op)
-    // invalid specs
-    // state 0 (correct)
-    // state in a race (ignored)
-    // db error => graceful termination
-];
-
 var REORDERS = [
 {
-    comment: 'handshake - server',
-    query:   '[swarm]/Swarm#db!stamp+swarm.on \n\n',
-    response:'[swarm]/Swarm#db!00000+user~ssn.on \n\n'
+    comment: 'handshake - upstream',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
 },
 {
-    comment: 'create an object by a fake server response',
-    query:   '/Model#id!stamp1+swarm.on \n' +
-                ' !time0+user.state initial root state\n\n',
-    response:''
+    comment: 'handshake - downstream I',
+    query:   '[dsI]/Swarm+Client#db!timea+me~ssn~dsI.on \n\n',
+    response:'[dsI]/Swarm+Replica#db!00002+me~ssn.on \n\n'
 },
 {
-    comment: 'handshake - client',
-    query:   '[client]/Swarm#db!stamp+user~b.on \n\n',
-    response:'[client]/Swarm#db!00001+user~ssn.on \n\n'
+    comment: 'handshake - downstream II',
+    query:   '[dsII]/Swarm+Client#db!timeb+me~ssn~dsII.on \n\n',
+    response:'[dsII]/Swarm+Replica#db!00003+me~ssn.on \n\n'
 },
+{
+    comment: 'subscription (ds I)',
+    query:   '[dsI]#object \n\n',
+    response:'[up]#object 0\n\n'+
+             '[dsI]#object !0\n\n'
+},
+{
+    comment: 'server response',
+    query:   '[up]#object !0\n'+
+                 ' !time0+joe.~state initial_state\n'+
+                 ' !time1+joe.op tail_op\n\n',
+    response:'[dsI]#object!time0+joe.~state initial_state\n'+
+                  ' !time1+joe.op tail_op (1)\n\n'
+},
+{
+    comment: 'subscription (ds II)',
+    query:   '[dsII]#object time0\n\n',
+    response:'[dsII]#object !0\n'+
+             ' !time1+joe.op tail_op\n\n'
+},
+
 {
     comment: 'feed reordered ops (echo)',
-    query:   '/Model#id!time1+user~b.op something happens (A)\n' +
-             '/Model#id!time0+user~b.op something else happens\n',
-    response:'/Model#id!time1+user~b.op something happens (A)\n' +
-             '/Model#id!time0+user~b.op something else happens\n' +
-             '[swarm]/Model#id!time1+user~b.op something happens (A)\n' +
-             '/Model#id!time0+user~b.op something else happens\n'
+    query:   '[up]#object!time3+joe.op op (2)\n' +
+             '[dsII]#object!time2+me~ssn~dsII.op op (3)\n',
+    response:'[dsI]#object!time3+joe.op op (2)\n' +
+             '[dsII]#object!time3+joe.op op (2)\n' +
+             '[up]#object!time2+me~ssn~dsII.op op (3)\n' +
+             '[dsI]#object!time2+me~ssn~dsII.op op (3)\n' +
+             '[dsII]#object!time2+me~ssn~dsII.op op (3)\n'
 },
 {
     comment: 'order preservation in a patch',
-    query:   '/Model#id!stamp2+user~ssn.on \n\n',
-    response:'[client]/Model#id!stamp2+user~ssn.on \n' +
-                ' !time1+user~b.op something happens (A)\n' +
-                ' !time0+user~b.op something else happens\n\n'
+    query:   '[dsI]#object  time1+joe\n\n',
+    response:'[dsI]#object !0\n'+
+             ' !time3+joe.op op (2)\n' +
+             ' !time2+me~ssn~dsII.op op (3)\n'
 },
 {
-    comment: 'correct patch (backreferences work)',
-    query:   '/Model#id!stamp3+user~ssn.on !time1+user~b\n\n',
-    response:'/Model#id!stamp3+user~ssn.on \n' +
-                ' !time0+user~b.op something else happens\n\n'
+    comment: 'correct patch (tip-stack works)',
+    query:   '[dsI]#object  time3+joe\n\n',
+    response:'[dsI]#object !0\n'+
+             ' !time2+me~ssn~dsII.op op (3)\n'
 },
 {
-    comment: 'correct empty patch (backreference passing works too)',
-    query:   '/Model#id!stamp4+user~ssn.on !time1+user~b!time0+user~b\n\n',
-    response:'/Model#id!stamp4+user~ssn.on \n\n'
+    comment: 'correct empty patch (reordered as a reference)',
+    query:   '[dsII]#object  time2+me~ssn~dsII\n\n',
+    response:'[dsII]#object !0\n\n'
 },
 {
-    comment: 'get a patch with upstream reorders',
-    query:   '[swarm]/Model#id2!stamp5+swarm.on \n' +
-                ' !time3+userB.op Alice\n' +
-                ' !time3+userA.op Bob\n\n',
+    comment: 'a state named after a reordered item',
+    query:   '[up]#object!time2+me~ssn~dsII.~state reordered_state\n',
     response:''
 },
 {
-    comment: 'invited subscription: reorders are reflected',
-    query:   '[client]/Model#id2!0+swarm.on \n\n',
-    response:'[swarm]/Model#id2!0+swarm.on !time3+userB.op!time3+userA.op\n\n'
+    comment: 'state served correctly (no tail)',
+    query:   '[dsI]#object  \n\n',
+    response:'[dsI]#object !0\n'+
+             ' !time2+me~ssn~dsII.~state reordered_state\n\n'
 },
 {
-    comment: 'upstream tip advances',
-    query:   '[swarm]/Model#id2!time4+userC.op Carol\n', ///  OOPS
-    response:'/Model#id2!time4+userC.op Carol\n'
+    comment: 'reorder is "straightened"',
+    query:   '[dsI]#object!time4+me~ssn~dsI.op op (4)\n',
+    response:'[up]#object!time4+me~ssn~dsI.op op (4)\n' +
+             '[dsI]#object!time4+me~ssn~dsI.op op (4)\n' +
+             '[dsII]#object!time4+me~ssn~dsI.op op (4)\n'
 },
 {
-    comment: 'invited subscription: reorders are gone',
-    query:   '/Model#id2!0+swarm.on \n\n',
-    response:'/Model#id2!0+swarm.on !time4+userC\n\n'
+    comment: 'patch of 1 (straight) op',
+    query:   '[dsII]#object  time2+me~ssn~dsII\n\n',
+    response:'[dsII]#object !0\n'+
+             ' !time4+me~ssn~dsI.op op (4)\n\n'
 },
 {
-    comment: 'important: ack of a compound-stamp op',
-    query:   '',
-    response:''
+    comment: 'empty patch (straight op is the mark)',
+    query:   '[dsI]#object  time4+me~ssn~dsI\n\n',
+    response:'[dsI]#object !0\n\n'
 },
 {
-    comment: '',
-    query:   '',
-    response:''
-},
-{
-    comment: '',
-    query:   '',
-    response:''
-},
-{
-    comment: '',
-    query:   '',
-    response:''
+    comment: 'error: causal order violation (disconnect)',
+    query:   '[dsII]#object!time1+me~ssn~dsII.op\nblatant\n',
+    response:'[dsII]#object!time1+me~ssn~dsII.error\ncausality violation\n[EOF]'
 }
 ];
 
 
-var SNAPSHOTS_AND_REORDERS = [
+tape('1.B reorders', function(t){
+
+    var replica = new Replica({
+        ssn_id:     'me~ssn',
+        db_id:      'db',
+        upstream:   'swarm',
+        clock:      new stamp.LamportClock('me~ssn'),
+        listen:     'loopback:1B',
+        prefix:     true
+    }, start_tests);
+
+    function compare (a,b,c) {
+        a = a.replace(/[\t\s]+/g, ' ');
+        b = b.replace(/[\t\s]+/g, ' ');
+        t.equal(a,b,c);
+    }
+
+    function start_tests () {
+        var mux = new BatMux('loopback:1A');
+
+        var bt = new bat.StreamTest(mux.trunk, REORDERS, compare);
+
+        bt.runScenario( function () {
+            t.end();
+        } );
+    }
+
+});
+
+
+var ERRORS = [
 {
-    comment: '',
-    query:   '',
-    response:''
+    comment: 'handshake - upstream',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
 },
 {
-    comment: '',
-    query:   '',
-    response:''
+    comment: 'handshake - downstream I',
+    query:   '[dsI]/Swarm+Client#db!timea+me~ssn~dsI.on \n\n',
+    response:'[dsI]/Swarm+Replica#db!00002+me~ssn.on \n\n'
+},
+{
+    comment: 'handshake - downstream II',
+    query:   '[dsII]/Swarm+Client#db!timeb+me~ssn~dsII.on \n\n',
+    response:'[dsII]/Swarm+Replica#db!00003+me~ssn.on \n\n'
+},
+{
+    comment: 'patch for an unknown object',
+    query:   '[dsI]#unknown \n'+
+             ' !some+stamp.name and value\n\n',
+    response:'#unknown.error unknown object\n'
+},
+{
+    comment: 'subscription (ds I)',
+    query:   '[dsI]#object \n\n',
+    response:'[up]#object 0\n\n'+
+             '[dsI]#object !0\n\n'
+},
+{
+    comment: 'server response',
+    query:   '[up]#object !0\n'+
+                 ' !time0+joe.~state initial_state\n'+
+                 ' !time1+joe.op tail_op\n\n',
+    response:'[dsI]#object!time0+joe.~state initial_state\n'+
+                  '#object!time1+joe.op tail_op (1)\n\n'
+},
+{
+    comment: 'subscription (unknown stamp, full patch back)',
+    query:   '[dsI]#object !0time+ago\n\n',
+    response:'[dsI]#object!time0+joe.~state initial_state\n'+
+                  '!time1+joe.op tail_op (1)\n\n'
+},
+{
+    comment: 'write to a non-subscribed object',
+    query:   '[dsII]#object!time2+me~ssn~dsII.op unexpected, right?\n',
+    response:'[dsII]#object!time2+me~ssn~dsII.error no active subscription\n'
 }
+// TODO db error => graceful termination
 ];
+
+
+tape('1.C various errors / incorrect messages', function(t){
+
+    var replica = new Replica({
+        ssn_id:     'me~ssn',
+        db_id:      'db',
+        upstream:   'swarm',
+        clock:      new stamp.LamportClock('me~ssn'),
+        listen:     'loopback:1B',
+        prefix:     true
+    }, start_tests);
+
+    function compare (a,b,c) {
+        a = a.replace(/[\t\s]+/g, ' ');
+        b = b.replace(/[\t\s]+/g, ' ');
+        t.equal(a,b,c);
+    }
+
+    function start_tests () {
+        var mux = new BatMux('loopback:1A');
+
+        var bt = new bat.StreamTest(mux.trunk, ERRORS, compare);
+
+        bt.runScenario( function () {
+            t.end();
+        } );
+    }
+
+});
