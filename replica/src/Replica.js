@@ -131,8 +131,12 @@ Replica.prototype.write = function (op) {
 
     var entry = this.entries[typeid];
     if (entry===undefined) {
-        entry = new Entry(this, typeid, this.entry_states[typeid], new_ops);
+        var meta = this.entry_states[typeid];
+        entry = new Entry(this, typeid, meta, new_ops);
         this.entries[typeid] = entry;
+        if (meta===undefined) {
+            this.loadMeta(entry);
+        }
     } else {
         entry.queueOps(new_ops);
     }
@@ -160,16 +164,22 @@ Replica.prototype.done = function (request) {
     request.send_queue = [];
     // first, save to db
     if (save_queue.length) {
-        var batch = [];
+        var seen = {};
+        // remove rewrites (tip, avv, etc)
+        for(var i=save_queue.length-1; i>=0; i--) {
+            if (seen.hasOwnProperty(save_queue[i].key)) {
+                save_queue[i] = null;
+            } else {
+                seen[save_queue[i].key] = true;
+            }
+        }
+        save_queue = save_queue.filter(function(rec){return !!rec;});
         var key_prefix = this.prefix + request.typeid;
-        save_queue.forEach(function(o){
-            batch.push({
-                type:  o.value===null ? 'del' : 'put',
-                key:   key_prefix+o.spec.toString(),
-                value: o.value
-            });
+        save_queue.forEach(function(rec){
+            rec.key = key_prefix + rec.key;
         });
-        this.db.batch(batch, send_ops);
+
+        this.db.batch(save_queue, send_ops);
     } else {
         send_ops();
     }
@@ -267,28 +277,41 @@ Replica.prototype.loadInitData = function () {
     });
 };
 
+
+Replica.prototype.loadMeta = function (activeEntry) {
+    var self = this;
+    var key = this.prefix + activeEntry.typeid + '.meta'; // BAD
+    this.db.get(key, function (err, value){
+        if (err && err.name!=='NotFoundError') {
+            console.error('data load failed', key, err);
+            self.close();
+        } else {
+            activeEntry.setMeta(new Entry.State(value));
+        }
+    });
+};
+
 //   [mark, log_end) - we need to see the starting point
 Replica.prototype.loadTail = function (activeEntry, mark) {
     var db_mark = mark ? '!'+mark : '.';
     var typeid = activeEntry.typeid;
-    var key_prefix = this.prefix + typeid;
+    var prefix = this.prefix, key_prefix = prefix + typeid;
     var gte_key = key_prefix + db_mark;
     var lt_key = key_prefix + typeid + '~';
     var error = null;
-    var ops = [];
+    var recs = [];
     this.db.createReadStream({
         gte: gte_key, // start at the mark (inclusive)
         lt: lt_key // don't read the next object's ops
     }).on('data', function (data){
-        var key = data.key.substr(key_prefix.length);
-        // FIXME strip stack prefix
-        ops.push(new Op(key, data.value));
+        data.key = data.key.substr(key_prefix.length);
+        recs.push(data);
     }).on('error', function(err){
         console.error('data load failed', typeid, mark, error);
         error = err;
         // TODO EXIT stop all processing, exit
     }).on('end', function () {
-        activeEntry.mark = mark || '~';
+        activeEntry.prependStoredRecords(recs, mark || '~');
         activeEntry.next();
     });
 

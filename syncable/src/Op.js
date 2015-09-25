@@ -105,8 +105,9 @@ Op.prototype.bundleLength = function () {
 };
 
 Op.prototype.toString = function (context) {
-    var spec = context ? this.spec.scoped(context) : this.spec;
-    var line = spec.toString() + '\t' + this.value + '\n';
+    var spec_str = context ?
+        this.spec.toAbbrevString(context) : this.spec.toString();
+    var line = spec_str + '\t' + this.value + '\n';
     if (this.name()==='on') {
         if (this.patch) {
             this.patch.forEach(function(o){

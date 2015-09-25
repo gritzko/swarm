@@ -346,7 +346,7 @@ function ParsedSpec (spec, scope, defaults) {
 Spec.Parsed = ParsedSpec;
 
 
-ParsedSpec.prototype.toString = function () {
+ParsedSpec.prototype.toString = function (defaults) {
     var ret = '';
     if (this._type) {
         ret+='/'+this._type;
@@ -358,6 +358,24 @@ ParsedSpec.prototype.toString = function () {
         ret+='!'+this._stamp;
     }
     if (this._op) {
+        ret+='.'+this._op;
+    }
+    return ret;
+};
+
+
+ParsedSpec.prototype.toAbbrevString = function (defaults) {
+    var ret = '';
+    if (this._type!==defaults._type) {
+        ret+='/'+this._type;
+    }
+    if (this._id!==defaults._id) {
+        ret+='#'+this._id;
+    }
+    if (this._stamp!==defaults._stamp) {
+        ret+='!'+this._stamp;
+    }
+    if (this._op!==defaults._op) {
         ret+='.'+this._op;
     }
     return ret;

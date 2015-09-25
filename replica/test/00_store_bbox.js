@@ -54,7 +54,7 @@ var BASIC = [
 
 {
     comment: 'downstream .on (bogus bookmark) responded',
-    query:   '[down2]#stamp2+remote\t!stale~ancient\n\n',
+    query:   '[down2]#stamp2+remote\tstale+ancient\n\n',
     response:'[down2]#stamp2+remote\t!0\n' +
                 '\t!stamp2+remote.~state\tinitial root state\n\n',
 },
@@ -329,6 +329,11 @@ var ERRORS = [
     comment: 'write to a non-subscribed object',
     query:   '[dsII]#object!time2+me~ssn~dsII.op unexpected, right?\n',
     response:'[dsII]#object!time2+me~ssn~dsII.error no active subscription\n'
+},
+{
+    comment: 'invalid bookmark syntax',
+    query:   '[dsII]#object s h i t\n\n',
+    response:'[dsII]#object.error malformed Lamport timestamp\n'
 }
 // TODO db error => graceful termination
 ];

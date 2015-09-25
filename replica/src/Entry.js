@@ -4,24 +4,66 @@ var AnchoredVV = stamp.AnchoredVV;
 var VVector = stamp.VVector;
 var sync = require('swarm-syncable');
 var Op = sync.Op;
+var Spec = sync.Spec;
+var Lamp = stamp.LamportTimestamp;
 
 // a single syncable
 // subscribers, state metadata
-function EntryState () {
+function EntryState (string) {
     this.subscribers = [];
-    // own progress
-    this.tip = '0';
-    this.state = '0';
-    // upstream progress
+    // The last stamp received from upstream
     this.last = '0';
-    this.avv = new AnchoredVV('0');
-    // e.g. non-upstream bookmarks
+    this.tip = this.avv = this.state = null;
+    var m;
+    if (string) {
+        while (m=EntryState.reKeyVal.exec(string)) {
+            switch (m[1]) {
+            case 'l': this.last = m[2]; break;
+            case 's': this.state = m[2]; break;
+            case 'a': this.avv = m[2]; break;
+            case 't': this.tip = m[2]; break;
+            }
+        }
+    }
+    // AVV for our arrival order: anchor is max_stamp, vv is reorders (if any)
+    if (this.tip === null) {
+        this.tip = this.last;
+    }
+    // our recentmost state (a single stamp)
+    if (this.state === null) {
+        this.state = this.tip;
+    }
+    // AVV for ops we receive from the upstream, relative to our order
+    if (this.avv === null) {
+        this.avv = this.last;
+    }
+    // other stuff, e.g. non-upstream bookmarks
     this.other = null;
 }
+EntryState.reKeyVal = /(\w):(\S+)/g;
+
+// serialize the state
+EntryState.prototype.toString = function () {
+    var str = 'l:'+this.last;
+    // avv defaults to last
+    if (this.avv!==this.last) {
+        str += ' a:' + this.avv;
+    }
+    // tip defaults to last
+    if (this.tip!==this.last) {
+        str += ' t:' + this.tip;
+    }
+    // state defaults to tip
+    if (this.state!==this.tip) {
+        str += ' s:' + this.state;
+    }
+    return str;
+};
 
 // while an op is being processed
 function Entry (replica, typeid, state, ops) {
     this.replica = replica;
+    this.typeId = new Spec.Parsed(typeid);
     this.typeid = typeid;
     this.state = state || null;
     // the in-progress op
@@ -35,73 +77,81 @@ function Entry (replica, typeid, state, ops) {
     // ops to be saved/sent
     this.save_queue = [];
     this.send_queue = [];
-    if (this.state===null) {
-        this.replica.loadTail(this);
-    } else {
-        this.next();
-    }
 }
 Entry.State = EntryState;
 module.exports = Entry;
 
 
-Entry.prototype.parseMetadata = function () {
-    if (this.state) { throw new Error('repeated metadata read'); }
-    var state = this.state = new Entry.State();
-    this.records.forEach(function(op){
-        switch (op.spec.toString()) {
-        case '.tip':   state.tip = op.value; break;
-        case '.last':  state.last = op.value; break;
-        case '.avv':   state.avv = op.value; break;
-        case '.state': state.state = op.value; break;
-        //case '.subs': meta. = op.value; break;
-        default: console.warn('what is this?', op);
+Entry.prototype.prependStoredRecords= function (records, mark) {
+    var typeId = this.typeId;
+    // parse into ops  (use scopes)
+    var ops = records.map( function(rec){
+        var key=rec.key, stamp_pos = key.lastIndexOf('!');
+        if (stamp_pos>0) { // skip tip_stack if any
+            key = key.substr(stamp_pos);
         }
+        var spec = new Spec.Parsed(key, typeId);
+        return new Op(spec, rec.value, null);
     });
-    this.records = [];
+    this.records = ops.concat(this.records);
+    this.mark = mark;
 };
 
-Entry.prototype.setTip = function (stamp) {
-    if (!stamp) {
-        throw new Error('BS!');
+
+Entry.prototype.appendNewRecord = function () {
+    if (this.records.length && this.op.stamp()<this.records[this.records.length-1].stamp()) {
+        throw new Error('screw you');
     }
-    this.state.tip = stamp;
-    this.save_queue.push(new Op('.tip', stamp));
-};
-Entry.prototype.setUpstreamLast = function (stamp) {
-    this.state.last = stamp;
-    this.save_queue.push(new Op('.last', stamp));
-};
-Entry.prototype.setUpstreamAVV = function (avv) {
-    this.state.avv = avv.toString();
-    var check = new AnchoredVV(this.state.avv);
-    this.save_queue.push(new Op('.avv', avv.toString()));
-};
-Entry.prototype.setBaseState = function (stamp) {
-    this.state.state = stamp;
-    this.save_queue.push(new Op('.state', stamp));
+    this.records.push(this.op);
+    var stamp = this.op.stamp();
+    if (stamp>this.state.tip) { // fast path
+        this.state.tip = stamp;
+    } else { // prepend reordered op keys to ensure arrival order
+        var tip_stack = this.state.tip.split('!').reverse();
+        while (tip_stack.length && tip_stack[0]<stamp) {
+            tip_stack.pop();
+        }
+        tip_stack.reverse();
+        tip_stack.push(stamp);
+        this.state.tip = tip_stack.join('!');
+    }
+    this.save_queue.push({
+        type: 'put',
+        key:  this.op.spec.toString(),
+        value:this.op.value
+    });
 };
 
 
 Entry.prototype.queueOps = function (new_ops) {
     if (this.pending_ops===null) {
         this.pending_ops = new_ops.slice();
-        this.next();
+        if (this.state) {
+            this.next();
+        }
     } else { // there are some ops in flight
         this.pending_ops = this.pending_ops.concat(new_ops);
     }
 };
 
 
+Entry.prototype.setMeta = function (meta) {
+    this.state = meta;
+    this.next();
+};
+
+
 Entry.prototype.next = function () {
-    if (this.state===null) {
-        this.parseMetadata();
-    }
     if (this.pending_ops.length) {
         this.op = this.pending_ops.shift();
         this.process();
     } else {
         this.pending_ops = null;
+        this.save_queue.push({
+            type: 'put',
+            key:  '.meta',
+            value: this.state.toString()
+        });
         this.replica.done(this);
     }
 };
@@ -136,15 +186,6 @@ Entry.prototype.relay = function (except) { // FIXME saveAndRelay
 };
 
 
-Entry.prototype.save = function (op) {
-    if (this.records.length && op.stamp()<this.records[this.records.length-1].stamp()) {
-        throw new Error('screw you');
-    }
-    this.records.push(op);
-    this.save_queue.push(op);
-};
-
-
 Entry.prototype.upstream = function () {
     return this.replica.upstream_ssn;
 };
@@ -158,9 +199,9 @@ Entry.prototype.process = function () {
     var op = this.op;
     switch (op.name()) {
     case 'on':      if (op.origin()===this.ssn_id()) {
-                        this.processUpstreamOn();
+                        this.processReciprocalOn();
                     } else {
-                        this.processDownstreamOn();
+                        this.processOn();
                     }
                     break;
     case 'off':     this.processOff(); break;
@@ -170,7 +211,7 @@ Entry.prototype.process = function () {
 };
 
 
-Entry.prototype.processUpstreamOn = function () {
+Entry.prototype.processReciprocalOn = function () {
     var op = this.op;
     if (op.source !== this.replica.upstream_ssn) {
         console.error('something fishy is going on');
@@ -184,7 +225,7 @@ Entry.prototype.processUpstreamOn = function () {
             new_avv.vv.add(patch[i].stamp());
         }
     }
-    this.setUpstreamAVV(new_avv.toString());
+    this.state.avv = new_avv.toString();
 
     // upstream .on needs no response
     this.next(); // FIXME call stack length => change to return LATER
@@ -193,7 +234,7 @@ Entry.prototype.processUpstreamOn = function () {
 
 // As an upstream, we send a patch based on the provided position in
 // our arrival order. We also add an acknowledgement for the received patch.
-Entry.prototype.processDownstreamOn = function () {
+Entry.prototype.processOn = function () {
     var upstream = this.upstream();
     var op = this.op;
     var subs = this.state.subscribers;
@@ -253,6 +294,7 @@ Entry.prototype.patchUpstream = function () {
 
     var ops = this.records;
     var i=0;
+
     while (i<ops.length && ops[i].stamp()!==anchor) { i++; }
     while (i<ops.length) {
         var op = ops[i++];
@@ -269,7 +311,7 @@ Entry.prototype.patchUpstream = function () {
 
     // correctness of this write does not depend on the current op
     // so we'll do it even if patchDownstream says LATER
-    this.setUpstreamAVV(avv.toString());
+    this.state.avv = avv.toString();
 
     var patch_op = new Op(
         this.op.spec.typeId().setStamp(this.replica.upstream_stamp).setOp('on'),
@@ -283,8 +325,7 @@ Entry.prototype.patchUpstream = function () {
 // As an upstream, we send a patch based on the provided position in
 // our arrival order. We also add an acknowledgement for the received patch.
 Entry.prototype.patchDownstream = function () {
-    var pos = this.op.value, add_state = false;
-    // TODO format check FIXME new Lamp();
+    var pos = new Lamp(this.op.value).toString(), add_state = false;
 
     var ack_vv = new VVector();
     if (this.op.patch) {
@@ -300,7 +341,7 @@ Entry.prototype.patchDownstream = function () {
         // don't send them back their own state
     }
 
-    if (pos<this.mark) {
+    if ( pos < this.mark ) {
         this.loadMoreData(pos);
         return LATER;
     }
@@ -376,12 +417,11 @@ Entry.prototype.processState = function () {
     if (this.state.tip!=='0' && this.op.source!==this.upstream()) {
         this.send(this.op.error('state overwrite from a downstream'));
     } else if (this.state.tip==='0') { // new object
-        this.save(this.op);
-        this.setTip(pos);
-        this.setBaseState(pos);
+        this.appendNewRecord();
+        this.state.state = pos;
         if (this.op.source===this.upstream()) {
-            this.setUpstreamLast(pos);
-            this.setUpstreamAVV(pos);
+            this.state.last = pos;
+            this.state.avv = pos;
         }
         this.relay(this.op.source);
         this.mark = pos;
@@ -391,8 +431,8 @@ Entry.prototype.processState = function () {
         var patch = this.makePatch(avv.anchor, avv.vv);
         if (!patch.length && this.state.tip===this.state.last &&
             pos===this.state.tip) {
-            this.save(this.op);
-            this.setBaseState(pos);
+            this.appendNewRecord();
+            this.state.state = pos;
             this.relay(this.upstream());
         } else {
             console.warn('upstream state skipped');
@@ -414,17 +454,15 @@ Entry.prototype.processOp = function () {
 
     // deal with our arrival order
     if ( stamp > state.tip ) { // fast track: new op
-        this.setTip(stamp);
+        is_known = false;
     } else if ( stamp === state.tip ) { // fast track: replay/echo
         is_known = true;
     } else { // need a replay check
-
         // IMPORTANT: no i/o before this check
         if (this.mark>stamp) {
-            // TODO use tip to skip scans
+            // TODO use tip stack to skip scans
             return this.loadMoreData(stamp);
         }
-
         is_known = this.records.some(function (o) {
             var stored_stamp = o.stamp();
             if (stored_stamp>stamp && o.origin()===origin) {
@@ -433,33 +471,19 @@ Entry.prototype.processOp = function () {
             }
             return stored_stamp===stamp; // FIXME replay/echo
         });
-
-        if (!is_known) {
-            // FIXME convert tip to AVV
-            // make a compound tip
-            var tip = state.tip.split('!');
-            while (tip.length && tip[tip.length-1]<stamp) {
-                tip.pop();
-            }
-            tip.push(stamp);
-            var new_tip = tip.join('!');
-
-            this.setTip(new_tip);
-        }
-
     }
 
     // track the upstream's progress and arrival order
     if (upstream === op.source ) {
-        this.setUpstreamLast(stamp);
+        this.state.last = stamp;
         var avv = new AnchoredVV(this.state.avv);
         avv.vv.add(stamp);
-        this.setUpstreamAVV(avv.toString());
+        this.state.avv = avv.toString();
     }
 
     if (!is_known) {
         this.relay(op.source===upstream?upstream:undefined);
-        this.save(op);
+        this.appendNewRecord();
     }
 
     this.next();
