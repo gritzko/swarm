@@ -203,7 +203,7 @@ var REORDERS = [
     query:   '[dsI]#object  time1+joe\n\n',
     response:'[dsI]#object !0\n'+
              ' !time3+joe.op op (2)\n' +
-             ' !time2+me~ssn~dsII.op op (3)\n'
+             ' !time2+me~ssn~dsII.op op (3)\n\n'
 },
 {
     comment: 'correct patch (tip-stack works)',
@@ -229,6 +229,13 @@ var REORDERS = [
     query:   '[dsI]#object  \n\n',
     response:'[dsI]#object !0\n'+
              ' !time2+me~ssn~dsII.~state reordered_state\n\n'
+},
+{
+    comment: '~state does not get included into a patch',
+    query:   '[dsI]#object time1+joe\n\n',
+    response:'#object !0\n'+
+             ' !time3+joe.op op (2)\n' +
+             ' !time2+me~ssn~dsII.op op (3)\n\n'
 },
 {
     comment: 'reorder is "straightened"',
