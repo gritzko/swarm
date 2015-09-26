@@ -99,25 +99,21 @@ Entry.prototype.prependStoredRecords= function (records, mark) {
 
 
 Entry.prototype.appendNewRecord = function () {
-    if (this.records.length && this.op.stamp()<this.records[this.records.length-1].stamp()) {
-        throw new Error('screw you');
-    }
     this.records.push(this.op);
     var stamp = this.op.stamp();
     if (stamp>this.state.tip) { // fast path
         this.state.tip = stamp;
     } else { // prepend reordered op keys to ensure arrival order
-        var tip_stack = this.state.tip.split('!').reverse();
-        while (tip_stack.length && tip_stack[0]<stamp) {
+        var tip_stack = this.state.tip.split('!');
+        while (tip_stack.length && tip_stack[tip_stack.length-1]<stamp) {
             tip_stack.pop();
         }
-        tip_stack.reverse();
         tip_stack.push(stamp);
         this.state.tip = tip_stack.join('!');
     }
     this.save_queue.push({
         type: 'put',
-        key:  this.op.spec.toString(),
+        key:  '!' + this.state.tip + '.' + this.op.name(),
         value:this.op.value
     });
 };
@@ -251,7 +247,7 @@ Entry.prototype.processOn = function () {
         patch_down = this.patchDownstream();
         if (patch_down===LATER) { return; }
     } else {
-        patch_down = this.op.reply('on', '0');
+        patch_down = this.op.reply('on', '');
     }
 
     if (patch_up) {
@@ -337,7 +333,7 @@ Entry.prototype.patchDownstream = function () {
     if (pos==='0') { // the client has nothing
         // this.state.state is defined as we are stateful
         pos =  this.state.state;
-        add_state = ! ack_vv.covers(pos);
+        add_state = ack_vv.isEmpty() || !ack_vv.covers(pos);
         // don't send them back their own state
     }
 
@@ -429,13 +425,14 @@ Entry.prototype.processState = function () {
         // check conditions are perfect (==tip, no compound)
         var avv = new AnchoredVV(this.state.avv);
         var patch = this.makePatch(avv.anchor, avv.vv);
-        if (!patch.length && this.state.tip===this.state.last &&
-            pos===this.state.tip) {
+        if (!patch.length) {
+            // the upstream has acknowledged everything we know, so
+            // this state eats everything we have => may append it
             this.appendNewRecord();
-            this.state.state = pos;
+            this.state.state = this.op.stamp();
             this.relay(this.upstream());
         } else {
-            console.warn('upstream state skipped');
+            console.warn('have unacked ops; upstream state skipped');
         }
     } else {
         this.send(this.op.error('state o/w impossible'));
@@ -471,6 +468,12 @@ Entry.prototype.processOp = function () {
             }
             return stored_stamp===stamp; // FIXME replay/echo
         });
+    }
+
+    if (is_error) {
+        this.send(this.op.error(is_error));
+        this.next();
+        return;
     }
 
     // track the upstream's progress and arrival order

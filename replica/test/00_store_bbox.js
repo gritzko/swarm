@@ -43,7 +43,7 @@ var BASIC = [
     comment: 'induct an upstream subscription (no local data)',
     query:   '[down]/Model#stamp2+remote!YYYYY+user~ssn~app.on\t0\n\n',
     response:'[up]#stamp2+remote\t0\n\n' +
-             '[down]#stamp2+remote!YYYYY+user~ssn~app\t0\n\n'
+             '[down]#stamp2+remote!YYYYY+user~ssn~app\t\n\n'
 },
 {
     comment: 'server response (downstream .on responded)',
@@ -127,7 +127,7 @@ var BASIC = [
 ];
 
 
-tape('1.A basic cases', function(t){
+tape.skip ('1.A basic cases', function(t){
 
     var replica = new Replica({
         ssn_id:     'user~ssn',
@@ -171,21 +171,21 @@ var REORDERS = [
     comment: 'subscription (ds I)',
     query:   '[dsI]#object \n\n',
     response:'[up]#object 0\n\n'+
-             '[dsI]#object !0\n\n'
+             '[dsI]#object \n\n'
 },
 {
     comment: 'server response',
     query:   '[up]#object !0\n'+
                  ' !time0+joe.~state initial_state\n'+
-                 ' !time1+joe.op tail_op\n\n',
-    response:'[dsI]#object!time0+joe.~state initial_state\n'+
-                  ' !time1+joe.op tail_op (1)\n\n'
+                 ' !time1+joe.op tail_op (1)\n\n',
+    response:'#object!time0+joe.~state initial_state\n'+
+             '#object!time1+joe.op tail_op (1)\n'
 },
 {
     comment: 'subscription (ds II)',
-    query:   '[dsII]#object time0\n\n',
+    query:   '[dsII]#object time0+joe\n\n',
     response:'[dsII]#object !0\n'+
-             ' !time1+joe.op tail_op\n\n'
+             ' !time1+joe.op tail_op (1)\n\n'
 },
 
 {
@@ -208,7 +208,7 @@ var REORDERS = [
 {
     comment: 'correct patch (tip-stack works)',
     query:   '[dsI]#object  time3+joe\n\n',
-    response:'[dsI]#object !0\n'+
+    response:'#object !0\n'+
              ' !time2+me~ssn~dsII.op op (3)\n'
 },
 {
@@ -216,10 +216,13 @@ var REORDERS = [
     query:   '[dsII]#object  time2+me~ssn~dsII\n\n',
     response:'[dsII]#object !0\n\n'
 },
+
 {
     comment: 'a state named after a reordered item',
-    query:   '[up]#object!time2+me~ssn~dsII.~state reordered_state\n',
-    response:''
+    query:   '[up]#object!time2+me~ssn~dsII.op op (3)\n'+
+             '#object!time2+me~ssn~dsII.~state reordered_state\n',
+    response:'[dsI]#object!time2+me~ssn~dsII.~state reordered_state\n'+
+             '[dsII]#object!time2+me~ssn~dsII.~state reordered_state\n'
 },
 {
     comment: 'state served correctly (no tail)',
@@ -237,7 +240,7 @@ var REORDERS = [
 {
     comment: 'patch of 1 (straight) op',
     query:   '[dsII]#object  time2+me~ssn~dsII\n\n',
-    response:'[dsII]#object !0\n'+
+    response:'#object !0\n'+
              ' !time4+me~ssn~dsI.op op (4)\n\n'
 },
 {
@@ -247,8 +250,8 @@ var REORDERS = [
 },
 {
     comment: 'error: causal order violation (disconnect)',
-    query:   '[dsII]#object!time1+me~ssn~dsII.op\nblatant\n',
-    response:'[dsII]#object!time1+me~ssn~dsII.error\ncausality violation\n[EOF]'
+    query:   '[dsII]#object!time1+me~ssn~dsII.op blatant\n',
+    response:'[dsII]#object!time1+me~ssn~dsII.error causality violation\n'
 }
 ];
 
@@ -271,7 +274,7 @@ tape('1.B reorders', function(t){
     }
 
     function start_tests () {
-        var mux = new BatMux('loopback:1A');
+        var mux = new BatMux('loopback:1B');
 
         var bt = new bat.StreamTest(mux.trunk, REORDERS, compare);
 
@@ -279,6 +282,8 @@ tape('1.B reorders', function(t){
             t.end();
         } );
     }
+
+        // FIXME close/open db!!!
 
 });
 
@@ -331,6 +336,11 @@ var ERRORS = [
     response:'[dsII]#object!time2+me~ssn~dsII.error no active subscription\n'
 },
 {
+    comment: 'bookmark > tip',
+    query:   '[dsII]#object ~book+mark\n',
+    response:'[dsII]#object.error bookmark is ahead!\n'
+},
+{
     comment: 'invalid bookmark syntax',
     query:   '[dsII]#object s h i t\n\n',
     response:'[dsII]#object.error malformed Lamport timestamp\n'
@@ -346,7 +356,7 @@ tape('1.C various errors / incorrect messages', function(t){
         db_id:      'db',
         upstream:   'swarm',
         clock:      new stamp.LamportClock('me~ssn'),
-        listen:     'loopback:1B',
+        listen:     'loopback:1C',
         prefix:     true
     }, start_tests);
 
@@ -357,7 +367,7 @@ tape('1.C various errors / incorrect messages', function(t){
     }
 
     function start_tests () {
-        var mux = new BatMux('loopback:1A');
+        var mux = new BatMux('loopback:1C');
 
         var bt = new bat.StreamTest(mux.trunk, ERRORS, compare);
 
@@ -366,4 +376,8 @@ tape('1.C various errors / incorrect messages', function(t){
         } );
     }
 
+});
+
+
+tape.skip('1.D close/open db', function(t){
 });

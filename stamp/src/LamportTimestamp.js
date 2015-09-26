@@ -13,12 +13,17 @@ LamportTimestamp.reTokExtMG = new RegExp(LamportTimestamp.rsTokExt, 'mg');
 // unless the time value is 0 (new LT() is "0").
 function LamportTimestamp (time, source) {
     if (!source) {
-        var m = LamportTimestamp.reTokExt.exec(time);
-        if (!m) {
-            throw new Error('malformed Lamport timestamp');
+        if (!time) {
+            time = '0';
+            source = '';
+        } else {
+            var m = LamportTimestamp.reTokExt.exec(time);
+            if (!m) {
+                throw new Error('malformed Lamport timestamp');
+            }
+            time = m[1];
+            source = m[2] || '';
         }
-        time = m[1];
-        source = m[2] || '';
     }
     if (!source && time!=='0') {
         source = time;
@@ -54,6 +59,7 @@ LamportTimestamp.prototype.eq = function (stamp) {
 
 LamportTimestamp.parse = function parseArbitraryString (str) {
     var ret = [], m;
+    if (!str) { return ret; }
     LamportTimestamp.reTokExtMG.lastIndex = 0;
     while (m = LamportTimestamp.reTokExtMG.exec(str)) {
         ret.push(new LamportTimestamp(m[1], m[2]));
