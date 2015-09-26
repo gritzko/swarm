@@ -77,12 +77,13 @@ function Entry (replica, typeid, state, ops) {
     // ops to be saved/sent
     this.save_queue = [];
     this.send_queue = [];
+    this.mark = '~';
 }
 Entry.State = EntryState;
 module.exports = Entry;
 
 
-Entry.prototype.prependStoredRecords= function (records, mark) {
+Entry.prototype.prependStoredRecords= function (records) {
     var typeId = this.typeId;
     // parse into ops  (use scopes)
     var ops = records.map( function(rec){
@@ -94,7 +95,6 @@ Entry.prototype.prependStoredRecords= function (records, mark) {
         return new Op(spec, rec.value, null);
     });
     this.records = ops.concat(this.records);
-    this.mark = mark;
 };
 
 

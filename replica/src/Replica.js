@@ -293,11 +293,11 @@ Replica.prototype.loadMeta = function (activeEntry) {
 
 //   [mark, log_end) - we need to see the starting point
 Replica.prototype.loadTail = function (activeEntry, mark) {
-    var db_mark = mark ? '!'+mark : '.';
+    var db_mark = '!' + (mark||'~');
     var typeid = activeEntry.typeid;
     var prefix = this.prefix, key_prefix = prefix + typeid;
     var gte_key = key_prefix + db_mark;
-    var lt_key = key_prefix + typeid + '~';
+    var lt_key = key_prefix + '!' + activeEntry.mark;
     var error = null;
     var recs = [];
     this.db.createReadStream({
@@ -311,7 +311,8 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
         error = err;
         // TODO EXIT stop all processing, exit
     }).on('end', function () {
-        activeEntry.prependStoredRecords(recs, mark || '~');
+        activeEntry.prependStoredRecords(recs);
+        activeEntry.mark = mark;
         activeEntry.next();
     });
 

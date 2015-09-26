@@ -127,7 +127,7 @@ var BASIC = [
 ];
 
 
-tape.skip ('1.A basic cases', function(t){
+tape ('1.A basic cases', function(t){
 
     var replica = new Replica({
         ssn_id:     'user~ssn',
