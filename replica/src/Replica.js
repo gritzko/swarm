@@ -130,7 +130,9 @@ Replica.prototype.write = function (op) {
     new_ops.push(op);
 
     var entry = this.entries[typeid];
-    if (entry===undefined) {
+    if (entry) {
+        entry.queueOps(new_ops);
+    } else if (op.name()==='on') {
         var meta = this.entry_states[typeid];
         entry = new Entry(this, typeid, meta, new_ops);
         this.entries[typeid] = entry;
@@ -138,7 +140,7 @@ Replica.prototype.write = function (op) {
             this.loadMeta(entry);
         }
     } else {
-        entry.queueOps(new_ops);
+        this.send(op.error('unknown object'));
     }
 };
 

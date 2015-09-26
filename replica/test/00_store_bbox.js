@@ -305,36 +305,36 @@ var ERRORS = [
     response:'[dsII]/Swarm+Replica#db!00003+me~ssn.on \n\n'
 },
 {
-    comment: 'patch for an unknown object',
-    query:   '[dsI]#unknown \n'+
-             ' !some+stamp.name and value\n\n',
-    response:'#unknown.error unknown object\n'
+    comment: 'op for an unknown object',
+    query:   '[dsI]#unknown!some+stamp.name and value\n\n',
+    response:'[dsI]#unknown!some+stamp.error unknown object\n'
 },
 {
     comment: 'subscription (ds I)',
     query:   '[dsI]#object \n\n',
     response:'[up]#object 0\n\n'+
-             '[dsI]#object !0\n\n'
+             '[dsI]#object \n\n'
 },
 {
     comment: 'server response',
     query:   '[up]#object !0\n'+
                  ' !time0+joe.~state initial_state\n'+
-                 ' !time1+joe.op tail_op\n\n',
-    response:'[dsI]#object!time0+joe.~state initial_state\n'+
-                  '#object!time1+joe.op tail_op (1)\n\n'
+                 ' !time1+joe.op tail_op (1)\n\n',
+    response:'#object!time0+joe.~state initial_state\n'+
+             '#object!time1+joe.op tail_op (1)\n\n'
 },
 {
     comment: 'subscription (unknown stamp, full patch back)',
-    query:   '[dsI]#object !0time+ago\n\n',
-    response:'[dsI]#object!time0+joe.~state initial_state\n'+
-                  '!time1+joe.op tail_op (1)\n\n'
+    query:   '[dsI]#object 0time+ago\n\n',
+    response:'#object !0\n'+
+                ' !time0+joe.~state initial_state\n'+
+                ' !time1+joe.op tail_op (1)\n\n'
 },
-{
+/*{     TODO; technically, patch ops go before the .on
     comment: 'write to a non-subscribed object',
     query:   '[dsII]#object!time2+me~ssn~dsII.op unexpected, right?\n',
     response:'[dsII]#object!time2+me~ssn~dsII.error no active subscription\n'
-},
+},*/
 {
     comment: 'bookmark > tip',
     query:   '[dsII]#object ~book+mark\n',
@@ -343,7 +343,7 @@ var ERRORS = [
 {
     comment: 'invalid bookmark syntax',
     query:   '[dsII]#object s h i t\n\n',
-    response:'[dsII]#object.error malformed Lamport timestamp\n'
+    response:'#object.error malformed bookmark\n'
 }
 // TODO db error => graceful termination
 ];

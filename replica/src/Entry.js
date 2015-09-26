@@ -259,7 +259,7 @@ Entry.prototype.processOn = function () {
 
     if (patch_down) {
         this.send( patch_down, op.source );
-        if (subs.indexOf(op.source)===-1) {
+        if (patch_down.name()==='on' && subs.indexOf(op.source)===-1) {
             subs.push(op.source);
         }
     }
@@ -321,7 +321,14 @@ Entry.prototype.patchUpstream = function () {
 // As an upstream, we send a patch based on the provided position in
 // our arrival order. We also add an acknowledgement for the received patch.
 Entry.prototype.patchDownstream = function () {
-    var pos = new Lamp(this.op.value).toString(), add_state = false;
+    var pos = this.op.value||'0', add_state = false;
+    if (!Lamp.is(pos)) {
+        return this.op.error('malformed bookmark');
+    }
+
+    if (pos>this.state.tip) {
+        return this.op.error('bookmark is ahead!');
+    }
 
     var ack_vv = new VVector();
     if (this.op.patch) {

@@ -37,6 +37,11 @@ LamportTimestamp.prototype.toString = function () {
     return this._time + (this._source ? '+' + this._source : '');
 };
 
+LamportTimestamp.is = function (str) {
+    LamportTimestamp.reTokExt.lastIndex = 0;
+    return LamportTimestamp.reTokExt.test(str);
+};
+
 LamportTimestamp.prototype.isZero = function () {
     return this._time === '0';
 };
