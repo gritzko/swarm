@@ -17,7 +17,7 @@ if (typeof(window)==='object') {
 
 
 tape('4.A Model set/get - Host protocol', function (t) {
-    t.plan(5);
+    t.plan(6);
     var host = new Host({
         ssn_id: 'anon~4A',
         db_id: 'db',
@@ -32,19 +32,18 @@ tape('4.A Model set/get - Host protocol', function (t) {
     var m = new Model({x:1}, host);
     t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
-    t.equal(m.x, 1);
-    t.equal(m.y, 2);
+    t.equal(m.x, 1, 'x=1 is still there');
+    t.equal(m.y, 2, '.set works');
     m.set({x:3});
     t.equal(m.x, 3);
     t.equal(m.y, 2);
     stream.pair.on('end', function() {
         t.equal(collect,
-            '/Swarm+Host#db!00000+anon~4A.on\t\n' +
-            '/Model#00001+anon~4A!00000+anon~4A.on\t0\n' +
-                '\t!00001+anon~4A.~state\t\n\n' +
-            '/Model#00001+anon~4A!00002+anon~4A.set\t{"x":1}\n' +
-            '/Model#00001+anon~4A!00003+anon~4A.set\t{"y":2}\n' +
-            '/Model#00001+anon~4A!00004+anon~4A.set\t{"x":3}\n',
+            '/Swarm+Host#db!00000+anon~4A.on\t\n\n' +
+            '#00001+anon~4A\t0\n' +
+                '\t!00001+anon~4A.~state\t{"00001+anon~4A":{"x":1}}\n\n' +
+            '#00001+anon~4A!00002+anon~4A.set\t{"y":2}\n' +
+            '#00001+anon~4A!00003+anon~4A.set\t{"x":3}\n',
             'full upstream output'
         );
         t.end();
@@ -58,11 +57,11 @@ tape('4.B concurrent ops', function (t) {
         ssn_id: 'anon~4B'
     });
     var duckling = new Model({}, host);
-    host.deliver( new Op(
+    host.write( new Op(
             duckling.spec()+'!1time+user2.set',
             '{"height":"2cm"}',
             host.id ));
-    host.deliver( new Op(
+    host.write( new Op(
             duckling.spec()+'!0time+user1.set',
             '{"height":"3cm"}',
             host.id ));

@@ -14,10 +14,8 @@ function StreamTest (stream, scenario, compare) {
     this.lc = new LearnedComparator();
     this.turn_num = -1;
     this.busy = false;
-    if (compare===undefined && typeof('equal')==='function') {
-        compare = equal;
-    }
-    this.compare = compare || cmp;
+    // sometimes 'equal' is a global
+    this.compare = compare || equal || cmp;
 }
 
 function cmp (act, exp) {

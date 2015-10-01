@@ -1,5 +1,6 @@
 "use strict";
 var Spec = require('./Spec');
+var Op = require('./Op');
 var Syncable = require('./Syncable');
 
 // This most basic class is a key-value JavaScript-style object.
@@ -10,23 +11,19 @@ var Syncable = require('./Syncable');
 // Note that changes are merged in the sense that a change may
 // leave values untouched: !time1.set {x:1, y:1}, then
 // !time2.set {y:2}, results in {x:1, y:2}.
-function Model (id_or_value, owner) {
-    var id = null;
-    if (id_or_value && id_or_value.constructor===String) {
-        if (!Spec.reTok.test(id_or_value)) {
-            throw new Error("invalid id");
+function Model (values, owner) {
+    var init_op = null;
+    if (values) {
+        var bad_keys = Object.keys(values).some(function(key){
+            return !Syncable.reFieldName.test(key);
+        });
+        if (bad_keys) {
+            throw new Error('invalid keys');
         }
-        id = id_or_value;
-    } else {
-        var values = id_or_value;
-        for(var key in values) {
-            if (Syncable.reFieldName.test(key)) {
-                this[key] = values[key]; // TODO flatten
-            }
-        }
+        init_op = new Op('.set', JSON.stringify(values)); // TODO 1.0 refs
     }
     // _owner _id _events
-    Syncable.call(this, id, owner);
+    Syncable.call(this, init_op, owner);
 }
 Model.prototype = Object.create( Syncable.prototype );
 Model.prototype.constructor = Model;
@@ -34,30 +31,15 @@ Model.prototype.constructor = Model;
 // The API method for the .set op has the same name as the op, which is
 // not always the case. It composes the op and submits it for execution.
 Model.prototype.set = function (keys_values) {
-    var pojo_kv = Syncable.toPojo(keys_values);
-    for (var key in pojo_kv) {
-        if (!Syncable.reFieldName.test(key)) {
-            throw new Error("malformed field name: "+key);
-        }
+    var bad = Object.keys(keys_values).some(function(key){
+        return !Syncable.reFieldName.test(key);
+    });
+    if (bad) {
+        throw new Error("malformed field name");
     }
-    return this._owner.submit( this, 'set', JSON.stringify(pojo_kv) );
+    return this._owner.submit( this, 'set', JSON.stringify(keys_values) );
 };
 
-// Produces the outer state from the inner state.
-// Must have no side effects, as a pure function, in a sense.
-Model.prototype.rebuild = function (inner) {
-    Syncable.prototype.rebuild.call(this, inner); // _id, _version...
-    if (!inner) { return; }
-    var changes = Model.playOpLog(inner.oplog);
-    for(var k in changes) {
-        this[k] = changes[k]; // TODO partial
-    }
-    for (k in this) {
-        if (Syncable.reFieldName.test(k) && !(k in changes)) {
-            delete this[k];
-        }
-    }
-};
 
 // The API user may directly modify the outer state and invoke save(),
 // which converts de-facto changes into proper ops. ops change the
@@ -104,39 +86,31 @@ Model.prototype.keys = function () {
     });
 };
 
-Model.prototype.toPojo = function () {
-    var keys = this.keys(), pojo = {}, self=this;
-    keys.forEach(function(key){
-        pojo[key]=Syncable.toPojo(self[key]);
-    });
-    return pojo;
-};
 
 
 // The API exposes the outer state of a syncable. But, its
 // inner state is its "true" state that also includes all
 // the (CRDT) metadata. The outer state can always be generated
 // from the inner state (see Syncable.rebuild()).
-// Inner state travels on the wire, gets saved into the DB, etc.
 // This method is a constructor for the inner state.
 // It either creates the default state or deserializes a .state
 // op value.
-function InnerModel (op, owner) {
-    Syncable.Inner.call(this, op, owner);
+function LWWObject (string, owner) {
     // { stamp: {key:value} }
-    var parsed = op.value ? JSON.parse(op.value) : {};
+    var parsed = string ? JSON.parse(string) : {};
     // some paranoid checks are very much relevant here
     var stamps = Object.keys(parsed);
     var correct = stamps.every(function(stamp){
         return Spec.reTokExt.test(stamp);
     });
     if (!correct) {
-        throw new Error('invalid state');
+        throw new Error('invalid state'); // FIXME 1.0 never throw
     }
     this.oplog = parsed;
+    Syncable.Inner.call(this, null, owner);
 }
-InnerModel.prototype = Object.create( Syncable.Inner.prototype );
-InnerModel.prototype.constructor = InnerModel;
+LWWObject.prototype = Object.create( Syncable.Inner.prototype );
+LWWObject.prototype.constructor = LWWObject;
 
 // This class implements just one kind of an op: set({key:value}).
 // To implement your own ops you need to understand
@@ -145,37 +119,52 @@ InnerModel.prototype.constructor = InnerModel;
 // converge. (see Model.playOpLog())
 // An op is a method for an inner state object that consumes an
 // op, changes inner state, no side effects allowed.
-InnerModel.prototype.set = function (op) {
+LWWObject.prototype.set = function (op) {
     var stamp = op.stamp();
     var values = JSON.parse(op.value);
 
     this.oplog[stamp] = values;
     //var new_vals = Model.playOpLog (this.oplog, stamp);
 
-    return {
+    /*return {
         name: "set",
         value: values, //new_vals,
         spec: op.spec,
         target: null,
         old_version: this._version
-    };
+    };*/
 };
 
-InnerModel.prototype.dispatch = function (op) {
+LWWObject.prototype.write = function (op) {
     switch (op.op()) {
     case 'set': return this.set(op);
-    default:    throw new Error('operation unknown');
+    default:    throw new Error('operation unknown'); // FIXME
     }
+};
+
+// Produces the outer state from the inner state.
+LWWObject.prototype.updateSyncable = function (obj) {
+    var syncable = obj || this._syncable;
+    var changes = LWWObject.playOpLog(this.oplog);
+    Object.keys(changes).forEach(function(k){
+        syncable[k] = changes[k];
+    });
+    var missing_keys = Object.keys(syncable).filter(function(key){
+        return key.charAt(0)!=='_' && !changes.hasOwnProperty(key);
+    });
+    missing_keys.length && missing_keys.forEach(function(key){
+        delete syncable[key];
+    });
 };
 
 // Serializes the inner state to a string. The constructor must
 // be able to parse this later.
-InnerModel.prototype.toString = function () {
+LWWObject.prototype.toString = function () {
     return JSON.stringify(this.oplog);
 };
 
 
-Model.Inner = InnerModel;
+Model.Inner = LWWObject;
 Syncable.registerType('Model', Model);
 module.exports = Model;
 
@@ -187,7 +176,7 @@ module.exports = Model;
 // outer state (returned) from the inner state (supplied as a parameter).
 // As an optional twist, this implementation may return changes
 // incurred by a single op.
-Model.playOpLog = function (oplog, break_at) {
+LWWObject.playOpLog = function (oplog, break_at) {
     var stamps = Object.keys(oplog);
     stamps.sort();
     var changes = {};

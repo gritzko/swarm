@@ -20,12 +20,14 @@ function Host (options) {
     this.clock = null;
     this.upstream = null;
     this.syncables = {};
-    this.inner_states = {};
+    this.crdts = {};
     if (options.ssn_id) {
         this.ssn_id = options.ssn_id;
-        this.clock = new lamp64.LamportClock(this.ssn_id, {
-            prefix: 'o', length:1
-        });
+    }
+    if (options.clock) {
+        this.clock = options.clock;
+    } else if (this.ssn_id) {
+        this.clock = new lamp64.LamportClock(this.ssn_id);
     }
     if (options.db_id) {
         this.db_id = options.db_id;
@@ -43,8 +45,7 @@ function Host (options) {
 util.inherits(Host, EventEmitter);
 module.exports = Host;
 Host.debug = false;
-Host.multihost = false;
-Host.localhost = null;
+
 
 Host.prototype.close = function () {
     if (Host.localhost===this) {
@@ -56,6 +57,10 @@ Host.prototype.setUpstream = function (stream) {
     this.upstream = new OpStream(stream, {
         peer_stamp: 'upstream'
     });
+    var hs = this.handshake();
+    this.upstream.sendHandshake(hs);
+    this.upstream.setContext( new Spec.Parsed( '/Model!'+
+        hs.stamp() + '.on' ));
 };
 
 
@@ -79,28 +84,38 @@ Host.prototype.time = function () {
 };
 
 // An innner state getter; needs /type#id spec for the object.
-Host.prototype.getInnerState = function (obj) {
+Host.prototype.getCRDT = function (obj) {
     if (obj._owner!==this) {
         throw new Error('an alien object');
     }
-    return this.inner_states[obj.spec().toString()];
+    return this.crdts[obj.spec().toString()];
 };
 
 // Applies a serialized operation (or a batch thereof) to this replica
-Host.prototype.deliver = function (op) {
+Host.prototype.write = function (op) {
 
-    var spec = op.spec.typeid();
-    var syncable = this.syncables[spec];
+    var typeid = op.spec.typeid(), self=this;
+    var syncable = this.syncables[typeid];
     if (!syncable) {
-        console.warn('syncable not open', ''+spec, ''+op);
-        return;
+        throw new Error('syncable not open');
     }
-    var events = [], self = this;
 
     switch (op.op()) {
     // handshake cycle pseudo ops
-    case 'on':    break;
-    case 'off':   break;
+    case 'on':
+        op.patch && op.patch.forEach(function(op){
+            self.write(op);
+        });
+        break;
+    case 'off':
+        break;
+    case 'state':
+        var type_fn = Syncable.types(op.type());
+        if (!type_fn) {
+            throw new Error('type unknown');
+        }
+        this.crdts[typeid] = new type_fn.Inner(op.value, syncable);
+        break;
     case 'error':
         // As all the event/operation processing is asynchronous, we
         // cannot simply throw/catch exceptions over the network.
@@ -108,76 +123,20 @@ Host.prototype.deliver = function (op) {
         // Sort of an asynchronous complaint mailbox :)
         console.error('something failed:', ''+op.spec, op.value);
     break;
-    case 'diff':
-        // Note that events are emitted *after* the complete diff is processed.
-        var ops = op.unbundle();  // <<<<< FIXME state
-        ops.forEach(function(op) {
-            events.push (self.deliverOp(op));
-        });
-    break;
     default: // actual ops
-        var e = this.deliverOp(op);
-        e && events.push(e);
+        var crdt = this.crdts[typeid];
+        if (!crdt) {
+            throw new Error('CRDT object was not initialized');
+        }
+        crdt.write(op);
     }
 
-    var inner = this.inner_states[op.spec.typeid()];
-    inner && syncable.rebuild(inner);
+    crdt.updateSyncable();
 
-    syncable.emit(events);
-
-    // TODO merged ops, like
+    // NOTE: merged ops, like
     //      !time+src.in text
     // should have their *last* stamp in the spec
     // TODO reactions (Syncable? Inner? here?)
-
-    return op.spec;
-};
-
-//
-Host.prototype.deliverOp = function (op) {
-
-    //Host.debug && console.log('#'+op.id()+
-    //    (Host.multihost?'@'+this.id:''),
-    //    op.spec.toString(), op.value);
-
-    // sanity checks
-    if (op.spec.pattern() !== '/#!.') {
-        throw new Error('malformed spec: '+op.spec);
-    }
-
-    var events = [];
-    var inner = this.inner_states[op.spec.typeid()];
-    if (!inner) { // our syncable is stateless at the moment
-        if (op.op()!=='state') {
-            throw new Error('no state received yet; can not apply ops');
-        }
-        var fn = Syncable.types[op.spec.type()];
-        if (!fn) {
-            throw new Error('type unknown');
-        }
-        inner = new fn.Inner(op);
-        this.inner_states[op.spec.filter('/#')] = inner;
-        events.push({
-            name: "init",
-            value: op.value,
-            target: null,
-            old_version: '',
-            spec: op.spec
-        });
-    }
-    if (!this.acl(op)) {
-        throw new Error('access violation: '+op.spec);
-    }
-
-    try {
-        var e = inner.deliver(op);
-        e && events.push(e);
-    } catch (ex) {
-        // TODO send back an .error
-        return undefined;
-    }
-
-    return events;
 };
 
 // The method must decide whether the source of the operation has
@@ -191,7 +150,7 @@ Host.prototype.acl = function (op) {
 
 // Inner state lifecycle:
 // * unknown (outer: default, '')
-// * created fresh: construcor, sent
+// * created fresh: constructor, sent
 // * arrived : parse, create, rebuild()
 // SCHEME
 /**
@@ -203,84 +162,103 @@ Host.prototype.acl = function (op) {
 // assigns an id and saves it. For a known-id objects
 // (like `new Model('2THjz01+gritzko~cA4')`) the state is queried
 // from the storage/uplink. Till the state is received, the object
-// is stateless (`obj.version()===undefined && !obj.hasState()`)
-Host.prototype.linkSyncable = function (obj) {
-    var id = obj._id;
-    if (!id) { // it is a new object; let's add it to the system
-        var new_id = this.time();
-        obj._id = id = new_id;
-        // the default (zero) state is the same for all objects of the type
-        // so the version id is the same too: !0
-        var ev_spec = obj.spec().add('!0').add('.state');
-        // for newly created objects, the 0 state is pushed ahead of the
-        // handshake as the uplink certainly has nothing
-        var state_op = new Op(ev_spec, '', this.id);
-        if (this.upstream) {
-            this.upstream.write(state_op);
-        }
-        // TODO state push @router
-        this.inner_states[obj.spec()] = new obj.constructor.Inner(state_op, this);
+// is stateless (`syncable.version()===undefined && !syncable.hasState()`)
+Host.prototype.adoptSyncable = function (syncable, init_op) {
+    var type = syncable._type, on_op;
+    var type_fn = Syncable.types[type];
+    if (!type_fn || type_fn!==syncable.constructor) {
+        throw new Error('not a registered syncable type');
     }
-    var spec = obj.spec().toString();
-    if (spec in this.syncables) {
-        return this.syncables[spec]; // there is such an object already
-    }
-    this.syncables[spec] = obj;  // OK, remember it
-    obj._owner = this;
-    if (new_id) {
-        // if the user has supplied any initialization values, those must
-        // be applied in the constructors; so it's the time to save it
-        obj.save();
-    } else {
-        // simply init all the fields to defaults
-        // inner state is certainly not available at this point
-        obj.rebuild(null);
-        // we'll repeat rebuild() on state arrival
+    if (syncable._owner) {
+        throw new Error('the syncable belongs to some host already');
     }
 
+    if (!syncable._id) { // it is a new object; let's add it to the system
+
+        var stamp = this.time();
+        syncable._id = stamp;
+        var typeid = syncable.spec();
+        var crdt = new syncable.constructor.Inner(null, syncable); // 0 state
+        if (init_op) {
+            var stamped_spec = typeid.add(stamp,'!').add(init_op.op(),'.');
+            var stamped_op = new Op(stamped_spec, init_op.value);
+            crdt.write(stamped_op);
+        }
+        this.crdts[typeid] = crdt;
+        crdt._version = stamp;
+        crdt.updateSyncable();
+
+        // the state is sent up in the handshake as the uplink has nothing
+        var state_op = new Op('!'+stamp+'.~state', crdt.toString());
+        var on_spec = syncable.spec().add('.on');
+        on_op = new Op(on_spec, '0', null, [state_op]);
+
+    } else {
+        var spec = syncable.spec().toString();
+        if (spec in this.syncables) {
+            return this.syncables[spec]; // there is such an object already
+        }
+        // !0 up
+        on_op = new Op(syncable.spec().add('.on'), '');
+    }
+
+    this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
+    syncable._owner = this;
     if (this.upstream) {
-        var on_spec = obj.spec().add(this.upstream.stamp, '!').add('.on');
-        var on_op = new Op (on_spec, obj._version);
         this.upstream.write(on_op);
     }
-    return obj;
+
+    return syncable;
 };
 
-Host.prototype.unlinkSyncable = function (obj) {
-    var id = obj._id;
-    if (id in this.syncables) {
-        if (this.syncables[id]!==obj) {
+
+Host.prototype.abandonSyncable = function (obj) {
+    var typeid = obj.spec().typeid();
+    if (typeid in this.syncables) {
+        if (this.syncables[typeid]!==obj) {
             throw new Error('the registered object is different');
         }
-        delete this.syncables[id];
+        delete this.syncables[typeid];
         if (this.upstream) {
-            var off_spec = obj.spec().add(this.upstream.stamp, '!').add('.off');
+            var off_spec = obj.spec().add('.off');
             var off_op = new Op (off_spec, '');
             this.upstream.write(off_op);
         }
     }
 };
 
-/** new Type()  in multirouter env it may be safer to use router.get() or,
-  * at least, new Type(id, router) / new Type(somevalue, router) */
+// Retrieve an object by its spec (type and id).
+// Optionally, invoke a callback once the state is actually available.
 Host.prototype.get = function (spec, callback) {
-    if (spec && spec.constructor === Function && spec.prototype._type) {
-        spec = '/' + spec.prototype._type;
+    if (spec.constructor===Function) {
+        spec = new Spec.Parsed('/'+spec._type);
     }
-    spec = new Spec(spec);
-    var typeid = spec.filter('/#');
-    if (!typeid.has('/')) {
-        throw new Error('typeless spec');
+    if (spec.constructor!==Spec.Parsed) {
+        spec = new Spec.Parsed(spec.toString());
     }
-    var o = typeid.has('#') && this.syncables[typeid];
-    if (!o) {
-        var t = Syncable.types[spec.type()];
-        if (!t) {
-            throw new Error('type unknown: ' + spec);
+    if (!spec.type()) {
+        throw new Error('type not specified');
+    }
+    var type_fn = Syncable.types[spec.type()];
+    if (!type_fn) {
+        throw new Error('type unknown: ' + spec.type());
+    }
+    var object;
+    if (spec.id()) {
+        var typeid = spec.typeid();
+        object = this.syncables[typeid];
+        if (!object) {
+            object = new type_fn(null, null);
+            object._id = spec.id();
+            this.adoptSyncable(object);
         }
-        return new t(spec.id(), this);
+    } else {
+        object = new type_fn(null, this);
     }
-    return o;
+    if (callback) {
+        object.onInit(callback);
+    }
+    return object;
 };
 
 // author a new operation
@@ -290,7 +268,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     }
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
     var op = new Op(spec, value, this.id);
-    this.deliver(op);
+    this.write(op);
     if (this.upstream) {
         this.upstream.write(op);
     }
@@ -298,6 +276,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
 
 
 // FIXME  UNIFY CREATION !!!!
+//   new -> link -> ...
 Host.prototype.create = function (spec) {
     var type = new Spec(spec, '/').type();
     var type_constructor = Syncable.types[type];
@@ -308,7 +287,7 @@ Host.prototype.create = function (spec) {
     var state = new Spec(type, '/').add(stamp, '#').add('!0.state');
     var op = new Op(state, '', this.id);
     var inner = new type_constructor.Inner(op);
-    this.inner_states[op.spec.filter('/#')] = inner;
+    this.crdts[op.spec.filter('/#')] = inner;
     this.upstream.write(op, this);
     return new type_constructor(stamp, this);
 };

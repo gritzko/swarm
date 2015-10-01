@@ -300,6 +300,7 @@ Spec.Map.prototype.toString = function (trim) {
 var stamp = require('swarm-stamp');
 
 //
+//
 function ParsedSpec (spec, scope, defaults) {
     if (defaults) {
         if (defaults.constructor!==ParsedSpec) {
@@ -366,16 +367,16 @@ ParsedSpec.prototype.toString = function (defaults) {
 
 ParsedSpec.prototype.toAbbrevString = function (defaults) {
     var ret = '';
-    if (this._type!==defaults._type) {
+    if (this._type && this._type!==defaults._type) {
         ret+='/'+this._type;
     }
-    if (this._id!==defaults._id) {
+    if (this._id && this._id!==defaults._id) {
         ret+='#'+this._id;
     }
-    if (this._stamp!==defaults._stamp) {
+    if (this._stamp && this._stamp!==defaults._stamp) {
         ret+='!'+this._stamp;
     }
-    if (this._op!==defaults._op) {
+    if (this._op && this._op!==defaults._op) {
         ret+='.'+this._op;
     }
     return ret;
@@ -426,6 +427,7 @@ ParsedSpec.prototype.set = function (tok, quant) {
     }
     return clone;
 };
+ParsedSpec.prototype.set = ParsedSpec.prototype.add;
 ParsedSpec.prototype.setStamp = function (stamp) {
     var clone = this.clone();
     clone._stamp = stamp;
