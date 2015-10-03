@@ -2,7 +2,7 @@
 
 var Spec = require('./Spec');
 var Op = require('./Op');
-var EventEmitter = require('events').EventEmitter;
+var EventEmitter = require('eventemitter3');
 var util = require('util');
 
 /** Syncable CmRDT objects use state machine replication. The only
@@ -57,16 +57,16 @@ function Syncable(init_op, host) {
     this._version = null;
     this._owner = null;
 
-    if (!host) {
+    if (host===undefined) {
         if (!Syncable.localhost) {
-            throw new Error('no host specified in multihost mode');
+            throw new Error('no host specified');
         } else {
             Syncable.multihost && console.warn('implicit host in mutihost mode');
             host = Syncable.localhost;
         }
     }
 
-    var copy = host.adoptSyncable(this, init_op);
+    var copy = host && host.adoptSyncable(this, init_op);
     return copy; // JavaScript-specific trick: prevent object copies
 }
 Syncable.multihost = false;

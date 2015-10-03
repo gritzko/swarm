@@ -98,19 +98,26 @@ Model.prototype.keys = function () {
 function LWWObject (string, owner) {
     // { stamp: {key:value} }
     var parsed = string ? JSON.parse(string) : {};
+    var values = this.values = {};
     // some paranoid checks are very much relevant here
-    var stamps = Object.keys(parsed);
-    var correct = stamps.every(function(stamp){
-        return Spec.reTokExt.test(stamp);
+    var keys = Object.keys(parsed).filter(LWWObject.is_field_name);
+    keys.forEach(function (key){
+        var p = parsed[key];
+        values[key] = new StampedValue(p.value, p.stamp);
     });
-    if (!correct) {
-        throw new Error('invalid state'); // FIXME 1.0 never throw
-    }
-    this.oplog = parsed;
     Syncable.Inner.call(this, null, owner);
 }
 LWWObject.prototype = Object.create( Syncable.Inner.prototype );
 LWWObject.prototype.constructor = LWWObject;
+LWWObject.reFieldName = /^[a-z]\w*$/;
+LWWObject.is_field_name = function (name) {
+    return LWWObject.reFieldName.test(name);
+};
+
+function StampedValue (value, stamp) {
+    this.value = value;
+    this.stamp = stamp;
+}
 
 // This class implements just one kind of an op: set({key:value}).
 // To implement your own ops you need to understand
@@ -119,25 +126,20 @@ LWWObject.prototype.constructor = LWWObject;
 // converge. (see Model.playOpLog())
 // An op is a method for an inner state object that consumes an
 // op, changes inner state, no side effects allowed.
-LWWObject.prototype.set = function (op) {
-    var stamp = op.stamp();
-    var values = JSON.parse(op.value);
-
-    this.oplog[stamp] = values;
-    //var new_vals = Model.playOpLog (this.oplog, stamp);
-
-    /*return {
-        name: "set",
-        value: values, //new_vals,
-        spec: op.spec,
-        target: null,
-        old_version: this._version
-    };*/
+LWWObject.prototype.set = function (values, stamp) {
+    var keys = Object.keys(values), self=this;
+    keys = keys.filter(LWWObject.is_field_name);
+    keys.forEach(function(key){
+        var entry = self.values[key];
+        if (entry===undefined || entry.stamp<stamp) {
+            self.values[key] = new StampedValue(values[key], stamp);
+        }
+    });
 };
 
 LWWObject.prototype.write = function (op) {
     switch (op.op()) {
-    case 'set': return this.set(op);
+    case 'set': return this.set(JSON.parse(op.value), op.stamp());
     default:    throw new Error('operation unknown'); // FIXME
     }
 };
@@ -145,14 +147,14 @@ LWWObject.prototype.write = function (op) {
 // Produces the outer state from the inner state.
 LWWObject.prototype.updateSyncable = function (obj) {
     var syncable = obj || this._syncable;
-    var changes = LWWObject.playOpLog(this.oplog);
-    Object.keys(changes).forEach(function(k){
-        syncable[k] = changes[k];
+    var values = this.values;
+    Object.keys(values).forEach(function(k){
+        syncable[k] = values[k].value;
     });
-    var missing_keys = Object.keys(syncable).filter(function(key){
-        return key.charAt(0)!=='_' && !changes.hasOwnProperty(key);
-    });
-    missing_keys.length && missing_keys.forEach(function(key){
+    var missing_keys = Object.keys(syncable).
+        filter(LWWObject.is_field_name).
+        filter(function(key) { !values.hasOwnProperty(key); });
+    missing_keys.forEach(function(key){
         delete syncable[key];
     });
 };
@@ -160,46 +162,10 @@ LWWObject.prototype.updateSyncable = function (obj) {
 // Serializes the inner state to a string. The constructor must
 // be able to parse this later.
 LWWObject.prototype.toString = function () {
-    return JSON.stringify(this.oplog);
+    return JSON.stringify(this.values);
 };
 
 
 Model.Inner = LWWObject;
 Syncable.registerType('Model', Model);
 module.exports = Model;
-
-
-// Model's inner state is a compact form of its op log. Any overwritten
-// ops are removed, so the number of records can not exceed the number
-// of fields.
-// This method replays the oplog, compacts it as it goes and produces the
-// outer state (returned) from the inner state (supplied as a parameter).
-// As an optional twist, this implementation may return changes
-// incurred by a single op.
-LWWObject.playOpLog = function (oplog, break_at) {
-    var stamps = Object.keys(oplog);
-    stamps.sort();
-    var changes = {};
-    for(var i=stamps.length-1; i>=0; i--) {
-        var stamp = stamps[i], values = oplog[stamp], empty = true;
-        for (var key in values) {
-            if (key in changes) { // this key was overwritten
-                delete values[key];
-            } else {
-                empty = false;
-                changes[key] = values[key];
-            }
-        }
-        if (empty) { // log compaction; no need to keep that anymore
-            delete oplog[stamp];
-        }
-        if (break_at) {
-            if (break_at===stamp) {
-                break;
-            } else {
-                for(var k in changes) {changes[k]=undefined;}
-            }
-        }
-    }
-    return changes;
-};
