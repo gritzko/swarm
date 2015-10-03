@@ -4,5 +4,6 @@ module.exports = {
     Syncable: require('./src/Syncable'),
     Host: require('./src/Host'),
     OpStream: require('./src/OpStream'),
-    Model: require('./src/Model')
+    Model: require('./src/Model'),
+    Set: require('./src/Set')
 };

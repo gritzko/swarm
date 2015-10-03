@@ -1,5 +1,6 @@
 "use strict";
 var sync = require('..');
+var Spec = sync.Spec;
 var Op = sync.Op;
 var Model = sync.Model;
 var Set = sync.Set;
@@ -57,19 +58,20 @@ tape('4.A Model CRDT / Syncable', function (t) {
 });
 
 
-tape.skip('4.B Set CRDT / Syncable', function (t) {
+tape('4.B Set CRDT / Syncable', function (t) {
 
     // CRDT
     var a = new Set.Inner();
     a.write(new Op('!stamp0+src1.add', '#some+id'));
-    t.equals(a['/Model#some+id'], 'stamp0+src1');
+    t.equals(a.added['stamp0+src1'], '/Model#some+id', 'added');
     var b1 = new Set.Inner(a.toString());
-    t.equals(b1['/Model#some+id'], 'stamp0+src1');
+    t.equals(b1.added['stamp0+src1'], '/Model#some+id', 'cloned');
 
-    a.write(new Op('!stamp1+src2.rm', 'stamp0+src'));
-    t.equals(a['/Model#some+id'], undefined);
+    a.write(new Op('!stamp1+src2.rm', 'stamp0+src1'));
+    t.equals(a.added['stamp0+src1'], undefined, 'erased');
+    t.equals(a.added['stamp1+src2'], undefined);
     var b2 = new Set.Inner(a.toString());
-    t.equals(b2['/Model#some+id'], 'stamp0+src2');
+    t.equals(b2.added['stamp0+src1'], undefined, 'clone - erased');
 
     a.write(new Op('!stamp2+src3.add', '#some+id'));
 
@@ -80,17 +82,28 @@ tape.skip('4.B Set CRDT / Syncable', function (t) {
             submit = {name: name, value: value};
         },
         get: function (spec) {
-            return {spec:spec};
+            return {
+                spec: new Spec.Parsed(spec),
+                on:function(ev, sub){
+                    t.equal(ev, 'change', 'event name');
+                    t.equal(sub, s.onObjectChange, 'subscriber');
+                }
+            };
         }
     };
     var s = new Set(null, null);
     s._owner = owner;
     a.updateSyncable(s);
-    t.ok(s.has('#some+id'));
+    t.ok(s.contains('/Model#some+id'), 'contains'); // TODO abbrev
     s.forEach(function (obj, spec){
         t.equal(obj.spec.id(), 'some+id', 'forEach object iteration');
     });
 
     t.end();
 
+});
+
+
+tape.skip('4.C Concurrency in Set', function (t) {
+    // TODO
 });

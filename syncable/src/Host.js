@@ -53,6 +53,11 @@ Host.prototype.close = function () {
     }
 };
 
+// mark-and-sweep kind-of distributed garbage collection
+Host.prototype.gc = function (criteria) {
+};
+
+
 Host.prototype.setUpstream = function (stream) {
     this.upstream = new OpStream(stream, {
         peer_stamp: 'upstream'
@@ -114,7 +119,7 @@ Host.prototype.write = function (op) {
         if (!type_fn) {
             throw new Error('type unknown');
         }
-        this.crdts[typeid] = new type_fn.Inner(op.value, syncable);
+        this.crdts[typeid] = new type_fn.Inner(op.value);
         break;
     case 'error':
         // As all the event/operation processing is asynchronous, we
@@ -131,7 +136,7 @@ Host.prototype.write = function (op) {
         crdt.write(op);
     }
 
-    crdt.updateSyncable();
+    crdt.updateSyncable(syncable);
 
     // NOTE: merged ops, like
     //      !time+src.in text

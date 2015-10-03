@@ -2,7 +2,7 @@
 
 var Spec = require('./Spec');
 var Op = require('./Op');
-var EventEmitter = require('eventemitter3');
+var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
 var util = require('util');
 
 /** Syncable CmRDT objects use state machine replication. The only
@@ -95,8 +95,13 @@ Syncable.prototype.diff = function (base_state) {
 };
 
 
+Syncable.submit = function (op_name, op_value) {
+    this._owner.submit(op_name, op_value);
+};
+
+
 Syncable.prototype.host = function () {
-    return Host.multihost ? this._host : Host.localhost;
+    return Syncable.multihost ? this._owner : Syncable.localhost;
 };
 
 //
@@ -154,6 +159,11 @@ Syncable.removeReaction = function (handle) {
 
 Syncable.prototype.spec = function () {
     return new Spec('/' + this._type + '#' + this._id);
+};
+
+
+Syncable.prototype.typeid = function () {
+    return '/' + this._type + '#' + this._id;
 };
 
 

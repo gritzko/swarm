@@ -1,5 +1,4 @@
 "use strict";
-var Spec = require('./Spec');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
 
@@ -95,7 +94,7 @@ Model.prototype.keys = function () {
 // This method is a constructor for the inner state.
 // It either creates the default state or deserializes a .state
 // op value.
-function LWWObject (string, owner) {
+function LWWObject (string) {
     // { stamp: {key:value} }
     var parsed = string ? JSON.parse(string) : {};
     var values = this.values = {};
@@ -105,7 +104,6 @@ function LWWObject (string, owner) {
         var p = parsed[key];
         values[key] = new StampedValue(p.value, p.stamp);
     });
-    Syncable.Inner.call(this, null, owner);
 }
 LWWObject.prototype = Object.create( Syncable.Inner.prototype );
 LWWObject.prototype.constructor = LWWObject;
@@ -139,14 +137,13 @@ LWWObject.prototype.set = function (values, stamp) {
 
 LWWObject.prototype.write = function (op) {
     switch (op.op()) {
-    case 'set': return this.set(JSON.parse(op.value), op.stamp());
+    case 'set': this.set(JSON.parse(op.value), op.stamp()); break;
     default:    throw new Error('operation unknown'); // FIXME
     }
 };
 
 // Produces the outer state from the inner state.
-LWWObject.prototype.updateSyncable = function (obj) {
-    var syncable = obj || this._syncable;
+LWWObject.prototype.updateSyncable = function (syncable) {
     var values = this.values;
     Object.keys(values).forEach(function(k){
         syncable[k] = values[k].value;
