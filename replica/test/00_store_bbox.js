@@ -143,9 +143,7 @@ tape ('1.A basic cases', function(t){
 
         var bt = new bat.StreamTest(mux.trunk, BASIC, t.equal.bind(t));
 
-        bt.runScenario( function () {
-            t.end();
-        } );
+        bt.runScenario( t.end.bind(t) );
     }
 
 });
@@ -285,12 +283,10 @@ tape('1.B reorders', function(t){
 
         var bt = new bat.StreamTest(mux.trunk, REORDERS, compare);
 
-        bt.runScenario( function () {
-            t.end();
-        } );
+        bt.runScenario( t.end.bind(t) );
     }
 
-        // FIXME close/open db!!!
+        // FIXME close/reopen db!!!
 
 });
 

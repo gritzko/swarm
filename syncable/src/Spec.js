@@ -427,7 +427,7 @@ ParsedSpec.prototype.set = function (tok, quant) {
     }
     return clone;
 };
-ParsedSpec.prototype.set = ParsedSpec.prototype.add;
+ParsedSpec.prototype.add = ParsedSpec.prototype.set;
 ParsedSpec.prototype.setStamp = function (stamp) {
     var clone = this.clone();
     clone._stamp = stamp;
