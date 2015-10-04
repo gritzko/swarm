@@ -27,7 +27,7 @@ function Host (options) {
     if (options.clock) {
         this.clock = options.clock;
     } else if (this.ssn_id) {
-        this.clock = new lamp64.LamportClock(this.ssn_id);
+        this.clock = new lamp64.Clock(this.ssn_id);
     }
     if (options.db_id) {
         this.db_id = options.db_id;
@@ -90,10 +90,14 @@ Host.prototype.time = function () {
 
 // An innner state getter; needs /type#id spec for the object.
 Host.prototype.getCRDT = function (obj) {
-    if (obj._owner!==this) {
-        throw new Error('an alien object');
+    if (obj._type) {
+        if (obj._owner!==this) {
+            throw new Error('an alien object');
+        }
+        return this.crdts[obj.typeid()];
+    } else {
+        return this.crdts[new Spec.Parsed(obj).typeid()];
     }
-    return this.crdts[obj.spec().toString()];
 };
 
 // Applies a serialized operation (or a batch thereof) to this replica
@@ -137,6 +141,7 @@ Host.prototype.write = function (op) {
     }
 
     crdt.updateSyncable(syncable);
+    syncable._version = crdt._version = op.stamp();
 
     // NOTE: merged ops, like
     //      !time+src.in text
@@ -192,6 +197,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         this.crdts[typeid] = crdt;
         crdt._version = stamp;
         crdt.updateSyncable();
+        syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
         var state_op = new Op('!'+stamp+'.~state', crdt.toString());
