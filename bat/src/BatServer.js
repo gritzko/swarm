@@ -2,6 +2,7 @@
 var url_pkg = require('url');
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
+var url = require('url');
 
 /** A server TestStreams can connect to.
     test_stream.connect('test:server1') leads to BatServer "server1"
@@ -24,6 +25,15 @@ BatServer.prototype._bat_connect = function (uri, bat_stream) {
 
 BatServer.prototype.listen = function (id, nothing, callback){
     var error = null, self=this;
+    if (!id) { throw new Error('no id specified'); }
+    if (id.constructor===String && id.indexOf(':')!==-1) {
+        id = url.parse(id).hostname;
+    } else if (id.hostname) { 
+        id = id.hostname; 
+    } else {
+        id = id.toString();
+    }
+    id = id.toLowerCase();
     if (this.id) {
         error = 'can listen one id only';
     } else if (this.id in BatServer.servers) {

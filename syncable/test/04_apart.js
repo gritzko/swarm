@@ -113,10 +113,12 @@ tape('4.D Model CRDT serialization', function (t) {
     var crdt = new Model.Inner();
     crdt.set({a:1, b:2}, 'stamp1+source');
     crdt.set({c:{d:4}}, 'stamp2+source');
+    crdt.set({wrong:true}, 'неправильно');
     var copy = new Model.Inner(crdt.toString());
     t.equals(copy.values.a.value, 1);
     t.equals(copy.values.b.value, 2);
     t.equals(copy.values.c.value.d, 4);
+    t.equals(copy.values.wrong, undefined, 'malformed record was ignored');
     t.equals(copy.values.a.stamp, 'stamp1+source');
     t.equals(copy.values.b.stamp, 'stamp1+source');
     t.equals(copy.values.c.stamp, 'stamp2+source');

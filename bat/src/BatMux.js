@@ -36,6 +36,10 @@ util.inherits(BatMux, EventEmitter);
 module.exports = BatMux;
 BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
 
+BatMux.prototype.clearTag = function () {
+    this.active_tag_w = '';
+};
+
 BatMux.prototype.onBranchDataIn = function (tag, data) {
     if (this.active_tag_w!==tag) {
         this.active_tag_w = tag;

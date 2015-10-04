@@ -19,8 +19,12 @@ function Host (options) {
     this.db_id = null;
     this.clock = null;
     this.upstream = null;
-    this.syncables = {};
-    this.crdts = {};
+    // syncables, API objects, outer state
+    this.syncables = Object.create(null);
+    // CRDTs, inner state
+    this.crdts = Object.create(null);
+    // pending writes to handle on replica reconnection
+    this.pendings = Object.create(null);
     if (options.ssn_id) {
         this.ssn_id = options.ssn_id;
     }
@@ -33,7 +37,18 @@ function Host (options) {
         this.db_id = options.db_id;
     }
     if (options.upstream) {
-        this.setUpstream(options.upstream);
+        if (typeof options.upstream.write!=='function') {
+            var self = this;
+            stream_url.connect(options.upstream, function(err, stream) {
+                if (err) {
+                    console.error('connection failed', err); // FIXME reconnect
+                } else {
+                    self.setUpstream(stream);
+                }
+            });
+        } else {
+            this.setUpstream(options.upstream);
+        }
     }
     if (!Host.multihost) {
         if (Host.localhost) {
@@ -55,17 +70,39 @@ Host.prototype.close = function () {
 
 // mark-and-sweep kind-of distributed garbage collection
 Host.prototype.gc = function (criteria) {
+    // NOTE objects in this.pending can NOT be gc'd
 };
 
 
 Host.prototype.setUpstream = function (stream) {
-    this.upstream = new OpStream(stream, {
+    var upstream = this.upstream = new OpStream(stream, {
         peer_stamp: 'upstream'
     });
     var hs = this.handshake();
-    this.upstream.sendHandshake(hs);
-    this.upstream.setContext( new Spec.Parsed( '/Model!'+
-        hs.stamp() + '.on' ));
+    upstream.sendHandshake(hs);
+    upstream.setContext( new Spec.Parsed( '/Model!'+ hs.stamp() + '.on' ));
+    upstream.on('data', this.write.bind(this));
+
+    // FIXME ugly
+    var typeids = Object.keys(this.syncables), crdts = this.crdts;
+    var pendings = this.pendings;
+    var stateless = typeids.filter(function(ti){ return !(ti in crdts); });
+    stateless.forEach(function(typeid){
+        upstream.write(new Op(typeid+'.on', ''));
+    });
+    var changeds = Object.keys(pendings);
+    changeds.forEach(function(typeid){
+        upstream.write(new Op(typeid+'.on', pendings[typeid].last, pendings[typeid].patch));
+    });
+    var statefuls = Object.keys(this.crdts).filter(function(ti){
+        return !(ti in pendings);
+    });
+    statefuls.forEach(function(typeid){
+        upstream.write(new Op(typeid+'.on', crdts[typeid]._version));
+    });
+
+
+    // FIXME resync, buffer local changes
 };
 
 
@@ -105,25 +142,45 @@ Host.prototype.write = function (op) {
 
     var typeid = op.spec.typeid(), self=this;
     var syncable = this.syncables[typeid];
+    var crdt = this.crdts[typeid];
     if (!syncable) {
         throw new Error('syncable not open');
     }
 
     switch (op.op()) {
-    // handshake cycle pseudo ops
     case 'on':
         op.patch && op.patch.forEach(function(op){
             self.write(op);
         });
+
+
+        /*crdt.updateSyncable(syncable);
+        syncable.emit('change', {
+            version: crdt._version,
+            changes: null
+        });*/
+
+
         break;
     case 'off':
         break;
-    case 'state':
-        var type_fn = Syncable.types(op.type());
+    case '~state':
+        var type_fn = Syncable.types[op.spec.type()];
         if (!type_fn) {
             throw new Error('type unknown');
         }
-        this.crdts[typeid] = new type_fn.Inner(op.value);
+        crdt = this.crdts[typeid] = new type_fn.Inner(op.value);
+
+
+        // FIXME pending state!!!
+
+
+        crdt.updateSyncable(syncable);
+        syncable._version = crdt._version = op.stamp();
+        syncable.emit('init', {
+            version: crdt._version,
+            changes: null
+        });
         break;
     case 'error':
         // As all the event/operation processing is asynchronous, we
@@ -133,20 +190,37 @@ Host.prototype.write = function (op) {
         console.error('something failed:', ''+op.spec, op.value);
     break;
     default: // actual ops
-        var crdt = this.crdts[typeid];
+        crdt = this.crdts[typeid];
         if (!crdt) {
             throw new Error('CRDT object was not initialized');
         }
         crdt.write(op);
-    }
 
-    crdt.updateSyncable(syncable);
-    syncable._version = crdt._version = op.stamp();
+
+        var pending = this.pendings[typeid];
+        if (pending) {
+            pending.last = op.stamp();
+            if (pending.patch[0].stamp()===op.stamp()) {
+                pending.patch.shift();
+                if (!pending.patch.length) {
+                    delete this.pendings[typeid];
+                }
+            }
+        }
+
+
+
+        crdt.updateSyncable(syncable);
+        syncable._version = crdt._version = op.stamp();
+        syncable.emit('change', {
+            version: crdt._version,
+            changes: null
+        });
+    }
 
     // NOTE: merged ops, like
     //      !time+src.in text
     // should have their *last* stamp in the spec
-    // TODO reactions (Syncable? Inner? here?)
 };
 
 // The method must decide whether the source of the operation has
@@ -196,7 +270,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         this.crdts[typeid] = crdt;
         crdt._version = stamp;
-        crdt.updateSyncable();
+        crdt.updateSyncable(syncable);
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
@@ -217,6 +291,12 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     syncable._owner = this;
     if (this.upstream) {
         this.upstream.write(on_op);
+    } else if (on_op.patch) {
+
+        this.pendings[typeid] = {
+            last: '0',
+            patch: on_op.patch
+        };
     }
 
     return syncable;
@@ -238,6 +318,8 @@ Host.prototype.abandonSyncable = function (obj) {
     }
 };
 
+var just_model = new Spec.Parsed('/Model'); // FIXME
+
 // Retrieve an object by its spec (type and id).
 // Optionally, invoke a callback once the state is actually available.
 Host.prototype.get = function (spec, callback) {
@@ -245,7 +327,7 @@ Host.prototype.get = function (spec, callback) {
         spec = new Spec.Parsed('/'+spec._type);
     }
     if (spec.constructor!==Spec.Parsed) {
-        spec = new Spec.Parsed(spec.toString());
+        spec = new Spec.Parsed(spec.toString(), null, just_model);
     }
     if (!spec.type()) {
         throw new Error('type not specified');
@@ -277,8 +359,24 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     if (syncable._owner!==this) {
         throw new Error('alien op submission');
     }
+    var typeid = syncable.typeid();
+    var crdt = this.crdts[typeid];
+    if (!crdt) {
+        throw new Error('have no state, can not modify');
+    }
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
     var op = new Op(spec, value, this.id);
+
+    var pending = this.pendings[typeid];
+    if (!pending) {
+        pending = this.pendings[typeid] = {
+            last: crdt._version,
+            patch: [op]
+        };
+    } else {
+        pending.patch.push(op);
+    }
+
     this.write(op);
     if (this.upstream) {
         this.upstream.write(op);
@@ -286,7 +384,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
 };
 
 
-// FIXME  UNIFY CREATION !!!!
+/*
 //   new -> link -> ...
 Host.prototype.create = function (spec) {
     var type = new Spec(spec, '/').type();
@@ -302,3 +400,4 @@ Host.prototype.create = function (spec) {
     this.upstream.write(op, this);
     return new type_constructor(stamp, this);
 };
+*/

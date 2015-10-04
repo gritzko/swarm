@@ -57,7 +57,7 @@ function Syncable(init_op, host) {
     this._version = null;
     this._owner = null;
 
-    if (host===undefined) {
+    if (host===undefined) { // null means "no host"
         if (!Syncable.localhost) {
             throw new Error('no host specified');
         } else {

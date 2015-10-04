@@ -14,11 +14,11 @@ stream_url.register('loopback:', loopback_listen, loopback_connect);
 stream_url.register('lo:', loopback_listen, loopback_connect);
 
 function loopback_listen (stream_url, no_options, callback) {
-    return new bat.BatServer(stream_url.hostname, {}, callback);
+    return new bat.BatServer(stream_url.hostname.toLowerCase(), {}, callback);
 }
 
 function loopback_connect (stream_url, no_options, callback) {
     var stream = new bat.BatStream();
-    stream.connect(stream_url.hostname, {}, callback);
+    stream.connect(stream_url.hostname.toLowerCase(), {}, callback);
     return stream;
 }
