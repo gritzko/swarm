@@ -1,7 +1,6 @@
 "use strict";
+var stamp = require('swarm-stamp');
 var sync = require('..');
-var Spec = sync.Spec;
-var Op = sync.Op;
 var Syncable = sync.Syncable;
 var Host = sync.Host;
 
@@ -14,32 +13,29 @@ if (typeof(window)==='object') {
 
 
 tape('2.A empty cycle', function (t) {
-    var host = new Host('anon', null);
-    var empty = new Syncable('sample', host);
-    t.equal(empty._version, '', 'stateless, version id empty');
-    t.ok(empty._id, 'sample', 'id is valid');
-    var new_syncable_event = new Spec('/Syncable#sample!0.state');
-    var zero = new Syncable.Inner(new Op(new_syncable_event, ''));
-    t.equal(zero._version, '!0', 'default state version !0');
-    empty.rebuild(zero);
-    t.equal(empty._version, '!0', 'syncable rebuilt');
-    t.ok(empty._id, 'sample', 'id is still valid');
+    var host = new Host({
+        ssn_id: 'anon',
+        db_id: 'db',
+        clock: new stamp.LamportClock('anon')
+    });
+    var empty = new Syncable(null, host);
+    t.equal(empty._version, empty._id, 'version id OK');
+    t.ok(empty._id, 'id is assigned');
+    var zero = host.getCRDT(empty);
+    t.equal(zero._version, empty._id, 'default state version !0');
+    t.equal(empty._version, empty._id, 'syncable rebuilt');
     host.close();
     t.end();
 });
 
 tape('2.B listeners', function (t) {
-    t.plan(2);
-    var host = new Host('anon', null);
-    var empty = new Syncable('emitter', host);
-    empty.on(function(ev){
-        t.equals(ev.name, "none");
-        t.equals(ev.target, empty);
-        host.close();
+    var empty = new Syncable(null, null);
+    empty.on('none', function(ev){
+        t.equals(ev.name, "none", 'event is OK');
         t.end();
     });
     var event = {name: "none"};
-    empty.emit(event);
+    empty.emit('none', event);
 });
 
 tape.skip('2.C batch events', function (t) {
