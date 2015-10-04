@@ -107,3 +107,18 @@ tape('4.B Set CRDT / Syncable', function (t) {
 tape.skip('4.C Concurrency in Set', function (t) {
     // TODO
 });
+
+
+tape('4.D Model CRDT serialization', function (t) {
+    var crdt = new Model.Inner();
+    crdt.set({a:1, b:2}, 'stamp1+source');
+    crdt.set({c:{d:4}}, 'stamp2+source');
+    var copy = new Model.Inner(crdt.toString());
+    t.equals(copy.values.a.value, 1);
+    t.equals(copy.values.b.value, 2);
+    t.equals(copy.values.c.value.d, 4);
+    t.equals(copy.values.a.stamp, 'stamp1+source');
+    t.equals(copy.values.b.stamp, 'stamp1+source');
+    t.equals(copy.values.c.stamp, 'stamp2+source');
+    t.end();
+});

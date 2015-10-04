@@ -1,6 +1,8 @@
 "use strict";
+var stamp = require('swarm-stamp');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
+var LamportTimestamp = stamp.LamportTimestamp;
 
 // This most basic class is a key-value JavaScript-style object.
 // It is also also an example of how to implement Syncables.
@@ -33,6 +35,12 @@ Model.prototype.set = function (keys_values) {
     var bad = Object.keys(keys_values).some(function(key){
         return !Syncable.reFieldName.test(key);
     });
+    for(var key in keys_values) {
+        var val = keys_values[key];  // FIXME ugly
+        if (val._type) {
+            keys_values[key] = {ref: val.typeid()};
+        }
+    }
     if (bad) {
         throw new Error("malformed field name");
     }
@@ -97,12 +105,15 @@ Model.prototype.keys = function () {
 function LWWObject (string) {
     // { stamp: {key:value} }
     var parsed = string ? JSON.parse(string) : {};
-    var values = this.values = {};
+    var values = this.values = Object.create(null);
     // some paranoid checks are very much relevant here
-    var keys = Object.keys(parsed).filter(LWWObject.is_field_name);
-    keys.forEach(function (key){
-        var p = parsed[key];
-        values[key] = new StampedValue(p.value, p.stamp);
+    var stamps = Object.keys(parsed).filter(LamportTimestamp.is).sort();
+    stamps.forEach(function (stamp){ // invert wire-format into mem-format
+        var set = parsed[stamp];
+        var keys=Object.keys(set).filter(LWWObject.is_field_name);
+        keys.forEach(function(key) {
+            values[key] = new StampedValue(set[key], stamp);
+        });
     });
 }
 LWWObject.prototype = Object.create( Syncable.Inner.prototype );
@@ -146,11 +157,15 @@ LWWObject.prototype.write = function (op) {
 LWWObject.prototype.updateSyncable = function (syncable) {
     var values = this.values;
     Object.keys(values).forEach(function(k){
-        syncable[k] = values[k].value;
+        var val = values[k].value;
+        if (val.constructor===Object && val.ref) {
+            val = syncable._owner.get(val.ref); // FIXME ugly
+        }
+        syncable[k] = val;
     });
     var missing_keys = Object.keys(syncable).
         filter(LWWObject.is_field_name).
-        filter(function(key) { !values.hasOwnProperty(key); });
+        filter(function(key) { !(key in values); });
     missing_keys.forEach(function(key){
         delete syncable[key];
     });
@@ -159,7 +174,16 @@ LWWObject.prototype.updateSyncable = function (syncable) {
 // Serializes the inner state to a string. The constructor must
 // be able to parse this later.
 LWWObject.prototype.toString = function () {
-    return JSON.stringify(this.values);
+    var wire = Object.create(null), values = this.values;
+    var keys = Object.keys(this.values);
+    keys.forEach(function(key){
+        var entry = values[key], change = wire[entry.stamp];
+        if (!change) {
+            change = wire[entry.stamp] = Object.create(null);
+        }
+        change[key] = entry.value;
+    });
+    return JSON.stringify(wire);
 };
 
 
