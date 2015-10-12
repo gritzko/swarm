@@ -20,21 +20,30 @@ If you understand what [CmRDT][cmrdt] is, then you may [implement][syncable-type
 You may run your own [Swarm server][swarm-node].
 Free-as-in-freedom (MIT).
 
+![Swarm: deployment](doc/swarm-moscowjs-deployment.png)
+
 ## How to start
 
-(1) Install an example server:
+### Install 
+
+Install an example server:
 
     npm install swarm-react-node
     ...
     npm start
 
-The default config puts leveldb files into ./db/ and listens
+The default config puts LevelDB files into ./db/ and listens
 localhost:8000 for both HTTP and WebSocket connections (see `swarm-react-node --help` for other options).
 
-(2) Open `http://localhost:8000`.
-    You should see the default mouse-sync example.
-    Open in another tab or browser to experiment.
-(3) Open console, start playing:
+### Click around
+
+Open `http://localhost:8000`.
+You should see the default mouse-sync example.
+Open in another tab or browser to experiment.
+
+### Go hardcore
+
+Open console, start playing:
 
     swarm.host.syncables;
     swarm.host.gc();
@@ -55,7 +64,7 @@ localhost:8000 for both HTTP and WebSocket connections (see `swarm-react-node --
         replica: true,
         upstream: 'ws://localhost:8000'
     });
-    var mouse = new swarm.Model('0+login');
+    var mouse = new swarm.Model({x:1, y:2});
     mouse.on('change', function() {
         console.log('mouse x:', mouse.x, 'y:', mouse.y);
     });
@@ -65,20 +74,20 @@ localhost:8000 for both HTTP and WebSocket connections (see `swarm-react-node --
 ## How it works
 
 Distributed systems are hard.
-Two easy ways to build a distributed system are:
+Two easy ways to build a distributed system are either:
 
-* either to make a system that *mostly* works or
+* to make a system that *mostly* works or
 * to shift the difficult part to the API user.
 
 We did our best to avoid both shortcuts.
 Swarm's advantage is provably correct bedrock math that works everywhere, all the time, correctly.
-
-(Check Bailis for [stricter invariants][bailis])
-
 Swarm implements the commutative ([CmRDT][cmrdt]) variety of replicated data types.
 Those are built on top of partially ordered op logs.
 Every op is immutable and has an unique timestamp.
-Eventually, once all ops reach all the replicas, all the states converge.
+Eventually, all ops reach all the replicas and all the states converge.
+As long as you are OK with object-scoped eventual consistency, that is more than enough.
+Neither [bookkeeping][pacioli] nor missile guidance systems need any ACID.
+Most likely, your case needs no ACID too.
 
 Classic databases (MySQL, Oracle, MongoDB) are built on top of *linear* operation logs.
 Their logs are hidden, but the resulting state is exposed and queried.
@@ -86,10 +95,11 @@ Stream processing systems (like Kafka) are often described as "inside-out" datab
 In both cases, the *master* node is the source of truth.
 Swarm is built on top of object-scoped *partially* ordered logs (hidden) which mutate the distributed CRDT state (exposed).
 Swarm can be described as an "upside-down" database because its [source of truth][SST] is at leaf nodes where ops originate.
-This adaptation makes lots of sense for complex web and (especially) mobile apps.
-There, the leaf node has immediate access to the natural source of truth, be it a sensor or a user.
+This adaptation makes lots of sense for complex web and mobile apps.
+Especially if leaf nodes have immediate access to the natural source of truth, be it a sensor or a user.
 
-That makes Swarm [information-centric][infocentric] (like git): nothing is defined by place of storage; information hops from storage to storage transparently.
+That makes Swarm [information-centric][infocentric], like git.
+Nothing is defined by its place of storage; information hops from a storage to a storage transparently.
 There is no master storage.
 
 Those op logs and CRDT data structures are wrapped with an ORM-like API that works in terms of syncable objects.
@@ -98,13 +108,15 @@ Those op logs and CRDT data structures are wrapped with an ORM-like API that wor
 ## Parts
 
 Swarm is a LEGO-like system. It has three types of parts that can form various topologies.
-Similar to LEGO blocks, parts get connected by an unified op-based interface, an op stream.
+Similar to LEGO blocks, parts get connected by an unified op-based interface, an *op stream*.
+
 An op stream carries three types of messages: subscriptions, state snapshots and CRDT ops per se.
-An op stream is asynchronous; the only request-response-like pattern in the subscription handshake.
-Once a subscription is complete, new ops are relayed automatically.
-The default op stream protocol is line-based key-value.
-Each op has a key which is an unique compound identifier (also named *specifier*).
-Op payload depends on the object's CRDT type and is considered an opaque string.
+An op stream is asynchronous; the only request-response-like pattern is the subscription handshake.
+Once a subscription is open, new ops are relayed automatically.
+The default wire protocol is a stream of newline-separated key-value pairs.
+Each op has a key which is an unique compound identifier (also named [*specifier*][spec]) and a value.
+Op value format depends on the object's CRDT type.
+Hence, it is treated as an opaque string by the protocol.
 
 ![Swarm LEGO parts](doc/swarm1.0arch.png "Swarm 1.0 LEGO parts")
 
@@ -112,17 +124,24 @@ Op payload depends on the object's CRDT type and is considered an opaque string.
 
 A replica is what the literature calls a "reliable causal broadcast".
 Its mission is to deliver every object's op to every object's copy, with no causality violations.
-Replicas implement both op storage and op relay *reliably*.
+Replicas implement both op storage and op relay *reliably* to correctly resume transmission after any interruptions.
 A replica employs some key-value storage engine to save/query its op logs.
-Essentially, replicas do the syncing.
+Essentially, replicas do the syncing per se.
 
 ### Host
 
 A Host is a container for Syncables and CRDT objects.
-Normally, those go in pairs: a syncable is a projection of a CRDT.
+Normally, those go in pairs: a Syncable is a projection of its CRDT.
+A Syncable is the outer part of an object's state, while a CRDT is the inner protected part.
 The first step in using Swarm is to create a Host and connect it to some upstream Replica.
 Every Host reminds a classic MVC loop where inner CRDT objects are "models", syncables are "views" and the Host itself is a controller.
-An API user interacts with syncables, thus generating ops, which propagate to CRDT replicas, which update their syncables.
+Events flow as follows:
+
+* An API user interacts with a Syncable,
+* which generates ops,
+* which propagate to all the object's CRDT replicas (both local and remote),
+* which update their Syncables,
+* which emit change events to API users.
 
 ### Router
 
@@ -135,10 +154,10 @@ Unless something is done wrongly, object-scoped systems have a potential to be [
 It was a year since 0.3 was released.
 That was a showcase release for the CRDT technology and it made a splash as such.
 The next release was supposed to be 0.4, but that one was never released.
-Note that Swarm switched to Semver: 1.0.0 is not "1.0".
+Note that Swarm switches to [Semver][semver]: 1.0.0 is not "1.0".
 Formally, 1.0.0 is just the first release that uses the new version of the protocol.
 
-First and foremost priority of 0.4/1.0.0 is to produce a production-ready *architecture*.
+The first and foremost priority of 0.4/1.0.0 is to produce a production-ready *architecture*.
 In late 2014, lab tests and flashcrowds (thanks HackerNews) surfaced quite a few bugs and, most importantly, architectural deficiencies.
 In particular:
 
@@ -149,7 +168,7 @@ In particular:
     * per-object three-way handshake is a bit too complex and expensive (esp regarding RTT)
     * 0.3 does not quite prevent op replays (which have to be filtered at the object level, which is expensive)
 * finally, 0.3 was not bulletproof mathematically
-    * 0.3 [breaks][36] in multi-level configurations (proxy servers, caches, etc -- thanks Sergey @chicoxyzzy)
+    * 0.3 [breaks][36] in multi-level configurations (proxy servers, caches, etc -- thanks [Sergey](https://twitter.com/chicoxyzzy))
 
 The system underwent full rehash:
 
@@ -158,9 +177,8 @@ The system underwent full rehash:
 * version vectors are avoided (still used locally in some cases of true consurrency)
 * data heavylifting is left to a battle-tested storage engine (LevelDB)
 
-At this point, the code abse is fresh, but the architecture and, especially, the protocol, are final and complete.
+At this point, the code base is fresh, but the architecture and, especially, the protocol, are final and complete.
 Hence, 1.0.0.
-Not change is guaranteed for 3 years :).
 
 
 ## Links
@@ -170,19 +188,28 @@ Not change is guaranteed for 3 years :).
 * [github](https://github.com/gritzko/swarm)
 
 
+[react-native]: https://facebook.github.io/react-native/
+[blog-UDA]: http://swarmjs.github.io/articles/uda/
+[cmrdt]: https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#Operation-based_CRDTs
+[syncable-types]: https://github.com/gritzko/swarm/tree/master/syncable
+[swarm-node]: https://github.com/gritzko/swarm/tree/master/node
+[pacioli]: https://en.wikipedia.org/wiki/Bookkeeping#/media/File:Pacioli.jpg
+[SST]: http://www.truthaboutdeath.com/blog/id/1591/the-authoritative-source-of-truth
 [infocentric]: https://en.wikipedia.org/wiki/Information-centric_networking
+[spec]: http://swarmjs.github.io/articles/lamport/
 [apple-cassandra]: http://www.techrepublic.com/article/apples-secret-nosql-sauce-includes-a-hefty-dose-of-cassandra/
+[semver]: http://semver.org/
 [36]: https://github.com/gritzko/swarm/issues/36
 
 
 ---------
 
+# Swarm 0.3 (historical)
 
 [Swarm](http://swarmjs.github.io/articles/todomvc/) is an isomorphic reactive M-of-MVC library that synchronizes objects in real-time and may work offline. Swarm is perfect for implementing collaboration or continuity features in Web and mobile apps. Swarm supports complex data types by relying on its op-based CRDT base.
 
 You may run your own Swarm server. If you understand what CRDT is, then you may implement your own data types. Free-as-in-freedom (MIT).
 
-![Swarm: deployment](doc/swarm-moscowjs-deployment.png)
 
 ## Installation
 
@@ -391,7 +418,7 @@ Read our [blog](http://swarmjs.github.io/).
 TODO
 
 
-## Lyrics
+# Swarm 0.2 (hysterical)
 
 New opportunities bring new challenges; now, having all that laptops, smartphones and tablets on WiFi/3G, we need handover (aka continuity), real time sync and offline work. Those requirements stressed classic request-response HTTP architectures leading to fix-on-a-fix stacks that are far from perfection. Our dream is to develop distributed applications like good old local MVC apps, by fully delegating the data caching/synchronization magic to a dedicated layer. We want to deal with the data uniformly, no matter where it resides. We believe, that CRDT is the only approach that allows to fully embrace the reality of distributed data. Swarm is a CRDT-based replicated model library (M of MVC) that keeps your data correctly cached and synchronized in real time using any storage and transport available.
 
