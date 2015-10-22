@@ -3,6 +3,7 @@ var stamp = require('swarm-stamp');
 var sync = require('..');
 var Op = sync.Op;
 var Model = sync.Model;
+var OpStream = sync.OpStream;
 var Host = sync.Host;
 var bat = require('swarm-bat');
 
@@ -24,11 +25,10 @@ tape('5.A Model set/get - Host protocol', function (t) {
         clock: new stamp.LamportClock('anon~5A')
     });
     var collect = '';
-    var stream = new bat.BatStream();
-    host.setUpstream(stream);
-    stream.pair.on('data', function(op){
+    host.on('data', function(op){
         collect += op.toString();
     });
+    host.replaySubscriptions();
     var m = new Model({x:1}, host);
     t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
@@ -37,18 +37,18 @@ tape('5.A Model set/get - Host protocol', function (t) {
     m.set({x:3});
     t.equal(m.x, 3);
     t.equal(m.y, 2);
-    stream.pair.on('end', function() {
+    host.on('end', function() {
         t.equal(collect,
             '/Swarm+Host#db!00000+anon~5A.on\t\n\n' +
-            '#00001+anon~5A\t0\n' +
+            '/Model#00001+anon~5A.on\t0\n' +
                 '\t!00001+anon~5A.~state\t{"00001+anon~5A":{"x":1}}\n\n' +
-            '#00001+anon~5A!00002+anon~5A.set\t{"y":2}\n' +
-            '#00001+anon~5A!00003+anon~5A.set\t{"x":3}\n',
+            '/Model#00001+anon~5A!00002+anon~5A.set\t{"y":2}\n' +
+            '/Model#00001+anon~5A!00003+anon~5A.set\t{"x":3}\n',
             'full upstream output'
         );
         t.end();
     });
-    stream.end();
+    host.end();
 });
 
 
@@ -74,7 +74,7 @@ var REFS = [
 {
     comment: 'upstream handshake, subscriptions initiated',
     query:   '/Swarm+Replica#db!timeup+swarm.on\t\n\n',
-    response:'/Swarm+Host#db!00000+me~5C.on\t\n\n'+
+    response:'/Swarm+Host#db!00000+me~5C\t\n\n'+
              '#Alice+herself\t\n\n#Bob+himself\t\n\n'
 },
 {
@@ -122,54 +122,57 @@ var REFS = [
 
 tape('5.C refs - blackbox', function (t) {
 
-    var replica = new bat.BatServer('loopback:5C');
-
     var host = new Host({
         db_id: 'db',
         ssn_id: 'me~5C',
-        upstream: 'loopback:5C',
         clock: new stamp.LamportClock('me~5C')
     });
 
-    replica.on('connection', function (stream) {
+    var bs = new bat.BatStream();
+    var os = new OpStream(bs.pair);
 
-        var bt = new bat.StreamTest(stream, REFS, t.equal.bind(t));
-        bt.runScenario( checkCarol );
-        // create syncables
-        var alice = host.get('/Model#Alice+herself');
-        var bob = host.get('/Model#Bob+himself');
+    var bt = new bat.StreamTest(bs, REFS, t.equal.bind(t));
 
-        bob.onInit(function () {
-            t.equal(bob.prev, alice, 'onInit - link OK');
-            t.equal(bob.prev.name, "Alice");
-        });
+    // create syncables
+    var alice = host.get('/Model#Alice+herself');
+    var bob = host.get('/Model#Bob+himself');
 
-        alice.once('change', function () {
-            t.equal(alice.name, "Alice");
-            t.equal(alice.next, bob, 'on change - link to an existing object');
-            t.ok(alice.next.hasState());
-            t.equal(alice.next.name, 'Bob');
-            alice.set({me: alice}, 'API - set reference');
-            t.equal(alice.me, alice, 'circular link OK');
-        });
+    os.pipe(host);
+    host.pipe(os);
 
-        bob.once('change', function () {
-            t.equal(bob.next._id, 'Carol+herself', 'Bob got Carol');
-            t.equal(bob.next.isStateful(), false);
-            t.equal(alice.next.next._id, 'Carol+herself');
-        });
+    bt.runScenario( checkCarol );
+    host.replaySubscriptions();
 
-        function checkCarol () {
-            t.equal(bob.next._id, 'Carol+herself', 'check Carol');
-            t.equal(bob.next.isStateful(), true);
-            t.equal(bob.next.name, 'Carol');
-            t.equal(bob.next.prev, bob);
-
-            t.ok(!host.pendings['/Model#Alice+herself'], 'no pending');
-            t.end();
-        }
-
+    bob.onInit(function () {
+        t.equal(bob.prev, alice, 'onInit - link OK');
+        t.equal(bob.prev.name, "Alice");
     });
+
+    alice.once('change', function () {
+        t.equal(alice.name, "Alice");
+        t.equal(alice.next, bob, 'on change - link to an existing object');
+        t.ok(alice.next.hasState());
+        t.equal(alice.next.name, 'Bob');
+        alice.set({me: alice}, 'API - set reference');
+        t.equal(alice.me, alice, 'circular link OK');
+    });
+
+    bob.once('change', function () {
+        t.equal(bob.next._id, 'Carol+herself', 'Bob got Carol');
+        t.equal(bob.next.isStateful(), false);
+        t.equal(alice.next.next._id, 'Carol+herself');
+    });
+
+    function checkCarol () {
+        t.equal(bob.next._id, 'Carol+herself', 'check Carol');
+        t.equal(bob.next.isStateful(), true);
+        t.equal(bob.next.name, 'Carol');
+        t.equal(bob.next.prev, bob);
+
+        t.ok(!host.unacked_ops['/Model#Alice+herself'], 'no pending');
+        t.end();
+    }
+
 
 });
 

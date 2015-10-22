@@ -1,5 +1,6 @@
 "use strict";
 var Op = require('./Op');
+var Spec = require('./Spec');
 var util         = require("util");
 var EventEmitter = require("events").EventEmitter;
 var Duplex       = require("stream").Duplex;
@@ -44,7 +45,7 @@ function OpStream (stream, options) {
     this.peer_options = null;
 
     this.remainder = '';
-    this.context = null;
+    this.context = new Spec.Parsed('/Model.on');
     this.bound_flush = this.flush.bind(this);
     this.flush_timeout = null;
     this.lastSendTime = 0;
@@ -65,7 +66,7 @@ module.exports = OpStream;
 OpStream.debug = false;
 
 OpStream.prototype._write = function (op, encoding, callback) {
-    this.pending_s.push(op);
+    this.pending_s.push( op.toString(this.context) );
     if (this.asyncFlush) {
         if (!this.flush_timeout) {
             var delay;
@@ -81,10 +82,7 @@ OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
 
 OpStream.prototype.flush = function () {
     if (!this.stream) {return;}
-    var parcel = '', context=this.context||undefined;
-    this.pending_s.forEach(function(o){
-        parcel += o.toString(context);
-    });
+    var parcel = this.pending_s.join('');
     this.pending_s = [];
     try {
         OpStream.debug && console.log
@@ -168,7 +166,8 @@ OpStream.prototype.sendHandshake = function (op) {
     this.db_id = op.id();
     this.ssn_id = op.origin();
     this.stamp = op.stamp();
-    this.write(op);
+    this.pending_s.push(op.toString());
+    this.flush();
 };
 
 OpStream.prototype.onHandshake = function (op) {
@@ -181,6 +180,8 @@ OpStream.prototype.onHandshake = function (op) {
     this.peer_ssn_id = op.origin();
     this.peer_options = op.value ? JSON.parse(op.value) : null;
     this.peer_stamp = op.stamp();
+    this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
+    console.warn('context set');
     this.emit('id', op, this);
 };
 
@@ -219,5 +220,6 @@ OpStream.prototype._read = function () {};
 
 
 OpStream.prototype.setContext = function (context) {
+    console.warn('setContext is deprecated');
     this.context = context;
 };
