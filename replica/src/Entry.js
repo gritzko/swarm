@@ -494,6 +494,10 @@ Entry.prototype.processOp = function () {
     if (!is_known) {
         this.relay(op.source===upstream?upstream:undefined);
         this.appendNewRecord();
+    } else if (op.source!==upstream) {
+        this.send(op, op.source); // ack it, just in case
+    } else {
+        // upstream ack it is
     }
 
     this.next();

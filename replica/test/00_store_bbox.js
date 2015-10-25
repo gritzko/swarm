@@ -66,19 +66,25 @@ var BASIC = [
              '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
 },
 {
-    comment: 'replay (ignored)',
-    query:   '[down2]#stamp2+remote!stampA+user~b.op something happens (A)\n',
+    comment: 'replay (acked, just in case)',
+    query:   '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n',
+    response:'#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
+},
+    // FIXME irregular stream labeling is very confusing
+{
+    comment: 'upstream replay (WTF, ignored)',
+    query:   '[up]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n',
     response:''
 },
 {
     comment: 'unsubscription',
-    query:   '#stamp2+remote.off\t\n',
+    query:   '[down2]#stamp2+remote.off\t\n',
     response:'#stamp2+remote.off\t\n'
 },
 
 {
     comment: 'subscription+push (new op is the tip)',
-    query:   '#stamp2+remote\tstampA+user~b\n'+
+    query:   '[down2]#stamp2+remote\tstampA+user~b\n'+
                 '\t!stampB+user~ssn~two.op\tsomething happens (B)\n\n',
     response:
      '[up]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n' +
@@ -383,4 +389,37 @@ tape('1.C various errors / incorrect messages', function(t){
 
 
 tape.skip('1.D close/open db', function(t){
+});
+
+
+var AUTH = [
+{
+    comment: 'handshake is received by the upstream',
+    query:   '',
+    response:'[up]/Swarm+Replica#db!me.on \n\n'
+},
+{
+    comment: 'ssn assigned by the upstream => on("connect"), 1st op stamped',
+    query:   '[up]/Swarm+Replica#db!0time+swarm.on me~1\n\n',
+    response:'#0timf 0\n !0timf.~state {"new":"stamp"}\n\n'
+},
+{
+    comment: 'handshake - downstream I',
+    query:   '[dsI]/Swarm+Client#db!me.on \n\n',
+    response:'[dsI]/Swarm+Replica#db!0timg+me~1.on me~1~1\n\n'
+},
+{
+    comment: 'handshake - downstream II',
+    query:   '[dsII]/Swarm+Client#db!0.on \n\n',
+    response:'[dsII]/Swarm+Replica#db!0timh+me~1.on me~1~2\n\n'
+},
+{
+    comment: 'downstream II - first stamp',
+    query:   '[dsII]#0timi+me~1~2 0\n !0timi+me~1~2.~state {"y":2}\n\n',
+    response:'[up]#0timi+me~1~2 0\n !0timi+me~1~2.~state {"y":2}\n\n'
+}
+];
+
+
+tape.skip('1.E auth/sessions', function (t) {
 });
