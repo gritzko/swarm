@@ -15,13 +15,14 @@ var EventEmitter = require("events").EventEmitter;
     being sent into mux1 trunk as
         '[tag]something'
 */
-function BatMux (server_url) {
+function BatMux (options) {
     EventEmitter.call(this);
-    /*if (id && id.constructor===String && id.indexOf(':')!==-1) {
-        server_url = id;
-        id = undefined;
-    }*/
-    this.server_url = server_url;
+    if (!options) {
+        options = {};
+    } else if (options.constructor===String) {
+        options = {server_url: options};
+    }
+    this.options = options;
     this.trunk = new BatStream();
     this.branches = {};
     this.data = [];
@@ -29,16 +30,45 @@ function BatMux (server_url) {
     this.url_r = '';
     this.active_tag_w = '';
     this.end = false;
+    this.accept_count = 0;
     this.trunk.pair.on('data', this.onTrunkDataIn.bind(this));
     this.trunk.pair.on('end', this.onTrunkDataEnd.bind(this));
+    if (options.listen) {
+        var accept = this.accept.bind(this);
+        stream_url.listen(options.listen, function(err, serv) {
+            options.callback && options.callback(err);
+            serv && serv.on('connection', accept);
+        });
+    } else {
+        options.callback && options.callback();
+    }
 }
 util.inherits(BatMux, EventEmitter);
 module.exports = BatMux;
 BatMux.tag_re = /\[([\w\:\/\#\.\_\~]+)\]/;
 
+
 BatMux.prototype.clearTag = function () {
     this.active_tag_w = '';
 };
+
+
+BatMux.prototype.accept = function (stream) {
+    var self = this, opts = this.options;
+    var url = opts.listen + '#' + (++this.accept_count);
+    if (opts.accept_ids && opts.accept_ids.length) {
+        url = opts.accept_ids.shift();
+    }
+    this.branches[url] = stream;
+    stream.on('data', function(data){
+        self.onBranchDataIn(url, data);
+    });
+    stream.on('end', function(){
+        self.onBranchEnd(url);
+    });
+    self.drain();
+};
+
 
 BatMux.prototype.onBranchDataIn = function (tag, data) {
     if (this.active_tag_w!==tag) {
@@ -68,7 +98,10 @@ BatMux.prototype.onBranchEnd = function (tag) {
 
 BatMux.prototype.connect = function (url) {
     var self = this;
-    var conn_url = url.indexOf(':')===-1 ? this.server_url : url;
+    var conn_url = url.indexOf(':')===-1 ? this.options.server_url : url;
+    if (!conn_url) {
+        throw new Error('no server url provided');
+    }
     stream_url.connect(conn_url, function(err, stream){
         if (err) {
             self.emit('error', err);

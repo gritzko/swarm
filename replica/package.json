@@ -1,6 +1,6 @@
 {
     "name": "swarm-replica",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -32,7 +32,7 @@
         "memdown": "^1.0.0",
         "tape": "^4.0.2",
         "tap-spec": "^4.0.2",
-        "tape-dom": "^0.0.4"
+        "tape-dom": "^0.0.10"
     },
     "scripts": {
         "test": "tape test/*.js | tap-spec"

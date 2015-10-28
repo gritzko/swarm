@@ -5,7 +5,7 @@ var BatServer = bat.BatServer;
 var BatMux = bat.BatMux;
 var BatStream = bat.BatStream;
 var StreamTest = bat.StreamTest;
-var url = require('url');
+var stream_url = require('stream-url');
 
 var tape = require('tape');
 if (typeof(window)==='object') {
@@ -212,4 +212,41 @@ tape ('2.e. Black box', function (t) {
 		});
 
 	} );
+});
+
+
+var ACCEPT = [
+{
+    comment:  'conn #1',
+    query:    '',
+    response: '[first]first'
+},
+{
+    comment:  'respond #1',
+    query:    '[first]FIRST',
+    response: '[EOF]'
+}
+];
+
+
+tape ('2.f mux-server', function (t) {
+    var mux = new BatMux({
+        listen: 'lo:test2f',
+        accept_ids: ['first', 'second']
+    });
+    mux.on('error', function(err){
+        console.error('mux error', err);
+        t.fail();
+        t.end();
+    });
+    var test = new StreamTest(mux.trunk, ACCEPT, t.equal.bind(t));
+	test.runScenario( t.end.bind(t) );
+    stream_url.connect('lo:test2f', function (err, stream) {
+        stream.write('first');
+        t.ok(!err);
+        stream.on('data', function (data) {
+            t.equal(''+data, 'FIRST');
+            stream.end();
+        });
+    });
 });
