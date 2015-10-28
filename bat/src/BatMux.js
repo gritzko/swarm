@@ -60,12 +60,8 @@ BatMux.prototype.accept = function (stream) {
         url = opts.accept_ids.shift();
     }
     this.branches[url] = stream;
-    stream.on('data', function(data){
-        self.onBranchDataIn(url, data);
-    });
-    stream.on('end', function(){
-        self.onBranchEnd(url);
-    });
+    stream.on('data', this.onBranchDataIn.bind(this, url));
+    stream.on('end', this.onBranchEnd.bind(this, url));
     self.drain();
 };
 
