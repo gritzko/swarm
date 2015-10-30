@@ -446,7 +446,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
         if (lamp.author() && lamp.author()!==this.user_id) {
             return op_stream.close('wrong user id');
         }
-        var new_ssn = this.user_id + '~' + this.issueSsn();
+        var new_ssn = this.issueSsn();
         hs.value = new_ssn;
         // FIXME op_stream.xxx = new_ssn;
         // once we assign the ssn, stream stamp is still 0, but ssn id changes

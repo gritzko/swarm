@@ -32,20 +32,22 @@ var NEW_SSN = [
 },*/
 {
     comment: 'the upstream assigns ssn id',
-    query:   '[up]/Swarm+Replica#db!timeup+swarm.on\tuser+ssn\n\n',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on\tuser~parent~ssn\n\n',
     response:''
 },
 {
     comment: 'downstream#1 retries',
     query:   '[down1]/Swarm+Host#db!user.on\t\n\n',
-    response:'[down1]/Swarm+Replica#db!00001+user~ssn.on\tuser~ssn~1\n\n'
+    response:'[down1]/Swarm+Replica#db!00001+user~ssn.on\tuser~parent~ssn~1\n\n'
 },
 {
     comment: 'downstream#2 knocks; it does not know its user id',
     query:   '[down2]/Swarm+Host#db!0.on\t\n\n',
-    response:'[down2]/Swarm+Replica#db!00003+user~ssn.on\tuser~ssn~2\n\n'
+    response:'[down2]/Swarm+Replica#db!00003+user~ssn.on\tuser~parent~ssn~2\n\n'
 }
 ];
+
+// TODO error handshakes: wrong user, wrong db, wrong ssn
 
 
 tape ('2.A ssn assignment', function(t){
