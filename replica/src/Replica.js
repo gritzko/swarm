@@ -2,7 +2,6 @@
 var stream_url = require('stream-url');
 var levelup = require('level');
 var stamp = require('swarm-stamp');
-var AnchoredVV = stamp.AnchoredVV;
 var LamportTimestamp = stamp.LamportTimestamp;
 
 var sync     = require('swarm-syncable');
@@ -20,78 +19,151 @@ var Entry  = require('./Entry');
 // Any actual replication logic is scoped to a replicated object (syncable)
 // see Entry.js.
 function Replica (options, callback) {
-    var self = this;
+    if (callback) {
+        options.callback = callback;
+    }
     this.options = options = options || {};
-    var db;
+    if (!options.db_id) {
+        // there is an option that our storage
+        throw new Error('no database specified');
+    }
+    if (options.ssn_id) {
+        this.user_id = new LamportTimestamp(options.ssn_id).author();
+    } else if (options.user_id) {
+        this.user_id = options.user_id;
+    } else {
+        throw new Error('no user id specified');
+    }
     if (!options.db) {
         var memdown = require('memdown');
         if (!memdown) { throw new Error('no memdown!'); }
-        db = levelup(memdown);
+        this.db = levelup(memdown);
     } else {
-        db = options.db;
+        this.db = options.db;
     }
-    //
-    this.ssn_id = options.ssn_id || null;
-    this.db_id = options.db_id || null;
+    // these two are set once we have de-facto access to the session's cache db
+    this.ssn_id = null;
+    this.db_id = options.db_id;
+    this.last_ds_ssn = -1;
+    this.last_us_stamp = null;
+    if (options.db_id && options.ssn_id) {
+        this.createClock(options.ssn_id);
+    } else { // read ssn_id from the db or get it from the upstream
+        this.clock = null;
+    }
     // TODO offline - ?
-    this.upstream = options.upstream || 'swarm';
+    this.upstream_url = options.upstream || null; // url
     this.upstream_ssn = null;
     this.upstream_stamp = null;
     //
-    this.entries = {};
-    this.entry_states = {};
+    this.entries = Object.create(null);
+    this.entry_states = Object.create(null);
     //
-    this.servers = {};
-    this.streams = {};
-    //
-    if (options.clock) {
-        this.clock = options.clock;
-    } else if (this.ssn_id) {
-        this.clock = new stamp.Clock(this.ssn_id);
-    } else { // wait db read
-        this.clock = null;
-    }
+    this.servers = Object.create(null);
+    this.streams = Object.create(null);
     // db related stuff
     this.prefix = options.prefix || '';
-    this.bound_write = self.write.bind(self);
-    this.db = null;
-    db.get( '.on', function onDbRead (err, value) {
-        if (err) {
-            if (err.name!=='NotFoundError') {
-                callback && callback('db error: '+err.name);
-                return;
-            }
-            if (!self.db_id || !self.ssn_id) {
-                callback && callback('not initialized');
-                return;
-            }
-        } else {
-            var hs = new Spec(value);
-            if (!self.ssn_id) {
-                self.ssn_id = hs.origin();
-            }
-            if (!self.db_id) {
-                self.db_id = hs.id(); // TODO shard
-            }
-            if (!self.clock) {
-                self.clock = new stamp.Clock(self.ssn_id);
-            }
-            self.clock.seeTimestamp(hs.stamp());
-        }
-        self.db = db;
-        if (self.prefix===true) {
-            self.prefix = '*'+self.db_id;
-        }
-        db.put('.on', self.handshake());
-        if (options.listen) {
-            self.listen(options.listen, options, callback);
-        } else {
-            callback && callback();
-        }
-    });
+    // check the existing db; depending on the outcome,
+    // we'll proceed with the network stuff
+    this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
 }
 module.exports = Replica;
 
+
+Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
+    // FIXME upstream session id MUST be stored in the db
+    // FIXME max child ssn id too
+    if (err && err.name==='NotFoundError') {
+        err = null;
+    } else if (err) {
+        return this.noClock('db error: '+err.name);
+    }
+    var options = this.options;
+    if (hs_str) {
+        var hs = new Op(hs_str);
+        if (options.db_id !== hs.id()) {
+            return this.noClock('wrong database');
+        }
+        if (options.ssn_id && options.ssn_id !== hs.origin()) {
+            return this.noClock('wrong session');
+        }
+        if (options.user_id && options.user_id !== hs.author()) {
+            return this.noClock('wrong user');
+        }
+        if (!this.clock) {
+            this.createClock(hs.origin());
+            this.clock.seeTimestamp(hs.stamp());
+        }
+        if (hs.patch) {
+            var kv = Object.create(null);
+            hs.patch.forEach(function(op){
+                kv[op.spec] = op.value;
+            });
+            if (kv['.last_ds_ssn']) {
+                this.last_ds_ssn = parseInt(kv['.last_ds_ssn']);
+            }
+            this.last_us_stamp;
+        }
+    } else { // fresh db
+        this.last_ds_ssn = 0;
+        this.last_us_stamp = '';
+    }
+    if (options.upstream) {
+        stream_url.connect(options.upstream, {
+            reconnect: true // TODO  reconnect: true
+        }, this.addStreamUp.bind(this));
+    } else if (!this.clock) {
+        this.noClock('can not get ssn_id');
+    }
+};
+
+// The end of initialization: replica creates its logical clocks.
+// These clocks are not used for timestamping data events (ops), but
+// only for connection/subscription pseudo-operations.
+// Hosts initiate all the mutations and the data is timestamped with
+// Host clocks. A Replica is fully reactive, initiates nothing.
+Replica.prototype.createClock = function (ssn_id) {
+    var options = this.options;
+    this.ssn_id = ssn_id;
+    this.clock = options.clock || new stamp.Clock(this.ssn_id);
+    if (options.prefix===true) {
+        this.prefix = '*'+this.db_id;
+    }
+    this.saveDatabaseHandshake();
+    if (options.listen) {
+        this.listen(options.listen, options, function (err) {
+            options.callback && options.callback(err);
+        });
+    } else {
+        options.callback && options.callback();
+    }
+};
+
+// failed to initialize
+Replica.prototype.noClock = function (reason) {
+    console.error('failed to create clocks', reason);
+    this.options.callback && this.options.callback(reason);
+};
+
+
+Replica.prototype.issueSsn = function () {
+    if (this.last_ds_ssn<0) {
+        throw new Error('not ready yet');
+    }
+    var seq = ++this.last_ds_ssn;
+    var ssn_id = this.ssn_id + '~' + stamp.base64.int2base(seq, 1);
+    this.saveDatabaseHandshake();
+    return ssn_id;
+};
+
+// every time we save the current timestamp to ensure monotony
+Replica.prototype.saveDatabaseHandshake = function () {
+    var hs = this.handshake();
+    hs.value = this.last_us_stamp;
+    hs.patch = []; // TODO bad style: make handshake() ret a spec
+    hs.patch.push(new Op('.last_ds_ssn', ''+this.last_ds_ssn));
+    this.db.put('.on', hs.toString());
+};
 
 // Q  upstream selection, subs maintainance
 // Q stream listeners
@@ -203,6 +275,15 @@ Replica.prototype.done = function (request) {
 
 };
 
+// replay all subscriptions to a newly connected upstream
+Replica.prototype.upscribe = function () {
+    var tis = Object.keys(this.entries);
+    for(var i=0; i<tis.length; i++){
+        var entry = this.entries[tis[i]];
+        entry.queueOps([new Op('.on')]);
+    }
+};
+
 
 Replica.prototype.close = function (err, callback) {
 
@@ -236,48 +317,6 @@ Replica.prototype.close = function (err, callback) {
 
 
 //        D A T A B A S E        //
-
-
-Replica.prototype.loadInitData = function () {
-    var self = this, options = this.options;
-    this.db.createReadStream({gt:'/Swarm ', lt:'/Swarm/', limit:1})
-    .on('data', function (data) {  // the database is not empty
-        var handshake = new Spec(data.key);
-        if (self.db_id) {
-            if (self.db_id!==handshake.id()) {
-                self.close('wrong db');
-            }
-        } else {
-            self.db_id = handshake.id();
-        }
-        if (self.ssn_id) {
-            if (self.ssn_id!==handshake.source()) {
-                self.close('wrong session');
-            }
-        } else {
-            self.ssn_id = handshake.source();
-        }
-        /*var opts = JSON.parse(data.value); TODO
-        for(var key in opts) {
-            if (key in options) {
-                console.warn('option overridden:', key);
-            }
-            options[key] = opts[key];
-        }*/
-    }).on('error', function (err) {
-        self.close(err);
-    }).on('end', function(){
-        if (!self.db_id) {// the database is empty
-            self.close('uninitialized db');
-        } else {
-            self.db.put(self.handshake());
-        }
-        self.clock = options.clock || new stamp.Clock (self.ssn_id);
-        if (options.listen_url) {
-            self.listen(options.listen_url);
-        }
-    });
-};
 
 
 Replica.prototype.loadMeta = function (activeEntry) {
@@ -326,79 +365,98 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
 
 
 Replica.prototype.handshake = function () {
-    if (!this.db_id || !this.ssn_id) {
-        return null;
-    }
+    if (!this.db_id) { return null; }
+    var stamp = this.clock ? this.clock.issueTimestamp() :
+        (this.ssn_id||this.user_id||'0');
     var handshake_spec = new Spec('/Swarm+Replica')
         .add(this.db_id, '#')
-        // generate stream stamp
-        .add(this.clock.issueTimestamp(), '!')
+        .add(stamp, '!')
         .add('.on');
     return new Op(handshake_spec, ''); // TODO options
 };
 
-// Add a connection to other replica, either upstream or downstream.
-Replica.prototype.addStream = function (stream) {
-    var self = this;
+
+Replica.prototype.addStreamUp = function (err, stream) {
+    if (err) {
+        console.warn('upsteram conn fail', err);
+        return;
+    }
     var op_stream = new OpStream (stream, undefined, {});
-    var is_upstream = false;
+    op_stream.once('id', this.onUpstreamHandshake.bind(this));
+    op_stream.sendHandshake(this.handshake());
+};
+// FIXME  Muxer accepts connections to stream ids
 
-    function onStreamHandshake (op) {
-        //var client_ssn_id = op.origin();
-        var lamp = new LamportTimestamp(op_stream.peer_stamp);
-        is_upstream = lamp.author()===self.upstream;
-        var default_stamp = is_upstream ?
-            op_stream.stamp : op_stream.peer_stamp; // TODO less guessing
-        op_stream.setContext( new Spec.Parsed( '/Model!'+
-            default_stamp + '.on' ));
-        var client_db_id = op.id();
-        if (self.db_id && self.db_id!==client_db_id) {
-            onHandshakeResult('wrong database id');
-        //} else if (self.ssn_id && self.ssn_id!==client_ssn_id) {
-        //    onHandshakeResult('wrong session id');
-        } else if (self.options.authorize) {
-            self.options.authorize ({
-                stream: stream,
-                op_stream: op_stream,
-                handshake: op
-            }, onHandshakeResult);
-        } else {
-            onHandshakeResult();
+Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
+    if (this.db_id) {
+        if (this.db_id!==hs_op.id()) {
+            return op_stream.close('wrong db id');
         }
+    } else {
+        this.db_id = hs_op.id();
     }
-
-    function onError (msg) {
-        try {
-            op_stream.end(new Op('.error', msg||'handshake error'));
-        } catch (ex) {}
-    }
-
-    function onHandshakeResult (error) {
-        if (error) {
-            op_stream.end(new Op('.error', error));
-        } else {
-            self.streams[op_stream.peer_stamp] = op_stream;
-            if (is_upstream) {
-                self.upstream_ssn = op_stream.peer_stamp;
-                self.upstream_stamp = op_stream.stamp;
-            }
-            op_stream.on('data', self.bound_write);
-            op_stream.on('end', function () {
-                self.removeStream(op_stream);
-            });
+    if (!this.ssn_id) {
+        if (!hs_op.value) {
+            return op_stream.close('no ssn received');
         }
+        var stamp = new LamportTimestamp(hs_op.value);
+        this.createClock(stamp.source());
+        // FIXME   op_stream stamps
     }
+    // TODO at some point, we'll do log replay based on the hs_op.value
+    this.streams[op_stream.peer_stamp] = op_stream;
+    op_stream.on('data', this.write.bind(this));
+    op_stream.on('end', this.removeStream.bind(this));
+    // TODO (need a testcase for reconnections)
+    this.upscribe();
+};
 
-    op_stream.on('id', onStreamHandshake);
-    op_stream.on('error', onError);
+// Add a connection to other replica, either upstream or downstream.
+Replica.prototype.addStreamDown = function (stream) {
+    var op_stream = new OpStream (stream, undefined, {
+        authorize: this.options.authorize // needs the stream
+    });
+
+    op_stream.on('id', this.onDownstreamHandshake.bind(this));
+
     setTimeout(function kill(){
         if (!op_stream.ssn_id) {
             stream.close();
             op_stream.close();
         }
-    }, 3000);
+    }, 3000); // the stream has 3 sec to complete the handshake
 
-    op_stream.sendHandshake(self.handshake());
+    op_stream.on('error', function onError (msg) {
+        try {
+            op_stream.end(new Op('.error',msg||'handshake error'));
+        } catch (ex) {}
+    });
+
+};
+
+
+Replica.prototype.onDownstreamHandshake = function (op, op_stream){
+    // op_stream.setContext();
+    if (this.db_id!==op.id()) {
+        return op_stream.close('wrong database id');
+    }
+    var lamp = new stamp.LamportTimestamp(op.stamp());
+    var hs = this.handshake();
+    if (lamp.time()==='0') { // the ds has no clocks
+        if (lamp.author() && lamp.author()!==this.user_id) {
+            return op_stream.close('wrong user id');
+        }
+        var new_ssn = this.user_id + '~' + this.issueSsn();
+        hs.value = new_ssn;
+        // FIXME op_stream.xxx = new_ssn;
+        // once we assign the ssn, stream stamp is still 0, but ssn id changes
+    }
+    op_stream.sendHandshake(hs);
+
+    this.streams[op_stream.peer_stamp] = op_stream;
+
+    op_stream.on('data', this.write.bind(this));
+    op_stream.on('end', this.removeStream.bind(this));
 };
 
 
@@ -441,9 +499,27 @@ Replica.prototype.listen = function (url, options, on_ready) {
             on_ready && on_ready(err, null);
         } else {
             self.servers[url] = server;
-            server.on('connection', self.addStream.bind(self));
+            server.on('connection', self.addStreamDown.bind(self));
             on_ready && on_ready(null, server);
         }
     });
 
 };
+
+
+// # Session numbers
+// we remember upstream handshakes
+// upstream handshake stash
+//   .on  /Swarm#db!time+swarm.on user~ssn
+// as we depend on the peer replica state and remember our pos...
+//   /Swarm#db!user.on user~ssn
+//   /Swarm#db!user~ssn.on user~ssn~sub
+//
+//   !user.on user~ssn
+//   !user~ssn.on user~ssn~sub
+//
+// Where should we put clock offset?
+// Upstream shard ring id? (can't connect to other ring?)
+//
+// Trunk connections (multi-db): server-to-server only, db is
+// prepended to ops & storage. Multi-db *mode*.

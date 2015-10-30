@@ -138,14 +138,17 @@ tape ('1.A basic cases', function(t){
     var replica = new Replica({
         ssn_id:     'user~ssn',
         db_id:      'db',
-        upstream:   'swarm',
+        upstream:   'loopback:1A_mux/up',
         clock:      new stamp.LamportClock('user~ssn'),
-        listen:     'loopback:1A',
+        listen:     'loopback:1A_repl',
         prefix:     true
     }, start_tests);
 
     function start_tests () {
-        var mux = new BatMux('loopback:1A');
+        var mux = new BatMux({
+            connect: 'loopback:1A_repl',
+            listen:  'loopback:1A_mux'
+        });
 
         var bt = new bat.StreamTest(mux.trunk, BASIC, t.equal.bind(t));
 
@@ -389,37 +392,4 @@ tape('1.C various errors / incorrect messages', function(t){
 
 
 tape.skip('1.D close/open db', function(t){
-});
-
-
-var AUTH = [
-{
-    comment: 'handshake is received by the upstream',
-    query:   '',
-    response:'[up]/Swarm+Replica#db!me.on \n\n'
-},
-{
-    comment: 'ssn assigned by the upstream => on("connect"), 1st op stamped',
-    query:   '[up]/Swarm+Replica#db!0time+swarm.on me~1\n\n',
-    response:'#0timf 0\n !0timf.~state {"new":"stamp"}\n\n'
-},
-{
-    comment: 'handshake - downstream I',
-    query:   '[dsI]/Swarm+Client#db!me.on \n\n',
-    response:'[dsI]/Swarm+Replica#db!0timg+me~1.on me~1~1\n\n'
-},
-{
-    comment: 'handshake - downstream II',
-    query:   '[dsII]/Swarm+Client#db!0.on \n\n',
-    response:'[dsII]/Swarm+Replica#db!0timh+me~1.on me~1~2\n\n'
-},
-{
-    comment: 'downstream II - first stamp',
-    query:   '[dsII]#0timi+me~1~2 0\n !0timi+me~1~2.~state {"y":2}\n\n',
-    response:'[up]#0timi+me~1~2 0\n !0timi+me~1~2.~state {"y":2}\n\n'
-}
-];
-
-
-tape.skip('1.E auth/sessions', function (t) {
 });

@@ -23,6 +23,7 @@ function BatMux (options) {
         options = {server_url: options};
     }
     this.options = options;
+    if ('server_url' in options) { options.connect = options.server_url; }
     this.trunk = new BatStream();
     this.branches = {};
     this.data = [];
@@ -94,7 +95,7 @@ BatMux.prototype.onBranchEnd = function (tag) {
 
 BatMux.prototype.connect = function (url) {
     var self = this;
-    var conn_url = url.indexOf(':')===-1 ? this.options.server_url : url;
+    var conn_url = url.indexOf(':')===-1 ? this.options.connect : url;
     if (!conn_url) {
         throw new Error('no server url provided');
     }

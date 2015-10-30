@@ -2,7 +2,6 @@
 var Op = require('./Op');
 var Spec = require('./Spec');
 var util         = require("util");
-var EventEmitter = require("events").EventEmitter;
 var Duplex       = require("stream").Duplex;
 
 // Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
@@ -38,8 +37,8 @@ function OpStream (stream, options) {
     this.db_id = options.db_id || null;
     this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
-    this.peer_ssn_id = null;
-    this.peer_db_id = null;
+    this.peer_ssn_id = null; // TODO tidy this up
+    this.peer_db_id = null;  // (store hs, add accessor methods)
     this.peer_stamp = null;
     // Peer options received in handshake
     this.peer_options = null;
@@ -178,7 +177,7 @@ OpStream.prototype.onHandshake = function (op) {
     }
     this.peer_db_id = op.id();
     this.peer_ssn_id = op.origin();
-    this.peer_options = op.value ? JSON.parse(op.value) : null;
+    this.peer_options = op.value ? op.patch : null; // TODO
     this.peer_stamp = op.stamp();
     this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
     console.warn('context set');
@@ -187,7 +186,7 @@ OpStream.prototype.onHandshake = function (op) {
 
 OpStream.prototype.onStreamEnded = function () {
     this.stream = null;
-    this.emit('end');
+    this.emit('end', this);
 };
 
 OpStream.prototype.onStreamError = function (err) {
@@ -217,6 +216,11 @@ OpStream.prototype.onTimer = function () {
 };
 
 OpStream.prototype._read = function () {};
+
+
+OpStream.prototype.close = function () {
+    this.stream.close();
+};
 
 
 OpStream.prototype.setContext = function (context) {

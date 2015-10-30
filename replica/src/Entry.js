@@ -143,6 +143,7 @@ Entry.prototype.next = function () {
         this.process();
     } else {
         this.pending_ops = null;
+        // if ???!!
         this.save_queue.push({
             type: 'put',
             key:  '.meta',
@@ -193,9 +194,12 @@ Entry.prototype.ssn_id = function () {
 Entry.prototype.process = function () {
     //var is_source_upstream = this.current.source === this.upstream();
     var op = this.op;
+
     switch (op.name()) {
     case 'on':      if (op.origin()===this.ssn_id()) {
                         this.processReciprocalOn();
+                    } else if (op.origin()===null) {
+                        this.processUpscribe();
                     } else {
                         this.processOn();
                     }
@@ -235,9 +239,9 @@ Entry.prototype.processOn = function () {
     var op = this.op;
     var subs = this.state.subscribers;
     var stateful = '0'!==this.state.state;
-    // subscribe to the uplink
     var patch_up, patch_down;
 
+    // subscribe to the uplink
     if (subs.length===0 && upstream) {
         patch_up = this.patchUpstream();
         if (patch_up===LATER) { return; }
@@ -268,7 +272,20 @@ Entry.prototype.processOn = function () {
 };
 var LATER=null;
 
-// As a downstream, we are responsible for remembering the upstream's
+
+Entry.prototype.processUpscribe = function () {
+    var upstream = this.upstream();
+    var subs = this.state.subscribers;
+    var patch_up = this.patchUpstream();
+    if (patch_up===LATER) { return; }
+    this.send( patch_up, upstream );
+    if (subs.indexOf(upstream)===-1) {
+        subs.push(upstream);
+    }
+    this.next();
+};
+
+// A downstream is responsible for remembering the upstream's
 // arrival order and progress. Hence, we compose the patch based on
 // our local info.
 Entry.prototype.patchUpstream = function () {
