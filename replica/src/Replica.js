@@ -3,6 +3,8 @@ var stream_url = require('stream-url');
 var levelup = require('level');
 var stamp = require('swarm-stamp');
 var LamportTimestamp = stamp.LamportTimestamp;
+var EventEmitter = require('eventemitter3');
+var util         = require("util");
 
 var sync     = require('swarm-syncable');
 var Spec = sync.Spec;
@@ -19,6 +21,7 @@ var Entry  = require('./Entry');
 // Any actual replication logic is scoped to a replicated object (syncable)
 // see Entry.js.
 function Replica (options, callback) {
+    EventEmitter.call(this);
     if (callback) {
         options.callback = callback;
     }
@@ -67,6 +70,7 @@ function Replica (options, callback) {
     // we'll proceed with the network stuff
     this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
 }
+util.inherits(Replica, EventEmitter);
 module.exports = Replica;
 
 
@@ -125,7 +129,13 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
 Replica.prototype.createClock = function (ssn_id) {
     var options = this.options;
     this.ssn_id = ssn_id;
-    this.clock = options.clock || new stamp.Clock(this.ssn_id);
+    if (!options.clock) {
+        this.clock = stamp.Clock(this.ssn_id);
+    } else if (options.clock.constructor===Function) {
+        this.clock = new options.clock(this.ssn_id);
+    } else {
+        this.clock = options.clock;
+    }
     if (options.prefix===true) {
         this.prefix = '*'+this.db_id;
     }
@@ -146,7 +156,7 @@ Replica.prototype.noClock = function (reason) {
 };
 
 
-Replica.prototype.issueSsn = function () {
+Replica.prototype.issueDownstreamSessionId = function () {
     if (this.last_ds_ssn<0) {
         throw new Error('not ready yet');
     }
@@ -415,6 +425,11 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     op_stream.on('end', this.removeStream.bind(this));
     // TODO (need a testcase for reconnections)
     this.upscribe();
+
+    this.emit('connection', {
+        op_stream: op_stream,
+        ssn_id: op_stream.peerSessionId()
+    });
 };
 
 // Add a connection to other replica, either upstream or downstream.
@@ -455,7 +470,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
         if (lamp.author() && lamp.author()!==this.user_id) {
             return op_stream.close('wrong user id');
         }
-        var new_ssn = this.issueSsn();
+        var new_ssn = this.issueDownstreamSessionId();
         hs.value = new_ssn;
         // FIXME op_stream.xxx = new_ssn;
         // once we assign the ssn, stream stamp is still 0, but ssn id changes
@@ -466,6 +481,11 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
 
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', this.removeStream.bind(this));
+
+    this.emit('connection', {
+        op_stream: op_stream,
+        ssn_id: op_stream.peerSessionId()
+    });
 };
 
 
