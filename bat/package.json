@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "files": [
         "src/*.js",
         "bat.js",
@@ -10,7 +10,8 @@
     ],
     "main": "bat.js",
     "dependencies": {
-        "stream-url": "^0.0.12"
+        "stream-url": "^0.0.12",
+        "eventemitter3": "^1.1.1"
     },
     "devDependencies": {
         "tape": "^4.0.2",

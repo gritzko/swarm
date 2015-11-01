@@ -2,7 +2,7 @@
 var BatStream = require('./BatStream');
 var stream_url = require('stream-url');
 var util         = require("util");
-var EventEmitter = require("events").EventEmitter;
+var EventEmitter = require('eventemitter3');
 
 /** The class is mostly useful to test text-based, line-based protocols.
     It multiplexes/demultiplexes several text streams to/from a single
