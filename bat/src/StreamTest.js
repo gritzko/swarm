@@ -1,5 +1,6 @@
 "use strict";
 var LearnedComparator = require('./LearnedComparator');
+var BatMux = require('./BatMux');
 
 // black box testing using a read-write stream
 // API:
@@ -7,6 +8,12 @@ var LearnedComparator = require('./LearnedComparator');
     // II. new StreamTest(iostream, script);
     // III. stream_test.run();
 function StreamTest (stream, scenario, compare) {
+    if (stream.constructor===BatMux) {
+        this.mux = stream;
+        stream = stream.trunk;
+    } else {
+        this.mux = null;
+    }
     this.stream = stream;
     stream.pause(); // TODO lc.try()
     this.scenario = scenario;
@@ -39,11 +46,14 @@ StreamTest.prototype.query = function (query, on_response) {
     setTimeout(function checkResponse() {
         self.busy = null;
         var response = self.stream.read() || '';
+        if (self.mux) {
+            self.mux.clearTag();
+        }
         on_response(response.toString());
     }, StreamTest.default_interval);
 };
 
-StreamTest.prototype.runScenario = function ( done ) {
+StreamTest.prototype.run = function ( done ) {
     var turn = 0, self = this;
     next_query();
     function next_query () {
@@ -57,7 +67,11 @@ StreamTest.prototype.runScenario = function ( done ) {
                 done && done();
             } else {
                 setTimeout(next_query, 1);
+                // TODO setInterval is possibly better
             }
         });
     }
 };
+
+
+StreamTest.prototype.runScenario = StreamTest.prototype.run;
