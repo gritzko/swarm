@@ -4,12 +4,21 @@ var Spec = require('./Spec');
 // *immutable* op: specifier, value and a patch (nested ops).
 // empty value is '', not null, not undefined
 function Op (spec, value, source, patch) { // FIXME source -> peer
-    if (spec && spec.constructor===Op) {
-        var orig = spec;
-        spec = orig.spec;
-        value = orig.value;
-        source = orig.source;
-        patch = orig.patch;
+    if (value===undefined) {
+        if (spec && spec.constructor===String) {
+            var parsed = Op.parse(spec);
+            if (parsed.ops.length!==1) {
+                throw new Error('not a serialized op');
+            }
+            spec = parsed.ops[0];
+        }
+        if (spec && spec.constructor===Op) {
+            var orig = spec;
+            spec = orig.spec;
+            value = orig.value;
+            source = orig.source;
+            patch = orig.patch;
+        }
     }
     this.spec = spec && spec.constructor===Spec.Parsed ?
         spec : new Spec.Parsed(spec);

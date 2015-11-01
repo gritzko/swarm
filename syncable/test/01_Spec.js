@@ -128,3 +128,22 @@ tape ('1.g parse ops', function (tap) {
     tap.end();
 
 });
+
+
+// be conservative in what you send, liberal in what you accept
+tape('1.h parse strange ops', function (tap) {
+
+    var bad_hs = "/Swarm+Replica#db!00000+user~ssn.on null\n !null.last_ds_ssn -1\n\n";
+    var op = new Op(bad_hs);
+    tap.equal(op.stamp(), '00000+user~ssn');
+    tap.equal(op.origin(), 'user~ssn');
+    tap.equal(op.op(), 'on');
+    tap.equal(op.value, 'null');
+    tap.equal(op.patch.length, 1);
+    tap.equal(op.patch[0].op(), 'last_ds_ssn');
+    tap.equal(op.patch[0].stamp(), 'null');
+    tap.equal(op.patch[0].value, '-1');
+    tap.equal(op.patch[0].id(), 'db');
+    tap.end();
+
+});
