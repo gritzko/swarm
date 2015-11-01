@@ -37,11 +37,15 @@ function OpStream (stream, options) {
     this.db_id = options.db_id || null;
     this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
+    this.peer_hs = null;
+
+
     this.peer_ssn_id = null; // TODO tidy this up
     this.peer_db_id = null;  // (store hs, add accessor methods)
     this.peer_stamp = null;
     // Peer options received in handshake
     this.peer_options = null;
+
 
     this.remainder = '';
     this.context = new Spec.Parsed('/Model.on');
@@ -184,11 +188,15 @@ OpStream.prototype.onHandshake = function (op) {
         console.error('not a handshake:', op);
         return this.onStreamError(new Error('invalid handshake'));
     }
+    this.peer_hs = op;
+
+    // TODO tidy
     this.peer_db_id = op.id();
     this.peer_ssn_id = op.origin();
     this.peer_options = op.value ? op.patch : null; // TODO
     this.peer_stamp = op.stamp();
     this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
+
     console.warn('context set');
     this.emit('id', op, this);
 };

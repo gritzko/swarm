@@ -46,11 +46,6 @@ function Replica (options, callback) {
     this.db_id = options.db_id;
     this.last_ds_ssn = -1;
     this.last_us_stamp = null;
-    if (options.db_id && options.ssn_id) {
-        this.createClock(options.ssn_id);
-    } else { // read ssn_id from the db or get it from the upstream
-        this.clock = null;
-    }
     // TODO offline - ?
     this.upstream_url = options.upstream || null; // url
     this.upstream_ssn = null;
@@ -61,6 +56,11 @@ function Replica (options, callback) {
     //
     this.servers = Object.create(null);
     this.streams = Object.create(null);
+    if (options.db_id && options.ssn_id) {
+        this.createClock(options.ssn_id);
+    } else { // then, read ssn_id from the db or get it from the upstream
+        this.clock = null;
+    }
     // db related stuff
     this.prefix = options.prefix || '';
     // check the existing db; depending on the outcome,
@@ -375,14 +375,18 @@ Replica.prototype.handshake = function () {
     return new Op(handshake_spec, ''); // TODO options
 };
 
-
+// FIXME ensure our handshake gets into the 1st TCP packet
 Replica.prototype.addStreamUp = function (err, stream) {
     if (err) {
         console.warn('upsteram conn fail', err);
         return;
     }
     var op_stream = new OpStream (stream, undefined, {});
-    op_stream.once('id', this.onUpstreamHandshake.bind(this));
+    if (op_stream.peer_hs) {
+        this.onUpstreamHandshake(op_stream.peer_hs, op_stream);
+    } else {
+        op_stream.once('id', this.onUpstreamHandshake.bind(this));
+    }
     op_stream.sendHandshake(this.handshake());
 };
 // FIXME  Muxer accepts connections to stream ids
@@ -405,6 +409,8 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
     this.streams[op_stream.peer_stamp] = op_stream;
+    this.upstream_ssn = hs_op.origin();
+    this.upstream_stamp = hs_op.stamp();
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', this.removeStream.bind(this));
     // TODO (need a testcase for reconnections)
@@ -434,7 +440,10 @@ Replica.prototype.addStreamDown = function (stream) {
 
 };
 
-
+// ssn id assignment necessitates strict handshake sequence:
+// the client introduces itself first. That matches the logic
+// of the spanning tree quite nicely. P2P shortcut links can
+// still behave the way they want.
 Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     // op_stream.setContext();
     if (this.db_id!==op.id()) {

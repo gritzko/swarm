@@ -15,9 +15,14 @@ if (typeof(window)==='object') {
 
 var BASIC = [
 {
-    comment: 'handshake - upstream',
-    query:   '[up]/Swarm+Replica#db!timeup+swarm.on\t\n\n',
+    comment: 'handshake sent to upstream',
+    query:   '',
     response:'[up]/Swarm+Replica#db!00001+user~ssn.on\t\n\n'
+},
+{
+    comment: 'handshake received from the upstream',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on\t\n\n',
+    response:''
 },
 {
     comment: 'handshake - downstream I',
@@ -49,7 +54,7 @@ var BASIC = [
     comment: 'server response (downstream .on responded)',
     query:   '[up]#stamp2+remote!00001+user~ssn.on\t0\n' +
                 '\t!stamp2+remote.~state\tinitial root state\n\n',
-    response:'#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
+    response:'[down]#stamp2+remote!stamp2+remote.~state\tinitial root state\n'
 },
 
 {
@@ -68,7 +73,7 @@ var BASIC = [
 {
     comment: 'replay (acked, just in case)',
     query:   '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n',
-    response:'#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
+    response:'[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
 },
     // FIXME irregular stream labeling is very confusing
 {
@@ -79,7 +84,7 @@ var BASIC = [
 {
     comment: 'unsubscription',
     query:   '[down2]#stamp2+remote.off\t\n',
-    response:'#stamp2+remote.off\t\n'
+    response:'[down2]#stamp2+remote.off\t\n'
 },
 
 {
@@ -135,22 +140,24 @@ var BASIC = [
 
 tape ('1.A basic cases', function(t){
 
+    var mux = new BatMux({
+        connect: 'loopback:1Arepl',
+        listen:  'loopback:1Aup',
+        accept_ids: ['up']
+    });
+
     var replica = new Replica({
         ssn_id:     'user~ssn',
         db_id:      'db',
-        upstream:   'loopback:1A_mux/up',
+        upstream:   'loopback:1Aup',
         clock:      new stamp.LamportClock('user~ssn'),
-        listen:     'loopback:1A_repl',
+        listen:     'loopback:1Arepl',
         prefix:     true
     }, start_tests);
 
     function start_tests () {
-        var mux = new BatMux({
-            connect: 'loopback:1A_repl',
-            listen:  'loopback:1A_mux'
-        });
 
-        var bt = new bat.StreamTest(mux.trunk, BASIC, t.equal.bind(t));
+        var bt = new bat.StreamTest(mux, BASIC, t.equal.bind(t));
 
         bt.runScenario( t.end.bind(t) );
     }
@@ -161,8 +168,13 @@ tape ('1.A basic cases', function(t){
 var REORDERS = [
 {
     comment: 'handshake - upstream',
-    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    query:   '',
     response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
+},
+{
+    comment: 'handshake - upstream (contiuned)',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    response:''
 },
 {
     comment: 'handshake - downstream I',
@@ -182,10 +194,10 @@ var REORDERS = [
 },
 {
     comment: 'server response',
-    query:   '[up]#object !0\n'+
+    query:   '[up]#object \n'+
                  ' !time0+joe.~state initial_state\n'+
                  ' !time1+joe.op tail_op (1)\n\n',
-    response:'#object!time0+joe.~state initial_state\n'+
+    response:'[dsI]#object!time0+joe.~state initial_state\n'+
              '#object!time1+joe.op tail_op (1)\n'
 },
 {
@@ -215,7 +227,7 @@ var REORDERS = [
 {
     comment: 'correct patch (tip-stack works)',
     query:   '[dsI]#object  time3+joe\n\n',
-    response:'#object !0\n'+
+    response:'[dsI]#object !0\n'+
              ' !time2+me~ssn~dsII.op op (3)\n'
 },
 {
@@ -240,7 +252,7 @@ var REORDERS = [
 {
     comment: '~state does not get included into a patch',
     query:   '[dsI]#object time1+joe\n\n',
-    response:'#object !0\n'+
+    response:'[dsI]#object !0\n'+
              ' !time3+joe.op op (2)\n' +
              ' !time2+me~ssn~dsII.op op (3)\n\n'
 },
@@ -254,7 +266,7 @@ var REORDERS = [
 {
     comment: 'patch of 1 (straight) op',
     query:   '[dsII]#object  time2+me~ssn~dsII\n\n',
-    response:'#object !0\n'+
+    response:'[dsII]#object !0\n'+
              ' !time4+me~ssn~dsI.op op (4)\n\n'
 },
 {
@@ -270,12 +282,18 @@ var REORDERS = [
 ];
 
 
-tape('1.B reorders', function(t){
+tape   ('1.B reorders', function(t){
+
+    var mux = new BatMux({
+        connect: 'loopback:1B',
+        listen:  'loopback:1Bup',
+        accept_ids: ['up']
+    });
 
     var replica = new Replica({
         ssn_id:     'me~ssn',
         db_id:      'db',
-        upstream:   'swarm',
+        upstream:   'lo:1Bup',
         clock:      new stamp.LamportClock('me~ssn'),
         listen:     'loopback:1B',
         prefix:     true
@@ -288,11 +306,10 @@ tape('1.B reorders', function(t){
     }
 
     function start_tests () {
-        var mux = new BatMux('loopback:1B');
 
-        var bt = new bat.StreamTest(mux.trunk, REORDERS, compare);
+        var bt = new bat.StreamTest(mux, REORDERS, compare);
 
-        bt.runScenario( t.end.bind(t) );
+        bt.run( t.end.bind(t) );
     }
 
         // FIXME close/reopen db!!!
@@ -303,8 +320,13 @@ tape('1.B reorders', function(t){
 var ERRORS = [
 {
     comment: 'handshake - upstream',
-    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    query:   '',
     response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
+},
+{
+    comment: 'handshake - upstream (continued)',
+    query:   '[up]/Swarm+Replica#db!timeup+swarm.on \n\n',
+    response:''
 },
 {
     comment: 'handshake - downstream I',
@@ -361,12 +383,18 @@ var ERRORS = [
 ];
 
 
-tape('1.C various errors / incorrect messages', function(t){
+tape ('1.C various errors / incorrect messages', function(t){
+
+    var mux = new BatMux({
+        connect: 'loopback:1C',
+        listen:  'loopback:1Cup',
+        accept_ids: ['up']
+    });
 
     var replica = new Replica({
         ssn_id:     'me~ssn',
         db_id:      'db',
-        upstream:   'swarm',
+        upstream:   'lo:1Cup',
         clock:      new stamp.LamportClock('me~ssn'),
         listen:     'loopback:1C',
         prefix:     true
@@ -379,13 +407,11 @@ tape('1.C various errors / incorrect messages', function(t){
     }
 
     function start_tests () {
-        var mux = new BatMux('loopback:1C');
 
         var bt = new bat.StreamTest(mux.trunk, ERRORS, compare);
 
-        bt.runScenario( function () {
-            t.end();
-        } );
+        bt.run( t.end.bind(t) );
+
     }
 
 });

@@ -184,7 +184,7 @@ Entry.prototype.relay = function (except) { // FIXME saveAndRelay
 
 
 Entry.prototype.upstream = function () {
-    return this.replica.upstream_ssn;
+    return this.replica.upstream_stamp;
 };
 Entry.prototype.ssn_id = function () {
     return this.replica.ssn_id;
@@ -196,7 +196,7 @@ Entry.prototype.process = function () {
     var op = this.op;
 
     switch (op.name()) {
-    case 'on':      if (op.origin()===this.ssn_id()) {
+    case 'on':      if (op.source===this.upstream()) { // TODO forced sub?
                         this.processReciprocalOn();
                     } else if (op.origin()===null) {
                         this.processUpscribe();
@@ -213,8 +213,8 @@ Entry.prototype.process = function () {
 
 Entry.prototype.processReciprocalOn = function () {
     var op = this.op;
-    if (op.source !== this.replica.upstream_ssn) {
-        console.error('something fishy is going on');
+    if (op.source !== this.replica.upstream_stamp) {
+        console.error('something fishy is going on'); // FIXME .error, test
     }
     // remember everything the upstream sent or acknowledged to us
     var new_avv = new AnchoredVV(this.state.avv);
