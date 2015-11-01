@@ -21,8 +21,8 @@ var Duplex       = require("stream").Duplex;
 // In case options.stamp and options.db_id are defined, our handshake is
 // sent out immediately. Use opstream.sendHandshake(op) to send
 // a handshake later on.
-//
 // options object:
+// NOTE: OpStream posesses its underlying stream
 function OpStream (stream, options) {
     if (!stream || !stream.on) {
         throw new Error('no stream provided');
@@ -52,7 +52,8 @@ function OpStream (stream, options) {
     if (options.keepAlive) {
         this.timer = setInterval(this.onTimer.bind(this), 1000);
     }
-    this.stream.on('data', this.onStreamDataReceived.bind(this));
+    this.onStreamReadable();
+    this.stream.on('readable', this.onStreamReadable.bind(this));
     this.stream.on('end', this.onStreamEnded.bind(this));
     this.stream.on('error', this.onStreamError.bind(this));
     //options.maxSendFreq;
@@ -103,6 +104,14 @@ OpStream.prototype.end = function (something) {
     }
     this.stream.end();
     this.stream = null;
+};
+
+
+OpStream.prototype.onStreamReadable = function () {
+    var buf;
+    while (this.stream && (buf=this.stream.read())) {
+        this.onStreamDataReceived(buf);
+    }
 };
 
 
@@ -185,6 +194,7 @@ OpStream.prototype.onHandshake = function (op) {
 };
 
 OpStream.prototype.onStreamEnded = function () {
+    this.stream.removeAllListeners();
     this.stream = null;
     this.emit('end', this);
 };
