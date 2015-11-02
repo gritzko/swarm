@@ -10,7 +10,7 @@
     ],
     "main": "bat.js",
     "dependencies": {
-        "stream-url": "^0.0.12",
+        "stream-url": "~0.0.12",
         "eventemitter3": "^1.1.1"
     },
     "devDependencies": {

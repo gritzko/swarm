@@ -22,8 +22,8 @@
   "main": "index.js",
   "browser": "index.js",
   "dependencies": {
-      "stream-url": "^0.0.12",
-      "swarm-stamp": "^0.4.0",
+      "stream-url": "~0.0.12",
+      "swarm-stamp": "1.0.0",
       "readable-stream": "~1.1.0",
       "eventemitter3": "^1.1.1"
   },
