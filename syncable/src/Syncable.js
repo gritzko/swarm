@@ -2,6 +2,7 @@
 
 var Spec = require('./Spec');
 var Op = require('./Op');
+var Host = require('./Host');
 var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
 var util = require('util');
 
@@ -59,19 +60,17 @@ function Syncable(init_op, host) {
     this._events = {change: null};
 
     if (host===undefined) { // null means "no host"
-        if (!Syncable.localhost) {
+        if (!Host.localhost) {
             throw new Error('no host specified');
         } else {
-            Syncable.multihost && console.warn('implicit host in mutihost mode');
-            host = Syncable.localhost;
+            Host.multihost && console.warn('implicit host in mutihost mode');
+            host = Host.localhost;
         }
     }
 
     var copy = host && host.adoptSyncable(this, init_op);
     return copy; // JavaScript-specific trick: prevent object copies
 }
-Syncable.multihost = false;
-Syncable.localhost = null;
 util.inherits(Syncable, EventEmitter);
 module.exports = Syncable;
 
@@ -102,7 +101,7 @@ Syncable.submit = function (op_name, op_value) {
 
 
 Syncable.prototype.host = function () {
-    return Syncable.multihost ? this._owner : Syncable.localhost;
+    return Host.multihost ? this._owner : Host.localhost;
 };
 
 //
