@@ -130,7 +130,7 @@ Replica.prototype.createClock = function (ssn_id) {
     var options = this.options;
     this.ssn_id = ssn_id;
     if (!options.clock) {
-        this.clock = stamp.Clock(this.ssn_id);
+        this.clock = new stamp.Clock(this.ssn_id);
     } else if (options.clock.constructor===Function) {
         this.clock = new options.clock(this.ssn_id);
     } else {
