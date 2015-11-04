@@ -93,6 +93,9 @@ Model.prototype.keys = function () {
     });
 };
 
+Model.prototype.toString = function () {
+    return JSON.stringify(this, this.keys());
+};
 
 
 // The API exposes the outer state of a syncable. But, its
