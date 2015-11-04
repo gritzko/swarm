@@ -130,7 +130,7 @@ Replica.prototype.createClock = function (ssn_id) {
     var options = this.options;
     this.ssn_id = ssn_id;
     if (!options.clock) {
-        this.clock = stamp.Clock(this.ssn_id);
+        this.clock = new stamp.Clock(this.ssn_id);
     } else if (options.clock.constructor===Function) {
         this.clock = new options.clock(this.ssn_id);
     } else {
@@ -198,6 +198,9 @@ Replica.prototype.gc = function () {
 Replica.prototype.write = function (op) {
     if (op.constructor!==Op) {
         throw new Error('consumes swarm-syncable Op objects only');
+    }
+    if (!this.streams[op.source]) {
+        console.warn('op origin unknown');
     }
     if (op.spec.pattern()!=='/#!.') { // TODO validate nested patterns
         this.send(op.error('invalid op'));
@@ -355,7 +358,7 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
         gte: gte_key, // start at the mark (inclusive)
         lt: lt_key // don't read the next object's ops
     }).on('data', function (data){
-        data.key = data.key.substr(key_prefix.length);
+        data.key = data.key.substr(prefix.length);
         recs.push(data);
     }).on('error', function(err){
         console.error('data load failed', typeid, mark, error);
@@ -418,7 +421,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         // FIXME   op_stream stamps
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
-    this.streams[op_stream.peer_stamp] = op_stream;
+    this.streams[op_stream.peerSessionStamp()] = op_stream;
     this.upstream_ssn = hs_op.origin();
     this.upstream_stamp = hs_op.stamp();
     op_stream.on('data', this.write.bind(this));
@@ -477,7 +480,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     }
     op_stream.sendHandshake(hs);
 
-    this.streams[op_stream.peer_stamp] = op_stream;
+    this.streams[op_stream.peerSessionStamp()] = op_stream;
 
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', this.removeStream.bind(this));

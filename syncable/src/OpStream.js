@@ -250,3 +250,6 @@ OpStream.prototype.setContext = function (context) {
 OpStream.prototype.peerSessionId = function () {
     return this.peer_hs && this.peer_hs.origin();
 };
+OpStream.prototype.peerSessionStamp = function () {
+    return this.peer_hs && this.peer_hs.stamp();
+};

@@ -169,6 +169,9 @@ Entry.prototype.send = function (op, to_ssn) {
     if (op.source!==to) {
         op = op.relay(to);
     }
+    if (!op.source) {
+        throw new Error('invalid send()');
+    }
     this.send_queue.push(op);
 };
 
