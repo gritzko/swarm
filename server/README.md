@@ -17,8 +17,8 @@ API use example:
     var SwarmServer = require('swarm-server');
     var server = new SwarmServer({
             listen: 'ws://localhost:8000', // or 'tcp://localhost:9000'
-            // ws_server: ws_server,  // also, may use an existing ws server
-            // http_server: http_server, // ...or an existing HTTP server
+            // ws_server: ws_server,  // may use an existing ws server
+            // http_server: http_server, // ...or an HTTP server
             ssn_id: 'swarm~0',
             db_id:  'db',
             callback: report
