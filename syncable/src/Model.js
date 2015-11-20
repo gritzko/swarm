@@ -104,6 +104,7 @@ Model.prototype.keys = function () {
 // op value.
 function LWWObject (string) {
     // { stamp: {key:value} }
+    this._version = null;
     var parsed = string ? JSON.parse(string) : {};
     var values = this.values = Object.create(null);
     // some paranoid checks are very much relevant here

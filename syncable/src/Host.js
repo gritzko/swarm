@@ -26,7 +26,7 @@ function Host (options) {
     this.clock = null;
     this.listened_to = false;
     // syncables, API objects, outer state
-    this.syncables = Object.create(null);
+    this.syncables = options.api===false ? null : Object.create(null);
     // CRDTs, inner state
     this.crdts = Object.create(null);
     this.run_id = null;
@@ -70,7 +70,8 @@ Host.prototype.emitSubscriptions = function () {
     var statefuls = Object.keys(this.crdts).sort();
     for(var i=0; i<statefuls.length; i++) {
         var typeid = statefuls[i];
-        this.emit('data', new Op(typeid+'.on', this.crdts[typeid]._version));
+        var crdt = this.crdts[typeid];
+        crdt && this.emit('data', new Op(typeid+'.on', crdt._version));
     }
     if (this.syncables) {
         var keys = Object.keys(this.syncables).sort();
@@ -124,6 +125,9 @@ Host.prototype.getCRDT = function (obj) {
 Host.prototype.write = function (op) {
 
     var typeid = op.spec.typeid(), stamp = op.stamp(), self=this;
+    if (!typeid || typeid==='null') {
+        throw new Error('what?');
+    }
 
     if (op.spec.Type().time()==='Swarm') {
         if (op.spec.op()==='error') {
@@ -136,11 +140,11 @@ Host.prototype.write = function (op) {
         }
     }
 
-    var syncable = this.syncables[typeid];
+    var syncable = this.syncables && this.syncables[typeid];
     var crdt = this.crdts[typeid];
-    if (!syncable) {
+    if (!syncable && this.options.api!==false) {
         throw new Error('syncable not open');
-    }
+    } // FIXME specify modes: api, obey, snapshot
 
     switch (op.op()) {
     case 'on':
@@ -157,22 +161,34 @@ Host.prototype.write = function (op) {
 
         break;
     case 'off':
+        if (this.syncables && this.syncables[typeid]) {
+            console.warn('upstream disappears for', typeid);
+        } else {
+            delete this.crdts[typeid];
+            this.emit('data', new Op(typeid+'.off', ''));
+        }
         break;
     case '~state':
         var type_fn = Syncable.types[op.spec.type()];
         if (!type_fn) {
             throw new Error('type unknown');
         }
-        crdt = this.crdts[typeid] = new type_fn.Inner(op.value);
+        var have_or_wait_state = this.crdts[typeid]!==undefined;
+        crdt = new type_fn.Inner(op.value);
+        this.crdts[typeid] = crdt;
+        if (!have_or_wait_state) { // FIXME obey
+            this.emit('data', new Op(typeid+'.on', op.spec.stamp()));
+        }
 
         // FIXME descending state!!! see the pacman note
-
-        crdt.updateSyncable(syncable);
-        syncable._version = crdt._version = stamp;
-        syncable.emit('init', {
-            version: crdt._version,
-            changes: null
-        });
+        if (this.syncables) {
+            crdt.updateSyncable(syncable);
+            syncable._version = crdt._version = stamp;
+            syncable.emit('init', {
+                version: crdt._version,
+                changes: null
+            });
+        }
         break;
     case 'error':
         // As all the event/operation processing is asynchronous, we
@@ -188,12 +204,14 @@ Host.prototype.write = function (op) {
         }
         crdt.write(op);
         // replay protection - either Replica or an idempotent type
-        crdt.updateSyncable(syncable);
-        syncable._version = crdt._version = stamp;
-        syncable.emit('change', {
-            version: crdt._version,
-            changes: null
-        });
+        if (this.syncables) {
+            crdt.updateSyncable(syncable);
+            syncable._version = crdt._version = stamp;
+            syncable.emit('change', {
+                version: crdt._version,
+                changes: null
+            });
+        }
 
         if (this.options.snapshot==='immediate') {
             var spec = op.spec.set('~state', '.');
@@ -249,6 +267,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         if (spec in this.syncables) {
             return this.syncables[spec]; // there is such an object already
         }
+        this.crdts[syncable.spec().typeid()] = null; // wait for the state
         // 0 up
         on_op = new Op(syncable.spec().add('.on'), '', this.run_id);
     }

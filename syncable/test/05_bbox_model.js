@@ -73,7 +73,7 @@ var REFS = [
 {
     comment: 'upstream handshake, subscriptions initiated (i)',
     query:   '',
-    response:'/Swarm+Host#db!00000+me~5C\t\n\n'+
+    response:'/Swarm+Host#db!00000+me~5C.on\t\n\n'+
              '#Alice+herself\t\n\n#Bob+himself\t\n\n'
 },
 {
@@ -139,10 +139,11 @@ tape('5.C refs - blackbox', function (t) {
 
     // create syncables
     var alice = host.get('/Model#Alice+herself');
-    var bob = host.get('/Model#Bob+himself');
 
     os.pipe(host);
     host.pipe(os);
+
+    var bob = host.get('/Model#Bob+himself');
 
     bt.run ( checkCarol );
     //host.replaySubscriptions();
@@ -292,51 +293,57 @@ tape.skip('5.E descending state', function (t) {
 
 var SNAPSHOTS = [
 {
-    comment: 'handshake, ssn grant (I)',
+    comment: 'handshake (I)',
     query:   '',
-    response:'/Swarm+Host#db!00001+me.on\t\n\n'
+    response:'/Swarm+Host#db!00000+me~5F.on\t\n\n'
 },
 {
-    comment: 'handshake, ssn grant (II)',
+    comment: 'handshake (II)',
     query:   '/Swarm+Replica#db!time+swarm.on\tme~5F\n\n',
     response:''
 },
 {
     comment: 'upstream sends a taily state, host responds with a snapshot',
-    query:   '#object\tversion+author\t\n'+
-             '\t!original+author.~state\t{"default":"value"}\n'+
+    query:   '#object\toriginal+author\n'+
+             '\t!original+author.~state\t{"original+author":{"default":"value"}}\n'+
              '\t!version+author.set\t{"update":true}\n\n',
-    response:'#object\tversion+author\t0\n\n'+
-             '#object!version+author.~state\t{"default":"value","update":true}\n'
+    response:'#object\toriginal+author\n\n'+
+             '#object!version+author.~state\t{"original+author":{"default":"value"},"version+author":{"update":true}}\n'
 },
 {
     comment: 'a follow-up op, Host responds with a snapshot',
     query:   '#object!zup+author.set\t{"update":42}\n',
-    response:'#object!version+author.~state\t{"default":"value","update":42}\n'
+    response:'#object!zup+author.~state\t{"original+author":{"default":"value"},"zup+author":{"update":42}}\n'
 },
 {
     comment: 'unsubscription',
-    query:   '#object.off',
-    response:'#object.off'
+    query:   '#object.off\t\n',
+    response:'#object.off\t\n'
 }
 ];
 
 
-tape.skip('5.F snapshotting', function (t) {
+tape('5.F snapshotting', function (t) {
 
     var host = new Host({
         db_id: 'db',
         ssn_id: 'me~5F',
-        clock: new stamp.LamportClock('me~5C'),
+        clock: new stamp.LamportClock('me~5F'),
         snapshot: 'immediate',
-        syncables: false
+        api:    false
     });
 
+    var bs = new bat.BatStream();
+    var os = new OpStream(bs.pair);
 
-    var bt = new bat.StreamTest(host, SNAPSHOTS, t.equal.bind(t));
+    var bt = new bat.StreamTest(bs, SNAPSHOTS, t.equal.bind(t));
+
+    os.pipe(host);
+    host.pipe(os);
+
     bt.run(function(){
-        t.notOk('/Model#object' in host.crdts);
-        t.notOk('/Model#object' in host.syncables);
+        t.equal('/Model#object' in host.crdts, false, 'no state remaining');
+        t.equal(host.syncables, null, 'no API');
         // t.notOk(host.syncables); // TODO CRDT only
         t.end();
     });

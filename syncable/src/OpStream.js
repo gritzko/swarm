@@ -70,7 +70,18 @@ module.exports = OpStream;
 OpStream.debug = false;
 
 OpStream.prototype._write = function (op, encoding, callback) {
-    this.pending_s.push( op.toString(this.context) );
+    if (!this.ssn_id) {
+        if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
+            op.op().toLowerCase()!=='on') {
+            throw new Error('handshake first');
+        }
+        this.db_id = op.id();
+        this.ssn_id = op.origin();
+        this.stamp = op.stamp();
+        this.pending_s.push( op.toString() );
+    } else {
+        this.pending_s.push( op.toString(this.context) );
+    }
     if (this.asyncFlush) {
         if (!this.flush_timeout) {
             var delay;
@@ -171,15 +182,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 };
 
 OpStream.prototype.sendHandshake = function (op) {
-    if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-        op.op().toLowerCase()!=='on') {
-        throw new Error('not a handshake');
-    }
-    this.db_id = op.id();
-    this.ssn_id = op.origin();
-    this.stamp = op.stamp();
-    this.pending_s.push(op.toString());
-    this.flush();
+    this.write(op);
 };
 
 OpStream.prototype.onHandshake = function (op) {
