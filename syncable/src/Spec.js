@@ -1,4 +1,5 @@
 "use strict";
+var stamp = require('swarm-stamp');
 
 //  S P E C I F I E R
 //
@@ -384,6 +385,9 @@ ParsedSpec.prototype.toAbbrevString = function (defaults) {
 
 
 ParsedSpec.prototype.type = function () { return this._type; };
+ParsedSpec.prototype.Type = function () {
+    return new stamp.LamportTimestamp(this._type);
+};
 ParsedSpec.prototype.id = function () { return this._id; };
 ParsedSpec.prototype.stamp = function () { return this._stamp; };
 ParsedSpec.prototype.version = function () { return '!'+this._stamp; };

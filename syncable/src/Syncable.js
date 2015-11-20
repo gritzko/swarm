@@ -222,7 +222,12 @@ Syncable.prototype.onLoad = function (callback) {
 // state or waits for state arrival, i.e. once('init', callback).
 Syncable.prototype.onInit = function (callback) {
     if (this.isStateful()) {
-        callback.call(this);
+        // if a callback flaps between sync and async execution
+        // that causes much of confusion, so let's force it to async
+        var self = this;
+        setTimeout(function(){
+            callback.call(self);
+        });
     } else {
         this.once('init', callback);
     }

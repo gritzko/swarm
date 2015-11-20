@@ -28,7 +28,6 @@ tape('5.A Model set/get - Host protocol', function (t) {
     host.on('data', function(op){
         collect += op.toString();
     });
-    host.replaySubscriptions();
     var m = new Model({x:1}, host);
     t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
@@ -72,10 +71,15 @@ tape('5.B concurrent ops', function (t) {
 
 var REFS = [
 {
-    comment: 'upstream handshake, subscriptions initiated',
-    query:   '/Swarm+Replica#db!timeup+swarm.on\t\n\n',
+    comment: 'upstream handshake, subscriptions initiated (i)',
+    query:   '',
     response:'/Swarm+Host#db!00000+me~5C\t\n\n'+
              '#Alice+herself\t\n\n#Bob+himself\t\n\n'
+},
+{
+    comment: 'upstream handshake, subscriptions initiated (ii)',
+    query:   '/Swarm+Replica#db!timeup+swarm.on\t\n\n',
+    response:''
 },
 {
     comment: 'state arrives (Bob has a link to Alice)',
@@ -140,8 +144,8 @@ tape('5.C refs - blackbox', function (t) {
     os.pipe(host);
     host.pipe(os);
 
-    bt.runScenario( checkCarol );
-    host.replaySubscriptions();
+    bt.run ( checkCarol );
+    //host.replaySubscriptions();
 
     bob.onInit(function () {
         t.equal(bob.prev, alice, 'onInit - link OK');
@@ -169,7 +173,6 @@ tape('5.C refs - blackbox', function (t) {
         t.equal(bob.next.name, 'Carol');
         t.equal(bob.next.prev, bob);
 
-        t.ok(!host.unacked_ops['/Model#Alice+herself'], 'no pending');
         t.end();
     }
 
@@ -233,15 +236,115 @@ tape.skip('5.D tortures', function (t){
 
 });
 
+var DESC_STATE = [
+{
+    comment: 'upstream handshake, subscriptions initiated',
+    query:   '/Swarm+Replica#db!timeup+swarm.on\t\n\n',
+    response:'/Swarm+Host#db!00000+me~5E\t\n\n'+
+             '#Alice+herself\t\n\n#Bob+himself\t\n\n'
+},
+{
+    comment: 'host subscribes to an object',
+    query:   '',
+    response:'#object 0\n\n'
+},
+{
+    comment: 'the state arrives, host makes a change',
+    query:   '#object\t\n\n\t!time+remote.~state\t{"x":1}\n',
+    response:'#object!00001+me~5E.set\t{"y":1}\n'
+},
+{
+    comment: 'descending state arrives',
+    query:   '!time+remote.~state\t{"x":2}\n',
+    response:''
+},
+{
+    comment: 'change ack arrives, host makes another change',
+    query:   '#object!00001+me~5E.set\t{"y":1}\n',
+    response:'#object!00002+me~5E.set\t{"z":3}\n'
+}
+];
 
-tape.skip('5.E host reconnections', function (t) {
+tape.skip('5.E descending state', function (t) {
 
-    // FIXME resync, buffer local changes
+    var host = new Host({
+        db_id: 'db',
+        ssn_id: 'me~5E',
+        clock: new stamp.LamportClock('me~5C')
+    });
+
+    var obj = host.get('object', function () {
+        obj.set({y:1});
+        t.equal(this.y, 1);
+        obj.on('change', function() {
+            obj.set({z:3});
+        });
+    });
+
+    var bt = new bat.StreamTest(host, DESC_STATE, t.equal.bind(t));
+    bt.run(function(){
+        t.deepEqual(obj, {x:2, y:1, z:3});
+        t.end();
+    });
 
 });
 
 
-tape.skip('5.F exception handling', function (t) {
+var SNAPSHOTS = [
+{
+    comment: 'handshake, ssn grant (I)',
+    query:   '',
+    response:'/Swarm+Host#db!00001+me.on\t\n\n'
+},
+{
+    comment: 'handshake, ssn grant (II)',
+    query:   '/Swarm+Replica#db!time+swarm.on\tme~5F\n\n',
+    response:''
+},
+{
+    comment: 'upstream sends a taily state, host responds with a snapshot',
+    query:   '#object\tversion+author\t\n'+
+             '\t!original+author.~state\t{"default":"value"}\n'+
+             '\t!version+author.set\t{"update":true}\n\n',
+    response:'#object\tversion+author\t0\n\n'+
+             '#object!version+author.~state\t{"default":"value","update":true}\n'
+},
+{
+    comment: 'a follow-up op, Host responds with a snapshot',
+    query:   '#object!zup+author.set\t{"update":42}\n',
+    response:'#object!version+author.~state\t{"default":"value","update":42}\n'
+},
+{
+    comment: 'unsubscription',
+    query:   '#object.off',
+    response:'#object.off'
+}
+];
+
+
+tape.skip('5.F snapshotting', function (t) {
+
+    var host = new Host({
+        db_id: 'db',
+        ssn_id: 'me~5F',
+        clock: new stamp.LamportClock('me~5C'),
+        snapshot: 'immediate',
+        syncables: false
+    });
+
+
+    var bt = new bat.StreamTest(host, SNAPSHOTS, t.equal.bind(t));
+    bt.run(function(){
+        t.notOk('/Model#object' in host.crdts);
+        t.notOk('/Model#object' in host.syncables);
+        // t.notOk(host.syncables); // TODO CRDT only
+        t.end();
+    });
+
+});
+
+
+tape.skip('5.G exception handling', function (t) {
 
     // FIXME resync, buffer local changes
 

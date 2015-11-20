@@ -1,15 +1,21 @@
 'use strict';
-
 var lamp64 = require('swarm-stamp');
-var Spec =  require('./Spec');
+var Spec = require('./Spec');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
-var OpStream =  require('./OpStream');
-var util         = require("util");
+var util = require("util");
 var EventEmitter = require("eventemitter3");
 
-// Host is the world of actual Syncable CRDT objects of various types.
-// A (full) Swarm node is Host+Storage+Router.
+// Host is the world of actual replicated/synchronized objects of various types.
+// Host contains inner CRDT objects and their outer API parts (Syncables).
+// A host is (a) passive and (b) synchronous.
+// Host has an OpStream-like interface, consuming and emitting ops.
+// To keep a host synchronized, it has to be connected to some
+// transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
+// it does not persist any information between runs. Hence, it dies once
+// disconnected from the upstream (Replica).
+// If assigned dynamically, ssn_id of a Host is derived from
+// the ssn_id of its Replica (the same for the first host, ~1 for the next, etc)
 function Host (options) {
     this._events = {data: null};
     EventEmitter.call(this);
@@ -18,12 +24,11 @@ function Host (options) {
     this.ssn_id = null;
     this.db_id = null;
     this.clock = null;
+    this.listened_to = false;
     // syncables, API objects, outer state
     this.syncables = Object.create(null);
     // CRDTs, inner state
     this.crdts = Object.create(null);
-    // pending writes to handle on replica reconnection
-    this.unacked_ops = Object.create(null);
     this.run_id = null;
     if (options.ssn_id) {
         this.ssn_id = options.ssn_id;
@@ -48,6 +53,36 @@ module.exports = Host;
 Host.debug = false;
 
 
+Host.prototype._on = Host.prototype.on;
+
+Host.prototype.on = function (event, callback) {
+    this._on(event, callback);
+    if (event==='data' && !this.listened_to) {
+        // I generally assume 1 listener; k listeners is TODO
+        this.listened_to = true;
+        this.emit('data', this.handshake());
+        this.emitSubscriptions();
+    }
+};
+
+
+Host.prototype.emitSubscriptions = function () {
+    var statefuls = Object.keys(this.crdts).sort();
+    for(var i=0; i<statefuls.length; i++) {
+        var typeid = statefuls[i];
+        this.emit('data', new Op(typeid+'.on', this.crdts[typeid]._version));
+    }
+    if (this.syncables) {
+        var keys = Object.keys(this.syncables).sort();
+        for(i=0; i<keys.length; i++) {
+            typeid = keys[i];
+            if (this.crdts[typeid]) { continue; }
+            this.emit('data', new Op(typeid+'.on', ''));
+        }
+    }
+};
+
+
 Host.prototype.close = function () {
     if (Host.localhost===this) {
         Host.localhost = null;
@@ -59,36 +94,12 @@ Host.prototype.gc = function (criteria) {
     // NOTE objects in this.pending can NOT be gc'd
 };
 
-// Emit subscriptions for all the open objects, include
-// last known versions and patches for unacknowledged ops.
-Host.prototype.replaySubscriptions = function (stream) {
-    var hs = this.handshake();
-    if (hs) {
-        this.emit('data', hs);
-    }
-    var typeids = Object.keys(this.syncables);
-    for(var i=0; i<typeids.length; i++) {
-        var typeid = typeids[i];
-        var crdt = this.crdts[typeid];
-        var unack = this.unacked_ops[typeid];
-        var op = new Op(typeid+'!'+this.run_id+'.on', this.run_id);
-        if (crdt) {
-            op.value - crdt._version;
-            if (unack) {
-                op.patch = unack;
-            }
-        }
-        this.emit('data', op);
-    }
-};
-
 
 Host.prototype.handshake = function () {
     if (!this.ssn_id || !this.db_id) { return null; }
     var key = new Spec.Parsed('/Swarm+Host').add(this.db_id, '#')
         .add(this.time(),'!').add('.on');
     this.run_id = key.stamp(); // FIXME run_id
-    console.warn('not this way');
     return new Op(key, '', this.run_id);
 };
 
@@ -113,6 +124,18 @@ Host.prototype.getCRDT = function (obj) {
 Host.prototype.write = function (op) {
 
     var typeid = op.spec.typeid(), stamp = op.stamp(), self=this;
+
+    if (op.spec.Type().time()==='Swarm') {
+        if (op.spec.op()==='error') {
+            console.error('handshake fails', op.value);
+            return;
+        } if (!this.clock) {
+            // get ssn, adjust clocks
+        } else {
+            // check everything matches
+        }
+    }
+
     var syncable = this.syncables[typeid];
     var crdt = this.crdts[typeid];
     if (!syncable) {
@@ -125,13 +148,12 @@ Host.prototype.write = function (op) {
             self.write(op);
         });
 
-
-        /*crdt.updateSyncable(syncable);
+        /*   TODO bundle 'change' events
+        crdt.updateSyncable(syncable);
         syncable.emit('change', {
             version: crdt._version,
             changes: null
         });*/
-
 
         break;
     case 'off':
@@ -143,9 +165,7 @@ Host.prototype.write = function (op) {
         }
         crdt = this.crdts[typeid] = new type_fn.Inner(op.value);
 
-
-        // FIXME pending state!!!
-
+        // FIXME descending state!!! see the pacman note
 
         crdt.updateSyncable(syncable);
         syncable._version = crdt._version = stamp;
@@ -167,23 +187,19 @@ Host.prototype.write = function (op) {
             throw new Error('CRDT object was not initialized');
         }
         crdt.write(op);
-
-        var pending = this.unacked_ops[typeid];
-        if (pending && op.origin()===this.ssn_id) {
-            while (pending.length && pending[0].stamp()<=stamp) {
-                pending.shift();
-            }
-            if (!pending.length) {
-                delete this.unacked_ops[typeid];
-            }
-        }
-
+        // replay protection - either Replica or an idempotent type
         crdt.updateSyncable(syncable);
         syncable._version = crdt._version = stamp;
         syncable.emit('change', {
             version: crdt._version,
             changes: null
         });
+
+        if (this.options.snapshot==='immediate') {
+            var spec = op.spec.set('~state', '.');
+            this.emit('data', new Op(spec, crdt.toString()));
+        }
+
     }
 
     // NOTE: merged ops, like
@@ -225,7 +241,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
 
         // the state is sent up in the handshake as the uplink has nothing
         var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.run_id);
-        var on_spec = syncable.spec().add('!0').add('.on');
+        var on_spec = syncable.spec().add('.on');
         on_op = new Op(on_spec, '0', this.run_id, [state_op]);
 
     } else {
@@ -234,14 +250,14 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
             return this.syncables[spec]; // there is such an object already
         }
         // 0 up
-        on_op = new Op(syncable.spec().add('!0').add('.on'), '', this.run_id);
+        on_op = new Op(syncable.spec().add('.on'), '', this.run_id);
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
     syncable._owner = this;
-    if (on_op.patch) {
-        this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
-    }
+    // if (on_op.patch) {
+    //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
+    // }
     this.emit('data', on_op);
 
     return syncable;
@@ -302,6 +318,9 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     if (syncable._owner!==this) {
         throw new Error('alien op submission');
     }
+    if (!this.clock) {
+        throw new Error('host has no clock, hence not writable');
+    }
     var typeid = syncable.typeid();
     var crdt = this.crdts[typeid];
     if (!crdt) {
@@ -309,12 +328,6 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     }
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
     var op = new Op(spec, value, this.run_id); // FIXME run vs ssn vs conn id
-
-    var pending = this.unacked_ops[typeid];
-    if (!pending) {
-        pending = this.unacked_ops[typeid] = [];
-    }
-    pending.push(op);
 
     this.write(op);
     this.emit('data', op);
@@ -326,16 +339,16 @@ Host.prototype.end = function () {
 };
 Host.prototype.pause = function () {
 };
+
+// Emit subscriptions for all the open objects, include
+// last known versions and patches for unacknowledged ops.
 Host.prototype.pipe = function (opstream) {
     this.on('data', opstream.write.bind(opstream));
 };
+
 Host.prototype.peerSessionId = function () {
     return this.ssn_id;
 };
 Host.prototype.peerSessionStamp = function () {
     return this.run_id;
-};
-Host.prototype.sendHandshake = function (hs) {
-    console.warn('FIXME local handshake', hs);
-    this.replaySubscriptions();
 };
