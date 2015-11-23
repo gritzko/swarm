@@ -34,8 +34,8 @@ tape('5.A Model set/get - Host protocol', function (t) {
     t.equal(m.x, 1, 'x=1 is still there');
     t.equal(m.y, 2, '.set works');
     m.set({x:3});
-    t.equal(m.x, 3);
-    t.equal(m.y, 2);
+    t.equal(m.x, 3, 'merge OK');
+    t.equal(m.y, 2, 'merge OK');
     host.on('end', function() {
         t.equal(collect,
             '/Swarm+Host#db!00000+anon~5A.on\t\n\n' +

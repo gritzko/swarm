@@ -1,6 +1,6 @@
 {
   "name": "swarm-syncable",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
   "dependencies": {
       "stream-url": "^0.0.12",
       "swarm-stamp": "^0.4.0",
+      "readable-stream": "~1.1.0",
       "eventemitter3": "^1.1.1"
   },
   "devDependencies": {
