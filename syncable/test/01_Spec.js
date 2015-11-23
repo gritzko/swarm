@@ -147,3 +147,16 @@ tape('1.h parse strange ops', function (tap) {
     tap.end();
 
 });
+
+
+tape('1.i spanning tree', function (tap) {
+    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn'));
+    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child'));
+    tap.notOk(Spec.inSubtree('ssn~child~1', 'ssn~another'));
+    tap.notOk(Spec.inSubtree('alice~1', 'bob~1'));
+    tap.notOk(Spec.inSubtree('alice~1', 'bob'));
+    tap.notOk(Spec.inSubtree('alice', 'bob~1'));
+    tap.notOk(Spec.inSubtree('alice', 'bob'));
+    tap.notOk(Spec.inSubtree('alicebuttheotherone', 'alice'));
+    tap.end();
+});

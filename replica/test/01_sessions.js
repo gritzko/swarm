@@ -19,10 +19,10 @@ var NEW_SSN = [
 {
     comment: 'handshake - upstream',
     query:   '',
-    response:'[up]/Swarm+Replica#db!user.on\t\n\n'
+    response:'[up]/Swarm+Replica#db!user\t\n\n'
 },
 {
-    comment: 'the upstream assigns ssn id => on("connect"), 1st op stamped',
+    comment: 'the upstream assigns ssn id => on("connection")',
     query:   '[up]/Swarm+Replica#db!timeup+user~parent.on\tuser~parent~ssn\n\n',
     response:''
 },
@@ -31,17 +31,18 @@ var NEW_SSN = [
 {
     comment: 'downstream#1 knocks',
     query:   '[down1]/Swarm+Host#db!user.on\t\n\n',
-    response:'[down1]/Swarm+Replica#db!00001+user~parent~ssn.on\tuser~parent~ssn~1\n\n'
+    response:'[down1]/Swarm+Replica#db!00001+user~parent~ssn\tuser~parent~ssn~1\n\n'
 },
 {
     comment: 'downstream#2 knocks; it does not know its user id',
     query:   '[down2]/Swarm+Host#db!0.on\t\n\n',
-    response:'[down2]/Swarm+Replica#db!00003+user~parent~ssn.on\tuser~parent~ssn~2\n\n'
+    response:'[down2]/Swarm+Replica#db!00003+user~parent~ssn\tuser~parent~ssn~2\n\n'
 }
 ];
 
 
 tape ('2.A ssn assignment', function(t){
+
     sync.OpStream.debug = true;
 
     var mux = new BatMux({
@@ -53,7 +54,7 @@ tape ('2.A ssn assignment', function(t){
     var replica = new Replica({
         user_id:    'user',
         db_id:      'db',
-        upstream:   'lo:2Aup',
+        connect:    'lo:2Aup',
         clock:      stamp.LamportClock,
         listen:     'loopback:2A',
         adopt:      true,
@@ -98,77 +99,95 @@ var AUTH = [
 {
     comment: 'handshake is received by the upstream',
     query:   '',
-    response:'[up]/Swarm+Replica#db!0.on \n\n'
+    response:'[up]/Swarm+Replica#db!user \n\n'
 },
 {
-    comment: 'the upstream assigns user, ssn ids (triggers a new obj)',
+    comment: 'the upstream assigns ssn id (triggers a new obj)',
     query:   '[up]/Swarm+Replica#db!timeup+swarm.on\tuser~ssn\n\n',
-    response:'#0timf+user~ssn 0\n !0timf+user~ssn.~state {"new":"stamp"}\n\n'
+    response:'[up]#00001+user~ssn~1 0\n\t!00001+user~ssn~1.~state\t{"00001+user~ssn~1":{"test":true}}\n\n'
 },
 {
     comment: 'handshake attempt - wrong user id',
     query:   '[wrong1]/Swarm+Host#db!wrong_user.on\t\n\n',
-    response:'[wrong1]/Swarm+Replica#db!00001+user~ssn.error\twrong user\n\n[EOF]'
+    response:'[wrong1]/Swarm+Replica#db!00003+user~ssn.error\twrong user id\n\n[EOF]'
 },
 {
     comment: 'handshake attmpt - wrong db id',
     query:   '[wrong2]/Swarm+Host#wrong_db!user.on\t\n\n',
-    response:'[wrong2]/Swarm+Replica#db!00002+user~ssn.error\twrong db\n\n[EOF]'
+    response:'[wrong2]/Swarm+Replica#db!00004+user~ssn.error\twrong database id\n\n[EOF]'
 },
 {
     comment: 'handshake attmpt - wrong ssn id',
-    query:   '[wrong3]/Swarm+Host#db!user~wrong~ssn.on\t\n\n',
-    response:'[wrong3]/Swarm+Replica#db!00003+user~ssn.error\twrong ssn\n\n[EOF]'
+    query:   '[wrong3]/Swarm+Host#db!time+user~wrong~ssn.on\t\n\n',
+    response:'[wrong3]/Swarm+Replica#db!00005+user~ssn.error\twrong ssn (wrong subtree)\n\n[EOF]'
 },
 {
     comment: 'downstream#1 ssn grant',
     query:   '[down1]/Swarm+Host#db!user.on\t\n\t.passwd\thello\n\n',
-    response:'[down1]/Swarm+Replica#db!00004+user~ssn.on\tuser~ssn~1\n\n'
+    response:'[down1]/Swarm+Replica#db!00006+user~ssn\tuser~ssn~2\n\n'
 },
 {
     comment: 'downstream#1 subscription',
-    query:   '#id~author\t0\n\n',
+    query:   '[down1]#id~author\t0\n\n',
     response:'[up]#id~author\t0\n\n'
 },
-{
+/*{
     comment: 'downstream#1 handshake refresh (TODO)',
     query:   '[down1]/Swarm+Host#db!time+user~ssn~1.on\t\n\n',
     response:''
-},
-{
+},*/
+/*{                 FIXME
     comment: 'wrong state timestamp from a downstream',
     query:   '#0timf+user~ssn 0\n !0timf+user~ssn.~state misattributed\n\n',
     response:'[down1]#0timf+user~ssn.error invalid state origin\n'
-},
+},*/
 {
     comment: 'wrong op timestamp from a downstream',
-    query:   '#object!time+user~ssn value\n',
-    response:'#object!time+user~ssn.error invalid op origin\n'
+    query:   '[down1]#id~author!time+user~ssn.set value\n',
+    response:'[down1]#id~author!time+user~ssn.error invalid op origin\n'
 },
 {
     comment: 'downstream#2 wrong password',
     query:   '[down2]/Swarm+Host#db!user.on\t\n\t.passwd\tbye\n\n',
-    response:'[down2]/Swarm+Replica#db!00005+user~ssn.error\twrong password\n\n[EOF]'
+    response:'[down2]/Swarm+Replica#db!00008+user~ssn.error\twrong password\n\n[EOF]'
 },
 {
     comment: 'downstream#3 no handshake',
     query:   '[down3]#id!stamp+user.set\t{}\n',
-    response:'[down3].error\tno handshake\n\n[EOF]'
+    response:'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
 }
 // FIXME: denied downstream push
 ];
 
 
-tape.skip('2.B handshake errors', function (t) {
+tape ('2.B handshake errors', function (t) {
+
+    Replica.debug = true;
+
+    var mux = new BatMux({
+        connect: 'loopback:2B',
+        listen:  'loopback:1B_up',
+        accept_ids: ['up']
+    });
+
+    var bt = new bat.StreamTest(mux, AUTH, compare);
+    bt.run( t.end.bind(t) );
 
     var replica = new Replica({
-        ssn_id:     'me~ssn',
+        user_id:    'user',
         db_id:      'db',
-        upstream:   'swarm',
-        clock:      new stamp.LamportClock('me~ssn'),
+        upstream:   'loopback:1B_up',
+        clock:      stamp.LamportClock,
         listen:     'loopback:2B',
-        prefix:     true
-    }, start_tests);
+        prefix:     true,
+        auth_policy: no_bye_policy
+    });
+
+    function no_bye_policy (hs_op, op_stream, callback) {
+        var ok = !hs_op.patch || hs_op.patch.length===0 ||
+            hs_op.patch[0].value!=='bye';
+        callback( ok ? null : 'wrong password' );
+    }
 
     function compare (a,b,c) {
         a = a.replace(/[\t\s]+/g, ' ');
@@ -176,17 +195,13 @@ tape.skip('2.B handshake errors', function (t) {
         t.equal(a,b,c);
     }
 
-    function start_tests () {
-        var mux = new BatMux({
-            connect: 'loopback:2B',
-            listen:  'loopback:1B_up'
+    replica.once('connection', function (ev) {
+        if (!ev.upstream) {return;}
+        var host = new sync.Host({clock: stamp.LamportClock});
+        replica.addOpStreamDown(host);
+        host.on('writable', function () {
+            new sync.Model({test:true}, host);
         });
-
-        var bt = new bat.StreamTest(mux.trunk, AUTH, compare);
-
-        bt.runScenario( function () {
-            t.end();
-        } );
-    }
+    });
 
 });

@@ -396,7 +396,7 @@ ParsedSpec.prototype.typeid = function () {
     return '/'+this._type+'#'+this._id;
 };
 ParsedSpec.prototype.stampop = function () {
-    return '!'+this._stamp+'.'+this._op;
+    return '!'+this._stamp+'.'+this._op; // FIXME null values are valid!!!
 };
 ParsedSpec.prototype.typeId = function () {
     var clone = this.clone();
@@ -418,7 +418,10 @@ ParsedSpec.prototype.pattern = function () {
             (this._stamp?'!':'')+(this._op?'.':'');
 };
 ParsedSpec.prototype.set = function (tok, quant) {
-    if (tok.charAt(0)<'0') {
+    if (!quant) {
+        if (!tok || tok.charAt(0)>='0') {
+            throw new Error('malformed quant');
+        } // TODO tok syntax check
         quant = tok.charAt(0);
         tok = tok.substr(1);
     }
@@ -444,4 +447,11 @@ ParsedSpec.prototype.setOp = function (op_name) {
 };
 ParsedSpec.prototype.clone = function () {
     return new ParsedSpec(this);
+};
+
+Spec.inSubtree = function (ssn, parent_ssn) {
+    if (ssn===parent_ssn) { return true; }
+    if (ssn.length<=parent_ssn) { return false; }
+    if (ssn.charAt(parent_ssn.length)!=='~') { return false; }
+    return ssn.substr(0,parent_ssn.length)===parent_ssn;
 };

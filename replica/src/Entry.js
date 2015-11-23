@@ -330,7 +330,8 @@ Entry.prototype.patchUpstream = function () {
     this.state.avv = avv.toString();
 
     var patch_op = new Op(
-        this.op.spec.typeId().setStamp(this.replica.upstream_stamp).setOp('on'),
+        // ?! .setStamp(this.replica.upstream_stamp)
+        this.op.spec.typeId().setOp('on'),
         this.state.last,
         '',
         patch

@@ -79,3 +79,8 @@ BatStream.prototype.end = function () {
     stream.Duplex.prototype.end.apply(this,arguments);
     this.pair && this.pair.push(null);
 };
+
+
+BatStream.prototype.destroy = function () {
+    this.end();
+};

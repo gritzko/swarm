@@ -59,6 +59,9 @@ function Replica (options, callback) {
     //
     this.servers = Object.create(null);
     this.streams = Object.create(null);
+    //
+    this.slave = null;
+    this.slave_jobs = Object.create(null); // {id: {streams:[], version:''}}
     if (options.db_id && options.ssn_id) {
         this.createClock(options.ssn_id);
     } else { // then, read ssn_id from the db or get it from the upstream
@@ -105,6 +108,8 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
             });
             if (kv['.last_ds_ssn']) {
                 this.last_ds_ssn = parseInt(kv['.last_ds_ssn']);
+            } else {
+                this.last_ds_ssn = 0;
             }
             this.last_us_stamp;
         }
@@ -112,8 +117,9 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
         this.last_ds_ssn = 0;
         this.last_us_stamp = '';
     }
-    if (options.upstream) {
-        stream_url.connect(options.upstream, {
+    options.connect = options.connect || options.upstream; // old name
+    if (options.connect) {
+        stream_url.connect(options.connect, {
             reconnect: true // TODO  reconnect: true
         }, this.addStreamUp.bind(this));
     } else if (!this.clock) {
@@ -155,7 +161,11 @@ Replica.prototype.noClock = function (reason) {
     this.options.callback && this.options.callback(reason);
 };
 
-
+// Grants a session number to a newly connected client.
+// A root session may grant session numbers to arbitrary clients,
+// while a local proxy can only assign recursive session ids to same-user
+// sessions. An on-premises proxy acts transparently in this regard by
+// forwarding db handshakes to/from the upstream thus assigning no ids.
 Replica.prototype.issueDownstreamSessionId = function () {
     if (this.last_ds_ssn<0) {
         throw new Error('not ready yet');
@@ -172,7 +182,12 @@ Replica.prototype.saveDatabaseHandshake = function () {
     hs.value = this.last_us_stamp;
     hs.patch = []; // TODO bad style: make handshake() ret a spec
     hs.patch.push(new Op('.last_ds_ssn', ''+this.last_ds_ssn));
-    this.db.put('.on', hs.toString());
+
+
+    this.db.put('.on', hs.toString()); // FIXME prefix!!!
+
+
+
 };
 
 // Q  upstream selection, subs maintainance
@@ -196,6 +211,7 @@ Replica.prototype.gc = function () {
 
 //
 Replica.prototype.write = function (op) {
+    Replica.debug && console.log(this.ssn_id,'>',op.toString());
     if (op.constructor!==Op) {
         throw new Error('consumes swarm-syncable Op objects only');
     }
@@ -216,7 +232,11 @@ Replica.prototype.write = function (op) {
 
     var entry = this.entries[typeid];
     if (entry) {
-        entry.queueOps(new_ops);
+        if (op.source===this.upstream_stamp || Spec.inSubtree(op.origin(), op.source)) {
+            entry.queueOps(new_ops);
+        } else {
+            this.send(op.error('invalid op origin'));
+        }
     } else if (op.name()==='on') {
         var meta = this.entry_states[typeid];
         entry = new Entry(this, typeid, meta, new_ops);
@@ -394,12 +414,10 @@ Replica.prototype.addStreamUp = function (err, stream) {
         console.warn('upsteram conn fail', err);
         return;
     }
-    var op_stream = new OpStream (stream, undefined, {});
-    if (op_stream.peer_hs) {
-        this.onUpstreamHandshake(op_stream.peer_hs, op_stream);
-    } else {
-        op_stream.once('id', this.onUpstreamHandshake.bind(this));
-    }
+    var op_stream = new OpStream (stream), self = this;
+    op_stream.once('data', function(data) {
+        self.onUpstreamHandshake(data, op_stream);
+    });
     op_stream.sendHandshake(this.handshake());
 };
 // FIXME  Muxer accepts connections to stream ids
@@ -407,7 +425,7 @@ Replica.prototype.addStreamUp = function (err, stream) {
 Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     if (this.db_id) {
         if (this.db_id!==hs_op.id()) {
-            return op_stream.close('wrong db id');
+            return op_stream.destroy('wrong db id');
         }
     } else {
         this.db_id = hs_op.id();
@@ -421,8 +439,9 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         // FIXME   op_stream stamps
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
-    this.streams[op_stream.peerSessionStamp()] = op_stream;
-    this.upstream_ssn = hs_op.origin();
+    var source = op_stream.source = hs_op.origin();
+    this.streams[hs_op.stamp()] = op_stream;
+    this.upstream_ssn = source;
     this.upstream_stamp = hs_op.stamp();
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', this.removeStream.bind(this));
@@ -431,7 +450,9 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
 
     this.emit('connection', {
         op_stream: op_stream,
-        ssn_id: op_stream.peerSessionId()
+        upstream: true,
+        ssn_id: source,
+        stamp:  hs_op.stamp()
     });
 };
 
@@ -440,23 +461,41 @@ Replica.prototype.addStreamDown = function (stream) {
     var op_stream = new OpStream (stream, undefined, {
         authorize: this.options.authorize // needs the stream
     });
-
-    op_stream.on('id', this.onDownstreamHandshake.bind(this));
+    var self = this;
+    op_stream.once('data', function (op) {
+        if (op.spec.Type().time()==='Swarm') {
+            self.onDownstreamHandshake(op, op_stream);
+        } else {
+            var err_op = new Op(self.handshake().spec.setOp('error'), 'no handshake');
+            op_stream.write(err_op);
+            op_stream.destroy();
+        }
+    });
 
     setTimeout(function kill(){
-        if (!op_stream.ssn_id) {
-            stream.close();
-            op_stream.close();
+        if (!op_stream.source) {
+            stream.destroy();
+            op_stream.destroy();
         }
-    }, 3000); // the stream has 3 sec to complete the handshake
+    }, 3000); // the stream has 3 sec to? complete the handshake
 
     op_stream.on('error', function onError (msg) {
         try {
             op_stream.end(new Op('.error',msg||'handshake error'));
+            op_stream.destroy();
         } catch (ex) {}
     });
 
 };
+
+
+Replica.prototype.addOpStreamDown = function (stream) {
+    var self = this;
+    stream.once('data', function (op) {
+        self.onDownstreamHandshake(op, stream);
+    });
+};
+
 
 // ssn id assignment necessitates strict handshake sequence:
 // the client introduces itself first. That matches the logic
@@ -464,31 +503,103 @@ Replica.prototype.addStreamDown = function (stream) {
 // still behave the way they want.
 Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     // op_stream.setContext();
-    if (this.db_id!==op.id()) {
-        return op_stream.close('wrong database id');
-    }
-    var lamp = new stamp.LamportTimestamp(op.stamp());
+    var self = this, options = this.options;
     var hs = this.handshake();
-    if (lamp.time()==='0') { // the ds has no clocks
-        if (lamp.author() && lamp.author()!==this.user_id) {
-            return op_stream.close('wrong user id');
-        }
-        var new_ssn = this.issueDownstreamSessionId();
-        hs.value = new_ssn;
-        // FIXME op_stream.xxx = new_ssn;
-        // once we assign the ssn, stream stamp is still 0, but ssn id changes
+    var peer_ssn_id = op.origin(), peer_user = op.author();
+
+    if (this.db_id!=='*' && this.db_id!==op.id() && op.id()!=='0') {
+        reject_handshake_action ('wrong database id');
+    } else if (peer_user && this.user_id!=='swarm' && peer_user!==this.user_id) {
+        reject_handshake_action ('wrong user id');
+    } else {
+        auth_action();
     }
-    op_stream.sendHandshake(hs);
 
-    this.streams[op_stream.peerSessionStamp()] = op_stream;
+    function auth_action () {
+        var auth = options.auth_policy;
+        if (auth) {
+            auth.call(self, op, op_stream, act_on_auth_policy_action);
+        } else {
+            check_ssn_action();
+        }
+    }
 
-    op_stream.on('data', this.write.bind(this));
-    op_stream.on('end', this.removeStream.bind(this));
+    function act_on_auth_policy_action (err) {
+        if (err) {
+            reject_handshake_action(err);
+        } else {
+            check_ssn_action();
+        }
+    }
 
-    this.emit('connection', {
-        op_stream: op_stream,
-        ssn_id: op_stream.peerSessionId()
-    });
+    function check_ssn_action () {
+        var lamp = new stamp.LamportTimestamp(op.stamp());
+        if (lamp.time()==='0') {
+            var policy = options.session_policy || Replica.seq_ssn_policy;
+            policy.call(self, op, op_stream, act_on_ssn_policy_action);
+        } else {
+            var ssn = lamp.source();
+            var tili = ssn.lastIndexOf('~');
+            if (tili<1 || ssn.substr(0, tili)!==self.ssn_id) {
+                reject_handshake_action('wrong ssn (wrong subtree)');
+            } else {
+                accept_handshake_action();
+            }
+        }
+    }
+
+    function act_on_ssn_policy_action (err, new_ssn) {
+        if (err) {
+            reject_handshake_action(err);
+        } else {
+            peer_ssn_id = new_ssn;
+            hs.value = new_ssn;
+            accept_handshake_action();
+        }
+    }
+
+    function accept_handshake_action () {
+
+        op_stream.on('data', self.write.bind(self));
+        op_stream.on('end', self.removeStream.bind(self));
+        self.streams[peer_ssn_id] = op_stream;
+        op_stream.source = peer_ssn_id;
+
+
+        op_stream.write(hs);
+
+        self.emit('connection', {
+            op_stream: op_stream,
+            upstream: false,
+            ssn_id: op_stream.source
+        });
+
+    }
+
+    function reject_handshake_action (err) {
+        var err_op = new Op(hs.spec.setOp('error'), err);
+        op_stream.write(err_op);
+        op_stream.destroy && op_stream.destroy();
+    }
+
+};
+
+// the default agree-to-everything cumulative-numbering ssn assignment policy
+Replica.seq_ssn_policy =  function (op, op_stream, callback) {
+    var replica = this;
+    var lamp = new stamp.LamportTimestamp(op.stamp());
+    if (replica.user_id!=='swarm' && lamp.author() && lamp.author()!==replica.user_id) {
+        callback('wrong user');
+        return;
+    }
+    //var ds_user_id = lamp.author();
+    var seq = ++replica.last_ds_ssn;
+    var new_ssn = replica.ssn_id + '~' + stamp.base64.int2base(seq, 1);
+    // FIXME recursive
+    replica.saveDatabaseHandshake(); // FIXME callback (prevent double-grant on restart)
+    callback(null, new_ssn);
+    // FIXME op_stream.xxx = new_ssn;
+    // once we assign the ssn, stream stamp is still 0, but ssn id changes
 };
 
 

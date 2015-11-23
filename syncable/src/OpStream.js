@@ -30,25 +30,25 @@ function OpStream (stream, options) {
     Duplex.call(this, {objectMode: true});
     this.stream = stream;
     this.options = options = options || {};
-    this.pending_s = [];
+    this.pending_s = []; // FIXME this is not our business
 
     // Local session/database/timestamp
-    this.ssn_id = options.ssn_id || null;
-    this.db_id = options.db_id || null;
-    this.stamp = options.stamp || '0';
+    // this.ssn_id = options.ssn_id || null;
+    // this.db_id = options.db_id || null;
+    // this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
-    this.peer_hs = null;
+    // this.peer_hs = null;
+this.source = null;
 
-
-    this.peer_ssn_id = null; // TODO tidy this up
-    this.peer_db_id = null;  // (store hs, add accessor methods)
-    this.peer_stamp = null;
+    // this.peer_ssn_id = null; // TODO tidy this up
+    // this.peer_db_id = null;  // (store hs, add accessor methods)
+    // this.peer_stamp = null;
     // Peer options received in handshake
-    this.peer_options = null;
+    // this.peer_options = null;
 
 
     this.remainder = '';
-    this.context = new Spec.Parsed('/Model.on');
+    this.context = new Spec.Parsed('/Model!0.on');
     this.bound_flush = this.flush.bind(this);
     this.flush_timeout = null;
     this.lastSendTime = 0;
@@ -70,18 +70,18 @@ module.exports = OpStream;
 OpStream.debug = false;
 
 OpStream.prototype._write = function (op, encoding, callback) {
-    if (!this.ssn_id) {
-        if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-            op.op().toLowerCase()!=='on') {
-            throw new Error('handshake first');
-        }
-        this.db_id = op.id();
-        this.ssn_id = op.origin();
-        this.stamp = op.stamp();
-        this.pending_s.push( op.toString() );
-    } else {
+    // if (!this.ssn_id) {
+    //     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
+    //         op.op().toLowerCase()!=='on') {
+    //         throw new Error('handshake first');
+    //     }
+    //     this.db_id = op.id();
+    //     this.ssn_id = op.origin();
+    //     this.stamp = op.stamp();
+    //     this.pending_s.push( op.toString() );
+    // } else {
         this.pending_s.push( op.toString(this.context) );
-    }
+    // }
     if (this.asyncFlush) {
         if (!this.flush_timeout) {
             var delay;
@@ -143,7 +143,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 
     try {
 
-        parsed = Op.parse(this.remainder, this.peer_stamp, this.context);
+        parsed = Op.parse(this.remainder, this.source, this.context);
 
     } catch (ex) {
         this.onStreamError(new Error('bad op format'));
@@ -159,14 +159,14 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 
     try {
 
-        if (!this.peer_stamp) { // we expect a handshake
-            this.onHandshake(ops.shift());
-        }
+        // if (!this.peer_stamp) { // we expect a handshake
+        //     this.onHandshake(ops.shift());
+        // }
 
         OpStream.debug && console.log
             (this.peer_stamp||'unknown', '>', this.stamp||'undecided', data.toString());
 
-        var author = this.options.restrictAuthor || undefined;
+        var author = this.options.restrictAuthor || undefined; // FIXME
         for(var i = 0; i < ops.length; i++) {
             var op = ops[i];
             if (author!==undefined && op.spec.author()!==author) {
@@ -185,29 +185,30 @@ OpStream.prototype.sendHandshake = function (op) {
     this.write(op);
 };
 
-OpStream.prototype.onHandshake = function (op) {
-    if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-        op.op().toLowerCase()!=='on') {
-        console.error('not a handshake:', op);
-        return this.onStreamError(new Error('invalid handshake'));
-    }
-    this.peer_hs = op;
-
-    // TODO tidy
-    this.peer_db_id = op.id();
-    this.peer_ssn_id = op.origin();
-    this.peer_options = op.value ? op.patch : null; // TODO
-    this.peer_stamp = op.stamp();
-    this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
-
-    console.warn('context set');
-    this.emit('id', op, this);
-};
+// OpStream.prototype.onHandshake = function (op) {
+//     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
+//         op.op().toLowerCase()!=='on') {
+//         console.error('not a handshake:', op);
+//         return this.onStreamError(new Error('invalid handshake'));
+//     }
+//     this.peer_hs = op;
+//
+//     // TODO tidy
+//     this.peer_db_id = op.id();
+//     this.peer_ssn_id = op.origin();
+//     this.peer_options = op.value ? op.patch : null; // TODO
+//     this.peer_stamp = op.stamp();
+//     this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
+//
+//     console.warn('context set');
+//     this.emit('id', op, this);
+// };
 
 OpStream.prototype.onStreamEnded = function () {
-    this.stream.removeAllListeners();
-    this.stream = null;
-    this.emit('end', this);
+    // this.stream.removeAllListeners();
+    // this.stream = null;
+    // this.emit('end', this);
+    this.push(null);
 };
 
 OpStream.prototype.onStreamError = function (err) {
@@ -239,20 +240,20 @@ OpStream.prototype.onTimer = function () {
 OpStream.prototype._read = function () {};
 
 
-OpStream.prototype.close = function () {
-    this.stream.close();
+OpStream.prototype.destroy = function () {
+    this.stream.destroy();
 };
 
+//
+// OpStream.prototype.setContext = function (context) {
+//     console.warn('setContext is deprecated');
+//     this.context = context;
+// };
 
-OpStream.prototype.setContext = function (context) {
-    console.warn('setContext is deprecated');
-    this.context = context;
-};
-
-
-OpStream.prototype.peerSessionId = function () {
-    return this.peer_hs && this.peer_hs.origin();
-};
-OpStream.prototype.peerSessionStamp = function () {
-    return this.peer_hs && this.peer_hs.stamp();
-};
+//
+// OpStream.prototype.peerSessionId = function () {
+//     return this.peer_hs && this.peer_hs.origin();
+// };
+// OpStream.prototype.peerSessionStamp = function () {
+//     return this.peer_hs && this.peer_hs.stamp();
+// };
