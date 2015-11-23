@@ -13,6 +13,7 @@ for P in $PACKAGES; do
                 ln -s ../../$p node_modules/swarm-$p
             fi
         done
+        npm install
     fi
 
     npm install
