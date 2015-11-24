@@ -2,7 +2,6 @@
 var swarm_stamp = require('swarm-stamp');
 var Spec = require('./Spec');
 var Op = require('./Op');
-var Syncable = require('./Syncable');
 var util = require("util");
 //var EventEmitter = require("eventemitter3");
 var Duplex = require('readable-stream').Duplex;
@@ -43,8 +42,10 @@ function Host (options) {
 }
 util.inherits(Host, Duplex);
 module.exports = Host;
-Host.debug = false;
 
+Host.debug = false;
+Host.multihost = false;
+Host.localhost = null;
 
 /*Host.prototype.emitSubscriptions = function () {
     var statefuls = Object.keys(this.crdts).sort();
@@ -67,6 +68,9 @@ Host.prototype._read = function () {
     return;
 };
 
+// import Syncable only after exporting Host - Syncable will import Host
+// itself, so otherwise it will get an incomplete object.
+var Syncable = require('./Syncable');
 
 Host.prototype.close = function () {
     if (Host.localhost===this) {
@@ -235,6 +239,7 @@ Host.prototype._write = function (op, encoding, callback) {
             syncable._version = crdt._version = stamp;
             syncable.emit('change', {
                 version: crdt._version,
+                target: syncable,
                 changes: null
             });
         }

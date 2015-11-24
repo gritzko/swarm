@@ -43,6 +43,21 @@ tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
     tap.equal(spec3.toString(), spec.toString());
     var spec4 = new Spec.Parsed(spec2);
     tap.equal(spec4.toString(), spec2.toString());
+
+    var test = '/Type.op2';
+    tap.equal(new Spec.Parsed(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec.Parsed(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec.Parsed(test, new Spec.Parsed('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
+    tap.equal(new Spec.Parsed(test, null, '/Type!stamp8.op1').toString(), '/Type!stamp8.op2');
+    tap.equal(new Spec.Parsed(test, null, new Spec.Parsed('/Type!stamp9.op1')).toString(), '/Type!stamp9.op2');
+
+    test = new Spec.Parsed('/Type.op2');
+    tap.equal(new Spec.Parsed(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec.Parsed(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec.Parsed(test, new Spec.Parsed('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
+    tap.equal(new Spec.Parsed(test, null, '/Type!stamp8.op1').toString(), '/Type.op2');
+    tap.equal(new Spec.Parsed(test, null, new Spec.Parsed('/Type!stamp9.op1')).toString(), '/Type.op2');
+
     tap.end();
 });
 
@@ -50,7 +65,19 @@ tape ('syncable.01.c spec filters', function (tap) {
     var filter = '.on';
     tap.equal (new Spec('!abc.on/Class').fits(filter), true);
     tap.equal (new Spec('.off/Class').fits(filter), false);
-    tap.equal (new Spec('/Type!abc.off.on').fits(filter), true);
+    tap.equal (new Spec('/Type#id!abc.off.on').fits(filter), true);
+
+    tap.equal (new Spec('/Type#id!abc.on').filter('/').value, '/Type');
+    tap.equal (new Spec('/Type#id!abc.on').filter('#').value, '#id');
+    tap.equal (new Spec('/Type#id!abc.on').filter('!').value, '!abc');
+    tap.equal (new Spec('/Type#id!abc.on').filter('.').value, '.on');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/#').value, '/Type#id');
+
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/').toString(), '/Type');
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('#').toString(), '#id');
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('!').toString(), '!abc');
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('.').toString(), '.on');
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/#').toString(), '/Type#id');
     tap.end();
 });
 
@@ -145,7 +172,17 @@ tape ('syncable.01.h parse strange ops', function (tap) {
     tap.equal(op.patch[0].value, '-1');
     tap.equal(op.patch[0].id(), 'db');
     tap.end();
+});
 
+tape ('1.i parse remainder', function (tap) {
+    var parsed = Op.parse ('/Type1#id1!stamp1.on\tVALUE\n/Type2#id2!stamp2');
+    tap.equal(parsed.remainder, '/Type2#id2!stamp2');
+    tap.equal(parsed.ops.length, 1);
+
+    var op = parsed.ops[0];
+    tap.equal(op.origin(), 'stamp1');
+    tap.equal(op.op(), 'on');
+    tap.end();
 });
 
 

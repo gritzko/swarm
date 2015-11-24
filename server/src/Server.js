@@ -38,4 +38,9 @@ function Server (options) {
     // this.rest_api = ...; TODO
 }
 
+Server.prototype.close = function () {
+    console.warn('Server.close not implemented');
+};
+
+
 module.exports = Server;
