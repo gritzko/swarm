@@ -18,7 +18,7 @@ if (typeof(window)==='object') {
 // A big advantage of the 1.0 model is that we can test everythign apart:
 // CRDTs, API objects, Host, Replica, and so on...
 
-tape('4.A Model CRDT / Syncable', function (t) {
+tape ('syncable.04.A Model CRDT / Syncable', function (t) {
 
     t.plan(8);
 
@@ -58,7 +58,7 @@ tape('4.A Model CRDT / Syncable', function (t) {
 });
 
 
-tape('4.B Set CRDT / Syncable', function (t) {
+tape ('syncable.04.B Set CRDT / Syncable', function (t) {
 
     // CRDT
     var a = new Set.Inner();
@@ -104,12 +104,12 @@ tape('4.B Set CRDT / Syncable', function (t) {
 });
 
 
-tape.skip('4.C Concurrency in Set', function (t) {
+tape.skip('syncable.04.C Concurrency in Set', function (t) {
     // TODO
 });
 
 
-tape('4.D Model CRDT serialization', function (t) {
+tape ('syncable.04.D Model CRDT serialization', function (t) {
     var crdt = new Model.Inner();
     crdt.set({a:1, b:2}, 'stamp1+source');
     crdt.set({c:{d:4}}, 'stamp2+source');

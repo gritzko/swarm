@@ -17,7 +17,7 @@ if (typeof(window)==='object') {
 }
 
 
-tape('5.A Model set/get - Host protocol', function (t) {
+tape ('syncable.05.A Model set/get - Host protocol', function (t) {
     t.plan(6);
     var host = new Host({
         ssn_id: 'anon~5A',
@@ -39,7 +39,7 @@ tape('5.A Model set/get - Host protocol', function (t) {
     host.on('end', function() {
         t.equal(collect,
             '/Swarm+Host#db!00001+anon~5A.on\t\n\n' +
-            '/Model#00002+anon~5A.on\t0\n' +
+            '/Model#00002+anon~5A!0.on\t0\n' +
                 '\t!00002+anon~5A.~state\t{"00002+anon~5A":{"x":1}}\n\n' +
             '/Model#00002+anon~5A!00003+anon~5A.set\t{"y":2}\n' +
             '/Model#00002+anon~5A!00004+anon~5A.set\t{"x":3}\n',
@@ -51,7 +51,7 @@ tape('5.A Model set/get - Host protocol', function (t) {
 });
 
 
-tape('5.B concurrent ops', function (t) {
+tape ('syncable.05.B concurrent ops', function (t) {
     t.plan(1);
     var host = new Host({
         ssn_id: 'anon~5B',
@@ -125,7 +125,7 @@ var REFS = [
 ];
 
 
-tape('5.C refs - blackbox', function (t) {
+tape ('syncable.05.C refs - blackbox', function (t) {
 
     var host = new Host({
         db_id: 'db',
@@ -220,7 +220,7 @@ var TORTURE_MODELS = [
 // storage has no idea who the consumers are, so it echoes every
 // new op => echo is OK, types must be idempotent, we may kill
 // echos for better performance
-tape.skip('5.D tortures', function (t){
+tape.skip('syncable.05.D tortures', function (t){
     var host = new Host({
         ssn_id: 'me',
         db_id:  'db',
@@ -267,7 +267,7 @@ var DESC_STATE = [
 }
 ];
 
-tape.skip('5.E descending state', function (t) {
+tape.skip('syncable.05.E descending state', function (t) {
 
     var host = new Host({
         db_id: 'db',
@@ -324,7 +324,7 @@ var SNAPSHOTS = [
 ];
 
 
-tape('5.F snapshotting', function (t) {
+tape ('syncable.05.F snapshotting', function (t) {
 
     var host = new Host({
         db_id: 'db',
@@ -352,14 +352,14 @@ tape('5.F snapshotting', function (t) {
 });
 
 
-tape.skip('5.G exception handling', function (t) {
+tape.skip('syncable.05.G exception handling', function (t) {
 
     // FIXME resync, buffer local changes
 
 });
 
 
-/*tape('5.E misc - dave/diff', function (t) {
+/*tape ('syncable.05.E misc - dave/diff', function (t) {
     var host = new Host({
         db_id: 'db5D',
         ssn_id: 'anon~5E',

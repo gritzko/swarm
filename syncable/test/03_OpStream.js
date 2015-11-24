@@ -12,7 +12,7 @@ if (typeof(window)==='object') {
     tape_dom.stream(tape);
 }
 
-tape('3.A simple cases', function (t) {
+tape ('syncable.03.A simple cases', function (t) {
     var stream = new BatStream();
 
     var pair = new OpStream(stream.pair, {});
@@ -50,7 +50,7 @@ tape('3.A simple cases', function (t) {
     }
 });
 
-tape('3.B defragmentation', function (t) {
+tape ('syncable.03.B defragmentation', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair, {source: 'pair'});
     var op = new Op('/Swarm#db+cluster!stream.on', '', 'pair');
@@ -67,7 +67,7 @@ tape('3.B defragmentation', function (t) {
     }
 });
 
-tape('3.C error', function (t) {
+tape ('syncable.03.C error', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair, {});
     t.plan(1);
@@ -80,7 +80,7 @@ tape('3.C error', function (t) {
     stream.write("!не операция\n");
 });
 
-tape('3.D handshake', function (t) {
+tape ('syncable.03.D handshake', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(4);
@@ -101,7 +101,7 @@ tape('3.D handshake', function (t) {
     stream.write("/Model#stamp!time.on\t\n");
 });
 
-tape('3.E destroy()', function (t) {
+tape ('syncable.03.E destroy()', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(1);
@@ -120,7 +120,7 @@ tape('3.E destroy()', function (t) {
 });
 
 
-tape('3.F stream end', function (t) {
+tape ('syncable.03.F stream end', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(3);
@@ -137,7 +137,7 @@ tape('3.F stream end', function (t) {
     stream.end();
 });
 
-tape('3.G dialog', function (t) {
+tape ('syncable.03.G dialog', function (t) {
     var stream = new BatStream();
     var pair = new OpStream(stream.pair, {});
     var opstream = new OpStream(stream, {});
@@ -167,7 +167,7 @@ tape('3.G dialog', function (t) {
 });
 
 
-tape('3.H write to a closed stream', function (t) {
+tape ('syncable.03.H write to a closed stream', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(3);
@@ -185,7 +185,7 @@ tape('3.H write to a closed stream', function (t) {
 });
 
 
-tape.skip('3.I stream .write()/.read() interface', function (t) {
+tape.skip('syncable.03.I stream .write()/.read() interface', function (t) {
     var stream = new BatStream();
     var pair = new OpStream(stream.pair, {});
     var opstream = new OpStream(stream, {});
@@ -224,5 +224,5 @@ tape.skip('3.I stream .write()/.read() interface', function (t) {
 });
 
 
-tape.skip('3.J patch: partial read', function (t) {
+tape.skip('syncable.03.J patch: partial read', function (t) {
 });

@@ -9,7 +9,7 @@ if (typeof(window)==='object') {
     tape_dom.stream(tape);
 }
 
-tape ('1.b basic specifier syntax', function (tap) {
+tape ('syncable.01.b basic specifier syntax', function (tap) {
     var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
     var spec = new Spec(testSpec);
     tap.equal(spec.version(),'7Umum+gritzko~ssn');
@@ -30,7 +30,7 @@ tape ('1.b basic specifier syntax', function (tap) {
 });
 
 
-tape ('1.b.2 parsed specifier (scopes and defaults)', function (tap) {
+tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
     var spec = new Spec.Parsed('!stamp', '/Type#id', '.on');
     tap.equal(spec.toString(), '/Type#id!stamp.on', 'scope/default');
     tap.equal(spec.type(), 'Type');
@@ -46,7 +46,7 @@ tape ('1.b.2 parsed specifier (scopes and defaults)', function (tap) {
     tap.end();
 });
 
-tape('1.c spec filters', function (tap) {
+tape ('syncable.01.c spec filters', function (tap) {
     var filter = '.on';
     tap.equal (new Spec('!abc.on/Class').fits(filter), true);
     tap.equal (new Spec('.off/Class').fits(filter), false);
@@ -55,7 +55,7 @@ tape('1.c spec filters', function (tap) {
 });
 
 
-tape('1.e corner cases', function (tap) {
+tape ('syncable.01.e corner cases', function (tap) {
     var empty = new Spec('');
     tap.equal(empty.type()||empty.id()||empty.op()||empty.version(),'');
     tap.equal(empty.toString(),'');
@@ -70,7 +70,7 @@ tape('1.e corner cases', function (tap) {
 });
 
 
-tape('1.f op regexes', function (t) {
+tape ('syncable.01.f op regexes', function (t) {
     var reSpec = new RegExp(Op.rsSpec);
     t.ok(reSpec.test('/Swarm#db!stamp+user~ssn.on'), '.on spec');
     Op.reOp.lastIndex = 0;
@@ -86,7 +86,7 @@ tape('1.f op regexes', function (t) {
 });
 
 
-tape ('1.g parse ops', function (tap) {
+tape ('syncable.01.g parse ops', function (tap) {
 
     var parsed = Op.parse (
         '/Model#test!timeX+author~ssn.on\t\n'+
@@ -131,7 +131,7 @@ tape ('1.g parse ops', function (tap) {
 
 
 // be conservative in what you send, liberal in what you accept
-tape('1.h parse strange ops', function (tap) {
+tape ('syncable.01.h parse strange ops', function (tap) {
 
     var bad_hs = "/Swarm+Replica#db!00000+user~ssn.on null\n !null.last_ds_ssn -1\n\n";
     var op = new Op(bad_hs);
@@ -149,7 +149,7 @@ tape('1.h parse strange ops', function (tap) {
 });
 
 
-tape('1.i spanning tree', function (tap) {
+tape ('syncable.01.i spanning tree', function (tap) {
     tap.ok(Spec.inSubtree('ssn~child~1', 'ssn'));
     tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child'));
     tap.notOk(Spec.inSubtree('ssn~child~1', 'ssn~another'));

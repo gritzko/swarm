@@ -12,7 +12,7 @@ if (typeof(window)==='object') {
 }
 
 
-tape('2.A empty cycle', function (t) {
+tape ('syncable.02.A empty cycle', function (t) {
     var host = new Host({
         ssn_id: 'anon',
         db_id: 'db',
@@ -28,7 +28,7 @@ tape('2.A empty cycle', function (t) {
     t.end();
 });
 
-tape('2.B listeners', function (t) {
+tape ('syncable.02.B listeners', function (t) {
     var empty = new Syncable(null, null);
     empty.on('none', function(ev){
         t.equals(ev.name, "none", 'event is OK');
@@ -38,7 +38,7 @@ tape('2.B listeners', function (t) {
     empty.emit('none', event);
 });
 
-tape.skip('2.C batch events', function (t) {
+tape.skip('syncable.02.C batch events', function (t) {
     var host = new Host('anon', null);
     var empty = new Syncable('emitter', host);
     var c = 0;
@@ -54,7 +54,7 @@ tape.skip('2.C batch events', function (t) {
 });
 
 /*
-tape('2.a basic listener func', function (t) {
+tape ('syncable.02.a basic listener func', function (t) {
     t.plan(6); // ...7
     var huey = new Model({}, null);
     var huey_ti = huey.spec();
