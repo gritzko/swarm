@@ -38,7 +38,9 @@ function Host (options) {
         }
         Host.localhost = this;
     }
-    this.push(this.handshake());
+    var hs = this.handshake();
+    this.source = hs.stamp();
+    this.push(hs);
 }
 util.inherits(Host, Duplex);
 module.exports = Host;
@@ -47,22 +49,6 @@ Host.debug = false;
 Host.multihost = false;
 Host.localhost = null;
 
-/*Host.prototype.emitSubscriptions = function () {
-    var statefuls = Object.keys(this.crdts).sort();
-    for(var i=0; i<statefuls.length; i++) {
-        var typeid = statefuls[i];
-        var crdt = this.crdts[typeid];
-        crdt && this.emit('data', new Op(typeid+'.on', crdt._version));
-    }
-    if (this.syncables) {
-        var keys = Object.keys(this.syncables).sort();
-        for(i=0; i<keys.length; i++) {
-            typeid = keys[i];
-            if (this.crdts[typeid]) { continue; }
-            this.emit('data', new Op(typeid+'.on', ''));
-        }
-    }
-};*/
 
 Host.prototype._read = function () {
     return;
@@ -93,7 +79,7 @@ Host.prototype.handshake = function () {
     }
     var key = new Spec.Parsed('/Swarm+Host').add(this.db_id||'0', '#')
         .add(stamp,'!').add('.on');
-    return new Op(key, '', this.ssn_id);
+    return new Op(key, '', this.source);
 };
 
 // Returns a new timestamp from the host's clock.
@@ -150,7 +136,7 @@ Host.prototype._writeHandshake = function (op) {
         }
     } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this.push(new Op('.error', 'handshake mismatch', this.ssn_id));
+        this.push(new Op('.error', 'handshake mismatch', this.source));
         this.end(); // TODO destroy?
     }
 };
@@ -195,7 +181,7 @@ Host.prototype._write = function (op, encoding, callback) {
             console.warn('upstream disappears for', typeid);
         } else {
             delete this.crdts[typeid];
-            this.push(new Op(typeid+'.off', '', this.ssn_id));
+            this.push(new Op(typeid+'.off', '', this.source));
         }
         break;
     case '~state':
@@ -207,7 +193,7 @@ Host.prototype._write = function (op, encoding, callback) {
         crdt = new type_fn.Inner(op.value);
         this.crdts[typeid] = crdt;
         if (!have_or_wait_state) { // FIXME obey
-            this.push(new Op(typeid+'.on', op.spec.stamp(), this.ssn_id));
+            this.push(new Op(typeid+'.on', op.spec.stamp(), this.source));
         }
 
         // FIXME descending state!!! see the pacman note
@@ -246,7 +232,7 @@ Host.prototype._write = function (op, encoding, callback) {
 
         if (this.options.snapshot==='immediate') {
             var spec = op.spec.set('~state', '.');
-            this.push(new Op(spec, crdt.toString()), this.ssn_id);
+            this.push(new Op(spec, crdt.toString()), this.source);
         }
 
     }
@@ -287,7 +273,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         var crdt = new syncable.constructor.Inner(null, syncable); // 0 state
         if (init_op) {
             var stamped_spec = typeid.add(stamp,'!').add(init_op.op(),'.');
-            var stamped_op = new Op(stamped_spec, init_op.value, this.ssn_id);
+            var stamped_op = new Op(stamped_spec, init_op.value, this.source);
             crdt.write(stamped_op);
         }
         this.crdts[typeid] = crdt;
@@ -296,9 +282,9 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
-        var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.ssn_id);
+        var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.source);
         var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
-        on_op = new Op(on_spec, '0', this.ssn_id, [state_op]);
+        on_op = new Op(on_spec, '0', this.source, [state_op]);
 
     } else {
         var spec = syncable.spec().toString();
@@ -307,7 +293,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         this.crdts[syncable.spec().typeid()] = null; // wait for the state
         // 0 up
-        on_op = new Op(syncable.spec().add('.on'), '', this.ssn_id);
+        on_op = new Op(syncable.spec().add('!0').add('.on'), '', this.source);
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
@@ -329,7 +315,7 @@ Host.prototype.abandonSyncable = function (obj) {
         }
         delete this.syncables[typeid];
         var off_spec = obj.spec().add('.off');
-        var off_op = new Op (off_spec, '', this.ssn_id);
+        var off_op = new Op (off_spec, '', this.source);
         this.push(off_op);
     }
 };
@@ -384,7 +370,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
         throw new Error('have no state, can not modify');
     }
     var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
-    var op = new Op(spec, value, this.ssn_id); // FIXME run vs ssn vs conn id
+    var op = new Op(spec, value, this.source); // FIXME run vs ssn vs conn id
 
     this._write(op); // not recommended by node docs :)
     this.push(op);

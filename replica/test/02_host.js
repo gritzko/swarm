@@ -16,7 +16,7 @@ if (typeof(window)==='object') {
 }
 
 
-tape ('2.A simple Model sync', function(t){
+tape ('replica.02.A simple Model sync', function(t){
     var replica = new Replica({
         ssn_id: 'user',
         db_id: 'db'
@@ -32,8 +32,10 @@ tape ('2.A simple Model sync', function(t){
 
     //replica.addStreamDown(host1);
     //replica.addStreamDown(host2);
-    replica.onDownstreamHandshake(host1.handshake(), host1);
-    replica.onDownstreamHandshake(host2.handshake(), host2);
+    //replica.onDownstreamHandshake(host1.handshake(), host1);
+    //replica.onDownstreamHandshake(host2.handshake(), host2);
+    replica.addOpStreamDown(host1);
+    replica.addOpStreamDown(host2);
 
     var obj1 = new Model({a:1}, host1);
     var obj2 = host2.get(obj1.spec());

@@ -647,7 +647,7 @@ Replica.prototype.listen = function (url, options, on_ready) {
             on_ready && on_ready(err, null);
         } else {
             self.servers[url] = server;
-            server.on('stream', self.addStreamDown.bind(self));
+            server.on('connection', self.addStreamDown.bind(self));
             on_ready && on_ready(null, server);
         }
     });
