@@ -2,7 +2,7 @@
 var Op = require('./Op');
 var Spec = require('./Spec');
 var util         = require("util");
-var Duplex       = require("stream").Duplex;
+var Duplex       = require("readable-stream").Duplex;
 
 // Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
 // router, host - all consume op streams. To make all those part able to run
@@ -38,7 +38,7 @@ function OpStream (stream, options) {
     // this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
     // this.peer_hs = null;
-this.source = null;
+    this.source = options.source || null;
 
     // this.peer_ssn_id = null; // TODO tidy this up
     // this.peer_db_id = null;  // (store hs, add accessor methods)

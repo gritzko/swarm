@@ -30,6 +30,8 @@ tape('3.A simple cases', function (t) {
 
     t.plan(send_ops.length*4);
 
+    opstream.source = 'pair';
+
     opstream.on('data', function(op) {
         var next = expect_ops.pop();
         t.equal(''+op.spec, ''+next.spec, 'spec matches ('+(i++)+')');
@@ -38,7 +40,7 @@ tape('3.A simple cases', function (t) {
         t.deepEqual(op.patch, next.patch, 'patch matches');
     });
 
-    pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+    //pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
 
     while (send_ops.length) {
         var op = send_ops.shift();
@@ -50,13 +52,13 @@ tape('3.A simple cases', function (t) {
 
 tape('3.B defragmentation', function (t) {
     var stream = new BatStream();
-    var opstream = new OpStream(stream.pair, {});
+    var opstream = new OpStream(stream.pair, {source: 'pair'});
     var op = new Op('/Swarm#db+cluster!stream.on', '', 'pair');
     var str = op.toString();
 
     t.plan(2);
 
-    opstream.on('id', function(recv_op){
+    opstream.on('data', function(recv_op){
         t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
         t.equal(recv_op.value, op.value, 'value matches');
     });
@@ -82,14 +84,16 @@ tape('3.D handshake', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(4);
-    opstream.on('data', function(recv_op){
+    opstream.once('data', function(hs_op) {
+        t.equal(hs_op.origin(), 'swarm~ssn');
+        t.equal(hs_op.id(), 'db+cluster');
+        opstream.source = hs_op.stamp();
+        opstream.on('data', more_data);
+    });
+    function more_data(recv_op){
         t.equal(recv_op.source, 'stamp+swarm~ssn');
         t.equal(''+recv_op.spec, '/Model#stamp!time.on');
-    });
-    opstream.on('id', function(id, op) {
-        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
-        t.equal(opstream.peer_db_id, 'db+cluster');
-    });
+    }
     opstream.on('error', function(msg) {
         t.fail('no error here');
     });
@@ -97,20 +101,22 @@ tape('3.D handshake', function (t) {
     stream.write("/Model#stamp!time.on\t\n");
 });
 
-tape('3.E handshake error', function (t) {
+tape('3.E destroy()', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(1);
-    opstream.on('data', function(recv_op){
-        t.fail('no valid data here');
-    });
-    opstream.on('id', function(spec) {
-        t.fail('handshake must fail');
+    opstream.once('data', function(recv_op){
+        t.ok(recv_op.stamp(), 'time', '1st op OK');
+        opstream.destroy();
+        opstream.on('data', function(){
+            t.fail('destroyed');
+        });
     });
     opstream.on('error', function(msg) {
-        t.equal(opstream.id, undefined, 'no handshake');
+        t.fail('no errors');
     });
     stream.write("/Model#stamp!time.on\t\n");
+    stream.write("/Model#stamp!more.on\t\n");
 });
 
 
@@ -119,9 +125,9 @@ tape('3.F stream end', function (t) {
     var opstream = new OpStream(stream.pair);
     t.plan(3);
 
-    opstream.on('id', function(id, op) {
-        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
-        t.equal(opstream.peer_db_id, 'db+cluster');
+    opstream.once('data', function(hs_op) {
+        t.equal(hs_op.origin(), 'swarm~ssn');
+        t.equal(hs_op.id(), 'db+cluster');
     });
     opstream.on('end', function () {
         t.ok(true, 'Got end event');
@@ -139,33 +145,36 @@ tape('3.G dialog', function (t) {
 
     t.plan(5);
 
-    opstream.on('id', function (op) {
+    opstream.once('data', function (op) {
         t.equal(''+op.spec, '/Swarm#db+cluster!pair.on', 'spec matches');
         opstream.sendHandshake(new Op('/Swarm#db+cluster!stream.on', '', 'pair'));
         opstream.write(sample_op);
     });
 
-    pair.on('id', function (op) {
+    pair.once('data', function (op) {
         t.equal(''+op.spec, '/Swarm#db+cluster!stream.on', 'spec matches');
+        pair.source = 'stream';
+        pair.on('data', more_data);
     });
 
-    pair.on('data', function(op) {
+     function more_data(op) {
         t.equal(''+op.spec, ''+sample_op.spec, 'spec matches');
         t.equal(''+op.value, ''+sample_op.value, 'value matches');
         t.equal(op.source, 'stream', 'source is correct');
-    });
+    }
 
     pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
 });
 
-tape('3.H write to closed stream', function (t) {
+
+tape('3.H write to a closed stream', function (t) {
     var stream = new BatStream();
     var opstream = new OpStream(stream.pair);
     t.plan(3);
 
-    opstream.on('id', function(id, op) {
-        t.equal(opstream.peer_ssn_id, 'swarm~ssn');
-        t.equal(opstream.peer_db_id, 'db+cluster');
+    opstream.on('data', function(op) {
+        t.equal(op.origin(), 'swarm~ssn');
+        t.equal(op.id(), 'db+cluster');
     });
     opstream.on('end', function () {
         t.ok(true, 'Got end event');
