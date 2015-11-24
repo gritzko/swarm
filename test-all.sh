@@ -19,7 +19,7 @@ for P in $PACKAGES; do
     npm install
 
     if ! npm test; then
-        echo TEST ALL FAIL; exiting
+        echo TEST ALL FAILS AT $P
         exit 1
     fi
 
