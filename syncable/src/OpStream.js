@@ -39,6 +39,7 @@ function OpStream (stream, options) {
     // Peer session/database/timestamp
     // this.peer_hs = null;
     this.source = options.source || null;
+    this.mute = false;
 
     // this.peer_ssn_id = null; // TODO tidy this up
     // this.peer_db_id = null;  // (store hs, add accessor methods)
@@ -172,7 +173,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
             if (author!==undefined && op.spec.author()!==author) {
                 return this.onStreamError(new Error('access violation: ' + op.spec));
             }
-            this.push(op);
+            !this.mute && this.push(op);
         }
 
     } catch (ex) {
@@ -241,7 +242,8 @@ OpStream.prototype._read = function () {};
 
 
 OpStream.prototype.destroy = function () {
-    this.stream.destroy();
+    this.stream.destroy && this.stream.destroy();
+    this.mute = true;
 };
 
 //
