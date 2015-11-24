@@ -144,9 +144,9 @@ Host.prototype._writeHandshake = function (op) {
         } else {
             this.createClock(op.id(), new_ssn); // FIXME check monotony
         }
-    } else if (op.id()!==this.db_id || new_ssn!==this.ssn_id) {
+    } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this.push(new Op('.error'), 'handshake mismatch', this.ssn_id);
+        this.push(new Op('.error', 'handshake mismatch', this.ssn_id));
         this.end(); // TODO destroy?
     }
 };
@@ -292,7 +292,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
 
         // the state is sent up in the handshake as the uplink has nothing
         var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.ssn_id);
-        var on_spec = syncable.spec().add(stamp,'!').add('.on');
+        var on_spec = syncable.spec().add('.on'); //.add(stamp,'!')
         on_op = new Op(on_spec, '0', this.ssn_id, [state_op]);
 
     } else {

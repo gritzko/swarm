@@ -38,11 +38,11 @@ tape('5.A Model set/get - Host protocol', function (t) {
     t.equal(m.y, 2, 'merge OK');
     host.on('end', function() {
         t.equal(collect,
-            '/Swarm+Host#db!00000+anon~5A.on\t\n\n' +
-            '/Model#00001+anon~5A.on\t0\n' +
-                '\t!00001+anon~5A.~state\t{"00001+anon~5A":{"x":1}}\n\n' +
-            '/Model#00001+anon~5A!00002+anon~5A.set\t{"y":2}\n' +
-            '/Model#00001+anon~5A!00003+anon~5A.set\t{"x":3}\n',
+            '/Swarm+Host#db!00001+anon~5A.on\t\n\n' +
+            '/Model#00002+anon~5A.on\t0\n' +
+                '\t!00002+anon~5A.~state\t{"00002+anon~5A":{"x":1}}\n\n' +
+            '/Model#00002+anon~5A!00003+anon~5A.set\t{"y":2}\n' +
+            '/Model#00002+anon~5A!00004+anon~5A.set\t{"x":3}\n',
             'full upstream output'
         );
         t.end();
@@ -54,7 +54,8 @@ tape('5.A Model set/get - Host protocol', function (t) {
 tape('5.B concurrent ops', function (t) {
     t.plan(1);
     var host = new Host({
-        ssn_id: 'anon~5B'
+        ssn_id: 'anon~5B',
+        db_id: 'db'
     });
     var duckling = new Model({}, host);
     host.write( new Op(
@@ -73,7 +74,7 @@ var REFS = [
 {
     comment: 'upstream handshake, subscriptions initiated (i)',
     query:   '',
-    response:'/Swarm+Host#db!00000+me~5C.on\t\n\n'+
+    response:'/Swarm+Host#db!00001+me~5C\t\n\n'+
              '#Alice+herself\t\n\n#Bob+himself\t\n\n'
 },
 {
@@ -94,7 +95,7 @@ var REFS = [
 {
     comment: 'Alice gets a link to Bob',
     query:   '#Alice+herself!time1+herself.set\t{"next":{"ref":"#Bob+himself"}}\n',
-    response:'#Alice+herself!00001+me~5C.set\t{"me":{"ref":"/Model#Alice+herself"}}\n'
+    response:'#Alice+herself!00002+me~5C.set\t{"me":{"ref":"/Model#Alice+herself"}}\n'
 },
 /*{
     comment: 'a link added through API',
@@ -241,7 +242,7 @@ var DESC_STATE = [
 {
     comment: 'upstream handshake, subscriptions initiated',
     query:   '/Swarm+Replica#db!timeup+swarm.on\t\n\n',
-    response:'/Swarm+Host#db!00000+me~5E\t\n\n'+
+    response:'/Swarm+Host#db!00001+me~5E\t\n\n'+
              '#Alice+herself\t\n\n#Bob+himself\t\n\n'
 },
 {
@@ -295,7 +296,7 @@ var SNAPSHOTS = [
 {
     comment: 'handshake (I)',
     query:   '',
-    response:'/Swarm+Host#db!00000+me~5F.on\t\n\n'
+    response:'/Swarm+Host#db!00001+me~5F\t\n\n'
 },
 {
     comment: 'handshake (II)',
