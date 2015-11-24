@@ -419,6 +419,7 @@ Replica.prototype.addStreamUp = function (err, stream) {
 // FIXME  Muxer accepts connections to stream ids
 
 Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
+    var self = this;
     if (this.db_id) {
         if (this.db_id!==hs_op.id()) {
             return op_stream.destroy('wrong db id');
@@ -441,7 +442,9 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.upstream_ssn = source;
     this.upstream_stamp = hs_op.stamp();
     op_stream.on('data', this.write.bind(this));
-    op_stream.on('end', this.removeStream.bind(this));
+    op_stream.on('end', function () {
+        self.removeStream(op_stream);
+    });
     // TODO (need a testcase for reconnections)
     this.upscribe();
 
@@ -559,7 +562,9 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     function accept_handshake_action () {
 
         op_stream.on('data', self.write.bind(self));
-        op_stream.on('end', self.removeStream.bind(self));
+        op_stream.on('end', function () {
+            self.removeStream(op_stream);
+        });
         self.streams[peer_stamp] = op_stream;
         op_stream.source = peer_stamp;
 
@@ -602,6 +607,8 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
 
 
 Replica.prototype.removeStream = function (op_stream) {
+    if (!op_stream)
+        throw new Error('no op_stream given to removeStream');
     if (op_stream.constructor===String) {
         op_stream = this.streams[op_stream];
     }
@@ -640,7 +647,7 @@ Replica.prototype.listen = function (url, options, on_ready) {
             on_ready && on_ready(err, null);
         } else {
             self.servers[url] = server;
-            server.on('connection', self.addStreamDown.bind(self));
+            server.on('stream', self.addStreamDown.bind(self));
             on_ready && on_ready(null, server);
         }
     });
