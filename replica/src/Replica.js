@@ -554,6 +554,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
             reject_handshake_action(err);
         } else {
             peer_ssn_id = new_ssn;
+            peer_stamp = new_ssn; // 0+new~ssn
             hs.value = new_ssn;
             accept_handshake_action();
         }

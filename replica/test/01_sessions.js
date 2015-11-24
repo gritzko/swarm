@@ -43,7 +43,7 @@ var NEW_SSN = [
 
 tape ('2.A ssn assignment', function(t){
 
-    sync.OpStream.debug = true;
+    //sync.OpStream.debug = true;
 
     var mux = new BatMux({
         connect: 'loopback:2A',
@@ -162,7 +162,7 @@ var AUTH = [
 
 tape ('2.B handshake errors', function (t) {
 
-    Replica.debug = true;
+    //Replica.debug = true;
 
     var mux = new BatMux({
         connect: 'loopback:2B',

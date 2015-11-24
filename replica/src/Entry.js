@@ -1,5 +1,6 @@
 "use strict";
 var stamp = require('swarm-stamp');
+var swarm_stamp = require('swarm-stamp');
 var AnchoredVV = stamp.AnchoredVV;
 var VVector = stamp.VVector;
 var sync = require('swarm-syncable');
@@ -477,8 +478,9 @@ Entry.prototype.processOp = function () {
     var state = this.state;
     var upstream = this.upstream();
     var old_op = null;
+    var src_lamp = new Lamp(op.source);
 
-    if (op.source!==upstream && !Spec.inSubtree(origin, op.origin())) {
+    if (op.source!==upstream && !Spec.inSubtree(origin, src_lamp.source())) {
         this.send(op.error('invalid op origin'));
         this.next();  // FIXME quite ugly and error-prone
         return;

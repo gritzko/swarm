@@ -114,7 +114,7 @@ var BASIC = [
     comment: 'downstream op replay (no double relay)',
     query:   '[down]#stamp2+remote!stampC+user~ssn~two.op\tcorrupt\n',
     response:
-        '[down]#stamp2+remote!stampC+user~ssn~two.op\tcorrupt\n'
+        '[down]#stamp2+remote!stampC+user~ssn~two.error	invalid op origin\n'
         //'[up]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
         //'[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething happens (C)\n' FIXME
         //'[down2]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n'

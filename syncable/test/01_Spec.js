@@ -189,6 +189,8 @@ tape ('1.i parse remainder', function (tap) {
 tape ('syncable.01.i spanning tree', function (tap) {
     tap.ok(Spec.inSubtree('ssn~child~1', 'ssn'));
     tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child'));
+    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child~1'));
+    tap.ok(!Spec.inSubtree('ssn~child~1', 'ssn~child~1~2'));
     tap.notOk(Spec.inSubtree('ssn~child~1', 'ssn~another'));
     tap.notOk(Spec.inSubtree('alice~1', 'bob~1'));
     tap.notOk(Spec.inSubtree('alice~1', 'bob'));
