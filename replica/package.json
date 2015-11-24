@@ -1,6 +1,6 @@
 {
     "name": "swarm-replica",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",

@@ -48,7 +48,6 @@ function OpStream (stream, options) {
 
 
     this.remainder = '';
-    this.context = new Spec.Parsed('/Model!0.on');
     this.bound_flush = this.flush.bind(this);
     this.flush_timeout = null;
     this.lastSendTime = 0;
@@ -68,6 +67,7 @@ function OpStream (stream, options) {
 util.inherits(OpStream, Duplex);
 module.exports = OpStream;
 OpStream.debug = false;
+OpStream.DEFAULT = new Spec.Parsed('/Model!0.on');
 
 OpStream.prototype._write = function (op, encoding, callback) {
     // if (!this.ssn_id) {
@@ -80,7 +80,7 @@ OpStream.prototype._write = function (op, encoding, callback) {
     //     this.stamp = op.stamp();
     //     this.pending_s.push( op.toString() );
     // } else {
-        this.pending_s.push( op.toString(this.context) );
+        this.pending_s.push( op.toString(OpStream.DEFAULT) );
     // }
     if (this.asyncFlush) {
         if (!this.flush_timeout) {
@@ -143,7 +143,7 @@ OpStream.prototype.onStreamDataReceived = function (data) {
 
     try {
 
-        parsed = Op.parse(this.remainder, this.source, this.context);
+        parsed = Op.parse(this.remainder, this.source, OpStream.DEFAULT);
 
     } catch (ex) {
         this.onStreamError(new Error('bad op format'));

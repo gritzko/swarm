@@ -232,11 +232,7 @@ Replica.prototype.write = function (op) {
 
     var entry = this.entries[typeid];
     if (entry) {
-        if (op.source===this.upstream_stamp || Spec.inSubtree(op.origin(), op.source)) {
-            entry.queueOps(new_ops);
-        } else {
-            this.send(op.error('invalid op origin'));
-        }
+        entry.queueOps(new_ops);
     } else if (op.name()==='on') {
         var meta = this.entry_states[typeid];
         entry = new Entry(this, typeid, meta, new_ops);
@@ -439,7 +435,8 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         // FIXME   op_stream stamps
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
-    var source = op_stream.source = hs_op.origin();
+    var source = hs_op.origin();
+    op_stream.source = hs_op.stamp();
     this.streams[hs_op.stamp()] = op_stream;
     this.upstream_ssn = source;
     this.upstream_stamp = hs_op.stamp();
@@ -506,6 +503,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     var self = this, options = this.options;
     var hs = this.handshake();
     var peer_ssn_id = op.origin(), peer_user = op.author();
+    var peer_stamp = op.stamp();
 
     if (this.db_id!=='*' && this.db_id!==op.id() && op.id()!=='0') {
         reject_handshake_action ('wrong database id');
@@ -562,8 +560,8 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
 
         op_stream.on('data', self.write.bind(self));
         op_stream.on('end', self.removeStream.bind(self));
-        self.streams[peer_ssn_id] = op_stream;
-        op_stream.source = peer_ssn_id;
+        self.streams[peer_stamp] = op_stream;
+        op_stream.source = peer_stamp;
 
 
         op_stream.write(hs);

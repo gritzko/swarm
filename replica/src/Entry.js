@@ -396,7 +396,7 @@ Entry.prototype.makePatch = function (base, filter, add_state) {
     while (i<ops.length && ops[i].stamp()!==base) { i++; }
     if (i===ops.length) {
         //return this.op.error('position not found');
-        console.error('position not found');
+        console.warn('no data'); // TODO normal case actually
         return null;
     } else if (ops[i].name()!=='~state') {
         i++; // base is known to the peer, hence not included
@@ -476,6 +476,13 @@ Entry.prototype.processOp = function () {
     var origin = op.origin();
     var state = this.state;
     var upstream = this.upstream();
+    var old_op = null;
+
+    if (op.source!==upstream && !Spec.inSubtree(origin, op.origin())) {
+        this.send(op.error('invalid op origin'));
+        this.next();  // FIXME quite ugly and error-prone
+        return;
+    }
 
     // deal with our arrival order
     if ( stamp > state.tip ) { // fast track: new op
@@ -494,7 +501,11 @@ Entry.prototype.processOp = function () {
                 is_error = "causality violation";
                 return true;
             }
-            return stored_stamp===stamp; // FIXME replay/echo
+            if (stored_stamp===stamp) {
+                old_op = o;
+                return true;
+            }
+            return false;
         });
     }
 
@@ -516,9 +527,10 @@ Entry.prototype.processOp = function () {
         this.relay(op.source===upstream?upstream:undefined);
         this.appendNewRecord();
     } else if (op.source!==upstream) {
-        this.send(op, op.source); // ack it, just in case
+        // FIXME respond with the stored op
+        this.send(old_op||op, op.source); // ack it, just in case
     } else {
-        // upstream ack it is
+        // an upstream ack it is
     }
 
     this.next();

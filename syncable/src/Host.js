@@ -292,7 +292,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
 
         // the state is sent up in the handshake as the uplink has nothing
         var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.ssn_id);
-        var on_spec = syncable.spec().add('.on'); //.add(stamp,'!')
+        var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
         on_op = new Op(on_spec, '0', this.ssn_id, [state_op]);
 
     } else {

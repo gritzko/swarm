@@ -17,7 +17,7 @@ var BASIC = [
 {
     comment: 'handshake sent to upstream',
     query:   '',
-    response:'[up]/Swarm+Replica#db!00001+user~ssn.on\t\n\n'
+    response:'[up]/Swarm+Replica#db!00001+user~ssn\t\n\n'
 },
 {
     comment: 'handshake received from the upstream',
@@ -27,12 +27,12 @@ var BASIC = [
 {
     comment: 'handshake - downstream I',
     query:   '[down]/Swarm+Client#db!timedn+user~ssn~app.on\t\n\n',
-    response:'[down]/Swarm+Replica#db!00002+user~ssn.on\t\n\n'
+    response:'[down]/Swarm+Replica#db!00002+user~ssn\t\n\n'
 },
 {
     comment: 'handshake - downstream II',
     query:   '[down2]/Swarm+Client#db!timedn2+user~ssn~two.on\t\n\n',
-    response:'[down2]/Swarm+Replica#db!00003+user~ssn.on\t\n\n'
+    response:'[down2]/Swarm+Replica#db!00003+user~ssn\t\n\n'
 },
 
 {
@@ -65,15 +65,22 @@ var BASIC = [
 },
 
 {
-    comment: 'new op from the upstream (echoed)',
+    comment: 'new op from the upstream (relayed)',
     query:   '[up]#stamp2+remote!stampA+user~b.op something happens (A)\n',
     response:'[down]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'+
              '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
 },
 {
+    comment: 'new op from downstream (relayed, echoed)',
+    query:   '[down2]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n',
+    response:'[up]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n'+
+             '[down]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n'+
+             '[down2]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n'
+},
+{
     comment: 'replay (acked, just in case)',
-    query:   '[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n',
-    response:'[down2]#stamp2+remote!stampA+user~b.op\tsomething happens (A)\n'
+    query:   '[down2]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n',
+    response:'[down2]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n'
 },
     // FIXME irregular stream labeling is very confusing
 {
@@ -89,26 +96,28 @@ var BASIC = [
 
 {
     comment: 'subscription+push (new op is the tip)',
-    query:   '[down2]#stamp2+remote\tstampA+user~b\n'+
-                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n\n',
+    query:   '[down2]#stamp2+remote\tstampB+user~ssn~two\n'+
+                '\t!stampC+user~ssn~two.op\tsomething happens (C)\n\n',
     response:
-     '[up]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n' +
-     '[down]#stamp2+remote!stampB+user~ssn~two.op\tsomething happens (B)\n' +
-     '[down2]#stamp2+remote\t!stampB+user~ssn~two\n\n'
+     '[up]#stamp2+remote!stampC+user~ssn~two.op\tsomething happens (C)\n' +
+     '[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething happens (C)\n' +
+     '[down2]#stamp2+remote\t!stampC+user~ssn~two\n\n' // TODO +stampB
 },
 {
     comment: 'repeated subscription, responded with a patch',
     query:   '[down]#stamp2+remote\tstampA+user~b\n',
     response:'[down]#stamp2+remote\t!0\n' +
-                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n\n'
+                '\t!stampB+user~ssn~two.op\tsomething happens (B)\n'+
+                '\t!stampC+user~ssn~two.op\tsomething happens (C)\n\n'
 },
 {
-    comment: 'downstream op (no double relay)',
-    query:   '[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n',
+    comment: 'downstream op replay (no double relay)',
+    query:   '[down]#stamp2+remote!stampC+user~ssn~two.op\tcorrupt\n',
     response:
-        '[up]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
-        '[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
-        '[down2]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n'
+        '[down]#stamp2+remote!stampC+user~ssn~two.op\tcorrupt\n'
+        //'[up]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n' +
+        //'[down]#stamp2+remote!stampC+user~ssn~two.op\tsomething happens (C)\n' FIXME
+        //'[down2]#stamp2+remote!stampC+user~ssn~two.op\tsomething (C)\n'
 },
 
 {
@@ -126,7 +135,7 @@ var BASIC = [
     response:'[down]#stamp2+remote\t!0\n' +
                 '\t!stampA+user~b.op\tsomething happens (A)\n'+
                 '\t!stampB+user~ssn~two.op\tsomething happens (B)\n'+
-                '\t!stampC+user~ssn~two.op\tsomething (C)\n\n'
+                '\t!stampC+user~ssn~two.op\tsomething happens (C)\n\n'
 },
 {
     comment: 'blanc subscription (responded with the state)',
@@ -138,7 +147,7 @@ var BASIC = [
 ];
 
 
-tape ('1.A basic cases', function(t){
+tape ('replica.00.A basic cases', function(t){
 
     var mux = new BatMux({
         connect: 'loopback:1Arepl',
@@ -149,7 +158,7 @@ tape ('1.A basic cases', function(t){
     var replica = new Replica({
         ssn_id:     'user~ssn',
         db_id:      'db',
-        upstream:   'loopback:1Aup',
+        connect:    'loopback:1Aup',
         clock:      new stamp.LamportClock('user~ssn'),
         listen:     'loopback:1Arepl',
         prefix:     true
@@ -169,7 +178,7 @@ var REORDERS = [
 {
     comment: 'handshake - upstream',
     query:   '',
-    response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
+    response:'[up]/Swarm+Replica#db!00001+me~ssn \n\n'
 },
 {
     comment: 'handshake - upstream (contiuned)',
@@ -179,12 +188,12 @@ var REORDERS = [
 {
     comment: 'handshake - downstream I',
     query:   '[dsI]/Swarm+Client#db!timea+me~ssn~dsI.on \n\n',
-    response:'[dsI]/Swarm+Replica#db!00002+me~ssn.on \n\n'
+    response:'[dsI]/Swarm+Replica#db!00002+me~ssn \n\n'
 },
 {
     comment: 'handshake - downstream II',
     query:   '[dsII]/Swarm+Client#db!timeb+me~ssn~dsII.on \n\n',
-    response:'[dsII]/Swarm+Replica#db!00003+me~ssn.on \n\n'
+    response:'[dsII]/Swarm+Replica#db!00003+me~ssn \n\n'
 },
 {
     comment: 'subscription (ds I)',
@@ -282,7 +291,7 @@ var REORDERS = [
 ];
 
 
-tape   ('1.B reorders', function(t){
+tape   ('replica.00.B reorders', function(t){
 
     var mux = new BatMux({
         connect: 'loopback:1B',
@@ -321,7 +330,7 @@ var ERRORS = [
 {
     comment: 'handshake - upstream',
     query:   '',
-    response:'[up]/Swarm+Replica#db!00001+me~ssn.on \n\n'
+    response:'[up]/Swarm+Replica#db!00001+me~ssn \n\n'
 },
 {
     comment: 'handshake - upstream (continued)',
@@ -331,12 +340,12 @@ var ERRORS = [
 {
     comment: 'handshake - downstream I',
     query:   '[dsI]/Swarm+Client#db!timea+me~ssn~dsI.on \n\n',
-    response:'[dsI]/Swarm+Replica#db!00002+me~ssn.on \n\n'
+    response:'[dsI]/Swarm+Replica#db!00002+me~ssn \n\n'
 },
 {
     comment: 'handshake - downstream II',
     query:   '[dsII]/Swarm+Client#db!timeb+me~ssn~dsII.on \n\n',
-    response:'[dsII]/Swarm+Replica#db!00003+me~ssn.on \n\n'
+    response:'[dsII]/Swarm+Replica#db!00003+me~ssn \n\n'
 },
 {
     comment: 'op for an unknown object',
@@ -383,7 +392,7 @@ var ERRORS = [
 ];
 
 
-tape ('1.C various errors / incorrect messages', function(t){
+tape ('replica.00.C various errors / incorrect messages', function(t){
 
     var mux = new BatMux({
         connect: 'loopback:1C',
