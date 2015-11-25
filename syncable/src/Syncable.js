@@ -223,10 +223,7 @@ Syncable.prototype.onInit = function (callback) {
     if (this.isStateful()) {
         // if a callback flaps between sync and async execution
         // that causes much of confusion, so let's force it to async
-        var self = this;
-        setTimeout(function(){
-            callback.call(self);
-        });
+        setTimeout(callback.bind(this), 0);
     } else {
         this.once('init', callback);
     }
