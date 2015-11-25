@@ -20,6 +20,10 @@ function Server (options) {
         options.listen = 'ws://localhost:8000';
     }
 
+    var db = level(options.db_path || '.');
+
+    // BIG TODO: propagate ssn grant replica->host
+
     this.slave = new Host({ // Host constructor is synchronous
         ssn_id: options.ssn_id,
         db_id:  options.db_id,
@@ -29,6 +33,7 @@ function Server (options) {
     this.replica = new Replica({
         ssn_id: options.ssn_id,
         db_id:  options.db_id,
+        db:     db,
         listen: options.listen,
         slave:  this.slave,
         clock:  options.clock,

@@ -151,7 +151,7 @@ Replica.prototype.createClock = function (ssn_id) {
             options.callback && options.callback(err);
         });
     } else {
-        options.callback && options.callback();
+        options.callback && setTimeout(options.callback.bind(this), 0);
     }
 };
 
@@ -598,7 +598,7 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
     }
     //var ds_user_id = lamp.author();
     var seq = ++replica.last_ds_ssn;
-    var new_ssn = replica.ssn_id + '~' + stamp.base64.int2base(seq, 1);
+    var new_ssn = (lamp.author()||replica.ssn_id) + '~' + stamp.base64.int2base(seq, 1);
     // FIXME recursive
     replica.saveDatabaseHandshake(); // FIXME callback (prevent double-grant on restart)
     callback(null, new_ssn);

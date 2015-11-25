@@ -18,13 +18,13 @@ var AGG = [
 {
     comment: 'upstream handshake, subscriptions initiated',
     query:   '[alice]/Swarm+Host#db!Alice.on \n\n',
-    response:'[alice]/Swarm+Replica#db!00001+swarm~1A.on\tAlice~1\n\n'
+    response:'[alice]/Swarm+Replica#db!00001+swarm~1A\tAlice~1\n\n'
 },
 {
     comment: 'client pushes an object',
-    query:   '[alice]#00002+Alice~1!00002+Alice~1\t\n' +
+    query:   '[alice]#00002+Alice~1\t\n' +
              '\t!00002+Alice~1.~state\t{"old":true,"alice":1}\n\n',
-    response:'[alice]#00002+Alice~1!00002+Alice~1\t!00002+Alice~1\n\n'
+    response:'[alice]#00002+Alice~1\t!00002+Alice~1\n\n'
 },
 {
     comment: 'client pushes an op (echo)',
@@ -34,7 +34,7 @@ var AGG = [
 {
     comment: 'new client connects, gets ssn',
     query:   '[bob]/Swarm+Host#db!Bob.on \n\n',
-    response:'[bob]/Swarm+Replica#db!00003+swarm~1A.on\tBob~2\n\n'
+    response:'[bob]/Swarm+Replica#db!00003+swarm~1A\tBob~2\n\n'
 },
 {
     comment: 'fresh subscription (log is aggregated)',
@@ -46,7 +46,8 @@ var AGG = [
 
 
 tape ('server.1.A log aggregation', function (t) {
-    var db_path = '.test_db_server.1.A';
+    var db_path = '.test_db_server.1.A_'+(new Date().getTime());
+    fs.existsSync(db_path) && fs.unlinkSync(db_path);
     var port = 10000+Math.floor(Math.random() * 10000);
     var listen_url = 'tcp://localhost:'+port;
     if (fs.existsSync(db_path)) {
@@ -57,7 +58,7 @@ tape ('server.1.A log aggregation', function (t) {
         ssn_id: 'swarm~1A',
         db_id:  'db',
         db_path: db_path,
-        clock:  new stamp.LamportClock('swarm~1A'),
+        clock:  stamp.LamportClock,
         callback: run
     });
 
@@ -73,7 +74,7 @@ tape ('server.1.A log aggregation', function (t) {
 
     function end () {
         server.close();
-        fs.unlinkSync(db_path);
+        fs.existsSync(db_path) && fs.unlinkSync(db_path);
         t.end();
     }
 
