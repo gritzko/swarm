@@ -1,6 +1,6 @@
 {
   "name": "swarm-gw",
-  "version": "0.4.0",
+  "version": "1.0.0",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -14,21 +14,12 @@
   "license": "MIT",
   "files": [
     "src/*.js",
-    "test/*.js",
     "LICENSE"
   ],
   "main": "src/Gateway.js",
-  "browser": "src/Gateway.js",
   "dependencies": {
+    "swarm-syncable":"1.0.2"
   },
   "devDependencies": {
-    "browserify": "",
-    "jshint": "",
-    "minimist": "^1.1.0",
-    "qunit": "^0.7.5"
-  },
-  "scripts": {
-    "pretest": "mkdir dist; ./node_modules/.bin/browserify test/Tests.js -o dist/gw-tests.js",
-    "test": "node_modules/.bin/qunit -c src/Gateway.js -t test/01_model.js"
   }
 }
