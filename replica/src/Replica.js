@@ -458,7 +458,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
 
 // Add a connection to other replica, either upstream or downstream.
 Replica.prototype.addStreamDown = function (stream) {
-    var op_stream = new OpStream (stream, undefined, {
+    var op_stream = new OpStream (stream, {
         authorize: this.options.authorize // needs the stream
     });
     var self = this;
