@@ -1,6 +1,7 @@
 "use strict";
 require('stream-url-node');
 var fs = require('fs');
+var rimraf = require('rimraf');
 var stamp = require('swarm-stamp');
 var SwarmServer = require('..');
 var bat = require('swarm-bat');
@@ -46,8 +47,8 @@ var AGG = [
 
 
 tape ('server.1.A log aggregation', function (t) {
-    var db_path = '.test_db_server.1.A_'+(new Date().getTime());
-    fs.existsSync(db_path) && fs.unlinkSync(db_path);
+    var db_path = '.test_db_server.1.A';
+    fs.existsSync(db_path) && rimraf.sync(db_path);
     var port = 10000+Math.floor(Math.random() * 10000);
     var listen_url = 'tcp://localhost:'+port;
     if (fs.existsSync(db_path)) {
@@ -74,7 +75,7 @@ tape ('server.1.A log aggregation', function (t) {
 
     function end () {
         server.close();
-        fs.existsSync(db_path) && fs.unlinkSync(db_path);
+        fs.existsSync(db_path) && rimraf.sync(db_path);
         t.end();
     }
 
