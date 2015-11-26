@@ -539,9 +539,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
             var policy = options.session_policy || Replica.seq_ssn_policy;
             policy.call(self, op, op_stream, act_on_ssn_policy_action);
         } else {
-            var ssn = lamp.source();
-            var tili = ssn.lastIndexOf('~');
-            if (tili<1 || ssn.substr(0, tili)!==self.ssn_id) {
+            if (!Spec.inSubtree(lamp.source(), self.ssn_id)) {
                 reject_handshake_action('wrong ssn (wrong subtree)');
             } else {
                 accept_handshake_action();
@@ -598,7 +596,8 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
     }
     //var ds_user_id = lamp.author();
     var seq = ++replica.last_ds_ssn;
-    var new_ssn = (lamp.author()||replica.ssn_id) + '~' + stamp.base64.int2base(seq, 1);
+    var parent = replica.user_id==='swarm' ? lamp.author() : replica.ssn_id;
+    var new_ssn = parent + '~' + stamp.base64.int2base(seq, 1);
     // FIXME recursive
     replica.saveDatabaseHandshake(); // FIXME callback (prevent double-grant on restart)
     callback(null, new_ssn);

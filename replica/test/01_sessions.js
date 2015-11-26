@@ -41,7 +41,7 @@ var NEW_SSN = [
 ];
 
 
-tape ('2.A ssn assignment', function(t){
+tape ('replica.01.A ssn assignment', function(t){
 
     //sync.OpStream.debug = true;
 
@@ -160,7 +160,7 @@ var AUTH = [
 ];
 
 
-tape ('2.B handshake errors', function (t) {
+tape ('replica.01.B handshake errors', function (t) {
 
     //Replica.debug = true;
 

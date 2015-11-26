@@ -458,9 +458,9 @@ Spec.inSubtree = function (ssn, parent_ssn) {
 
 ParsedSpec.prototype.filter = function (quants) {
     var result = this.clone();
-    if (quants.indexOf('/') < 0) result._type = null;
-    if (quants.indexOf('#') < 0) result._id = null;
-    if (quants.indexOf('!') < 0) result._stamp = null;
-    if (quants.indexOf('.') < 0) result._op = null;
+    if (quants.indexOf('/') < 0) { result._type = null; }
+    if (quants.indexOf('#') < 0) { result._id = null; }
+    if (quants.indexOf('!') < 0) { result._stamp = null; }
+    if (quants.indexOf('.') < 0) { result._op = null; }
     return result;
 };
