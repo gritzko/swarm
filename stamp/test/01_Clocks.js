@@ -23,6 +23,10 @@ tape('0. Lamport timestamp', function(tap){
     var lamp3 = new Lamp('time+src');
     tap.ok(lamp3.eq('time+src'));
     tap.ok(lamp3.toString()==='time+src');
+    tap.notOk(lamp3.eq('later+src'));
+    tap.notOk(lamp3.gt('zzz+src'));
+    tap.ok(lamp3.gt('time+Src'), 'order by src');
+    tap.ok(lamp3.gt('tim+src'), 'order by timestamp');
     tap.end();
 });
 

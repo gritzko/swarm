@@ -51,15 +51,15 @@ LamportTimestamp.prototype.gt = function (stamp) {
     if (stamp.constructor!==LamportTimestamp) {
         stamp = new LamportTimestamp(stamp);
     }
-    return this._stamp > stamp._stamp ||
-        (this._stamp===stamp._stamp && this._source>stamp._source);
+    return this._time > stamp._time ||
+        (this._time===stamp._time && this._source>stamp._source);
 };
 
 LamportTimestamp.prototype.eq = function (stamp) {
     if (stamp.constructor!==LamportTimestamp) {
         stamp = new LamportTimestamp(stamp);
     }
-    return this._stamp===stamp._stamp && this._source===stamp._source;
+    return this._time===stamp._time && this._source===stamp._source;
 };
 
 LamportTimestamp.parse = function parseArbitraryString (str) {
