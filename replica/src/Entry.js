@@ -1,12 +1,11 @@
 "use strict";
-var stamp = require('swarm-stamp');
 var swarm_stamp = require('swarm-stamp');
-var AnchoredVV = stamp.AnchoredVV;
-var VVector = stamp.VVector;
+var AnchoredVV = swarm_stamp.AnchoredVV;
+var VVector = swarm_stamp.VVector;
 var sync = require('swarm-syncable');
 var Op = sync.Op;
 var Spec = sync.Spec;
-var Lamp = stamp.LamportTimestamp;
+var Lamp = swarm_stamp.LamportTimestamp;
 
 // a single syncable
 // subscribers, state metadata

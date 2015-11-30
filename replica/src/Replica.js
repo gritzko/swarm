@@ -307,7 +307,7 @@ Replica.prototype.done = function (request) {
 // replay all subscriptions to a newly connected upstream
 Replica.prototype.upscribe = function () {
     var tis = Object.keys(this.entries);
-    for(var i=0; i<tis.length; i++){
+    for(var i=0; i<this.length; i++){
         var entry = this.entries[tis[i]];
         entry.queueOps([new Op('.on')]);
     }
@@ -607,8 +607,9 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
 
 
 Replica.prototype.removeStream = function (op_stream) {
-    if (!op_stream)
+    if (!op_stream) {
         throw new Error('no op_stream given to removeStream');
+    }
     if (op_stream.constructor===String) {
         op_stream = this.streams[op_stream];
     }
