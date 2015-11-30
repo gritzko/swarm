@@ -1,6 +1,8 @@
 # Swarm 1.x.x
 _reactive data sync: replicated model for your web/mobile app_
 
+__proceed with caution: 1.0 is not entirely stable!__
+
 Swarm is a sync-centric data storage with an object-based interface.
 Simply put, once you change an object at one replica, that change propagates to other object's replicas in real time.
 Concurrent changes merge automatically.
