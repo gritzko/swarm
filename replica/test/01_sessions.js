@@ -128,8 +128,8 @@ var AUTH = [
 },
 {
     comment: 'downstream#1 subscription',
-    query:   '[down1]#id~author\t0\n\n',
-    response:'[up]#id~author\t0\n\n'
+    query:   '[down1]#zid~author\t0\n\n',
+    response:'[up]#zid~author\t0\n\n[down1]#zid~author\t\n\n'
 },
 /*{
     comment: 'downstream#1 handshake refresh (TODO)',
@@ -143,8 +143,8 @@ var AUTH = [
 },*/
 {
     comment: 'wrong op timestamp from a downstream',
-    query:   '[down1]#id~author!time+user~ssn.set value\n',
-    response:'[down1]#id~author!time+user~ssn.error invalid op origin\n'
+    query:   '[down1]#zid~author!time+user~ssn.set value\n',
+    response:'[down1]#zid~author!time+user~ssn.error invalid op origin\n'
 },
 {
     comment: 'downstream#2 wrong password',
@@ -153,7 +153,7 @@ var AUTH = [
 },
 {
     comment: 'downstream#3 no handshake',
-    query:   '[down3]#id!stamp+user.set\t{}\n',
+    query:   '[down3]#zid+author!stamp+user.set\t{}\n',
     response:'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
 }
 // FIXME: denied downstream push

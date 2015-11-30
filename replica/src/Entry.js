@@ -254,6 +254,11 @@ Entry.prototype.processOn = function () {
         patch_down = this.patchDownstream();
         if (patch_down===LATER) { return; }
     } else {
+        // in 1.0, every replica in a tree has a full cache; hence, any
+        // missing info, most likely, never passed downstream.
+        // Hence, we request any missing information from the downstream.
+        // TODO leave this for downstream-stamped objects only
+        // TODO consider LRU/LFU caches
         patch_down = this.op.reply('on', '');
     }
 
