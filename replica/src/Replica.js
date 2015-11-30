@@ -60,8 +60,11 @@ function Replica (options, callback) {
     this.servers = Object.create(null);
     this.streams = Object.create(null);
     //
-    this.slave = null;
-    this.slave_jobs = Object.create(null); // {id: {streams:[], version:''}}
+    this.snapshot_slave = options.snapshot_slave || null;
+    if (this.snapshot_slave) {
+        this.snapshot_slave.on('data', this.onSnaphotSlaveOp.bind(this));
+    }
+    this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
     if (options.db_id && options.ssn_id) {
         this.createClock(options.ssn_id);
     } else { // then, read ssn_id from the db or get it from the upstream
@@ -248,13 +251,57 @@ Replica.prototype.write = function (op) {
 
 Replica.prototype.send = function (op) {
     var stream = this.streams[op.source];
-
-    // TREE for all the subscribers and the upstream !!!
-
-    if (stream) {
-        stream.write(op);
-    } else {
+    if (!stream) {
         console.warn('op sent nowhere', op);
+        return;
+    }
+    // TEMP workaround for snapshotting FIXME
+    // this code is not OK in the general case
+    // temporarily acceptable until Replica+Entity are
+    // refactored
+    var typeid = op.typeid();
+    var job = this.snapshot_jobs[typeid];
+    if (this.snapshot_slave && op.name()==='on' && op.patch &&
+        op.patch.length>1 && op.patch[0].name()==='~state') { // snapshot it
+        if (!job) {
+            job = this.snapshot_jobs[typeid] = {
+                stamp: op.patch[op.patch.length-1].stamp(),
+                streams: [op.source]
+            };
+            this.snapshot_slave.write(op);
+        } else {
+            job.streams.push(op.source);
+        }
+    } else if (job && job.streams.indexOf(op.source)!==-1) {
+        if (job.stamp!==op.stamp()) {
+            job.stamp = op.stamp();
+            this.snapshot_slave.write(op);
+        }
+    } else {
+        stream.write(op);
+    }
+};
+
+
+Replica.prototype.onSnaphotSlaveOp = function (op) {
+    if (op.name()==='on' || op.name()==='off') {
+        return;
+    }
+    var typeid = op.typeid();
+    var job = this.snapshot_jobs[typeid];
+    if (!job) {
+        this.snapshot_slave.write(new Op(typeid+'.off', ''));
+        return;
+    }
+    if (job.stamp!==op.stamp()) {
+        console.warn('waiting for a follow-up', job.stamp, op.stamp());
+        return;
+    }
+    var sms = job.streams;
+    delete this.snapshot_jobs[typeid];
+    this.snapshot_slave.write(new Op(typeid+'.off', ''));
+    for(var i=0; i<sms.length; i++) {
+        this.send(op.relay(sms[i]));
     }
 };
 
@@ -314,11 +361,16 @@ Replica.prototype.upscribe = function () {
 };
 
 
-Replica.prototype.close = function (err, callback) {
+Replica.prototype.close = function (callback, err) {
 
     // TODO FINISH processing all ops,
     // don't accept any further ops
     var err_op = err ? new Op('.error', err) : null;
+
+    var srv_urls = Object.keys(this.servers);
+    for(var i=0; i<srv_urls.length; i++) {
+        this.servers[srv_urls[i]].close(); // (((
+    }
 
     var stamps = Object.keys(this.streams);
     var closing = 0;
@@ -341,6 +393,8 @@ Replica.prototype.close = function (err, callback) {
 
         });
     }
+
+    callback && callback(); // FIXME :()
 
 };
 
@@ -622,7 +676,7 @@ Replica.prototype.removeStream = function (op_stream) {
     if (stamp in this.streams) {
         op_stream.removeAllListeners();
         delete this.streams[stamp];
-        var off = new Spec('/Swarm').add(this.db_id, '#')
+        var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
         op_stream.end(off);
     }

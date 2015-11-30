@@ -20,22 +20,25 @@ function Server (options) {
         options.listen = 'ws://localhost:8000';
     }
 
-    var db = level(options.db_path || '.');
+    this.db = level(options.db_path || '.');
 
     // BIG TODO: propagate ssn grant replica->host
+    // use exactly the same clock object!!!
 
-    this.slave = new Host({ // Host constructor is synchronous
+    this.snapshot_slave = new Host({ // Host constructor is synchronous
         ssn_id: options.ssn_id,
         db_id:  options.db_id,
-        clock:  options.clock
+        clock:  options.clock,
+        api:    false, // FIXME api?
+        snapshot: 'immediate'
     });
 
     this.replica = new Replica({
         ssn_id: options.ssn_id,
         db_id:  options.db_id,
-        db:     db,
+        db:     this.db,
         listen: options.listen,
-        slave:  this.slave,
+        snapshot_slave:  this.snapshot_slave,
         clock:  options.clock,
         callback: options.callback
     });
@@ -44,7 +47,14 @@ function Server (options) {
 }
 
 Server.prototype.close = function () {
-    console.warn('Server.close not implemented');
+    console.warn('Server.close');
+    var self = this;
+    self.replica.close(function(){
+        self.snapshot_slave.close();
+        self.db.close(function(){
+            process.exit(0);
+        });
+    });
 };
 
 

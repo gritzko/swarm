@@ -24,7 +24,7 @@ var AGG = [
 {
     comment: 'client pushes an object',
     query:   '[alice]#00002+Alice~1\t\n' +
-             '\t!00002+Alice~1.~state\t{"old":true,"alice":1}\n\n',
+             '\t!00002+Alice~1.~state\t{"00002+Alice~1":{"old":true,"alice":1}}\n\n',
     response:'[alice]#00002+Alice~1\t!00002+Alice~1\n\n'
 },
 {
@@ -40,8 +40,8 @@ var AGG = [
 {
     comment: 'fresh subscription (log is aggregated)',
     query:   '[bob]#00002+Alice~1\t0\n\n',
-    response:'[bob]#00002+Alice~1\t!0\n' +
-             '\t!00003+Alice~1.~state\t{"old":true,"alice":2}\n\n'
+    response:'[bob]#00002+Alice~1!00003+Alice~1.~state\t'+
+                '{"00002+Alice~1":{"old":true},"00003+Alice~1":{"alice":2}}\n'
 }
 ];
 
@@ -74,9 +74,20 @@ tape ('server.1.A log aggregation', function (t) {
     }
 
     function end () {
-        server.close();
+        console.log('end');
         fs.existsSync(db_path) && rimraf.sync(db_path);
+        server.close();
         t.end();
     }
 
+});
+
+// !!!!!!!!!!!!!!!!!!!!!
+
+// TODO:  two clients req consurrently
+//        also a new op arrives
+//        slave is a stream (async, slow)
+
+tape.skip ('server.1.B snapshotting - concurrency', function (t) {
+    t.fail();
 });
