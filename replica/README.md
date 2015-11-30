@@ -59,3 +59,26 @@ read).
 
 The most common interface in the system is an *OpStream*. That is a
 single-database op stream going from one session to another.
+
+
+## TODO
+
+### Rework (1.1)
+
+Goals: manageable state snapshotting, general clean-up and simplification.
+Storage/network/subscriptions go to Replica entirely; Entry becomes passive,
+merges with EntryState.
+
+[ ] move subscribers, write to Replica (replica.appendNewOp(op))
+    [ ] subscribers
+    [ ] append new op
+    [ ] send
+    [ ] save
+    [ ] Q selective ack, error -- mailbox ? entry.error
+[ ] replica.snapshotting[typeid] -> [stream_id], check on relaying new ops
+[ ] replica to save meta, Entry to stay passive
+    [ ] replica.op_queue, backpressure
+    [ ] unite Entry/EntryState
+    [ ] replica.readTail(fn, end) -> fn(op)* fn(null)|end()
+    [ ] replica to maintain a common pending queue
+[ ] descending state hooks (last snapshot size, tail size)
