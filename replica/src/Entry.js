@@ -259,6 +259,7 @@ Entry.prototype.processOn = function () {
         // Hence, we request any missing information from the downstream.
         // TODO leave this for downstream-stamped objects only
         // TODO consider LRU/LFU caches
+        // FIXME tests for cache poisoning
         patch_down = this.op.reply('on', '');
     }
 

@@ -63,17 +63,17 @@ tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
 
 tape ('syncable.01.c spec filters', function (tap) {
     var filter = '.on';
-    tap.equal (new Spec('!abc.on/Class').fits(filter), true);
+    tap.equal (new Spec('!abc.on/Class').fits(filter), true, 'Spec.fits()');
     tap.equal (new Spec('.off/Class').fits(filter), false);
     tap.equal (new Spec('/Type#id!abc.off.on').fits(filter), true);
 
-    tap.equal (new Spec('/Type#id!abc.on').filter('/').value, '/Type');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/').value, '/Type', 'filter() type');
     tap.equal (new Spec('/Type#id!abc.on').filter('#').value, '#id');
     tap.equal (new Spec('/Type#id!abc.on').filter('!').value, '!abc');
     tap.equal (new Spec('/Type#id!abc.on').filter('.').value, '.on');
-    tap.equal (new Spec('/Type#id!abc.on').filter('/#').value, '/Type#id');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/#').value, '/Type#id', 'filter type and id');
 
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/').toString(), '/Type');
+    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/').toString(), '/Type', 'ParsedSpec.filter()');
     tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('#').toString(), '#id');
     tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('!').toString(), '!abc');
     tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('.').toString(), '.on');
@@ -162,7 +162,7 @@ tape ('syncable.01.h parse strange ops', function (tap) {
 
     var bad_hs = "/Swarm+Replica#db!00000+user~ssn.on null\n !null.last_ds_ssn -1\n\n";
     var op = new Op(bad_hs);
-    tap.equal(op.stamp(), '00000+user~ssn');
+    tap.equal(op.stamp(), '00000+user~ssn', 'bad handshake stamp');
     tap.equal(op.origin(), 'user~ssn');
     tap.equal(op.op(), 'on');
     tap.equal(op.value, 'null');
@@ -187,12 +187,12 @@ tape ('1.i parse remainder', function (tap) {
 
 
 tape ('syncable.01.i spanning tree', function (tap) {
-    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn'));
-    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child'));
-    tap.ok(Spec.inSubtree('ssn~child~1', 'ssn~child~1'));
-    tap.ok(!Spec.inSubtree('ssn~child~1', 'ssn~child~1~2'));
-    tap.notOk(Spec.inSubtree('ssn~child~1', 'ssn~another'));
-    tap.notOk(Spec.inSubtree('alice~1', 'bob~1'));
+    tap.ok(Spec.inSubtree('user~ssn~1', 'user'), 'inSubtree() cases');
+    tap.ok(Spec.inSubtree('user~ssn~1', 'user~ssn'));
+    tap.ok(Spec.inSubtree('user~ssn~1', 'user~ssn~1'));
+    tap.ok(!Spec.inSubtree('user~ssn~1', 'user~ssn~1~2'));
+    tap.notOk(Spec.inSubtree('user~ssn~1', 'ssn~another'));
+    tap.notOk(Spec.inSubtree('alice~1', 'bob~1'), 'inSubtree() bad cases');
     tap.notOk(Spec.inSubtree('alice~1', 'bob'));
     tap.notOk(Spec.inSubtree('alice', 'bob~1'));
     tap.notOk(Spec.inSubtree('alice', 'bob'));
