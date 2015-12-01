@@ -9,7 +9,7 @@ if (typeof(window)==='object') {
 var Lamp = lamp64.LamportTimestamp;
 
 
-tape('0. Lamport timestamp', function(tap){
+tape ('stamp.01._ Lamport timestamp', function(tap){
     var lamp1 = new Lamp('0');
     tap.equal(lamp1.isZero(), true, 'zero OK');
     tap.equal(lamp1.toString(), '0', 'zero str OK');
@@ -31,7 +31,7 @@ tape('0. Lamport timestamp', function(tap){
 });
 
 
-tape ('a. SecondPreciseClock sequence test', function (tap) {
+tape ('stamp.01.a SecondPreciseClock sequence test', function (tap) {
     var clock = new lamp64.SecondPreciseClock('gritzko');
     tap.plan(100);
     var ts1 = clock.issueTimestamp(), ts2, i=0;
@@ -41,13 +41,13 @@ tape ('a. SecondPreciseClock sequence test', function (tap) {
             tap.end();
             clearInterval(iv);
         } else {
-            tap.ok(ts2 > ts1);
+            tap.ok(ts2 > ts1, 'order is OK');
         }
         ts1 = ts2;
     }, 0);
 });
 
-tape ('b. Version vector', function (tap){
+tape ('stamp.01.b Version vector', function (tap){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
@@ -72,7 +72,7 @@ tape ('b. Version vector', function (tap){
     tap.end();
 });
 
-tape('c. Minute-precise clox', function(tap){
+tape ('stamp.01.c. Minute-precise clox', function(tap){
     var clock = new lamp64.MinutePreciseClock('min');
     var prevts = '';
     for(var i=0; i<64; i++) {
@@ -93,7 +93,7 @@ tape('c. Minute-precise clox', function(tap){
     // see it spills over (extended ts)
 });
 
-tape('d. Timestamp-ahead', function(tap){
+tape ('stamp.01.d. Timestamp-ahead', function(tap){
     var clock = new lamp64.SecondPreciseClock('normal');
     var ts = clock.issueTimestamp();
     var parsed = clock.parseTimestamp(ts);
@@ -108,7 +108,7 @@ tape('d. Timestamp-ahead', function(tap){
     tap.end();
 });
 
-tape('e. Timestamp to date', function(tap){
+tape ('stamp.01.e. Timestamp to date', function(tap){
     var clock = new lamp64.SecondPreciseClock('normal');
     var ts = clock.issueTimestamp();
     var date = new Date();
@@ -117,7 +117,7 @@ tape('e. Timestamp to date', function(tap){
     tap.end();
 });
 
-tape('f. Lamport clocks', function(tap){
+tape ('stamp.01.f. Lamport clocks', function(tap){
     var clock = new lamp64.LamportClock('leslie');
     var ts1 = clock.issueTimestamp();
     tap.equal(ts1,'00000+leslie');
