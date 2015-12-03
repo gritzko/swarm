@@ -77,7 +77,7 @@ Host.prototype.handshake = function () {
     } else if (this.user_id) {
         stamp = this.user_id;
     }
-    var key = new Spec.Parsed('/Swarm+Host').add(this.db_id||'0', '#')
+    var key = new Spec('/Swarm+Host').add(this.db_id||'0', '#')
         .add(stamp,'!').add('.on');
     return new Op(key, '', this.source);
 };
@@ -95,7 +95,7 @@ Host.prototype.getCRDT = function (obj) {
         }
         return this.crdts[obj.typeid()];
     } else {
-        return this.crdts[new Spec.Parsed(obj).typeid()];
+        return this.crdts[new Spec(obj).typeid()];
     }
 };
 
@@ -320,16 +320,16 @@ Host.prototype.abandonSyncable = function (obj) {
     }
 };
 
-var just_model = new Spec.Parsed('/Model'); // FIXME
+var just_model = new Spec('/Model'); // FIXME
 
 // Retrieve an object by its spec (type and id).
 // Optionally, invoke a callback once the state is actually available.
 Host.prototype.get = function (spec, callback) {
     if (spec.constructor===Function) {
-        spec = new Spec.Parsed('/'+spec._type);
+        spec = new Spec('/'+spec._type);
     }
-    if (spec.constructor!==Spec.Parsed) {
-        spec = new Spec.Parsed(spec.toString(), null, just_model);
+    if (spec.constructor!==Spec) {
+        spec = new Spec(spec.toString(), null, just_model);
     }
     if (!spec.type()) {
         throw new Error('type not specified');
