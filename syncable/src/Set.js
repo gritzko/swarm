@@ -54,7 +54,7 @@ Set.prototype.contains = function (param) {
 //                        V
 
 Set.prototype.get = function (key_spec) {
-    key_spec = new Spec(key_spec).filter('/#');
+    key_spec = new Spec.Parsed(key_spec).filter('/#');
     if (key_spec.pattern() !== '/#') {
         throw new Error("invalid spec");
     }
