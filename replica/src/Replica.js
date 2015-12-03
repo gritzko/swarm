@@ -451,7 +451,7 @@ Replica.prototype.handshake = function () {
     if (!this.db_id) { return null; }
     var stamp = this.clock ? this.clock.issueTimestamp() :
         (this.ssn_id||this.user_id||'0');
-    var handshake_spec = new Spec('/Swarm+Replica')
+    var handshake_spec = new Spec.Parsed('/Swarm+Replica')
         .add(this.db_id, '#')
         .add(stamp, '!')
         .add('.on');
@@ -676,7 +676,7 @@ Replica.prototype.removeStream = function (op_stream) {
     if (stamp in this.streams) {
         op_stream.removeAllListeners();
         delete this.streams[stamp];
-        var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
+        var off = new Spec.Parsed('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
         op_stream.end(off);
     }
