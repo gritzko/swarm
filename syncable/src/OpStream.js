@@ -68,7 +68,7 @@ function OpStream (stream, options) {
 util.inherits(OpStream, Duplex);
 module.exports = OpStream;
 OpStream.debug = false;
-OpStream.DEFAULT = new Spec.Parsed('/Model!0.on');
+OpStream.DEFAULT = new Spec('/Model!0.on');
 
 OpStream.prototype._write = function (op, encoding, callback) {
     // if (!this.ssn_id) {
@@ -199,7 +199,7 @@ OpStream.prototype.sendHandshake = function (op) {
 //     this.peer_ssn_id = op.origin();
 //     this.peer_options = op.value ? op.patch : null; // TODO
 //     this.peer_stamp = op.stamp();
-//     this.context = new Spec.Parsed('/Model!'+op.stamp()+'.on');
+//     this.context = new Spec('/Model!'+op.stamp()+'.on');
 //
 //     console.warn('context set');
 //     this.emit('id', op, this);

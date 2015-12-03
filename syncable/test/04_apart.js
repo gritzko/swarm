@@ -83,7 +83,7 @@ tape ('syncable.04.B Set CRDT / Syncable', function (t) {
         },
         get: function (spec) {
             return {
-                spec: new Spec.Parsed(spec),
+                spec: new Spec(spec),
                 on:function(ev, sub){
                     t.equal(ev, 'change', 'event name');
                     t.equal(sub, s.onObjectChange, 'subscriber');

@@ -158,7 +158,7 @@ Syncable.removeReaction = function (handle) {
 
 
 Syncable.prototype.spec = function () {
-    return new Spec.Parsed('/' + this._type + '#' + this._id);
+    return new Spec('/' + this._type + '#' + this._id);
 };
 
 
@@ -233,7 +233,7 @@ Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
 
 Syncable.getType = function (type_id) {
     if (Spec.is(type_id)) {
-        return Syncable.types[new Spec.Parsed(type_id).type()] || undefined;
+        return Syncable.types[new Spec(type_id).type()] || undefined;
     } else {
         return Syncable.types[type_id] || undefined;
     }
