@@ -231,7 +231,7 @@ tape.skip('syncable.05.D tortures', function (t){
     });
     var host_stream = host.stream();
 
-    var bt = new StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
+    var bt = new bat.StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
 
     bt.runScenario( function () {
         t.end();

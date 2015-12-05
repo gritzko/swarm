@@ -191,7 +191,7 @@ tape ('syncable.01.i spanning tree', function (tap) {
     tap.ok(Spec.inSubtree('user~ssn~1', 'user~ssn'));
     tap.ok(Spec.inSubtree('user~ssn~1', 'user~ssn~1'));
     tap.ok(!Spec.inSubtree('user~ssn~1', 'user~ssn~1~2'));
-    tap.notOk(Spec.inSubtree('user~ssn~1', 'ssn~another'));
+    tap.notOk(Spec.inSubtree('user~ssn~1', 'user~another_ssn'));
     tap.notOk(Spec.inSubtree('alice~1', 'bob~1'), 'inSubtree() bad cases');
     tap.notOk(Spec.inSubtree('alice~1', 'bob'));
     tap.notOk(Spec.inSubtree('alice', 'bob~1'));
