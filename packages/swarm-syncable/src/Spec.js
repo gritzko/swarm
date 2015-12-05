@@ -299,4 +299,3 @@ Spec.as = function (spec) {
         return spec.constructor === Spec ? spec : new Spec(spec);
     }
 };
-

@@ -28,8 +28,8 @@ BatServer.prototype.listen = function (id, nothing, callback){
     if (!id) { throw new Error('no id specified'); }
     if (id.constructor===String && id.indexOf(':')!==-1) {
         id = url.parse(id).hostname;
-    } else if (id.hostname) { 
-        id = id.hostname; 
+    } else if (id.hostname) {
+        id = id.hostname;
     } else {
         id = id.toString();
     }

@@ -28,5 +28,3 @@ configuration is:
 
 [bbt]: https://en.wikipedia.org/wiki/Black-box_testing
 [su]: https://www.npmjs.com/package/stream-url
-
-

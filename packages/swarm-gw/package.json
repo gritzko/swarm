@@ -1,5 +1,5 @@
 {
-  "name": "swarm-stamp",
+  "name": "swarm-gw",
   "version": "1.0.0",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
@@ -13,23 +13,13 @@
   "email": "swarm.js@gmail.com",
   "license": "MIT",
   "files": [
-    "index.js",
     "src/*.js",
-    "test/*.js",
-    "test/index.html",
-    "LICENSE",
-    "README.md"
+    "LICENSE"
   ],
-  "main": "index.js",
-  "browser": "index.js",
+  "main": "src/Gateway.js",
   "dependencies": {
+    "swarm-syncable":"^1.0.3"
   },
   "devDependencies": {
-    "tape": "^4.0.2",
-    "tap-spec": "^4.0.2",
-    "tape-dom": "^0.0.8"
-  },
-  "scripts": {
-    "test": "tape test/*.js | tap-spec"
   }
 }

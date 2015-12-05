@@ -30,5 +30,5 @@ tape ('1.A listen-connect loopback stream', function (t) {
 
 
 tape.skip ('1.B listen-connect local stream', function (t) {
-    
+
 });

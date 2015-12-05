@@ -118,7 +118,7 @@ tape.skip ('2.a. LearnedComparator', function (t) {
         t.equal(sc.fact, sc.expected);
     });
     for(var key in variables) {
-    	t.equal(lc.variables[key], variables[key], key);
+	t.equal(lc.variables[key], variables[key], key);
     }
 });
 

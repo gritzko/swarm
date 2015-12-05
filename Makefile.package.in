@@ -1,0 +1,19 @@
+# List of other swarm packages minus the package itself
+PACKAGES := bat stamp syncable client replica server
+PACKAGES := $(PACKAGES:$(shell basename $(CURDIR))=)
+
+BIN = ../../node_modules/.bin
+TAPE = $(BIN)/tape
+TAP_SPEC  = $(BIN)/tap-spec
+
+.PHONY: clean install test
+
+install::
+	@for pkg in $(PACKAGES); do npm install ../$$pkg && npm link ../$$pkg || exit 1; done
+	@npm $@
+
+clean::
+	@rm -rf node_modules
+
+test:
+	@$(TAPE) test/*.js | $(TAP_SPEC)

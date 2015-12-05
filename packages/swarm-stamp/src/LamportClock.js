@@ -3,7 +3,7 @@ var base64 = require('./base64');
 var LamportTimestamp = require('./LamportTimestamp');
 
 /** Pure logical-time Lamport clocks. */
-var LamportClock = function (processId, options) { 
+var LamportClock = function (processId, options) {
     if (!base64.reTok.test(processId)) {
         throw new Error('invalid process id: '+processId);
     }
