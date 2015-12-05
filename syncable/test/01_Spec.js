@@ -12,7 +12,7 @@ if (typeof(window)==='object') {
 tape ('syncable.01.b basic specifier syntax', function (tap) {
     var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
     var spec = new Spec(testSpec);
-    tap.equal(spec.version(),'7Umum+gritzko~ssn');
+    tap.equal(spec.stamp(),'7Umum+gritzko~ssn');
     tap.equal(spec.token('!').ext,'gritzko~ssn');
     tap.equal(spec.source(),'gritzko~ssn');
     tap.equal(spec.author(),'gritzko');
@@ -21,7 +21,7 @@ tape ('syncable.01.b basic specifier syntax', function (tap) {
     var spec2 = new Spec(spec);
     tap.equal(spec.toString(),spec2.toString());
     var def = new Spec('/Type#id!ver.method');
-    var over = def.set('#newid.newmethod');
+    var over = def.set('#newid').set('.newmethod');
     tap.equal(''+over, '/Type#newid!ver.newmethod', 'set() makes a well-formed spec');
     var abc = new Spec('!abc');
     tap.equal(abc.has('!ab'), false); // ?
@@ -31,32 +31,32 @@ tape ('syncable.01.b basic specifier syntax', function (tap) {
 
 
 tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
-    var spec = new Spec.Parsed('!stamp', '/Type#id', '.on');
+    var spec = new Spec('!stamp', '/Type#id', '.on');
     tap.equal(spec.toString(), '/Type#id!stamp.on', 'scope/default');
     tap.equal(spec.type(), 'Type');
     tap.equal(spec.id(), 'id');
     tap.equal(spec.stamp(), 'stamp');
     tap.equal(spec.op(), 'on');
-    var spec2 = new Spec.Parsed('!stamp2.off',null,spec);
+    var spec2 = new Spec('!stamp2.off',null,spec);
     tap.equal(spec2.toString(), '/Type#id!stamp2.off', 'default (parsed)');
-    var spec3 = new Spec.Parsed('',null,spec);
+    var spec3 = new Spec('',null,spec);
     tap.equal(spec3.toString(), spec.toString());
-    var spec4 = new Spec.Parsed(spec2);
+    var spec4 = new Spec(spec2);
     tap.equal(spec4.toString(), spec2.toString());
 
     var test = '/Type.op2';
-    tap.equal(new Spec.Parsed(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
-    tap.equal(new Spec.Parsed(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
-    tap.equal(new Spec.Parsed(test, new Spec.Parsed('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
-    tap.equal(new Spec.Parsed(test, null, '/Type!stamp8.op1').toString(), '/Type!stamp8.op2');
-    tap.equal(new Spec.Parsed(test, null, new Spec.Parsed('/Type!stamp9.op1')).toString(), '/Type!stamp9.op2');
+    tap.equal(new Spec(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
+    tap.equal(new Spec(test, null, '/Type!stamp8.op1').toString(), '/Type!stamp8.op2');
+    tap.equal(new Spec(test, null, new Spec('/Type!stamp9.op1')).toString(), '/Type!stamp9.op2');
 
-    test = new Spec.Parsed('/Type.op2');
-    tap.equal(new Spec.Parsed(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
-    tap.equal(new Spec.Parsed(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
-    tap.equal(new Spec.Parsed(test, new Spec.Parsed('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
-    tap.equal(new Spec.Parsed(test, null, '/Type!stamp8.op1').toString(), '/Type.op2');
-    tap.equal(new Spec.Parsed(test, null, new Spec.Parsed('/Type!stamp9.op1')).toString(), '/Type.op2');
+    test = new Spec('/Type.op2');
+    tap.equal(new Spec(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
+    tap.equal(new Spec(test, null, '/Type!stamp8.op1').toString(), '/Type.op2');
+    tap.equal(new Spec(test, null, new Spec('/Type!stamp9.op1')).toString(), '/Type.op2');
 
     tap.end();
 });
@@ -67,31 +67,33 @@ tape ('syncable.01.c spec filters', function (tap) {
     tap.equal (new Spec('.off/Class').fits(filter), false);
     tap.equal (new Spec('/Type#id!abc.off.on').fits(filter), true);
 
-    tap.equal (new Spec('/Type#id!abc.on').filter('/').value, '/Type', 'filter() type');
-    tap.equal (new Spec('/Type#id!abc.on').filter('#').value, '#id');
-    tap.equal (new Spec('/Type#id!abc.on').filter('!').value, '!abc');
-    tap.equal (new Spec('/Type#id!abc.on').filter('.').value, '.on');
-    tap.equal (new Spec('/Type#id!abc.on').filter('/#').value, '/Type#id', 'filter type and id');
 
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/').toString(), '/Type', 'ParsedSpec.filter()');
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('#').toString(), '#id');
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('!').toString(), '!abc');
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('.').toString(), '.on');
-    tap.equal (new Spec.Parsed('/Type#id!abc.on').filter('/#').toString(), '/Type#id');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/').type(), 'Type', 'filter() type');
+    tap.equal (new Spec('/Type#id!abc.on').filter('#').type(), null);
+    tap.equal (new Spec('/Type#id!abc.on').filter('!').toString(), '!abc');
+    tap.equal (new Spec('/Type#id!abc.on').filter('.').toString(), '.on');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/#').toString(), '/Type#id', 'filter type and id');
+
+    tap.equal (new Spec('/Type#id!abc.on').filter('/').toString(), '/Type');
+    tap.equal (new Spec('/Type#id!abc.on').filter('#').toString(), '#id');
+    tap.equal (new Spec('/Type#id!abc.on').filter('!').toString(), '!abc');
+    tap.equal (new Spec('/Type#id!abc.on').filter('.').toString(), '.on');
+    tap.equal (new Spec('/Type#id!abc.on').filter('/#').toString(), '/Type#id');
     tap.end();
 });
 
 
 tape ('syncable.01.e corner cases', function (tap) {
     var empty = new Spec('');
-    tap.equal(empty.type()||empty.id()||empty.op()||empty.version(),'');
+    tap.equal(empty.type()||empty.id()||empty.op()||empty.stamp()||'','');
     tap.equal(empty.toString(),'');
     var action = new Spec('.on+re');
     tap.equal(action.op(),'on+re');
     var fieldSet = new Spec('/TodoItem#7AM0f+gritzko!7AMTc+gritzko.set');
     tap.equal(fieldSet.type(),'TodoItem', 'type()');
     tap.equal(fieldSet.id(),'7AM0f+gritzko', 'id()');
-    tap.equal(fieldSet.version(),'7AMTc+gritzko', 'version()');
+    tap.equal(fieldSet.version(),'!7AMTc+gritzko', 'version()');
+    tap.equal(fieldSet.stamp(),'7AMTc+gritzko', 'stamp()');
     tap.equal(fieldSet.op(),'set');
     tap.end();
 });

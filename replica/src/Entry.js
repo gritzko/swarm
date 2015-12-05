@@ -63,7 +63,7 @@ EntryState.prototype.toString = function () {
 // while an op is being processed
 function Entry (replica, typeid, state, ops) {
     this.replica = replica;
-    this.typeId = new Spec.Parsed(typeid);
+    this.typeId = new Spec(typeid);
     this.typeid = typeid;
     this.state = state || null;
     // the in-progress op
@@ -91,7 +91,7 @@ Entry.prototype.prependStoredRecords= function (records) {
         if (stamp_pos>0) { // skip tip_stack if any
             key = key.substr(stamp_pos);
         }
-        var spec = new Spec.Parsed(key, typeId);
+        var spec = new Spec(key, typeId);
         return new Op(spec, rec.value, null);
     });
     this.records = ops.concat(this.records);

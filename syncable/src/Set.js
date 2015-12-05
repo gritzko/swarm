@@ -46,7 +46,7 @@ Set.prototype.remove = function (syncable) {
 
 
 Set.prototype.contains = function (param) {
-    var typeid = param._type ? param.typeid() : new Spec.Parsed(param).typeid();
+    var typeid = param._type ? param.typeid() : new Spec(param).typeid();
     return typeid in this.objects;
 };
 
@@ -107,16 +107,16 @@ function ORSet (state_string) {
         var parsed = JSON.parse(state_string);
         var stamps = Object.keys(parsed).filter(LamportTimestamp.is);
         stamps.forEach(function (stamp) {
-            var spec = new Spec.Parsed(parsed[stamp], null, just_model);
+            var spec = new Spec(parsed[stamp], null, just_model);
             added[stamp] = spec.typeid();
         });
     }
 }
-var just_model = new Spec.Parsed('/Model');
+var just_model = new Spec('/Model');
 
 
 ORSet.prototype.add = function (value, stamp) {
-    var spec = new Spec.Parsed(value,null,just_model);
+    var spec = new Spec(value,null,just_model);
     this.added[stamp] = spec.typeid();
 };
 
