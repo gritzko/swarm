@@ -154,7 +154,10 @@ tape ('syncable.05.C refs - blackbox', function (t) {
         t.equal(bob.prev.name, "Alice");
     });
 
-    alice.once('change', function () {
+    alice.on('change', function (ev) {
+        if (ev.version!=='time1+herself') {
+            return;
+        }
         t.equal(alice.name, "Alice");
         t.equal(alice.next, bob, 'on change - link to an existing object');
         t.ok(alice.next.hasState());
@@ -163,7 +166,10 @@ tape ('syncable.05.C refs - blackbox', function (t) {
         t.equal(alice.me, alice, 'circular link OK');
     });
 
-    bob.once('change', function () {
+    bob.on('change', function (ev) {
+        if (ev.version!=='time2+himself') {
+            return;
+        }
         t.equal(bob.next._id, 'Carol+herself', 'Bob got Carol');
         t.equal(bob.next.isStateful(), false);
         t.equal(alice.next.next._id, 'Carol+herself');
