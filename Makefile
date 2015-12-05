@@ -5,7 +5,7 @@ each-package = for pkg in $(PACKAGES); do make -C ./packages/$$pkg $(1) || exit 
 
 install::
 	@npm install .
-	@$(BIN)/lerna bootstrap
+	@$(BIN)/lerna bootstrap 2>&1 1> /dev/null
 
 test::
 	$(call each-package,test)
