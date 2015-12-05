@@ -32,11 +32,14 @@
   ],
   "main": "",
   "browser": "",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
+    "lerna": "^1.0.2",
+    "tap-spec": "^4.0.2",
+    "tape": "^4.0.2",
+    "tape-dom": "^0.0.10"
   },
   "scripts": {
-    "test": "./test-all.sh"
+    "test": "make install test"
   }
 }

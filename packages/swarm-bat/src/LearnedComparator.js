@@ -1,6 +1,6 @@
 "use strict";
 // TODO LearnedComparator.js
-var variable_re = 
+var variable_re =
 /([^\$]*)(\$([A-Z0-9_]+)|\${([A-Z0-9_]+)(?:\/([^\/]+)\/)?}|\$(\*))([^\$]*)/;
 
 function LearnedComparator () {
@@ -60,8 +60,8 @@ ComparatorRound.prototype.chunkCmp = function (fact_str, exp_str, var_name) {
 };
 
 
-ComparatorRound.prototype.match = function 
-    ( prefix, postfix, var_expr, var_name, regex ) 
+ComparatorRound.prototype.match = function
+    ( prefix, postfix, var_expr, var_name, regex )
 {
     if (!this.ok) {return;}
     if (prefix) {
@@ -71,7 +71,7 @@ ComparatorRound.prototype.match = function
         this.chunkCmp(undefined, var_expr, var_name);
     } else if (postfix) {
         var i = this.fact.indexOf(postfix);
-        if (i===-1) { 
+        if (i===-1) {
             this.ok = false;
             return;
         }
