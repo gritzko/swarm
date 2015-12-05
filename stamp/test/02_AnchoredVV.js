@@ -10,7 +10,7 @@ if (typeof(window)==='object') {
     tape_dom.stream(tape);
 }
 
-tape ('2.A VV basics', function (tap) {
+tape ('stamp.02.A VV basics', function (tap) {
 
     var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!some+garbage';
     var vv = new VV(vec);
@@ -29,7 +29,7 @@ tape ('2.A VV basics', function (tap) {
 
 });
 
-tape ('2.B basic anchored syntax', function (tap) {
+tape ('stamp.02.B basic anchored syntax', function (tap) {
     var an1 = new AnchoredVV(
         'time0+sourceA!time2+sourceB!time3+sourceC!time4+sourceC' );
     tap.equal(an1.anchor, 'time0+sourceA');
@@ -43,7 +43,7 @@ tape ('2.B basic anchored syntax', function (tap) {
     tap.end();
 });
 
-tape ('2.C zero vector', function (tap) {
+tape ('stamp.02.C zero vector', function (tap) {
     var empty = new VV();
     tap.equal(empty.toString(), '!0', 'empty vector is !0');
     tap.ok(empty.covers('0'), '!0 covers 0');
@@ -58,7 +58,7 @@ tape ('2.C zero vector', function (tap) {
     tap.end();
 });
 
-tape ('2.D mutations', function (tap) {
+tape ('stamp.02.D mutations', function (tap) {
     var an = new AnchoredVV();
     tap.equal(an.toString(), '0');
 

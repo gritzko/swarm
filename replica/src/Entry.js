@@ -259,6 +259,7 @@ Entry.prototype.processOn = function () {
         // Hence, we request any missing information from the downstream.
         // TODO leave this for downstream-stamped objects only
         // TODO consider LRU/LFU caches
+        // FIXME tests for cache poisoning
         patch_down = this.op.reply('on', '');
     }
 
@@ -452,7 +453,7 @@ Entry.prototype.processState = function () {
             this.state.last = pos;
             this.state.avv = pos;
         }
-        this.relay(this.op.source);
+        this.relay(this.op.source); // FIXME state ack!!!
         this.mark = pos;
     } else if (this.op.source===this.upstream()) {
         // check conditions are perfect (==tip, no compound)
@@ -463,7 +464,7 @@ Entry.prototype.processState = function () {
             // this state eats everything we have => may append it
             this.appendNewRecord();
             this.state.state = this.op.stamp();
-            this.relay(this.upstream());
+            this.relay(this.upstream()); // don't ack up
         } else {
             console.warn('have unacked ops; upstream state skipped');
         }
@@ -530,7 +531,7 @@ Entry.prototype.processOp = function () {
     }
 
     if (!is_known) {
-        this.relay(op.source===upstream?upstream:undefined);
+        this.relay(op.source===upstream?upstream:undefined); // no ack up
         this.appendNewRecord();
     } else if (op.source!==upstream) {
         // FIXME respond with the stored op

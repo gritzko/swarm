@@ -162,6 +162,7 @@ tape ('syncable.05.C refs - blackbox', function (t) {
         t.equal(alice.next, bob, 'on change - link to an existing object');
         t.ok(alice.next.hasState());
         t.equal(alice.next.name, 'Bob');
+        t.ok(alice.next, bob, 'Host matches a link to an existing object');
         alice.set({me: alice}, 'API - set reference');
         t.equal(alice.me, alice, 'circular link OK');
     });
@@ -179,7 +180,7 @@ tape ('syncable.05.C refs - blackbox', function (t) {
         t.equal(bob.next._id, 'Carol+herself', 'check Carol');
         t.equal(bob.next.isStateful(), true);
         t.equal(bob.next.name, 'Carol');
-        t.equal(bob.next.prev, bob);
+        t.equal(bob.next.prev, bob, 'referenced object is loaded, links OK');
 
         t.end();
     }
@@ -236,7 +237,7 @@ tape.skip('syncable.05.D tortures', function (t){
     });
     var host_stream = host.stream();
 
-    var bt = new StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
+    var bt = new bat.StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
 
     bt.runScenario( function () {
         t.end();

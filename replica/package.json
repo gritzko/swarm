@@ -23,7 +23,7 @@
     "browser": "src/Replica.js",
     "dependencies": {
         "swarm-stamp": "1.0.0",
-        "swarm-syncable": "~1.0.2",
+        "swarm-syncable": "~1.0.3",
         "level": "^1.3.0",
         "stream-url": "~0.0.12",
         "eventemitter3": "~1.1.1"

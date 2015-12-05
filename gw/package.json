@@ -18,7 +18,7 @@
   ],
   "main": "src/Gateway.js",
   "dependencies": {
-    "swarm-syncable":"1.0.2"
+    "swarm-syncable":"1.0.3"
   },
   "devDependencies": {
   }
