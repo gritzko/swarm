@@ -23,7 +23,7 @@
   "dependencies": {
       "levelup":        "^1.2.1",
       "level-js":       "^2.2.2",
-      "swarm-syncable": "^1.0.0",
+      "swarm-syncable": "^1.0.3",
       "swarm-replica":  "^1.0.0"
   },
   "scripts": {
