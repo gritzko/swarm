@@ -269,7 +269,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         var stamp = this.time();
         syncable._id = stamp;
-        var typeid = syncable.spec();
+        var typeid = syncable.typeId();
         var crdt = new syncable.constructor.Inner(null, syncable); // 0 state
         if (init_op) {
             var stamped_spec = typeid.add(stamp,'!').add(init_op.op(),'.');

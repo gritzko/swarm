@@ -5,15 +5,29 @@ var Spec = require('./Spec');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
 
-// Backbone's Collection is essentially an array and arrays behave poorly
-// under concurrent writes (see OT). Hence, our primary object collection
-// type is an unordered Set. One may obtain a linearized version by sorting
-// entries by keys or otherwise (see sort()).
+// Backbone's Collection is essentially an array. Arrays behave poorly
+// under concurrent writes and it is expensive to make them behave good.
+// Hence, our primary collection type is an unordered Set. One may obtain
+// an array by sorting entries (see sort()).
+// Note that a Set can only contain Syncable objects (no primitives,
+// no arbitrary JSON).
 function Set (init_set, owner) {
     // { id: object }
-    this.objects = {};
+    this.objects = Object.create(null);
     Syncable.call(this, null, owner);
 }
+Set.prototype = Object.create( Syncable.prototype );
+Set.prototype.constructor = Set;
+
+
+Set.prototype.isEmpty = function () {
+    return this.size() === 0;
+};
+
+
+Set.prototype.size = function () {
+    return Object.keys(this.objects).length;
+};
 
 
 Set.prototype.onObjectChange = function (ev) {
@@ -26,29 +40,102 @@ Set.prototype.onObjectChange = function (ev) {
     });
 };
 
-Set.prototype.sorted = function (criteria) {
-    var ret = [];
+// Return a sorted array (unless `sort_fn` is specified, sort on object ids)
+Set.prototype.toArray = function (sort_fn) {
+    var objects = this.objects;
+    var ids = Object.keys(objects);
+    var ret = ids.map(function(id){ return objects[id]; });
+    sort_fn = sort_fn || function id_sort (a, b) {
+        if (a._id<b._id) { return -1; }
+        else if (a._id>b.id) { return 1; }
+        else { return 0; }
+    };
+    ret.sort(sort_fn);
+    return ret;
 };
 
+
 // Public API: Adds an object to the set.
+Set.prototype.addSpec = function (arg) {
+    var typeId = new Spec(arg).filter('/#');
+    if (!typeId.type() || ! typeId.id()) {
+        throw new Error('invalid argument');
+    }
+    return this._owner.submit( this, 'add', typeId.toString() );
+};
+
+
 Set.prototype.add = function (syncable) {
-    return this._owner.submit( this, 'add', syncable.spec() );
+    if (!syncable._type) {
+        throw new Error('not a syncable');
+    }
+    return this.addSpec(syncable.typeId());
+};
+
+Set.prototype.addId = function (id) {
+    if (!LamportTimestamp.is(id)) {
+        throw new Error('not an id');
+    }
+    return this.addSpec(new Spec('#'+id, Syncable.DEFAULT_TYPE).typeId());
+};
+
+
+Set.prototype.addAll = function (list) {
+    var self = this;
+    list.forEach(function(e){ self.add(e); });
+};
+
+
+Set.prototype.removeSpec = function (typeId) {
+    var story = this._story || {}, typeid = typeId.toString();
+    var rm = Object.keys(story).filter(function(stamp) {
+        return story[stamp]===typeid;
+    });
+    rm.length && this._owner.submit(this, 'rm', rm.join());
+};
+
+// only for instances of Model
+Set.prototype.removeId = function (id) {
+    if (!LamportTimestamp.is(id)) {
+        throw new Error('not an id');
+    }
+    return this.removeSpec(new Spec('#'+id, Syncable.DEFAULT_TYPE).typeId());
 };
 
 
 Set.prototype.remove = function (syncable) {
-    var typeid = syncable.typeid(), story = this._story;
-    var rm = Object.keys(story).filter(function(stamp) {
-        return story[stamp]===typeid;
-    });
-    rm.length && this.submit('rm', rm.join());
+    if (!syncable._type) {
+        throw new Error('not a syncable');
+    }
+    return this.removeSpec(syncable.typeId());
 };
 
 
-Set.prototype.contains = function (param) {
-    var typeid = param._type ? param.typeid() : new Spec(param).typeid();
+Set.prototype.contains = function (syncable) {
+    if (!syncable._type) {
+        throw new Error('not a syncable');
+    }
+    return this.containsSpec(syncable.typeId());
+};
+
+
+Set.prototype.containsSpec = function (typeid) {
     return typeid in this.objects;
 };
+
+
+Set.prototype.containsId = function (id) {
+    return this.containsSpec(new Spec('#'+id, Syncable.DEFAULT_TYPE).typeId());
+};
+
+
+Set.prototype.containsAll = function (array) {
+    var self = this;
+    return array.every(function(val){
+        return self.contains(val);
+    });
+};
+
 
 // TODO port & test those I
 //                        V
@@ -122,7 +209,7 @@ ORSet.prototype.add = function (value, stamp) {
 
 
 ORSet.prototype.remove = function (value_stamp) {
-    var stamps = value_stamp.split(), added = this.added;
+    var stamps = value_stamp.split(','), added = this.added;
     stamps.forEach(function(stamp){
         delete added[stamp];
     });

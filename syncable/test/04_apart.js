@@ -58,56 +58,6 @@ tape ('syncable.04.A Model CRDT / Syncable', function (t) {
 });
 
 
-tape ('syncable.04.B Set CRDT / Syncable', function (t) {
-
-    // CRDT
-    var a = new Set.Inner();
-    a.write(new Op('!stamp0+src1.add', '#some+id'));
-    t.equals(a.added['stamp0+src1'], '/Model#some+id', 'added');
-    var b1 = new Set.Inner(a.toString());
-    t.equals(b1.added['stamp0+src1'], '/Model#some+id', 'cloned');
-
-    a.write(new Op('!stamp1+src2.rm', 'stamp0+src1'));
-    t.equals(a.added['stamp0+src1'], undefined, 'erased');
-    t.equals(a.added['stamp1+src2'], undefined);
-    var b2 = new Set.Inner(a.toString());
-    t.equals(b2.added['stamp0+src1'], undefined, 'clone - erased');
-
-    a.write(new Op('!stamp2+src3.add', '#some+id'));
-
-    // Syncable
-    var submit = {name: null, value: null};
-    var owner = {
-        write: function(obj, name, value) {
-            submit = {name: name, value: value};
-        },
-        get: function (spec) {
-            return {
-                spec: new Spec(spec),
-                on:function(ev, sub){
-                    t.equal(ev, 'change', 'event name');
-                    t.equal(sub, s.onObjectChange, 'subscriber');
-                }
-            };
-        }
-    };
-    var s = new Set(null, null);
-    s._owner = owner;
-    a.updateSyncable(s);
-    t.ok(s.contains('/Model#some+id'), 'contains'); // TODO abbrev
-    s.forEach(function (obj, spec){
-        t.equal(obj.spec.id(), 'some+id', 'forEach object iteration');
-    });
-
-    t.end();
-
-});
-
-
-tape.skip('syncable.04.C Concurrency in Set', function (t) {
-    // TODO
-});
-
 
 tape ('syncable.04.D Model CRDT serialization', function (t) {
     var crdt = new Model.Inner();

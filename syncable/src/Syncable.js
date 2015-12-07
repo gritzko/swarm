@@ -73,6 +73,7 @@ function Syncable(init_op, host) {
 }
 util.inherits(Syncable, EventEmitter);
 module.exports = Syncable;
+Syncable.DEFAULT_TYPE = new Spec('/Model');
 
 
 Syncable.prototype._crdt = function () {
