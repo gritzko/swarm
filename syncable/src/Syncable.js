@@ -86,7 +86,7 @@ Syncable.prototype.save = function () {
     var clean_state = host.getCRDT().updateSyncable({});
     var diff = this.diff(clean_state);
     while (diff && diff.length) {
-        host.submit(diff.unshift());
+        this._owner.submitOp(this, diff.unshift());
     }
 };
 
@@ -96,7 +96,7 @@ Syncable.prototype.diff = function (base_state) {
 };
 
 
-Syncable.submit = function (op_name, op_value) {
+Syncable.prototype.submit = function (op_name, op_value) {
     this._owner.submit(op_name, op_value);
 };
 

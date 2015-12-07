@@ -157,23 +157,43 @@ Host.prototype._write = function (op, encoding, callback) {
     // NOTE that a slave host has no clocks and still functions
 
     var syncable = this.syncables && this.syncables[typeid];
-    var crdt = this.crdts[typeid];
     if (!syncable && this.options.api!==false) {
         throw new Error('syncable not open');
     } // FIXME specify modes: api, obey, snapshot
 
-    switch (op.op()) {
-    case 'on':
-        op.patch && op.patch.forEach(function(op){
-            self.write(op);
-        });
+    this.consume(typeid, syncable, op);
 
-        /*   TODO bundle 'change' events
+    var crdt = this.crdts[typeid];
+    if (crdt && syncable) {
+        // We bundle events (e.g. a sequence of ops we
+        // received on handshake after spending some time offline).
         crdt.updateSyncable(syncable);
         syncable.emit('change', {
             version: crdt._version,
             changes: null
-        });*/
+        });
+    }
+
+    if (crdt && this.options.snapshot==='immediate') {
+        var spec = op.spec.set(crdt._version, '!').set('~state', '.');
+        this.push(new Op(spec, crdt.toString()), this.source);
+    }
+
+    if (callback) {
+        callback();
+    }
+};
+
+
+Host.prototype.consume = function (typeid, syncable, op) {
+    var crdt = this.crdts[typeid];
+
+    switch (op.op()) {
+    case 'on':
+        var patch = op.patch;
+        for(var i=0; patch && i<patch.length; i++) {
+            this.consume(typeid, syncable, patch[i]);
+        }
 
         break;
     case 'off':
@@ -197,9 +217,9 @@ Host.prototype._write = function (op, encoding, callback) {
         }
 
         // FIXME descending state!!! see the pacman note
-        if (this.syncables) {
+        if (this.syncables) {// FIXME get rid of 'init' ?!!
             crdt.updateSyncable(syncable);
-            syncable._version = crdt._version = stamp;
+            syncable._version = crdt._version = op.stamp();
             syncable.emit('init', {
                 version: crdt._version,
                 changes: null
@@ -219,32 +239,18 @@ Host.prototype._write = function (op, encoding, callback) {
             throw new Error('CRDT object was not initialized');
         }
         crdt.write(op);
+        crdt._version = op.stamp();
         // replay protection - either Replica or an idempotent type
         if (this.syncables) {
-            crdt.updateSyncable(syncable);
-            syncable._version = crdt._version = stamp;
-            syncable.emit('change', {
-                version: crdt._version,
-                target: syncable,
-                changes: null
-            });
-        }
-
-        if (this.options.snapshot==='immediate') {
-            var spec = op.spec.set('~state', '.');
-            this.push(new Op(spec, crdt.toString()), this.source);
+            syncable._version = crdt._version;
         }
 
     }
-
-    if (callback) {
-        callback();
-    }
-
     // NOTE: merged ops, like
     //      !time+src.in text
     // should have their *last* stamp in the spec
 };
+
 
 // Incorporate a syncable into this replica.
 // In case the object is newly created (like `new Model()`), Host
@@ -365,12 +371,22 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
         throw new Error('host has no clock, hence not writable');
     }
     var typeid = syncable.typeid();
+    var spec = new Spec(typeid).add(this.time(),'!').add(op_name,'.');
+    var op = new Op(spec, value, this.source);
+    this.submitOp(op);
+};
+
+
+Host.prototype.submitOp = function (op) { // TODO sig
+    var typeid = op.typeid();
+    var syncable = this.syncables[typeid];
+    if (!syncable) {
+        throw new Error('object is not open');
+    }
     var crdt = this.crdts[typeid];
     if (!crdt) {
-        throw new Error('have no state, can not modify');
+        throw new Error('have no state, hence can not modify');
     }
-    var spec = syncable.spec().add(this.time(), '!').add(op_name,'.');
-    var op = new Op(spec, value, this.source); // FIXME run vs ssn vs conn id
 
     this._write(op); // not recommended by node docs :)
     this.push(op);
