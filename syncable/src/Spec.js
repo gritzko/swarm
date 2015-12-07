@@ -99,6 +99,17 @@ Spec.prototype.toString = function (defaults) {
     return ret;
 };
 
+// a type-id-stamp-op convenience factory method
+// syntax validation is a responsibility of the caller
+Spec.create = function (type, id, stamp, op) {
+    var empty = new Spec();
+    empty._type = type ? type.toString() : null;
+    empty._id = id ? id.toString() : null;
+    empty._stamp = stamp ? stamp.toString() : null;
+    empty._op = op ? op.toString() : null;
+    return empty;
+};
+
 
 Spec.prototype.toAbbrevString = function (defaults) {
     var ret = '';
@@ -299,4 +310,3 @@ Spec.as = function (spec) {
         return spec.constructor === Spec ? spec : new Spec(spec);
     }
 };
-

@@ -166,6 +166,9 @@ Syncable.prototype.typeid = function () {
     return '/' + this._type + '#' + this._id;
 };
 
+Syncable.prototype.typeId = function () {
+    return Spec.create(this._type, this._id, null, null);
+};
 
 // Returns current object state specifier
 Syncable.prototype.stateSpec = function () {

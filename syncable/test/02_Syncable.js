@@ -21,6 +21,13 @@ tape ('syncable.02.A empty cycle', function (t) {
     var empty = new Syncable(null, host);
     t.equal(empty._version, empty._id, 'version id OK');
     t.ok(empty._id, 'id is assigned');
+
+    var typeId = empty.typeId();
+    t.equal(typeId.type(), 'Syncable', 'typeId()');
+    t.equal(typeId.id(), empty._version, 'typeId()');
+    var typeid = empty.typeid();
+    t.equal(typeid, '/Syncable#'+empty._id, 'typeid()');
+
     var zero = host.getCRDT(empty);
     t.equal(zero._version, empty._id, 'default state version !0');
     t.equal(empty._version, empty._id, 'syncable rebuilt');
