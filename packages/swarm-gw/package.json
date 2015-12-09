@@ -20,6 +20,9 @@
   "dependencies": {
     "swarm-syncable":"1.0.3"
   },
+  "scripts": {
+    "test": "true"
+  },
   "devDependencies": {
   }
 }
