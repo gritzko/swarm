@@ -32,9 +32,9 @@
   ],
   "main": "",
   "browser": "",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
+    "lerna": "^1.0.4"
   },
   "scripts": {
     "test": "./test-all.sh"
