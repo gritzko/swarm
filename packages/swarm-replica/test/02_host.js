@@ -39,6 +39,7 @@ tape ('replica.02.A simple Model sync', function(t){
 
     var obj1 = new Model({a:1}, host1);
     var obj2 = host2.get(obj1.spec());
+    console.log(obj1, obj2);
     var expect_a = 1;
     obj1.on('change', function () {
         t.equal(obj1.a, expect_a++);
