@@ -74,7 +74,6 @@ tape ('server.1.A log aggregation', function (t) {
     }
 
     function end () {
-        console.log('end');
         fs.existsSync(db_path) && rimraf.sync(db_path);
         server.close();
         t.end();
@@ -88,6 +87,6 @@ tape ('server.1.A log aggregation', function (t) {
 //        also a new op arrives
 //        slave is a stream (async, slow)
 
-tape.skip ('server.1.B snapshotting - concurrency', function (t) {
-    t.fail();
-});
+//tape.skip ('server.1.B snapshotting - concurrency', function (t) {
+//    t.fail();
+//});

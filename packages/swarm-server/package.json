@@ -37,6 +37,6 @@
         "rimraf": "~2.4.4"
     },
     "scripts": {
-        "test": "tape test/*.js | tap-spec"
+        "test": "tape test/*.js | tap-min"
     }
 }
