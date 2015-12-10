@@ -23,7 +23,7 @@
   "browser": "index.js",
   "dependencies": {
       "stream-url": "^0.0.12",
-      "swarm-stamp": "~1.0.0",
+      "swarm-stamp": "^1.0.0",
       "readable-stream": "~1.1.0",
       "eventemitter3": "^1.1.1"
   },
@@ -31,7 +31,7 @@
     "tape": "^4.0.2",
     "tap-spec": "^4.0.2",
     "tape-dom": "^0.0.9",
-    "swarm-bat": "1.0.2"
+    "swarm-bat": "^1.0.2"
   },
   "scripts": {
     "test": "tape test/*.js | tap-spec"
