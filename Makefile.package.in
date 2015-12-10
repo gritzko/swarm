@@ -1,8 +1,16 @@
 BIN = ../node_modules/.bin
-.PHONY: install test clean
+SRC = $(shell find src -name '*.js')
+
+.PHONY: build install test clean
 
 test:
-	@if [ -d "test" ]; then $(BIN)/tape test/*.js | $(BIN)/tap-spec; else true; fi;
+	@if [ -d "test" ]; then $(BIN)/babel-node $(BIN)/tape test/*.js | $(BIN)/tap-spec; else true; fi;
 
 clean:
 	@rm -rf node_modules
+
+build: $(SRC:src/%.js=lib/%.js)
+
+lib/%.js: src/%.js
+	@mkdir -p $(@D)
+	$(BIN)/babel $< -o $@

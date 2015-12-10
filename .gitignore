@@ -1,5 +1,6 @@
 # Build products
 dist/*
+swarm-*/lib
 *.app.js
 *.min.js
 # byproducts
