@@ -12,6 +12,10 @@ var Op = sync.Op;
 var OpStream = sync.OpStream;
 var Entry  = require('./Entry');
 
+// ## TODO ##
+// 1. ssn_id/db_id modes => document, unify
+// 2. db hs write-then read situation
+
 // Swarm database node backed by an ordered op storage
 // Has an object stream based interface.
 // Consumes ops, emits ops that need to be delivered to their op.source.
@@ -20,6 +24,15 @@ var Entry  = require('./Entry');
 // Provides general infrastructure: db access, network connections.
 // Any actual replication logic is scoped to a replicated object (syncable)
 // see Entry.js.
+// Options:
+//      ssn_id
+//      user_id
+//      db_id
+//      connect
+//      listen
+//      snapshot_slave
+//      prefix
+//      clock
 function Replica (options, callback) {
     EventEmitter.call(this);
     if (callback) {
@@ -36,13 +49,6 @@ function Replica (options, callback) {
         this.user_id = options.user_id;
     } else {
         throw new Error('no user id specified');
-    }
-    if (!options.db) {
-        var memdown = require('memdown');
-        if (!memdown) { throw new Error('no memdown!'); }
-        this.db = levelup(memdown);
-    } else {
-        this.db = options.db;
     }
     // these two are set once we have de-facto access to the session's cache db
     this.ssn_id = null;
@@ -65,19 +71,24 @@ function Replica (options, callback) {
         this.snapshot_slave.on('data', this.onSnaphotSlaveOp.bind(this));
     }
     this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
-    if (options.db_id && options.ssn_id) {
-        this.createClock(options.ssn_id);
-    } else { // then, read ssn_id from the db or get it from the upstream
-        this.clock = null;
-    }
+    this.clock = null;
     // db related stuff
     this.prefix = options.prefix || '';
-    // check the existing db; depending on the outcome,
-    // we'll proceed with the network stuff
-    this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
+    if (!options.db) { // tests
+        var memdown = require('memdown');
+        if (!memdown) { throw new Error('no memdown!'); }
+        this.db = levelup(memdown);
+        this.loadDatabaseHandshake(null, null);
+    } else {
+        this.db = options.db;
+        // check the existing db; depending on the outcome,
+        // we'll proceed with the network stuff
+        this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
+    }
 }
 util.inherits(Replica, EventEmitter);
 module.exports = Replica;
+// FIXME uniform export interface
 
 
 Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
@@ -107,7 +118,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
         if (hs.patch) {
             var kv = Object.create(null);
             hs.patch.forEach(function(op){
-                kv[op.spec] = op.value;
+                kv[op.name()] = op.value;
             });
             if (kv['.last_ds_ssn']) {
                 this.last_ds_ssn = parseInt(kv['.last_ds_ssn']);
@@ -116,9 +127,14 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
             }
             this.last_us_stamp;
         }
-    } else { // fresh db
+    } else { // fresh db, no records
         this.last_ds_ssn = 0;
         this.last_us_stamp = '';
+        if (options.db_id && options.ssn_id) {
+            this.createClock(options.ssn_id);
+        } else {
+            'there is still a chance to get ssn_id from the upstream';
+        }
     }
     options.connect = options.connect || options.upstream; // old name
     if (options.connect) {
@@ -212,9 +228,9 @@ Replica.prototype.gc = function () {
     }
 };
 
-//
+// process an incoming op
 Replica.prototype.write = function (op) {
-    Replica.debug && console.log(this.ssn_id,'>',op.toString());
+    Replica.debug && console.log('>'+this.ssn_id+'\t'+op.toString());
     if (op.constructor!==Op) {
         throw new Error('consumes swarm-syncable Op objects only');
     }
@@ -512,6 +528,9 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
 
 // Add a connection to other replica, either upstream or downstream.
 Replica.prototype.addStreamDown = function (stream) {
+    if (!this.ssn_id) {
+        return stream.end('.error\tsession not initialized yet\n');
+    }
     var op_stream = new OpStream (stream, {
         authorize: this.options.authorize // needs the stream
     });
@@ -545,6 +564,9 @@ Replica.prototype.addStreamDown = function (stream) {
 
 Replica.prototype.addOpStreamDown = function (stream) {
     var self = this;
+    if (!this.ssn_id) {
+        throw new Error('not initialized yet!');
+    }
     stream.once('data', function (op) {
         self.onDownstreamHandshake(op, stream);
     });

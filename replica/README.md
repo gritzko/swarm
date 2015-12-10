@@ -61,7 +61,7 @@ The most common interface in the system is an *OpStream*. That is a
 single-database op stream going from one session to another.
 
 
-## TODO
+## TODO ##
 
 ### Rework (1.1)
 
@@ -69,6 +69,14 @@ Goals: manageable state snapshotting, general clean-up and simplification.
 Storage/network/subscriptions go to Replica entirely; Entry becomes passive,
 merges with EntryState.
 
+Method: rewire refactoring. Stages:
+[ ] send ~ done ~ save
+[ ] read db by callbacks
+[ ] O queue
+[ ] I queue
+[ ] Entry ~ EntryState
+
+Full job list:
 [ ] move subscribers, write to Replica (replica.appendNewOp(op))
     [ ] subscribers
     [ ] append new op

@@ -6,6 +6,9 @@ var util = require("util");
 //var EventEmitter = require("eventemitter3");
 var Duplex = require('readable-stream').Duplex;
 
+// ## TODO ##
+// 1. no-clock "slave mode" (make options orderly)
+
 // Host is the world of actual replicated/synchronized objects of various types.
 // Host contains inner CRDT objects and their outer API parts (Syncables).
 // A host is (a) passive and (b) synchronous.
@@ -160,21 +163,25 @@ Host.prototype._write = function (op, encoding, callback) {
     if (!syncable && this.options.api!==false) {
         throw new Error('syncable not open');
     } // FIXME specify modes: api, obey, snapshot
+    var crdt = this.crdts[typeid];
+    var old_ver = crdt && crdt._version;
 
     this.consume(typeid, syncable, op);
 
-    var crdt = this.crdts[typeid];
-    if (crdt && syncable) {
+    crdt = crdt || this.crdts[typeid];
+    var is_changed = old_ver!==crdt._version;
+    if (crdt && syncable && is_changed) {
         // We bundle events (e.g. a sequence of ops we
         // received on handshake after spending some time offline).
         crdt.updateSyncable(syncable);
         syncable.emit('change', {
             version: crdt._version,
-            changes: null
+            changes: null,
+            op:      op
         });
     }
 
-    if (crdt && this.options.snapshot==='immediate') {
+    if (crdt && is_changed && this.options.snapshot==='immediate') {
         var spec = op.spec.set(crdt._version, '!').set('~state', '.');
         this.push(new Op(spec, crdt.toString()), this.source);
     }
@@ -211,6 +218,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
         }
         var have_or_wait_state = this.crdts[typeid]!==undefined;
         crdt = new type_fn.Inner(op.value);
+        crdt._version = op.stamp();
         this.crdts[typeid] = crdt;
         if (!have_or_wait_state) { // FIXME obey
             this.push(new Op(typeid+'.on', op.spec.stamp(), this.source));
@@ -219,7 +227,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
         // FIXME descending state!!! see the pacman note
         if (this.syncables) {// FIXME get rid of 'init' ?!!
             crdt.updateSyncable(syncable);
-            syncable._version = crdt._version = op.stamp();
+            syncable._version = op.stamp();
             syncable.emit('init', {
                 version: crdt._version,
                 changes: null
