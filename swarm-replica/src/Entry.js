@@ -401,8 +401,7 @@ Entry.prototype.makePatch = function (base, filter, add_state) {
     var patch = [];
     while (i<ops.length && ops[i].stamp()!==base) { i++; }
     if (i===ops.length) {
-        //return this.op.error('position not found');
-        console.warn('no data'); // TODO normal case actually
+        'no data'; // normal case actually
         return null;
     } else if (ops[i].name()!=='~state') {
         i++; // base is known to the peer, hence not included
