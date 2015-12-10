@@ -25,6 +25,6 @@
   "dependencies": {
   },
   "scripts": {
-    "test": "tape test/*.js | tap-spec"
+    "test": "make test"
   }
 }

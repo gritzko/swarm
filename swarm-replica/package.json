@@ -33,6 +33,6 @@
         "memdown": "^1.0.0"
     },
     "scripts": {
-        "test": "tape test/*.js | tap-spec"
+        "test": "make test"
     }
 }
