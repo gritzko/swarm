@@ -10,3 +10,6 @@ bootstrap:
 
 test:
 	$(call foreach_package, npm test)
+
+clean:
+	@$(call foreach_package, rm -rf node_modules)
