@@ -5,12 +5,7 @@ var Replica = require('..');
 var bat = require('swarm-bat');
 var BatMux = bat.BatMux;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 
 var BASIC = [
@@ -423,8 +418,4 @@ tape ('replica.00.C various errors / incorrect messages', function(t){
 
     }
 
-});
-
-
-tape.skip('1.D close/open db', function(t){
 });

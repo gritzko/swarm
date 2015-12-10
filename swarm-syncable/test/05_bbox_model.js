@@ -9,12 +9,7 @@ var bat = require('swarm-bat');
 
 Host.multihost = true;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 
 tape ('syncable.05.A Model set/get - Host protocol', function (t) {
@@ -227,23 +222,23 @@ var TORTURE_MODELS = [
 // storage has no idea who the consumers are, so it echoes every
 // new op => echo is OK, types must be idempotent, we may kill
 // echos for better performance
-tape.skip('syncable.05.D tortures', function (t){
-    var host = new Host({
-        ssn_id: 'me',
-        db_id:  'db',
-        clock:  new stamp.TestClock('me'),
-        pushOn: true,
-        emitStates: true
-    });
-    var host_stream = host.stream();
-
-    var bt = new bat.StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
-
-    bt.runScenario( function () {
-        t.end();
-    } );
-
-});
+// tape.skip('syncable.05.D tortures', function (t){
+//     var host = new Host({
+//         ssn_id: 'me',
+//         db_id:  'db',
+//         clock:  new stamp.TestClock('me'),
+//         pushOn: true,
+//         emitStates: true
+//     });
+//     var host_stream = host.stream();
+//
+//     var bt = new bat.StreamTest(host_stream, TORTURE_MODELS, t.equal.bind(t));
+//
+//     bt.runScenario( function () {
+//         t.end();
+//     } );
+//
+// });
 
 var DESC_STATE = [
 {
@@ -274,29 +269,29 @@ var DESC_STATE = [
 }
 ];
 
-tape.skip('syncable.05.E descending state', function (t) {
-
-    var host = new Host({
-        db_id: 'db',
-        ssn_id: 'me~5E',
-        clock: new stamp.LamportClock('me~5C')
-    });
-
-    var obj = host.get('object', function () {
-        obj.set({y:1});
-        t.equal(this.y, 1);
-        obj.on('change', function() {
-            obj.set({z:3});
-        });
-    });
-
-    var bt = new bat.StreamTest(host, DESC_STATE, t.equal.bind(t));
-    bt.run(function(){
-        t.deepEqual(obj, {x:2, y:1, z:3});
-        t.end();
-    });
-
-});
+// tape.skip('syncable.05.E descending state', function (t) { FIXME revitalize!!
+//
+//     var host = new Host({
+//         db_id: 'db',
+//         ssn_id: 'me~5E',
+//         clock: new stamp.LamportClock('me~5C')
+//     });
+//
+//     var obj = host.get('object', function () {
+//         obj.set({y:1});
+//         t.equal(this.y, 1);
+//         obj.on('change', function() {
+//             obj.set({z:3});
+//         });
+//     });
+//
+//     var bt = new bat.StreamTest(host, DESC_STATE, t.equal.bind(t));
+//     bt.run(function(){
+//         t.deepEqual(obj, {x:2, y:1, z:3});
+//         t.end();
+//     });
+//
+// });
 
 
 var SNAPSHOTS = [
@@ -359,11 +354,11 @@ tape ('syncable.05.F snapshotting', function (t) {
 });
 
 
-tape.skip('syncable.05.G exception handling', function (t) {
-
-    // FIXME resync, buffer local changes
-
-});
+// tape.skip('syncable.05.G exception handling', function (t) {
+//
+//     // FIXME resync, buffer local changes
+//
+// });
 
 
 /*tape ('syncable.05.E misc - dave/diff', function (t) {

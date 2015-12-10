@@ -7,12 +7,7 @@ var Model = sync.Model;
 var Spec = sync.Spec;
 var Op = sync.Op;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 Host.multihost = true;
 
@@ -83,36 +78,36 @@ tape('syncable.02.C batch events', function (t) {
 });
 
 
-tape.skip ('syncable.02.D submit API', function (t) {
-    var host = new Host({
-        ssn_id: 'anon~02~D',
-        db_id: 'db',
-        clock: stamp.LamportClock
-    });
-    var last_op;
-    host.on('data', function (op) {
-        last_op = op;
-    });
-
-    var obj = new Model({c:1}, host);
-    obj.a = 2;
-    obj.save();
-    t.equal(obj.a, 2, 'save()');
-    t.equal(obj.c, 1, 'old field is intact');
-    t.equal(last_op.name(), 'set', 'op is .set');
-    t.equal(last_op.value, '{"a":2}', 'op value');
-
-    obj.submit('set', '{"a":3}');
-    t.equal(obj.a, 3, 'name-value syntax');
-
-    host.submitOp(new Op(obj.typeid().add('.set'), '{"b":4}'));
-    t.equal(obj.a, 3, 'submitOp - merge');
-    t.equal(obj.b, 4, 'submitOp - new value');
-    t.equal(obj.c, 1, 'old field is intact');
-
-    host.close();
-    t.end();
-});
+// tape.skip ('syncable.02.D submit API', function (t) { FIXME revitalize
+//     var host = new Host({
+//         ssn_id: 'anon~02~D',
+//         db_id: 'db',
+//         clock: stamp.LamportClock
+//     });
+//     var last_op;
+//     host.on('data', function (op) {
+//         last_op = op;
+//     });
+//
+//     var obj = new Model({c:1}, host);
+//     obj.a = 2;
+//     obj.save();
+//     t.equal(obj.a, 2, 'save()');
+//     t.equal(obj.c, 1, 'old field is intact');
+//     t.equal(last_op.name(), 'set', 'op is .set');
+//     t.equal(last_op.value, '{"a":2}', 'op value');
+//
+//     obj.submit('set', '{"a":3}');
+//     t.equal(obj.a, 3, 'name-value syntax');
+//
+//     host.submitOp(new Op(obj.typeid().add('.set'), '{"b":4}'));
+//     t.equal(obj.a, 3, 'submitOp - merge');
+//     t.equal(obj.b, 4, 'submitOp - new value');
+//     t.equal(obj.c, 1, 'old field is intact');
+//
+//     host.close();
+//     t.end();
+// });
 
 /*
 tape ('syncable.02.a basic listener func', function (t) {

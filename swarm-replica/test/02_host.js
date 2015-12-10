@@ -8,12 +8,7 @@ var Model = sync.Model;
 var bat = require('swarm-bat');
 Host.multihost = true;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 
 tape ('replica.02.A simple Model sync', function(t){

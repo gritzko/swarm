@@ -5,12 +5,7 @@ var OpStream = sync.OpStream;
 var bat = require('swarm-bat');
 var BatStream = bat.BatStream;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 tape ('syncable.03.A simple cases', function (t) {
     var stream = new BatStream();
@@ -106,7 +101,7 @@ tape ('syncable.03.E destroy()', function (t) {
     var opstream = new OpStream(stream.pair);
     t.plan(1);
     opstream.once('data', function(recv_op){
-        t.ok(recv_op.stamp(), 'time', '1st op OK');
+        t.equal(recv_op.stamp(), 'time', '1st op OK');
         opstream.destroy();
         opstream.on('data', function(){
             t.fail('destroyed');
@@ -185,44 +180,44 @@ tape ('syncable.03.H write to a closed stream', function (t) {
 });
 
 
-tape.skip('syncable.03.I stream .write()/.read() interface', function (t) {
-    var stream = new BatStream();
-    var pair = new OpStream(stream.pair, {});
-    var opstream = new OpStream(stream, {});
-    var op, index = 0;
-    var send_ops = Op.parse(
-        '/Model#id!time1+user1~ssn.on\t\n\n'+
-        '/Mode#some!time2+user2~ssn.set\t12345\n'+
-        '/Model#stamp+author!time3+user3~ssn.on\tpos\n'+
-               '\t!stamp+source.op\tvalue\n'+
-               '\t!stamp2+source2.op\tvalue2\n\n',
-        'pair'
-    ).ops;
+// tape.skip('syncable.03.I stream .write()/.read() interface', function (t) {
+//     var stream = new BatStream();
+//     var pair = new OpStream(stream.pair, {});
+//     var opstream = new OpStream(stream, {});
+//     var op, index = 0;
+//     var send_ops = Op.parse(
+//         '/Model#id!time1+user1~ssn.on\t\n\n'+
+//         '/Mode#some!time2+user2~ssn.set\t12345\n'+
+//         '/Model#stamp+author!time3+user3~ssn.on\tpos\n'+
+//                '\t!stamp+source.op\tvalue\n'+
+//                '\t!stamp2+source2.op\tvalue2\n\n',
+//         'pair'
+//     ).ops;
+//
+//     function check_op(op) {
+//         var next = send_ops[index++];
+//         t.equal(''+op.spec, ''+next.spec, 'spec matches');
+//         t.equal(''+op.value, ''+next.value, 'value matches');
+//         t.equal(op.source, 'pair', 'source is correct');
+//     }
+//
+//     t.plan(send_ops.length * 3 + 2);
+//     pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+//
+//     pair.write(send_ops[0]);
+//     pair.write(send_ops[1]);
+//
+//     while (op = opstream.read()) {
+//         check_op(op);
+//     }
+//
+//     t.equal(op, null, 'No more operations available for now');
+//     t.equal(index, 2, 'Two operations processed');
+//
+//     pair.write(send_ops[2]);
+//     check_op(opstream.read());
+// }); FIXME revitalize!!!
 
-    function check_op(op) {
-        var next = send_ops[index++];
-        t.equal(''+op.spec, ''+next.spec, 'spec matches');
-        t.equal(''+op.value, ''+next.value, 'value matches');
-        t.equal(op.source, 'pair', 'source is correct');
-    }
 
-    t.plan(send_ops.length * 3 + 2);
-    pair.sendHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
-
-    pair.write(send_ops[0]);
-    pair.write(send_ops[1]);
-
-    while (op = opstream.read()) {
-        check_op(op);
-    }
-
-    t.equal(op, null, 'No more operations available for now');
-    t.equal(index, 2, 'Two operations processed');
-
-    pair.write(send_ops[2]);
-    check_op(opstream.read());
-});
-
-
-tape.skip('syncable.03.J patch: partial read', function (t) {
-});
+// tape.skip('syncable.03.J patch: partial read', function (t) {
+// });

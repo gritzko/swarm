@@ -7,12 +7,7 @@ var Spec = sync.Spec;
 var Op = sync.Op;
 var Set = sync.Set;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 
 tape ('syncable.06.A Set basic API', function (t) {
@@ -120,6 +115,6 @@ tape ('syncable.06.B Set CRDT / Syncable', function (t) {
 });
 
 
-tape.skip('syncable.06.C Concurrency in Set', function (t) {
-    // TODO
-});
+// tape.skip('syncable.06.C Concurrency in Set', function (t) {
+//     // TODO
+// });

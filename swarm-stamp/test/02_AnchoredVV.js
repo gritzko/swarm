@@ -3,12 +3,7 @@ var stamp = require('..');
 var VV = stamp.VV;
 var AnchoredVV = stamp.AnchoredVV;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 tape ('stamp.02.A VV basics', function (tap) {
 

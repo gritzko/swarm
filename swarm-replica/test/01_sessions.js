@@ -7,13 +7,7 @@ var sync = require('swarm-syncable');
 var bat = require('swarm-bat');
 var BatMux = bat.BatMux;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
-
+var tape = require('tap').test;
 
 var NEW_SSN = [
 {

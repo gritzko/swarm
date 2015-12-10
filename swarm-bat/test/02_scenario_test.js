@@ -7,12 +7,8 @@ var BatStream = bat.BatStream;
 var StreamTest = bat.StreamTest;
 var stream_url = require('stream-url');
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
+
 
 var positives = [
 
@@ -109,18 +105,18 @@ var variables = {
 	MONARCH: "King"
 };
 
-tape.skip ('2.a. LearnedComparator', function (t) {
-    var lc = new LearnedComparator();
-    positives.forEach(function (sc) {
-        t.equal(sc.fact, sc.expected);
-    });
-    negatives.forEach(function (sc) {
-        t.equal(sc.fact, sc.expected);
-    });
-    for(var key in variables) {
-    	t.equal(lc.variables[key], variables[key], key);
-    }
-});
+// tape.skip ('2.a. LearnedComparator', function (t) {
+//     var lc = new LearnedComparator();
+//     positives.forEach(function (sc) {
+//         t.equal(sc.fact, sc.expected);
+//     });
+//     negatives.forEach(function (sc) {
+//         t.equal(sc.fact, sc.expected);
+//     });
+//     for(var key in variables) {
+//     	t.equal(lc.variables[key], variables[key], key);
+//     }
+// });
 
 tape ('2.b. BatStream', function (t) {
 	var stream = new BatStream();

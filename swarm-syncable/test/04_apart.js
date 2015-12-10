@@ -8,12 +8,7 @@ var Host = sync.Host;
 
 Host.multihost = true;
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 // A big advantage of the 1.0 model is that we can test everythign apart:
 // CRDTs, API objects, Host, Replica, and so on...

@@ -2,12 +2,7 @@
 var su = require('stream-url');
 var bat = require('..'); // register loopback:
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 tape ('1.A listen-connect loopback stream', function (t) {
     t.plan(3);
@@ -29,6 +24,6 @@ tape ('1.A listen-connect loopback stream', function (t) {
 });
 
 
-tape.skip ('1.B listen-connect local stream', function (t) {
-    
-});
+// tape.skip ('1.B listen-connect local stream', function (t) {
+//
+// });

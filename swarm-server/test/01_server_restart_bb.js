@@ -6,12 +6,7 @@ var stamp = require('swarm-stamp');
 var SwarmServer = require('..');
 var bat = require('swarm-bat');
 
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 // this is not a bare Replica, but a Replica+Host server-side combo
 // which must aggregate logs into states properly
@@ -87,6 +82,6 @@ tape ('server.1.A log aggregation', function (t) {
 //        also a new op arrives
 //        slave is a stream (async, slow)
 
-tape.skip ('server.1.B snapshotting - concurrency', function (t) {
-    t.fail();
-});
+// tape.skip ('server.1.B snapshotting - concurrency', function (t) {
+//     t.fail();
+// });

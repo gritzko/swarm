@@ -2,12 +2,7 @@
 var sync = require('..');
 var Spec = sync.Spec;
 var Op = sync.Op;
-var tape = require('tape');
-if (typeof(window)==='object') {
-    var tape_dom = require('tape-dom');
-    tape_dom.installCSS();
-    tape_dom.stream(tape);
-}
+var tape = require('tap').test;
 
 tape ('syncable.01.b basic specifier syntax', function (tap) {
     var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
