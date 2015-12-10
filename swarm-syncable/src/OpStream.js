@@ -23,228 +23,226 @@ var Duplex       = require("readable-stream").Duplex;
 // a handshake later on.
 // options object:
 // NOTE: OpStream posesses its underlying stream
-function OpStream (stream, options) {
-    if (!stream || !stream.on) {
-        throw new Error('no stream provided');
-    }
-    Duplex.call(this, {objectMode: true});
-    this.stream = stream;
-    this.options = options = options || {};
-    this.pending_s = []; // FIXME this is not our business
+class OpStream extends Duplex {
 
-    // Local session/database/timestamp
-    // this.ssn_id = options.ssn_id || null;
-    // this.db_id = options.db_id || null;
-    // this.stamp = options.stamp || '0';
-    // Peer session/database/timestamp
-    // this.peer_hs = null;
-    this.source = options.source || null;
-    this.mute = false;
-
-    // this.peer_ssn_id = null; // TODO tidy this up
-    // this.peer_db_id = null;  // (store hs, add accessor methods)
-    // this.peer_stamp = null;
-    // Peer options received in handshake
-    // this.peer_options = null;
-
-
-    this.remainder = '';
-    this.bound_flush = this.flush.bind(this);
-    this.flush_timeout = null;
-    this.lastSendTime = 0;
-    //this.serializer = options.serializer || LineBasedSerializer;
-    if (options.keepAlive) {
-        this.timer = setInterval(this.onTimer.bind(this), 1000);
-    }
-    this.onStreamReadable();
-    this.stream.on('readable', this.onStreamReadable.bind(this));
-    this.stream.on('end', this.onStreamEnded.bind(this));
-    this.stream.on('error', this.onStreamError.bind(this));
-    //options.maxSendFreq;
-    //options.burstWaitTime;
-    //OpStream.debug && console.log("OpStream open", this.options);
-    this.readable = false;
-}
-util.inherits(OpStream, Duplex);
-module.exports = OpStream;
-OpStream.debug = false;
-OpStream.DEFAULT = new Spec('/Model!0.on');
-
-OpStream.prototype._write = function (op, encoding, callback) {
-    // if (!this.ssn_id) {
-    //     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-    //         op.op().toLowerCase()!=='on') {
-    //         throw new Error('handshake first');
-    //     }
-    //     this.db_id = op.id();
-    //     this.ssn_id = op.origin();
-    //     this.stamp = op.stamp();
-    //     this.pending_s.push( op.toString() );
-    // } else {
-        this.pending_s.push( op.toString(OpStream.DEFAULT) );
-    // }
-    if (this.asyncFlush) {
-        if (!this.flush_timeout) {
-            var delay;
-            this.flush_timeout = setTimeout(this.bound_flush, delay);
+    constructor(stream, options) {
+        if (!stream || !stream.on) {
+            throw new Error('no stream provided');
         }
-    } else {
-        this.flush();
-    }
-    callback();
-};
+        super({objectMode: true});
+        this.stream = stream;
+        this.options = options = options || {};
+        this.pending_s = []; // FIXME this is not our business
 
-OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
+        // Local session/database/timestamp
+        // this.ssn_id = options.ssn_id || null;
+        // this.db_id = options.db_id || null;
+        // this.stamp = options.stamp || '0';
+        // Peer session/database/timestamp
+        // this.peer_hs = null;
+        this.source = options.source || null;
+        this.mute = false;
 
-OpStream.prototype.flush = function () {
-    if (!this.stream) {return;}
-    var parcel = this.pending_s.join('');
-    this.pending_s = [];
-    try {
-        OpStream.debug && console.log
-            (this.peer_stamp||'unknown', '<', this.stamp||'undecided', parcel);
-        this.stream.write(parcel);
-        this.lastSendTime = new Date().getTime();
-    } catch (ioex) {
-        console.error(ioex);
-        this.onStreamError(ioex);
-    }
-};
-
-OpStream.prototype.end = function (something) {
-    if (!this.stream) {
-        throw new Error('this op stream is not open');
-    }
-    if (something) {
-        this.write(something);
-    }
-    this.stream.end();
-    this.stream = null;
-};
+        // this.peer_ssn_id = null; // TODO tidy this up
+        // this.peer_db_id = null;  // (store hs, add accessor methods)
+        // this.peer_stamp = null;
+        // Peer options received in handshake
+        // this.peer_options = null;
 
 
-OpStream.prototype.onStreamReadable = function () {
-    var buf;
-    while (this.stream && (buf=this.stream.read())) {
-        this.onStreamDataReceived(buf);
-    }
-};
-
-
-OpStream.prototype.onStreamDataReceived = function (data) {
-    if (!this.stream) {
-        return;
+        this.remainder = '';
+        this.bound_flush = this.flush.bind(this);
+        this.flush_timeout = null;
+        this.lastSendTime = 0;
+        //this.serializer = options.serializer || LineBasedSerializer;
+        if (options.keepAlive) {
+            this.timer = setInterval(this.onTimer.bind(this), 1000);
+        }
+        this.onStreamReadable();
+        this.stream.on('readable', this.onStreamReadable.bind(this));
+        this.stream.on('end', this.onStreamEnded.bind(this));
+        this.stream.on('error', this.onStreamError.bind(this));
+        //options.maxSendFreq;
+        //options.burstWaitTime;
+        //OpStream.debug && console.log("OpStream open", this.options);
+        this.readable = false;
     }
 
-    if (!data) {return;} // keep-alive
-
-    this.remainder += data.toString();
-
-    var parsed;
-
-    try {
-
-        parsed = Op.parse(this.remainder, this.source, OpStream.DEFAULT);
-
-    } catch (ex) {
-        this.onStreamError(new Error('bad op format'));
-        return;
-    }
-
-    this.remainder = parsed.remainder;
-    var ops = parsed.ops;
-
-    if (!ops || !ops.length) {
-        return;
-    }
-
-    try {
-
-        // if (!this.peer_stamp) { // we expect a handshake
-        //     this.onHandshake(ops.shift());
+    _write(op, encoding, callback) {
+        // if (!this.ssn_id) {
+        //     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
+        //         op.op().toLowerCase()!=='on') {
+        //         throw new Error('handshake first');
+        //     }
+        //     this.db_id = op.id();
+        //     this.ssn_id = op.origin();
+        //     this.stamp = op.stamp();
+        //     this.pending_s.push( op.toString() );
+        // } else {
+            this.pending_s.push( op.toString(OpStream.DEFAULT) );
         // }
-
-        OpStream.debug && console.log
-            (this.peer_stamp||'unknown', '>', this.stamp||'undecided', data.toString());
-
-        var author = this.options.restrictAuthor || undefined; // FIXME
-        for(var i = 0; i < ops.length; i++) {
-            var op = ops[i];
-            if (author!==undefined && op.spec.author()!==author) {
-                return this.onStreamError(new Error('access violation: ' + op.spec));
+        if (this.asyncFlush) {
+            if (!this.flush_timeout) {
+                var delay;
+                this.flush_timeout = setTimeout(this.bound_flush, delay);
             }
-            !this.mute && this.push(op);
-        }
-
-    } catch (ex) {
-        console.error(ex);
-        this.onStreamError(ex);
-    }
-};
-
-OpStream.prototype.sendHandshake = function (op) {
-    this.write(op);
-};
-
-// OpStream.prototype.onHandshake = function (op) {
-//     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-//         op.op().toLowerCase()!=='on') {
-//         console.error('not a handshake:', op);
-//         return this.onStreamError(new Error('invalid handshake'));
-//     }
-//     this.peer_hs = op;
-//
-//     // TODO tidy
-//     this.peer_db_id = op.id();
-//     this.peer_ssn_id = op.origin();
-//     this.peer_options = op.value ? op.patch : null; // TODO
-//     this.peer_stamp = op.stamp();
-//     this.context = new Spec('/Model!'+op.stamp()+'.on');
-//
-//     console.warn('context set');
-//     this.emit('id', op, this);
-// };
-
-OpStream.prototype.onStreamEnded = function () {
-    // this.stream.removeAllListeners();
-    // this.stream = null;
-    // this.emit('end', this);
-    this.push(null);
-};
-
-OpStream.prototype.onStreamError = function (err) {
-    OpStream.debug && console.error('stream error', err);
-    if (this.stream) {
-        this.emit('error', err);
-        if (this.stream) {
-            this.end();
-            this.stream = null;
-        }
-    }
-};
-
-OpStream.prototype.onTimer = function () {
-    //if (!this.id && !this.closed) { FIXME move upstream (Router)
-    //    this.close();
-    //}    // health check
-    // keepalive prevents the conn from being killed by overly smart middleboxes
-    // and helps the server to keep track of who's really online
-    if (this.options.keepAlive) {
-        var time = new Date().getTime();
-        var silentTime = time - this.lastSendTime;
-        if (silentTime > (this.options.keepAliveInterval||50000)) {
+        } else {
             this.flush();
         }
+        callback();
     }
-};
 
-OpStream.prototype._read = function () {};
+    flush() {
+        if (!this.stream) {return;}
+        var parcel = this.pending_s.join('');
+        this.pending_s = [];
+        try {
+            OpStream.debug && console.log
+                (this.peer_stamp||'unknown', '<', this.stamp||'undecided', parcel);
+            this.stream.write(parcel);
+            this.lastSendTime = new Date().getTime();
+        } catch (ioex) {
+            console.error(ioex);
+            this.onStreamError(ioex);
+        }
+    }
 
+    end(something) {
+        if (!this.stream) {
+            throw new Error('this op stream is not open');
+        }
+        if (something) {
+            this.write(something);
+        }
+        this.stream.end();
+        this.stream = null;
+    }
 
-OpStream.prototype.destroy = function () {
-    this.stream.destroy && this.stream.destroy();
-    this.mute = true;
-};
+    onStreamReadable() {
+        var buf;
+        while (this.stream && (buf=this.stream.read())) {
+            this.onStreamDataReceived(buf);
+        }
+    }
+
+    onStreamDataReceived(data) {
+        if (!this.stream) {
+            return;
+        }
+
+        if (!data) {return;} // keep-alive
+
+        this.remainder += data.toString();
+
+        var parsed;
+
+        try {
+
+            parsed = Op.parse(this.remainder, this.source, OpStream.DEFAULT);
+
+        } catch (ex) {
+            this.onStreamError(new Error('bad op format'));
+            return;
+        }
+
+        this.remainder = parsed.remainder;
+        var ops = parsed.ops;
+
+        if (!ops || !ops.length) {
+            return;
+        }
+
+        try {
+
+            // if (!this.peer_stamp) { // we expect a handshake
+            //     this.onHandshake(ops.shift());
+            // }
+
+            OpStream.debug && console.log
+                (this.peer_stamp||'unknown', '>', this.stamp||'undecided', data.toString());
+
+            var author = this.options.restrictAuthor || undefined; // FIXME
+            for(var i = 0; i < ops.length; i++) {
+                var op = ops[i];
+                if (author!==undefined && op.spec.author()!==author) {
+                    return this.onStreamError(new Error('access violation: ' + op.spec));
+                }
+                !this.mute && this.push(op);
+            }
+
+        } catch (ex) {
+            console.error(ex);
+            this.onStreamError(ex);
+        }
+    }
+
+    sendHandshake(op) {
+        this.write(op);
+    }
+
+    // OpStream.prototype.onHandshake = function (op) {
+    //     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
+    //         op.op().toLowerCase()!=='on') {
+    //         console.error('not a handshake:', op);
+    //         return this.onStreamError(new Error('invalid handshake'));
+    //     }
+    //     this.peer_hs = op;
+    //
+    //     // TODO tidy
+    //     this.peer_db_id = op.id();
+    //     this.peer_ssn_id = op.origin();
+    //     this.peer_options = op.value ? op.patch : null; // TODO
+    //     this.peer_stamp = op.stamp();
+    //     this.context = new Spec('/Model!'+op.stamp()+'.on');
+    //
+    //     console.warn('context set');
+    //     this.emit('id', op, this);
+    // };
+
+    onStreamEnded() {
+        // this.stream.removeAllListeners();
+        // this.stream = null;
+        // this.emit('end', this);
+        this.push(null);
+    }
+
+    onStreamError(err) {
+        OpStream.debug && console.error('stream error', err);
+        if (this.stream) {
+            this.emit('error', err);
+            if (this.stream) {
+                this.end();
+                this.stream = null;
+            }
+        }
+    }
+
+    onTimer() {
+        //if (!this.id && !this.closed) { FIXME move upstream (Router)
+        //    this.close();
+        //}    // health check
+        // keepalive prevents the conn from being killed by overly smart middleboxes
+        // and helps the server to keep track of who's really online
+        if (this.options.keepAlive) {
+            var time = new Date().getTime();
+            var silentTime = time - this.lastSendTime;
+            if (silentTime > (this.options.keepAliveInterval||50000)) {
+                this.flush();
+            }
+        }
+    }
+
+    _read() {
+
+    }
+
+    destroy() {
+        this.stream.destroy && this.stream.destroy();
+        this.mute = true;
+    }
+}
+
+OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
 
 //
 // OpStream.prototype.setContext = function (context) {
@@ -259,3 +257,7 @@ OpStream.prototype.destroy = function () {
 // OpStream.prototype.peerSessionStamp = function () {
 //     return this.peer_hs && this.peer_hs.stamp();
 // };
+
+module.exports = OpStream;
+OpStream.debug = false;
+OpStream.DEFAULT = new Spec('/Model!0.on');

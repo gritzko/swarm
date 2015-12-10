@@ -51,59 +51,136 @@ var util = require('util');
  // (2) does it monotonically (in the alphanum order sense)
 
 
-function Syncable(init_op, host) {
+class Syncable extends EventEmitter {
 
-    EventEmitter.call(this);
-    this._id = null;
-    this._version = null;
-    this._owner = null;
-    this._events = {change: null};
-
-    if (host===undefined) { // null means "no host"
-        if (!Host.localhost) {
-            throw new Error('no host specified');
-        } else {
-            Host.multihost && console.warn('implicit host in mutihost mode');
-            host = Host.localhost;
+    constructor(init_op, host, adopt) {
+        adopt = adopt === undefined ? true : adopt;
+        super();
+        this._id = null;
+        this._version = null;
+        this._owner = null;
+        this._events = {change: null};
+        if (adopt) {
+          this.adopt(init_op, host);
         }
     }
 
-    var copy = host && host.adoptSyncable(this, init_op);
-    return copy; // JavaScript-specific trick: prevent object copies
-}
-util.inherits(Syncable, EventEmitter);
-module.exports = Syncable;
-Syncable.DEFAULT_TYPE = new Spec('/Model');
+    adopt(init_op, host) {
+      if (host===undefined) { // null means "no host"
+          if (!Host.localhost) {
+              throw new Error('no host specified');
+          } else {
+              Host.multihost && console.warn('implicit host in mutihost mode');
+              host = Host.localhost;
+          }
+      }
 
-
-Syncable.prototype._crdt = function () {
-    return this.host().getCRDT(this);
-};
-
-//
-Syncable.prototype.save = function () {
-    var host = this.host();
-    var clean_state = host.getCRDT().updateSyncable({});
-    var diff = this.diff(clean_state);
-    while (diff && diff.length) {
-        this._owner.submitOp(this, diff.unshift());
+      if (host) {
+        host.adoptSyncable(this, init_op);
+      }
     }
-};
 
-//
-Syncable.prototype.diff = function (base_state) {
-    return [];
-};
+    _crdt() {
+        return this.host().getCRDT(this);
+    }
 
+    //
+    save() {
+        var host = this.host();
+        var clean_state = host.getCRDT().updateSyncable({});
+        var diff = this.diff(clean_state);
+        while (diff && diff.length) {
+            this._owner.submitOp(this, diff.unshift());
+        }
+    }
 
-Syncable.prototype.submit = function (op_name, op_value) {
-    this._owner.submit(op_name, op_value);
-};
+    //
+    diff(base_state) {
+        return [];
+    }
 
+    submit(op_name, op_value) {
+        this._owner.submit(op_name, op_value);
+    }
 
-Syncable.prototype.host = function () {
-    return Host.multihost ? this._owner : Host.localhost;
-};
+    host() {
+        return Host.multihost ? this._owner : Host.localhost;
+    }
+
+    spec() {
+        return new Spec('/' + this._type + '#' + this._id);
+    }
+
+    typeid() {
+        return '/' + this._type + '#' + this._id;
+    }
+
+    typeId() {
+        return Spec.create(this._type, this._id, null, null);
+    }
+
+    // Returns current object state specifier
+    stateSpec() {
+        return this.spec() + (this._version || '!0');
+    }
+
+    /** Syncable object version transitions:
+    *
+    *             ''                    state unknown
+    *              ↓
+    *             !0                    default/initial state
+    *              ↓
+    *   ↻ !time1+src1!time2+src2        version vector
+    *              ↓
+    *             !~                    deleted
+    *
+    * @returns {Spec.Map} the version vector for this object
+    */
+    version() {
+        return this._version;
+    }
+
+    // External objects (those you create by supplying an id) need first to query
+    // the uplink for their state. Before the state arrives they are stateless.
+    hasState() {
+        return !!this._version;
+    }
+
+    isStateful() {
+        return this.hasState();
+    }
+
+    // Deallocate everything, free all resources.
+    close() {
+        this.host().abandonSyncable(this);
+    }
+
+    // Once an object is not listened by anyone it is perfectly safe
+    // to garbage collect it.
+    gc() {
+        if (!this.listenerCount('change')) { // FIXME
+            this.close();
+        }
+    }
+
+    onLoad(callback) {
+        // FIXME .4 wait all Refs to load
+        // FIXME no refs => same as .init
+        this.once('load', callback);
+    }
+
+    // Syntactic sugar: invokes the callback immediately if the object has
+    // state or waits for state arrival, i.e. once('init', callback).
+    onInit(callback) {
+        if (this.isStateful()) {
+            // if a callback flaps between sync and async execution
+            // that causes much of confusion, so let's force it to async
+            setTimeout(callback.bind(this), 0);
+        } else {
+            this.once('init', callback);
+        }
+    }
+}
 
 //
 Syncable.registerType = function (name, type) {
@@ -126,6 +203,15 @@ Syncable.reMethodName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
 Syncable.Inner = require('./CRDT');
 Syncable.registerType('Syncable', Syncable);
 
+Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
+
+Syncable.getType = function (type_id) {
+    if (Spec.is(type_id)) {
+        return Syncable.types[new Spec(type_id).type()] || undefined;
+    } else {
+        return Syncable.types[type_id] || undefined;
+    }
+};
 
 // A *reaction* is a hybrid of a listener and a method. It "reacts" on a
 // certain event for all objects of that type. The callback gets invoked
@@ -157,88 +243,5 @@ Syncable.removeReaction = function (handle) {
     }
 };
 
-
-Syncable.prototype.spec = function () {
-    return new Spec('/' + this._type + '#' + this._id);
-};
-
-
-Syncable.prototype.typeid = function () {
-    return '/' + this._type + '#' + this._id;
-};
-
-Syncable.prototype.typeId = function () {
-    return Spec.create(this._type, this._id, null, null);
-};
-
-// Returns current object state specifier
-Syncable.prototype.stateSpec = function () {
-    return this.spec() + (this._version || '!0');
-};
-
-
-/** Syncable object version transitions:
- *
- *             ''                    state unknown
- *              ↓
- *             !0                    default/initial state
- *              ↓
- *   ↻ !time1+src1!time2+src2        version vector
- *              ↓
- *             !~                    deleted
- *
- * @returns {Spec.Map} the version vector for this object
- */
-Syncable.prototype.version = function () {
-    return this._version;
-};
-
-// External objects (those you create by supplying an id) need first to query
-// the uplink for their state. Before the state arrives they are stateless.
-Syncable.prototype.hasState = function () {
-    return !!this._version;
-};
-Syncable.prototype.isStateful = Syncable.prototype.hasState;
-
-
-// Deallocate everything, free all resources.
-Syncable.prototype.close = function () {
-    this.host().abandonSyncable(this);
-};
-
-// Once an object is not listened by anyone it is perfectly safe
-// to garbage collect it.
-Syncable.prototype.gc = function () {
-    if (!this.listenerCount('change')) { // FIXME
-        this.close();
-    }
-};
-
-
-Syncable.prototype.onLoad = function (callback) {
-    // FIXME .4 wait all Refs to load
-    // FIXME no refs => same as .init
-    this.once('load', callback);
-};
-
-// Syntactic sugar: invokes the callback immediately if the object has
-// state or waits for state arrival, i.e. once('init', callback).
-Syncable.prototype.onInit = function (callback) {
-    if (this.isStateful()) {
-        // if a callback flaps between sync and async execution
-        // that causes much of confusion, so let's force it to async
-        setTimeout(callback.bind(this), 0);
-    } else {
-        this.once('init', callback);
-    }
-};
-
-Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
-
-Syncable.getType = function (type_id) {
-    if (Spec.is(type_id)) {
-        return Syncable.types[new Spec(type_id).type()] || undefined;
-    } else {
-        return Syncable.types[type_id] || undefined;
-    }
-};
+module.exports = Syncable;
+Syncable.DEFAULT_TYPE = new Spec('/Model');

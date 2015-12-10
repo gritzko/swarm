@@ -12,31 +12,35 @@
 // CRDT itself is an abstract no-op class, all the actual CRDTs inherit from it.
 
 // The same applies to Syncable.
-function CRDT (state_string, syncable) {
-    this._version = null;
-    this._syncable = syncable || null;
-    state_string; // ...parse the serialized state
-}
-module.exports = CRDT;
+class CRDT {
 
-// update the outer (API) state
-CRDT.prototype.updateSyncable = function (obj) {
-    var syncable = obj || this._syncable;
-    syncable; // update the object
-    syncable.emit('change');
-    return syncable;
-};
-
-// Returns the serialized state that the constructor understands.
-CRDT.prototype.toString = function () {
-    return '';
-};
-
-// it must never throw!
-CRDT.prototype.write = function (op) {
-    switch(op.name()) {
-    // case 'op': this.op(op.value, op.stamp());
-    default: console.error("Syncable has no ops", op);
+    constructor(state_string, syncable) {
+        this._version = null;
+        this._syncable = syncable || null;
+        state_string; // ...parse the serialized state
     }
-    this._version = op.stamp();
-};
+
+    // update the outer (API) state
+    updateSyncable(obj) {
+        var syncable = obj || this._syncable;
+        syncable; // update the object
+        syncable.emit('change');
+        return syncable;
+    }
+
+    // Returns the serialized state that the constructor understands.
+    toString() {
+        return '';
+    }
+
+    // it must never throw!
+    write(op) {
+        switch(op.name()) {
+        // case 'op': this.op(op.value, op.stamp());
+        default: console.error("Syncable has no ops", op);
+        }
+        this._version = op.stamp();
+    }
+}
+
+module.exports = CRDT;

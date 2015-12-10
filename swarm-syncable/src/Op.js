@@ -3,33 +3,110 @@ var Spec = require('./Spec');
 
 // *immutable* op: specifier, value and a patch (nested ops).
 // empty value is '', not null, not undefined
-function Op (spec, value, source, patch) { // FIXME source -> peer
-    if (value===undefined) {
-        if (spec && spec.constructor===String) {
-            var parsed = Op.parse(spec);
-            if (parsed.ops.length!==1) {
-                throw new Error('not a serialized op');
+class Op {
+
+    constructor(spec, value, source, patch) { // FIXME source -> peer
+        if (value===undefined) {
+            if (spec && spec.constructor===String) {
+                var parsed = Op.parse(spec);
+                if (parsed.ops.length!==1) {
+                    throw new Error('not a serialized op');
+                }
+                spec = parsed.ops[0];
             }
-            spec = parsed.ops[0];
+            if (spec && spec.constructor===Op) {
+                var orig = spec;
+                spec = orig.spec;
+                value = orig.value;
+                source = orig.source;
+                patch = orig.patch;
+            }
         }
-        if (spec && spec.constructor===Op) {
-            var orig = spec;
-            spec = orig.spec;
-            value = orig.value;
-            source = orig.source;
-            patch = orig.patch;
+        this.spec = spec && spec.constructor===Spec ?
+            spec : new Spec(spec);
+        this.value = value ? value.toString() : '';
+        this.source = source ? source.id || source.toString() : '';
+        this.patch = patch || null;
+        if (patch && patch.constructor!==Array) {
+            throw new Error('need a patch as an array of Ops');
         }
     }
-    this.spec = spec && spec.constructor===Spec ?
-        spec : new Spec(spec);
-    this.value = value ? value.toString() : '';
-    this.source = source ? source.id || source.toString() : '';
-    this.patch = patch || null;
-    if (patch && patch.constructor!==Array) {
-        throw new Error('need a patch as an array of Ops');
+
+    origin() {
+        return this.spec.source();
+    }
+
+    stamp() {
+        return this.spec.stamp();
+    }
+
+    author() {
+        return this.spec.author();
+    }
+
+    typeid() {
+        return this.spec.typeid();
+    }
+
+    id() {
+        return this.spec.id();
+    }
+
+    name() {
+        return this.spec.op();
+    }
+
+    op() {
+      return this.name();
+    }
+
+    version() {
+        return this.spec.version();
+    }
+
+    unbundle() {
+        return this.patch;
+    }
+
+    // FIXME make efficient
+    bundleLength() {
+        return this.unbundle().length;
+    }
+
+    toString(context) {
+        var spec_str = context ?
+            this.spec.toAbbrevString(context) : this.spec.toString();
+        var line = spec_str + '\t' + this.value + '\n';
+        if (this.name()==='on') {
+            if (this.patch) {
+                this.patch.forEach(function(o){
+                    line += '\t' + o.toShortString();
+                });
+            }
+            line += '\n';
+        }
+        return line;
+    }
+
+    toShortString() {
+        return this.spec.stampop() + '\t' + this.value + '\n';
+    }
+
+    error(msg, src) {
+        var msg50 = msg.toString().replace(/\n/g, ' ').substr(0,50);
+        return new Op(this.spec.set('.error'), msg50, src||this.source);
+    }
+
+    /** handshake ops */
+    reply(opname, value) {
+        return new Op( this.spec.set('.'+opname), value||'', this.source, this.patch );
+    }
+
+    relay(to_pipe) {
+        return new Op(this.spec, this.value, to_pipe, this.patch );
     }
 }
-module.exports = Op;
+
 Op.handshake_ops = {on:1, off:1};
 
 // Epically monumental op-parsing regexes.
@@ -80,68 +157,4 @@ Op.parse = function (str, source, context) {
     return {ops: ops, remainder: rem};
 };
 
-Op.prototype.origin = function () {
-    return this.spec.source();
-};
-Op.prototype.stamp = function () {
-    return this.spec.stamp();
-};
-Op.prototype.author = function () {
-    return this.spec.author();
-};
-Op.prototype.typeid = function () {
-    return this.spec.typeid();
-};
-Op.prototype.id = function () {
-    return this.spec.id();
-};
-Op.prototype.name = function () {
-    return this.spec.op();
-};
-Op.prototype.op = Op.prototype.name;
-
-Op.prototype.version = function () {
-    return this.spec.version();
-};
-
-Op.prototype.unbundle = function () {
-    return this.patch;
-};
-
-// FIXME make efficient
-Op.prototype.bundleLength = function () {
-    return this.unbundle().length;
-};
-
-Op.prototype.toString = function (context) {
-    var spec_str = context ?
-        this.spec.toAbbrevString(context) : this.spec.toString();
-    var line = spec_str + '\t' + this.value + '\n';
-    if (this.name()==='on') {
-        if (this.patch) {
-            this.patch.forEach(function(o){
-                line += '\t' + o.toShortString();
-            });
-        }
-        line += '\n';
-    }
-    return line;
-};
-
-Op.prototype.toShortString = function () {
-    return this.spec.stampop() + '\t' + this.value + '\n';
-};
-
-Op.prototype.error = function (msg, src) {
-    var msg50 = msg.toString().replace(/\n/g, ' ').substr(0,50);
-    return new Op(this.spec.set('.error'), msg50, src||this.source);
-};
-
-/** handshake ops */
-Op.prototype.reply = function (opname, value) {
-    return new Op( this.spec.set('.'+opname), value||'', this.source, this.patch );
-};
-
-Op.prototype.relay = function (to_pipe) {
-    return new Op(this.spec, this.value, to_pipe, this.patch );
-};
+module.exports = Op;
