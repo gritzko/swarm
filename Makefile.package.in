@@ -1,0 +1,8 @@
+BIN = ../node_modules/.bin
+.PHONY: install test clean
+
+test:
+	@if [ -d "test" ]; then $(BIN)/tape test/*.js | $(BIN)/tap-spec; else true; fi;
+
+clean:
+	@rm -rf node_modules

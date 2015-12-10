@@ -32,11 +32,16 @@
   ],
   "main": "",
   "browser": "",
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
+    "async": "^1.5.0",
+    "mkdirp": "^0.5.1",
+    "rimraf": "^2.4.4",
+    "tap-spec": "^4.0.2",
+    "tape": "^4.0.2",
+    "tape-dom": "^0.0.8"
   },
   "scripts": {
-    "test": "./test-all.sh"
+    "test": "make bootstrap test"
   }
 }
