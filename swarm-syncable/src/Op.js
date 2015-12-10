@@ -1,9 +1,11 @@
-"use strict";
+/**
+ * *immutable* op: specifier, value and a patch (nested ops).
+ * empty value is '', not null, not undefined
+ */
+'use strict';
 
 import Spec from './Spec';
 
-// *immutable* op: specifier, value and a patch (nested ops).
-// empty value is '', not null, not undefined
 export default class Op {
 
     constructor(spec, value, source, patch) { // FIXME source -> peer
@@ -98,7 +100,9 @@ export default class Op {
         return new Op(this.spec.set('.error'), msg50, src||this.source);
     }
 
-    /** handshake ops */
+    /**
+     * handshake ops
+     */
     reply(opname, value) {
         return new Op( this.spec.set('.'+opname), value||'', this.source, this.patch );
     }

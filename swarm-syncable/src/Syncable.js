@@ -1,11 +1,3 @@
-"use strict";
-
-import EventEmitter from 'eventemitter3';
-import Spec from './Spec';
-import Op from './Op';
-import Host from './Host';
-import CRDT from './CRDT';
-
 /** Syncable CmRDT objects use state machine replication. The only
  * difference from the classic case is that operations are not linear
  * but partially ordered (http://bit.ly/1Nl3ink, http://bit.ly/1F07aZ0)
@@ -25,7 +17,13 @@ import CRDT from './CRDT';
  * and separate operations of the tail, but we need some atomicity here.
  * @this {Syncable}
  */
+'use strict';
 
+import EventEmitter from 'eventemitter3';
+import Spec from './Spec';
+import Op from './Op';
+import Host from './Host';
+import CRDT from './CRDT';
 
 /**
  * All CRDT model classes must extend syncable directly or indirectly. Syncable
@@ -35,21 +33,22 @@ import CRDT from './CRDT';
  * @param {function|string} fn
  * @param {{ops:object, neutrals:object, remotes:object}} own
  */
+
 /**
  * Syncable: an oplog-synchronized object
  * Syncable(spec|id|state[,host])
  * @constructor
+ *
+ * please call Syncable.constructor.apply(this,args) in your constructor
+ * The most correct way to specify a version is the version vector,
+ * but that one may consume more space than the data itself in some cases.
+ * Hence, _version is not a fully specified version vector (see version()
+ * instead). _version is essentially is the greatest operation timestamp
+ * (Lamport-like, i.e. "time+source"), sometimes amended with additional
+ * timestamps. Its main features:
+ * (1) changes once the object's state changes
+ * (2) does it monotonically (in the alphanum order sense)
  */
- // please call Syncable.constructor.apply(this,args) in your constructor
- // The most correct way to specify a version is the version vector,
- // but that one may consume more space than the data itself in some cases.
- // Hence, _version is not a fully specified version vector (see version()
- // instead). _version is essentially is the greatest operation timestamp
- // (Lamport-like, i.e. "time+source"), sometimes amended with additional
- // timestamps. Its main features:
- // (1) changes once the object's state changes
- // (2) does it monotonically (in the alphanum order sense)
-
 export default class Syncable extends EventEmitter {
 
     constructor(init_op, host, adopt) {
@@ -118,29 +117,34 @@ export default class Syncable extends EventEmitter {
         return Spec.create(this._type, this._id, null, null);
     }
 
-    // Returns current object state specifier
+    /**
+     * Returns current object state specifier
+     */
     stateSpec() {
         return this.spec() + (this._version || '!0');
     }
 
     /** Syncable object version transitions:
-    *
-    *             ''                    state unknown
-    *              ↓
-    *             !0                    default/initial state
-    *              ↓
-    *   ↻ !time1+src1!time2+src2        version vector
-    *              ↓
-    *             !~                    deleted
-    *
-    * @returns {Spec.Map} the version vector for this object
-    */
+     *
+     *             ''                    state unknown
+     *              ↓
+     *             !0                    default/initial state
+     *              ↓
+     *   ↻ !time1+src1!time2+src2        version vector
+     *              ↓
+     *             !~                    deleted
+     *
+     * @returns {Spec.Map} the version vector for this object
+     */
     version() {
         return this._version;
     }
 
-    // External objects (those you create by supplying an id) need first to query
-    // the uplink for their state. Before the state arrives they are stateless.
+    /**
+     * External objects (those you create by supplying an id) need first to
+     * query the uplink for their state. Before the state arrives they are
+     * stateless.
+     */
     hasState() {
         return !!this._version;
     }
@@ -149,13 +153,17 @@ export default class Syncable extends EventEmitter {
         return this.hasState();
     }
 
-    // Deallocate everything, free all resources.
+    /**
+     * Deallocate everything, free all resources.
+     */
     close() {
         this.host().abandonSyncable(this);
     }
 
-    // Once an object is not listened by anyone it is perfectly safe
-    // to garbage collect it.
+    /**
+     * Once an object is not listened by anyone it is perfectly safe
+     * to garbage collect it.
+     */
     gc() {
         if (!this.listenerCount('change')) { // FIXME
             this.close();
@@ -168,8 +176,10 @@ export default class Syncable extends EventEmitter {
         this.once('load', callback);
     }
 
-    // Syntactic sugar: invokes the callback immediately if the object has
-    // state or waits for state arrival, i.e. once('init', callback).
+    /**
+     * Syntactic sugar: invokes the callback immediately if the object has state
+     * or waits for state arrival, i.e. once('init', callback).
+     */
     onInit(callback) {
         if (this.isStateful()) {
             // if a callback flaps between sync and async execution
@@ -212,13 +222,13 @@ Syncable.getType = function (type_id) {
     }
 };
 
-// A *reaction* is a hybrid of a listener and a method. It "reacts" on a
-// certain event for all objects of that type. The callback gets invoked
-// as a method, i.e. this===syncableObj. In an event-oriented architecture
-// reactions are rather handy, e.g. for creating mixins.
-// @param {string} op operation name
-// @param {function} fn callback
-// @returns {{op:string, fn:function}}
+/**
+ * A *reaction* is a hybrid of a listener and a method. It "reacts" on a certain
+ * event for all objects of that type. The callback gets invoked as a method,
+ * i.e. this===syncableObj. In an event-oriented architecture reactions are
+ * rather handy, e.g. for creating mixins.  @param {string} op operation name
+ * @param {function} fn callback @returns {{op:string, fn:function}}
+ */
 Syncable.addReaction = function (op, fn) {
     var reactions = this.prototype._reactions;
     var list = reactions[op];

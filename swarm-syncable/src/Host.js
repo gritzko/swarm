@@ -1,3 +1,15 @@
+/**
+ * Host is the world of actual replicated/synchronized objects of various types.
+ * Host contains inner CRDT objects and their outer API parts (Syncables).
+ * A host is (a) passive and (b) synchronous.
+ * Host has an OpStream-like interface, consuming and emitting ops.
+ * To keep a host synchronized, it has to be connected to some
+ * transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
+ * it does not persist any information between runs. Hence, it dies once
+ * disconnected from the upstream (Replica).
+ * If assigned dynamically, ssn_id of a Host is derived from
+ * the ssn_id of its Replica (the same for the first host, ~1 for the next, etc)
+ */
 'use strict';
 
 import {Duplex} from 'readable-stream';
@@ -8,16 +20,6 @@ import Syncable from './Syncable';
 
 var just_model = new Spec('/Model'); // FIXME
 
-// Host is the world of actual replicated/synchronized objects of various types.
-// Host contains inner CRDT objects and their outer API parts (Syncables).
-// A host is (a) passive and (b) synchronous.
-// Host has an OpStream-like interface, consuming and emitting ops.
-// To keep a host synchronized, it has to be connected to some
-// transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
-// it does not persist any information between runs. Hence, it dies once
-// disconnected from the upstream (Replica).
-// If assigned dynamically, ssn_id of a Host is derived from
-// the ssn_id of its Replica (the same for the first host, ~1 for the next, etc)
 export default class Host extends Duplex {
 
     constructor(options) {
@@ -47,7 +49,6 @@ export default class Host extends Duplex {
         this.push(hs);
     }
 
-
     _read() {
         return;
     }
@@ -58,7 +59,9 @@ export default class Host extends Duplex {
         }
     }
 
-    // mark-and-sweep kind-of distributed garbage collection
+    /**
+     * Mark-and-sweep kind-of distributed garbage collection.
+     */
     gc(criteria) {
         // NOTE objects in this.pending can NOT be gc'd
     }
@@ -75,12 +78,16 @@ export default class Host extends Duplex {
         return new Op(key, '', this.source);
     }
 
-    // Returns a new timestamp from the host's clock.
+    /**
+     * Returns a new timestamp from the host's clock.
+     */
     time() {
         return this.clock ? this.clock.issueTimestamp() : null;
     }
 
-    // An innner state getter; needs /type#id spec for the object.
+    /**
+     * An innner state getter; needs /type#id spec for the object.
+     */
     getCRDT(obj) {
         if (obj._type) {
             if (obj._owner!==this) {
@@ -92,7 +99,9 @@ export default class Host extends Duplex {
         }
     }
 
-    // does not interfere with Replica clock
+    /**
+     * Does not interfere with Replica clock.
+     */
     createClock(db_id, ssn_id) {
         var options = this.options;
         ssn_id = ssn_id || options.ssn_id;
@@ -133,7 +142,9 @@ export default class Host extends Duplex {
         }
     }
 
-    // Applies a serialized operation (or a batch thereof) to this replica
+    /**
+     * Applies a serialized operation (or a batch thereof) to this replica
+     */
     _write(op, encoding, callback) {
 
         var typeid = op.spec.typeid(), stamp = op.stamp(), self=this;
@@ -242,12 +253,14 @@ export default class Host extends Duplex {
         // should have their *last* stamp in the spec
     }
 
-    // Incorporate a syncable into this replica.
-    // In case the object is newly created (like `new Model()`), Host
-    // assigns an id and saves it. For a known-id objects
-    // (like `new Model('2THjz01+gritzko~cA4')`) the state is queried
-    // from the storage/uplink. Till the state is received, the object
-    // is stateless (`syncable.version()===undefined && !syncable.hasState()`)
+    /**
+     * Incorporate a syncable into this replica.
+     * In case the object is newly created (like `new Model()`), Host
+     * assigns an id and saves it. For a known-id objects
+     * (like `new Model('2THjz01+gritzko~cA4')`) the state is queried
+     * from the storage/uplink. Till the state is received, the object
+     * is stateless (`syncable.version()===undefined && !syncable.hasState()`)
+     */
     adoptSyncable(syncable, init_op) {
         var type = syncable._type, on_op;
         var type_fn = Syncable.types[type];
@@ -315,8 +328,10 @@ export default class Host extends Duplex {
         }
     }
 
-    // Retrieve an object by its spec (type and id).
-    // Optionally, invoke a callback once the state is actually available.
+    /**
+     * Retrieve an object by its spec (type and id).
+     * Optionally, invoke a callback once the state is actually available.
+     */
     get(spec, callback) {
         if (spec.constructor===Function) {
             spec = new Spec('/'+spec._type);
@@ -349,7 +364,9 @@ export default class Host extends Duplex {
         return object;
     }
 
-    // author a new operation
+    /**
+     * Author a new operation.
+     */
     submit(syncable, op_name, value) { // TODO sig
         if (syncable._owner!==this) {
             throw new Error('alien op submission');
@@ -407,7 +424,6 @@ export default class Host extends Duplex {
         return this.run_id;
     }
 }
-
 
 Host.debug = false;
 Host.multihost = false;

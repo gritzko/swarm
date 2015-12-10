@@ -1,16 +1,18 @@
-"use strict";
+/**
+ * Backbone's Collection is essentially an array. Arrays behave poorly
+ * under concurrent writes and it is expensive to make them behave good.
+ * Hence, our primary collection type is an unordered Set. One may obtain
+ * an array by sorting entries (see sort()).
+ * Note that a Set can only contain Syncable objects (no primitives,
+ * no arbitrary JSON).
+ */
+'use strict';
 
 import {LamportTimestamp} from 'swarm-stamp';
 import Spec from './Spec';
 import Op from './Op';
 import Syncable from './Syncable';
 
-// Backbone's Collection is essentially an array. Arrays behave poorly
-// under concurrent writes and it is expensive to make them behave good.
-// Hence, our primary collection type is an unordered Set. One may obtain
-// an array by sorting entries (see sort()).
-// Note that a Set can only contain Syncable objects (no primitives,
-// no arbitrary JSON).
 export default class Set extends Syncable {
 
   constructor(init_set, owner) {
@@ -38,7 +40,9 @@ export default class Set extends Syncable {
       });
   }
 
-  // Return a sorted array (unless `sort_fn` is specified, sort on object ids)
+  /**
+   * Return a sorted array (unless `sort_fn` is specified, sort on object ids)
+   */
   toArray(sort_fn) {
       var objects = this.objects;
       var ids = Object.keys(objects);
@@ -52,7 +56,9 @@ export default class Set extends Syncable {
       return ret;
   }
 
-  // Public API: Adds an object to the set.
+  /**
+   * Public API: Adds an object to the set.
+   */
   addSpec(arg) {
       var typeId = new Spec(arg).filter('/#');
       if (!typeId.type() || ! typeId.id()) {
@@ -89,7 +95,9 @@ export default class Set extends Syncable {
       rm.length && this._owner.submit(this, 'rm', rm.join());
   }
 
-  // only for instances of Model
+  /**
+   * Only for instances of Model
+   */
   removeId(id) {
       if (!LamportTimestamp.is(id)) {
           throw new Error('not an id');
@@ -176,7 +184,9 @@ export default class Set extends Syncable {
 
 var just_model = new Spec('/Model');
 
-// An OR-Set implemented with Lamport timestamps
+/**
+ * An OR-Set implemented with Lamport timestamps
+ */
 class ORSet {
 
     constructor(state_string) {

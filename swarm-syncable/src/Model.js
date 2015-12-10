@@ -1,17 +1,19 @@
-"use strict";
+/**
+ * This most basic class is a key-value JavaScript-style object.
+ * It is also also an example of how to implement Syncables.
+ * Model's distributed/concurrent behavior is of a very classic
+ * Last-Write-Wins object where all changes are timestamped and
+ * the greater timestamp "wins" (LWW is a corner-case CRDT too).
+ * Note that changes are merged in the sense that a change may
+ * leave values untouched: !time1.set {x:1, y:1}, then
+ * !time2.set {y:2}, results in {x:1, y:2}.
+ */
+'use strict';
 
 import {LamportTimestamp} from 'swarm-stamp';
 import Op from './Op';
 import Syncable from './Syncable';
 
-// This most basic class is a key-value JavaScript-style object.
-// It is also also an example of how to implement Syncables.
-// Model's distributed/concurrent behavior is of a very classic
-// Last-Write-Wins object where all changes are timestamped and
-// the greater timestamp "wins" (LWW is a corner-case CRDT too).
-// Note that changes are merged in the sense that a change may
-// leave values untouched: !time1.set {x:1, y:1}, then
-// !time2.set {y:2}, results in {x:1, y:2}.
 export default class Model extends Syncable {
 
     constructor(values, owner) {
@@ -30,8 +32,10 @@ export default class Model extends Syncable {
         this.adopt(init_op, owner);
     }
 
-    // The API method for the .set op has the same name as the op, which is
-    // not always the case. It composes the op and submits it for execution.
+    /**
+     * The API method for the .set op has the same name as the op, which is
+     * not always the case. It composes the op and submits it for execution.
+     */
     set(keys_values) {
         var bad = Object.keys(keys_values).some(function(key){
             return !Syncable.reFieldName.test(key);
@@ -49,10 +53,12 @@ export default class Model extends Syncable {
     }
 
 
-    // The API user may directly modify the outer state and invoke save(),
-    // which converts de-facto changes into proper ops. ops change the
-    // inner state, the outer state gets regenerated, ops propagate
-    // to other replicas.
+    /**
+     * The API user may directly modify the outer state and invoke save(),
+     * which converts de-facto changes into proper ops. ops change the
+     * inner state, the outer state gets regenerated, ops propagate
+     * to other replicas.
+     */
     save(inner) {
         var dirty = this.toPojo();
         var dirty_keys = this.keys();
@@ -74,8 +80,10 @@ export default class Model extends Syncable {
         changed && this.set(changes);
     }
 
-    // A bit of syntactic sugar for Model listeners.
-    // Invoke model.onFieldChange('field', cb) to listen to that particular field.
+    /**
+     * A bit of syntactic sugar for Model listeners.
+     * Invoke model.onFieldChange('field', cb) to listen to that particular field.
+     */
     onFieldChange(field, callback, context) {
         /*if (filter.constructor===Function) {  ?
             context = callback;
@@ -100,13 +108,13 @@ export default class Model extends Syncable {
 }
 
 
-// The API exposes the outer state of a syncable. But, its
-// inner state is its "true" state that also includes all
-// the (CRDT) metadata. The outer state can always be generated
-// from the inner state (see Syncable.rebuild()).
-// This method is a constructor for the inner state.
-// It either creates the default state or deserializes a .state
-// op value.
+/**
+ * The API exposes the outer state of a syncable. But, its inner state is its
+ * "true" state that also includes all the (CRDT) metadata. The outer state can
+ * always be generated from the inner state (see Syncable.rebuild()).  This
+ * method is a constructor for the inner state.  It either creates the default
+ * state or deserializes a .state op value.
+ */
 class LWWObject extends Syncable.Inner {
 
     constructor(string) {
@@ -126,13 +134,14 @@ class LWWObject extends Syncable.Inner {
         });
     }
 
-    // This class implements just one kind of an op: set({key:value}).
-    // To implement your own ops you need to understand
-    // implications of partial order. Ops may be applied in slightly
-    // different orders at different replicas, but the result must
-    // converge. (see Model.playOpLog())
-    // An op is a method for an inner state object that consumes an
-    // op, changes inner state, no side effects allowed.
+    /**
+     * This class implements just one kind of an op: set({key:value}).  To
+     * implement your own ops you need to understand implications of partial
+     * order. Ops may be applied in slightly different orders at different
+     * replicas, but the result must converge. (see Model.playOpLog()) An op is
+     * a method for an inner state object that consumes an op, changes inner
+     * state, no side effects allowed.
+     */
     set(values, stamp) {
         var keys = Object.keys(values), self=this;
         keys = keys.filter(LWWObject.is_field_name);
@@ -151,7 +160,9 @@ class LWWObject extends Syncable.Inner {
         }
     };
 
-    // Produces the outer state from the inner state.
+    /**
+     * Produces the outer state from the inner state.
+     */
     updateSyncable(syncable) {
         var values = this.values;
         Object.keys(values).forEach(function(k){
@@ -169,8 +180,10 @@ class LWWObject extends Syncable.Inner {
         });
     }
 
-    // Serializes the inner state to a string. The constructor must
-    // be able to parse this later.
+    /**
+     * Serializes the inner state to a string. The constructor must
+     * be able to parse this later.
+     */
     toString() {
         var wire = Object.create(null), values = this.values;
         var keys = Object.keys(this.values);
