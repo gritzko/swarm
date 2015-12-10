@@ -1,1 +1,1 @@
-include ../../Makefile.package.in
+include ../Makefile.package.in

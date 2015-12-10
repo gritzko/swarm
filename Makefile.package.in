@@ -1,4 +1,4 @@
-BIN = ../../node_modules/.bin
+BIN = ../node_modules/.bin
 .PHONY: install test clean
 
 test:
