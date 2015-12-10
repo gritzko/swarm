@@ -37,6 +37,6 @@
     "lerna": "^1.0.4"
   },
   "scripts": {
-    "test": "./test-all.sh"
+    "test": "make test"
   }
 }
