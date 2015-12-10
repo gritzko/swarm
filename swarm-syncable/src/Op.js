@@ -1,9 +1,10 @@
 "use strict";
-var Spec = require('./Spec');
+
+import Spec from './Spec';
 
 // *immutable* op: specifier, value and a patch (nested ops).
 // empty value is '', not null, not undefined
-class Op {
+export default class Op {
 
     constructor(spec, value, source, patch) { // FIXME source -> peer
         if (value===undefined) {
@@ -156,5 +157,3 @@ Op.parse = function (str, source, context) {
 
     return {ops: ops, remainder: rem};
 };
-
-module.exports = Op;

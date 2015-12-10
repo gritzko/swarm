@@ -12,7 +12,7 @@
 // CRDT itself is an abstract no-op class, all the actual CRDTs inherit from it.
 
 // The same applies to Syncable.
-class CRDT {
+export default class CRDT {
 
     constructor(state_string, syncable) {
         this._version = null;
@@ -42,5 +42,3 @@ class CRDT {
         this._version = op.stamp();
     }
 }
-
-module.exports = CRDT;

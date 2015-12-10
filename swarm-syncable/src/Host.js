@@ -1,10 +1,10 @@
 'use strict';
-var swarm_stamp = require('swarm-stamp');
-var Spec = require('./Spec');
-var Op = require('./Op');
-var util = require("util");
-//var EventEmitter = require("eventemitter3");
-var Duplex = require('readable-stream').Duplex;
+
+import {Duplex} from 'readable-stream';
+import {Clock, LamportTimestamp} from 'swarm-stamp';
+import Spec from './Spec';
+import Op from './Op';
+import Syncable from './Syncable';
 
 var just_model = new Spec('/Model'); // FIXME
 
@@ -18,7 +18,7 @@ var just_model = new Spec('/Model'); // FIXME
 // disconnected from the upstream (Replica).
 // If assigned dynamically, ssn_id of a Host is derived from
 // the ssn_id of its Replica (the same for the first host, ~1 for the next, etc)
-class Host extends Duplex {
+export default class Host extends Duplex {
 
     constructor(options) {
         super({objectMode: true});
@@ -98,7 +98,7 @@ class Host extends Duplex {
         ssn_id = ssn_id || options.ssn_id;
         db_id = db_id || options.db_id;
         if (!options.clock) {
-            this.clock = new swarm_stamp.Clock(ssn_id);
+            this.clock = new Clock(ssn_id);
         } else if (options.clock.constructor===Function) {
             this.clock = new options.clock(ssn_id);
         } else {
@@ -116,7 +116,7 @@ class Host extends Duplex {
             this.end();
             return;
         }
-        var lamp = new swarm_stamp.LamportTimestamp(op.value);
+        var lamp = new LamportTimestamp(op.value);
         var new_ssn = lamp.source();
         if (!this.clock) {
             // get ssn, adjust clocks
@@ -409,12 +409,6 @@ class Host extends Duplex {
 }
 
 
-// import Syncable only after exporting Host - Syncable will import Host
-// itself, so otherwise it will get an incomplete object.
-var Syncable = require('./Syncable');
-
 Host.debug = false;
 Host.multihost = false;
 Host.localhost = null;
-
-module.exports = Host;

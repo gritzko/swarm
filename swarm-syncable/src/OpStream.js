@@ -1,8 +1,8 @@
 "use strict";
-var Op = require('./Op');
-var Spec = require('./Spec');
-var util         = require("util");
-var Duplex       = require("readable-stream").Duplex;
+
+import Op from './Op';
+import Spec from './Spec';
+import {Duplex} from 'readable-stream';
 
 // Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
 // router, host - all consume op streams. To make all those part able to run
@@ -23,7 +23,7 @@ var Duplex       = require("readable-stream").Duplex;
 // a handshake later on.
 // options object:
 // NOTE: OpStream posesses its underlying stream
-class OpStream extends Duplex {
+export default class OpStream extends Duplex {
 
     constructor(stream, options) {
         if (!stream || !stream.on) {
@@ -258,6 +258,5 @@ OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
 //     return this.peer_hs && this.peer_hs.stamp();
 // };
 
-module.exports = OpStream;
 OpStream.debug = false;
 OpStream.DEFAULT = new Spec('/Model!0.on');

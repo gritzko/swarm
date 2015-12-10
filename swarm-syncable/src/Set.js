@@ -1,9 +1,9 @@
 "use strict";
-var stamp = require('swarm-stamp');
-var LamportTimestamp = stamp.LamportTimestamp;
-var Spec = require('./Spec');
-var Op = require('./Op');
-var Syncable = require('./Syncable');
+
+import {LamportTimestamp} from 'swarm-stamp';
+import Spec from './Spec';
+import Op from './Op';
+import Syncable from './Syncable';
 
 // Backbone's Collection is essentially an array. Arrays behave poorly
 // under concurrent writes and it is expensive to make them behave good.
@@ -11,7 +11,7 @@ var Syncable = require('./Syncable');
 // an array by sorting entries (see sort()).
 // Note that a Set can only contain Syncable objects (no primitives,
 // no arbitrary JSON).
-class Set extends Syncable {
+export default class Set extends Syncable {
 
   constructor(init_set, owner) {
       super(null, owner, false);
@@ -244,4 +244,3 @@ class ORSet {
 
 Set.Inner = ORSet;
 Syncable.registerType('Set', Set);
-module.exports = Set;

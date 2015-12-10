@@ -1,8 +1,8 @@
 "use strict";
-var stamp = require('swarm-stamp');
-var Op = require('./Op');
-var Syncable = require('./Syncable');
-var LamportTimestamp = stamp.LamportTimestamp;
+
+import {LamportTimestamp} from 'swarm-stamp';
+import Op from './Op';
+import Syncable from './Syncable';
 
 // This most basic class is a key-value JavaScript-style object.
 // It is also also an example of how to implement Syncables.
@@ -12,7 +12,7 @@ var LamportTimestamp = stamp.LamportTimestamp;
 // Note that changes are merged in the sense that a change may
 // leave values untouched: !time1.set {x:1, y:1}, then
 // !time2.set {y:2}, results in {x:1, y:2}.
-class Model extends Syncable {
+export default class Model extends Syncable {
 
     constructor(values, owner) {
         var init_op = null;
@@ -197,5 +197,3 @@ LWWObject.is_field_name = function (name) {
 
 Model.Inner = LWWObject;
 Syncable.registerType('Model', Model);
-
-module.exports = Model;

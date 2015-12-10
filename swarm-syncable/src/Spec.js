@@ -1,5 +1,6 @@
 "use strict";
-var stamp = require('swarm-stamp');
+
+import {LamportTimestamp} from 'swarm-stamp';
 
 //  S P E C I F I E R
 //
@@ -36,7 +37,7 @@ var stamp = require('swarm-stamp');
 //  class Spec to parse them easily. A wrapper is immutable as we pass
 //  specifiers around a lot.
 
-class Spec {
+export default class Spec {
 
     constructor(spec, scope, defaults) {
         if (defaults) {
@@ -121,7 +122,7 @@ class Spec {
     }
 
     Type() {
-        return new stamp.LamportTimestamp(this._type);
+        return new LamportTimestamp(this._type);
     }
 
     id() {
@@ -156,7 +157,7 @@ class Spec {
 
     source() {
         if (!this._stamp) {return null;}
-        var parsed = new stamp.LamportTimestamp(this._stamp);
+        var parsed = new LamportTimestamp(this._stamp);
         return parsed.source();
     }
 
@@ -336,5 +337,3 @@ Spec.as = function (spec) {
         return spec.constructor === Spec ? spec : new Spec(spec);
     }
 };
-
-module.exports = Spec;

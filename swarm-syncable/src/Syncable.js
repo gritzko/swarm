@@ -1,10 +1,10 @@
 "use strict";
 
-var Spec = require('./Spec');
-var Op = require('./Op');
-var Host = require('./Host');
-var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
-var util = require('util');
+import EventEmitter from 'eventemitter3';
+import Spec from './Spec';
+import Op from './Op';
+import Host from './Host';
+import CRDT from './CRDT';
 
 /** Syncable CmRDT objects use state machine replication. The only
  * difference from the classic case is that operations are not linear
@@ -50,8 +50,7 @@ var util = require('util');
  // (1) changes once the object's state changes
  // (2) does it monotonically (in the alphanum order sense)
 
-
-class Syncable extends EventEmitter {
+export default class Syncable extends EventEmitter {
 
     constructor(init_op, host, adopt) {
         adopt = adopt === undefined ? true : adopt;
@@ -200,7 +199,7 @@ Syncable.registerType = function (name, type) {
 Syncable.types = {};
 Syncable.reMethodName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
 
-Syncable.Inner = require('./CRDT');
+Syncable.Inner = CRDT;
 Syncable.registerType('Syncable', Syncable);
 
 Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
@@ -243,5 +242,4 @@ Syncable.removeReaction = function (handle) {
     }
 };
 
-module.exports = Syncable;
 Syncable.DEFAULT_TYPE = new Spec('/Model');
