@@ -74,7 +74,6 @@ tape ('server.1.A log aggregation', function (t) {
     }
 
     function end () {
-        console.log('end');
         fs.existsSync(db_path) && rimraf.sync(db_path);
         server.close();
         t.end();

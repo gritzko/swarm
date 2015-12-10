@@ -1,5 +1,5 @@
 {
-  "name": "swarm-gw",
+  "name": "swarm-client",
   "version": "1.0.0",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
@@ -13,13 +13,20 @@
   "email": "swarm.js@gmail.com",
   "license": "MIT",
   "files": [
-    "src/*.js",
-    "LICENSE"
+    "index.js",
+    "test/*.js",
+    "LICENSE",
+    "README.md"
   ],
-  "main": "src/Gateway.js",
+  "main": "index.js",
+  "browser": "index.js",
   "dependencies": {
-    "swarm-syncable":"1.0.3"
+      "levelup":        "^1.2.1",
+      "level-js":       "^2.2.2",
+      "swarm-syncable": "^1.0.3",
+      "swarm-replica":  "^1.0.4"
   },
-  "devDependencies": {
+  "scripts": {
+    "test": "true"
   }
 }
