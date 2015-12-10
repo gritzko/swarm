@@ -28,9 +28,6 @@
       "eventemitter3": "^1.1.1"
   },
   "devDependencies": {
-    "tape": "^4.0.2",
-    "tap-spec": "^4.0.2",
-    "tape-dom": "^0.0.9",
     "swarm-bat": "^1.0.2"
   },
   "scripts": {

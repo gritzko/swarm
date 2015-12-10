@@ -34,10 +34,7 @@
     "devDependencies": {
         "swarm-bat": "^1.0.2",
         "memdown": "^1.0.0",
-        "tape": "^4.0.2",
-        "rimraf": "~2.4.4",
-        "tap-spec": "^4.0.2",
-        "tape-dom": "^0.0.10"
+        "rimraf": "~2.4.4"
     },
     "scripts": {
         "test": "tape test/*.js | tap-spec"

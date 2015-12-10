@@ -34,9 +34,12 @@
   "browser": "",
   "dependencies": {},
   "devDependencies": {
-    "lerna": "^1.0.4"
+    "lerna": "^1.0.4",
+    "tape": "^4.0.2",
+    "tap-spec": "^4.0.2",
+    "tape-dom": "^0.0.8"
   },
   "scripts": {
-    "test": "make test"
+    "test": "make bootstrap test"
   }
 }
