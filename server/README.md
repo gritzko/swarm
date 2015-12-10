@@ -1,16 +1,28 @@
 # Swarm: a basic server
 
-A simple LevelDB-backed WebSocket and/or TCP-listening server.
+A simple LevelDB-backed WebSocket and HTTP-listening server.
+
+## CLI
 
 Simple command-line use examples:
 
-    npm install -g swarm-server
-    swarm-server --listen ws://localhost:8080 --db test_db --repl
-    > Swarm.server.replica.streams; // good for debugging
-    {}
-    > process.exit(0);
+```bash
+npm install -g swarm-server
+# WebSocket-only Swarm server, runs REPL, which is good for debugging
+swarm-server --listen ws://localhost:8080 --db test_db --repl
+> Swarm.server.replica.streams;
+{}
+> process.exit(0);
+# Run a server for a database test_db, do garbage collection every 60sec
+swarm-server --listen ws://localhost:8080 --db test_db --gc 60
+# Demo config, see http://localhost:8080 for a simple demo
+swarm-server --demo
+# Run HTTP and WebSocket server for statics and data respectively.
+# Server files from ./static/ and a db named 'data'.
+swarm-server --listen http://localhost:8080 --static ./static/ --db data
+```
 
-    swarm-server --listen ws://localhost:8080 --db test_db
+## API
 
 API use example:
 
