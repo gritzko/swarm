@@ -113,10 +113,8 @@ VV.prototype.add = function (new_ts) {
 };
 
 VV.prototype.addAll = function (new_ts) {
-    var stamps = LamportTimestamp.parse(new_ts);
-    for(var i=0; i<stamps.length; i++) {
-        this.add(stamps[i]);
-    }
+    var merge = new VV(this.vv + new_ts.toString());
+    return merge.dedup();
 };
 
 VV.prototype.remove = function (src) {

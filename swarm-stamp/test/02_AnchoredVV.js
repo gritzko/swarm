@@ -18,7 +18,11 @@ tape ('stamp.02.A VV basics', function (tap) {
     var map2 = new VV("!1QDpv03+anon000qO!1P7AE05+anon000Bu");
     tap.equal(map2.covers('1P7AE05+anon000Bu'), true, 'covers the border');
 
-    //var vv = new VV('!time0+author~session1!time1+author~session2');
+    var one = new VV('!1+one!2+two!0+three');
+    var two = new VV('!0+two');
+    var three = '!3+three';
+    var add = one.addAll(two).addAll(three);
+    tap.equal(add.toString(), '!3+three!2+two!1+one');
 
     tap.end();
 
