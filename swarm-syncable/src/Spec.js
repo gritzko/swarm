@@ -33,6 +33,8 @@
  * Specifiers are stored in strings, but we use a lightweight wrapper
  * class Spec to parse them easily. A wrapper is immutable as we pass
  * specifiers around a lot.
+ *
+ * @flow
  */
 'use strict';
 
@@ -40,7 +42,12 @@ import {LamportTimestamp} from 'swarm-stamp';
 
 export default class Spec {
 
-    constructor(spec, scope, defaults) {
+    _type: ?string;
+    _id: ?string;
+    _stamp: ?string;
+    _op: ?string;
+
+    constructor(spec: ?string | Spec, scope: ?Spec, defaults: ?Spec) {
         if (defaults) {
             if (defaults.constructor!==Spec) {
                 defaults = new Spec(defaults);
@@ -55,7 +62,7 @@ export default class Spec {
             this._stamp = null;
             this._op = null;
         }
-        if (spec && spec.constructor===Spec) {
+        if (spec && (spec instanceof Spec)) {
             this._type = spec._type;
             this._id = spec._id;
             this._stamp = spec._stamp;
@@ -84,7 +91,7 @@ export default class Spec {
         }
     }
 
-    toString(defaults) {
+    toString(defaults: any): string {
         var ret = '';
         if (this._type) {
             ret+='/'+this._type;
@@ -101,7 +108,7 @@ export default class Spec {
         return ret;
     }
 
-    toAbbrevString(defaults) {
+    toAbbrevString(defaults: Spec): string {
         var ret = '';
         if (this._type && this._type!==defaults._type) {
             ret+='/'+this._type;
@@ -118,62 +125,65 @@ export default class Spec {
         return ret;
     }
 
-    type() {
+    type(): ?string {
       return this._type;
     }
 
-    Type() {
+    Type(): LamportTimestamp {
         return new LamportTimestamp(this._type);
     }
 
-    id() {
+    id(): ?string {
       return this._id;
     }
 
-    stamp() {
+    stamp(): ?string {
       return this._stamp;
     }
 
-    version() {
-      return '!'+this._stamp;
+    version(): string {
+      return '!'+String(this._stamp);
     }
 
-    op() {
+    op(): ?string {
       return this._op;
     }
 
-    typeid() {
-        return '/'+this._type+'#'+this._id;
+    typeid(): string {
+        return '/'+String(this._type)+'#'+String(this._id);
     }
 
-    stampop() {
-        return '!'+this._stamp+'.'+this._op; // FIXME null values are valid!!!
+    stampop(): string {
+        return '!'+String(this._stamp)+'.'+String(this._op); // FIXME null values are valid!!!
     }
 
-    typeId() {
+    typeId(): Spec {
         var clone = this.clone();
         clone._stamp = clone._op = null;
         return clone;
     }
 
-    source() {
+    source(): ?string {
         if (!this._stamp) {return null;}
         var parsed = new LamportTimestamp(this._stamp);
         return parsed.source();
     }
 
-    author() {
+    author(): ?string {
         var source = this.source();
+        if (!source) {
+          return null;
+        }
         var i = source.indexOf('~');
         return i===-1 ? source : source.substring(0,i);
     }
 
-    pattern() {
+    pattern(): string {
         return  (this._type?'/':'')+(this._id?'#':'')+
                 (this._stamp?'!':'')+(this._op?'.':'');
     }
 
-    set(tok, quant) {
+    set(tok: string, quant: ?string): Spec {
         if (!quant) {
             if (!tok || tok.charAt(0)>='0') {
                 throw new Error('malformed quant');
@@ -191,27 +201,27 @@ export default class Spec {
         return clone;
     }
 
-    add(tok, quant) {
+    add(tok: string, quant: string): Spec {
       return this.set(tok, quant);
     }
 
-    setStamp(stamp) {
+    setStamp(stamp: string): Spec {
         var clone = this.clone();
         clone._stamp = stamp;
         return clone;
     }
 
-    setOp(op_name) {
+    setOp(op_name: string): Spec {
         var clone = this.clone();
         clone._op = op_name;
         return clone;
     }
 
-    clone() {
+    clone(): Spec {
         return new Spec(this);
     }
 
-    filter(quants) {
+    filter(quants: Array<string>): Spec {
         var result = this.clone();
         if (quants.indexOf('/') < 0) { result._type = null; }
         if (quants.indexOf('#') < 0) { result._id = null; }
@@ -220,7 +230,7 @@ export default class Spec {
         return result;
     }
 
-    token(quant, index) {
+    token(quant: string, index: any) {
         if (!quant || Spec.quants.indexOf(quant) === -1) {
             return undefined;
         }
@@ -233,6 +243,10 @@ export default class Spec {
         case '.': value = this._op; break;
         }
 
+        if (!value) {
+          return undefined;
+        }
+
         Spec.reTokExt.lastIndex = 0;
         var m = Spec.reTokExt.exec(value);
 
@@ -243,14 +257,15 @@ export default class Spec {
         return {quant: quant, body: value, bare: m[1], ext: m[2]};
     }
 
-    has(quant) {
+    has(quant: string): boolean {
         var toks = this.pattern();
         return toks.indexOf(quant) !== -1;
     }
 
-    fits(specFilter) {
-        var myToks = this.toString().match(Spec.reQTokExt);
-        var filterToks = specFilter.match(Spec.reQTokExt), tok;
+    fits(specFilter: string): boolean {
+        var myToks = this.toString().match(Spec.reQTokExt) || [];
+        var filterToks = specFilter.match(Spec.reQTokExt) || [];
+        var tok;
         while (tok=filterToks.pop()) {
             if (myToks.indexOf(tok) === -1) {
                 return false;
@@ -258,25 +273,92 @@ export default class Spec {
         }
         return true;
     }
+
+    /**
+     * a type-id-stamp-op convenience factory method
+     * syntax validation is a responsibility of the caller
+     */
+    static create(type, id, stamp, op) {
+        var empty = new Spec();
+        empty._type = type ? type.toString() : null;
+        empty._id = id ? id.toString() : null;
+        empty._stamp = stamp ? stamp.toString() : null;
+        empty._op = op ? op.toString() : null;
+        return empty;
+    }
+
+    static is(str) {
+        if (str === null || str === undefined) {
+            return false;
+        }
+        return str.constructor === Spec ||
+              '' === str.toString().replace(Spec.reQTokExt, '');
+    }
+
+    static as(spec) {
+        if (!spec) {
+            return new Spec('');
+        } else {
+            return spec.constructor === Spec ? spec : new Spec(spec);
+        }
+    }
+
+    static inSubtree(ssn, parent_ssn) {
+        if (ssn===parent_ssn) { return true; }
+        if (ssn.length<=parent_ssn) { return false; }
+        if (ssn.charAt(parent_ssn.length)!=='~') { return false; }
+        return ssn.substr(0,parent_ssn.length)===parent_ssn;
+    }
+
+    static base2int(base) {
+        var ret = 0, l = base.match(Spec.re64l);
+        for (var shift = 0; l.length; shift += 6) {
+            ret += Spec.base64.indexOf(l.pop()) << shift; // TODO performance
+        }
+        return ret;
+    }
+
+    static parseToken(token_body) {
+        Spec.reTokExt.lastIndex = -1;
+        var m = Spec.reTokExt.exec(token_body);
+        if (!m) {
+            return null;
+        }
+        return {bare: m[1], ext: m[2] || 'swarm'}; // FIXME not generic
+    }
+
+    // $FlowFixMe: when it supports static prop initializers.
+    static base64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_'+
+                    'abcdefghijklmnopqrstuvwxyz~';
+    // $FlowFixMe: when it supports static prop initializers.
+    static rT = '[0-9A-Za-z_~]{1,80}'; // 60*8 bits is enough for everyone
+    // $FlowFixMe: when it supports static prop initializers.
+    static reTok = new RegExp('^'+Spec.rT+'$'); // plain no-extension token
+    // $FlowFixMe: when it supports static prop initializers.
+    static re64l = new RegExp('[0-9A-Za-z_~]', 'g');
+    // $FlowFixMe: when it supports static prop initializers.
+    static quants = ['/', '#', '!', '.'];
+    // $FlowFixMe: when it supports static prop initializers.
+    static rsTokExt = '^(=)(?:\\+(=))?$'.replace(/=/g, Spec.rT);
+    // $FlowFixMe: when it supports static prop initializers.
+    static reTokExt = new RegExp(Spec.rsTokExt);
+    // $FlowFixMe: when it supports static prop initializers.
+    static reTok = new RegExp('^'+Spec.rsTokExt+'$');
+    // $FlowFixMe: when it supports static prop initializers.
+    static rsQuant = "[/#\\.!\\*]";
+    // $FlowFixMe: when it supports static prop initializers.
+    static reQuant = new RegExp('^'+Spec.rsQuant+'$');
+    // $FlowFixMe: when it supports static prop initializers.
+    static rsQTokExt = '('+Spec.rsQuant+')((=)(?:\\+(=))?)'.replace(/=/g, Spec.rT);
+    // $FlowFixMe: when it supports static prop initializers.
+    static reQTokExt = new RegExp(Spec.rsQTokExt, 'g');
+    // $FlowFixMe: when it supports static prop initializers.
+    static reSpec = new RegExp('^(?:'+Spec.rsQTokExt+')*$');
+    // $FlowFixMe: when it supports static prop initializers.
+    static rsExt = '\\+(=)'.replace(/=/g, Spec.rT);
+    // $FlowFixMe: when it supports static prop initializers.
+    static reExt = new RegExp(Spec.rsExt, 'g');
 }
-
-// a type-id-stamp-op convenience factory method
-// syntax validation is a responsibility of the caller
-Spec.create = function (type, id, stamp, op) {
-    var empty = new Spec();
-    empty._type = type ? type.toString() : null;
-    empty._id = id ? id.toString() : null;
-    empty._stamp = stamp ? stamp.toString() : null;
-    empty._op = op ? op.toString() : null;
-    return empty;
-};
-
-Spec.inSubtree = function (ssn, parent_ssn) {
-    if (ssn===parent_ssn) { return true; }
-    if (ssn.length<=parent_ssn) { return false; }
-    if (ssn.charAt(parent_ssn.length)!=='~') { return false; }
-    return ssn.substr(0,parent_ssn.length)===parent_ssn;
-};
 
 /*
 Spec.int2base = function (i, padlen) {
@@ -290,50 +372,3 @@ Spec.int2base = function (i, padlen) {
     return ret;
 };*/
 
-Spec.base2int = function (base) {
-    var ret = 0, l = base.match(Spec.re64l);
-    for (var shift = 0; l.length; shift += 6) {
-        ret += Spec.base64.indexOf(l.pop()) << shift; // TODO performance
-    }
-    return ret;
-};
-Spec.parseToken = function (token_body) {
-    Spec.reTokExt.lastIndex = -1;
-    var m = Spec.reTokExt.exec(token_body);
-    if (!m) {
-        return null;
-    }
-    return {bare: m[1], ext: m[2] || 'swarm'}; // FIXME not generic
-};
-
-Spec.base64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_'+
-              'abcdefghijklmnopqrstuvwxyz~';
-Spec.rT = '[0-9A-Za-z_~]{1,80}'; // 60*8 bits is enough for everyone
-Spec.reTok = new RegExp('^'+Spec.rT+'$'); // plain no-extension token
-Spec.re64l = new RegExp('[0-9A-Za-z_~]', 'g');
-Spec.quants = ['/', '#', '!', '.'];
-Spec.rsTokExt = '^(=)(?:\\+(=))?$'.replace(/=/g, Spec.rT);
-Spec.reTokExt = new RegExp(Spec.rsTokExt);
-Spec.reTok = new RegExp('^'+Spec.rsTokExt+'$');
-Spec.rsQuant = "[/#\\.!\\*]";
-Spec.reQuant = new RegExp('^'+Spec.rsQuant+'$');
-Spec.rsQTokExt = '('+Spec.rsQuant+')((=)(?:\\+(=))?)'.replace(/=/g, Spec.rT);
-Spec.reQTokExt = new RegExp(Spec.rsQTokExt, 'g');
-Spec.reSpec = new RegExp('^(?:'+Spec.rsQTokExt+')*$');
-Spec.rsExt = '\\+(=)'.replace(/=/g, Spec.rT);
-Spec.reExt = new RegExp(Spec.rsExt, 'g');
-
-Spec.is = function (str) {
-    if (str === null || str === undefined) {
-        return false;
-    }
-    return str.constructor === Spec ||
-           '' === str.toString().replace(Spec.reQTokExt, '');
-};
-Spec.as = function (spec) {
-    if (!spec) {
-        return new Spec('');
-    } else {
-        return spec.constructor === Spec ? spec : new Spec(spec);
-    }
-};
