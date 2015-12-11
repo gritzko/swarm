@@ -9,6 +9,9 @@ test:
 clean:
 	@rm -rf node_modules
 
+check:
+	@$(BIN)/flow check
+
 build: $(SRC:src/%.js=lib/%.js)
 
 lib/%.js: src/%.js
