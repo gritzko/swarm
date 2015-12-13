@@ -42,10 +42,9 @@ var AGG = [
 
 
 tape ('server.1.A log aggregation', function (t) {
-    var db_path = '.test_db_server.1.A';
+    var db_path = '.test_db_server.1.A_'+(new Date().getTime());
     fs.existsSync(db_path) && rimraf.sync(db_path);
-    var port = 10000+Math.floor(Math.random() * 10000);
-    var listen_url = 'tcp://localhost:'+port;
+    var listen_url = 'tcp://localhost:44055';
     if (fs.existsSync(db_path)) {
         fs.unlinkSync(db_path);
     }
