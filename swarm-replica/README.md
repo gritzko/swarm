@@ -70,23 +70,23 @@ Storage/network/subscriptions go to Replica entirely; Entry becomes passive,
 merges with EntryState.
 
 Method: rewire refactoring. Stages:
-[ ] send ~ done ~ save
-[ ] read db by callbacks
-[ ] O queue
-[ ] I queue
-[ ] Entry ~ EntryState
+- [ ] send ~ done ~ save
+- [ ] read db by callbacks
+- [ ] O queue
+- [ ] I queue
+- [ ] Entry ~ EntryState
 
 Full job list:
-[ ] move subscribers, write to Replica (replica.appendNewOp(op))
-    [ ] subscribers
-    [ ] append new op
-    [ ] send
-    [ ] save
-    [ ] Q selective ack, error -- mailbox ? entry.error
-[ ] replica.snapshotting[typeid] -> [stream_id], check on relaying new ops
-[ ] replica to save meta, Entry to stay passive
-    [ ] replica.op_queue, backpressure
-    [ ] unite Entry/EntryState
-    [ ] replica.readTail(fn, end) -> fn(op)* fn(null)|end()
-    [ ] replica to maintain a common pending queue
-[ ] descending state hooks (last snapshot size, tail size)
+- [ ] move subscribers, write to Replica (replica.appendNewOp(op))
+    - [ ] subscribers
+    - [ ] append new op
+    - [ ] send
+    - [ ] save
+    - [ ] Q selective ack, error -- mailbox ? entry.error
+- [ ] replica.snapshotting[typeid] -> [stream_id], check on relaying new ops
+- [ ] replica to save meta, Entry to stay passive
+    - [ ] replica.op_queue, backpressure
+    - [ ] unite Entry/EntryState
+    - [ ] replica.readTail(fn, end) -> fn(op)* fn(null)|end()
+    - [ ] replica to maintain a common pending queue
+- [ ] descending state hooks (last snapshot size, tail size)
