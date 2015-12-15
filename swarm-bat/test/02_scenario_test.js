@@ -118,7 +118,7 @@ var variables = {
 //     }
 // });
 
-tape ('2.b. BatStream', function (t) {
+tape ('bat.02.B BatStream', function (t) {
 	var stream = new BatStream();
     var date = new Date().toString();
 	stream.on('data', function(data) {
@@ -129,7 +129,7 @@ tape ('2.b. BatStream', function (t) {
 	stream.pair.write(date);
 });
 
-tape ('2.c. BatServer', function (t) {
+tape ('bat.02.C BatServer', function (t) {
 	var step = 1, count = 3;
     t.plan(count);
 	var server = new BatServer('srv1');
@@ -149,7 +149,7 @@ tape ('2.c. BatServer', function (t) {
   });
 });
 
-tape ('2.d. BatMux', function (t) {
+tape ('bat.02.D BatMux', function (t) {
 	var srv2 = new BatServer('srv2d');
 	var mux = new BatMux('lo:srv2d');
 	var response = '';
@@ -187,7 +187,7 @@ tape ('2.d. BatMux', function (t) {
     mux.trunk.end();
 });
 
-tape ('2.e. Black box', function (t) {
+tape ('bat.02.E Black box', function (t) {
 	var responder = new BatStream();
 	responder.on('data', function(data) {
 		var str = data.toString();
@@ -225,7 +225,7 @@ var ACCEPT = [
 ];
 
 
-tape ('2.f mux-server', function (t) {
+tape ('bat.02.F mux-server', function (t) {
     var mux = new BatMux({
         listen: 'lo:test2f',
         accept_ids: ['first', 'second']
