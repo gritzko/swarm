@@ -14,7 +14,6 @@ var Entry  = require('./Entry');
 
 // ## TODO ##
 // 1. ssn_id/db_id modes => document, unify
-// 2. db hs write-then read situation
 
 // Swarm database node backed by an ordered op storage
 // Has an object stream based interface.
@@ -138,12 +137,21 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
     }
     options.connect = options.connect || options.upstream; // old name
     if (options.connect) {
-        stream_url.connect(options.connect, {
-            reconnect: true // TODO  reconnect: true
-        }, this.addStreamUp.bind(this));
+        this.connect();
     } else if (!this.clock) {
         this.noClock('can not get ssn_id');
     }
+};
+
+
+Replica.prototype.connect = function (url) {
+    if (!this.db_id) {
+        throw new Error('db not specified');
+    }
+    url = url || this.options.connect;
+    stream_url.connect(this.options.connect, {
+        reconnect: true // TODO  reconnect: true
+    }, this.addStreamUp.bind(this));
 };
 
 // The end of initialization: replica creates its logical clocks.
@@ -515,6 +523,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     op_stream.on('end', function () {
         self.removeStream(op_stream);
     });
+    Replica.debug && console.log('>>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
     this.upscribe();
 
