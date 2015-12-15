@@ -169,13 +169,12 @@ BatMux.prototype.drain = function () {
         }
     }
     if (!this.data.length && this.end) {
-        this.onTrunkDataEnd();
+        for(var tag in this.branches) {
+            this.branches[tag].end();
+        }
     }
 };
 
 BatMux.prototype.onTrunkDataEnd = function () {
-    for(var tag in this.branches) {
-        this.branches[tag].end();
-    }
     this.end = true;
 };
