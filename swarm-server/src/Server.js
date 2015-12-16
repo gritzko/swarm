@@ -1,4 +1,5 @@
 "use strict";
+var fs = require('fs');
 var Replica = require('swarm-replica');
 var sync = require('swarm-syncable');
 var Host = sync.Host;
@@ -9,6 +10,7 @@ require('stream-url-ws');
 // Host combo where the Host is mostly used for op log aggregation.
 // TODO add REST API for state bundles (Replica->Host->REST API)
 function Server (options) {
+    options.debug && console.log('swarm server options', options);
     this.options = options;
     if (!options.ssn_id) {
         options.ssn_id = options.user_id || 'swarm';
@@ -20,7 +22,15 @@ function Server (options) {
         options.listen = 'ws://localhost:8000';
     }
 
-    this.db = level(options.db_path || '.');
+    if (options.db) {
+        this.db = options.db;
+    } else {
+        var db_path = options.db_path || './swarm.db';
+        if (!fs.existsSync(db_path)) {
+            fs.mkdirSync(db_path);
+        }
+        this.db = level(db_path);
+    }
 
     // BIG TODO: propagate ssn grant replica->host
     // use exactly the same clock object!!!
