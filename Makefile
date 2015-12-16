@@ -1,12 +1,13 @@
 BIN = ./node_modules/.bin
 PACKAGES = \
 	swarm-bat \
-	swarm-client \
-	swarm-gw \
-	swarm-replica \
-	swarm-server \
 	swarm-stamp \
 	swarm-syncable \
+	swarm-replica \
+	swarm-server \
+	swarm-client \
+	swarm-gw \
+
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)
 

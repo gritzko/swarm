@@ -161,7 +161,9 @@ Replica.prototype.connect = function (url) {
 // Host clocks. A Replica is fully reactive, initiates nothing.
 Replica.prototype.createClock = function (ssn_id) {
     var options = this.options;
-    this.ssn_id = ssn_id;
+    var lamp = new LamportTimestamp(ssn_id);
+    this.ssn_id = lamp.source();
+    this.user_id = lamp.author();
     if (!options.clock) {
         this.clock = new stamp.Clock(this.ssn_id);
     } else if (options.clock.constructor===Function) {
@@ -180,6 +182,7 @@ Replica.prototype.createClock = function (ssn_id) {
     } else {
         options.callback && setTimeout(options.callback.bind(this), 0);
     }
+    this.emit('ready');
 };
 
 // failed to initialize
@@ -238,7 +241,7 @@ Replica.prototype.gc = function () {
 
 // process an incoming op
 Replica.prototype.write = function (op) {
-    Replica.debug && console.log('>'+this.ssn_id+'\t'+op.toString());
+    Replica.debug && console.log('=>'+this.ssn_id+'\t'+op.toString());
     if (op.constructor!==Op) {
         throw new Error('consumes swarm-syncable Op objects only');
     }
@@ -523,7 +526,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     op_stream.on('end', function () {
         self.removeStream(op_stream);
     });
-    Replica.debug && console.log('>>>'+this.ssn_id+'\t'+hs_op);
+    Replica.debug && console.log('U>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
     this.upscribe();
 
@@ -592,6 +595,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     var hs = this.handshake();
     var peer_ssn_id = op.origin(), peer_user = op.author();
     var peer_stamp = op.stamp();
+    Replica.debug && console.log('D>>'+this.ssn_id+'\t'+op);
 
     if (this.db_id!=='*' && this.db_id!==op.id() && op.id()!=='0') {
         reject_handshake_action ('wrong database id');
@@ -624,7 +628,9 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
             var policy = options.session_policy || Replica.seq_ssn_policy;
             policy.call(self, op, op_stream, act_on_ssn_policy_action);
         } else {
-            if (!Spec.inSubtree(lamp.source(), self.ssn_id)) {
+            if (self.user_id==='swarm') {
+                accept_handshake_action(); // FIXME checks
+            } else if (!Spec.inSubtree(lamp.source(), self.ssn_id)) {
                 reject_handshake_action('wrong ssn (wrong subtree)');
             } else {
                 accept_handshake_action();

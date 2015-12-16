@@ -8,6 +8,7 @@ var Duplex = require('readable-stream').Duplex;
 
 // ## TODO ##
 // 1. no-clock "slave mode" (make options orderly)
+// 2. separate Duplex from Host
 
 // Host is the world of actual replicated/synchronized objects of various types.
 // Host contains inner CRDT objects and their outer API parts (Syncables).
@@ -43,7 +44,7 @@ function Host (options) {
     }
     var hs = this.handshake();
     this.source = hs.stamp();
-    this.push(hs);
+    this._push(hs);
 }
 util.inherits(Host, Duplex);
 module.exports = Host;
@@ -139,7 +140,7 @@ Host.prototype._writeHandshake = function (op) {
         }
     } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this.push(new Op('.error', 'handshake mismatch', this.source));
+        this._push(new Op('.error', 'handshake mismatch', this.source));
         this.end(); // TODO destroy?
     }
 };
@@ -151,6 +152,7 @@ Host.prototype._write = function (op, encoding, callback) {
     if (!typeid || typeid==='null') {
         throw new Error('what?');
     }
+    Host.debug && console.log('->'+this.ssn_id+'\t'+op);
 
     if (op.spec.Type().time()==='Swarm') { // FIXME repeats
         this._writeHandshake(op);
@@ -169,7 +171,7 @@ Host.prototype._write = function (op, encoding, callback) {
     this.consume(typeid, syncable, op);
 
     crdt = crdt || this.crdts[typeid];
-    var is_changed = old_ver!==crdt._version;
+    var is_changed = crdt && old_ver!==crdt._version;
     if (crdt && syncable && is_changed) {
         // We bundle events (e.g. a sequence of ops we
         // received on handshake after spending some time offline).
@@ -183,7 +185,7 @@ Host.prototype._write = function (op, encoding, callback) {
 
     if (crdt && is_changed && this.options.snapshot==='immediate') {
         var spec = op.spec.set(crdt._version, '!').set('~state', '.');
-        this.push(new Op(spec, crdt.toString()), this.source);
+        this._push(new Op(spec, crdt.toString()), this.source);
     }
 
     if (callback) {
@@ -208,7 +210,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
             console.warn('upstream disappears for', typeid);
         } else {
             delete this.crdts[typeid];
-            this.push(new Op(typeid+'.off', '', this.source));
+            this._push(new Op(typeid+'.off', '', this.source));
         }
         break;
     case '~state':
@@ -221,7 +223,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
         crdt._version = op.stamp();
         this.crdts[typeid] = crdt;
         if (!have_or_wait_state) { // FIXME obey
-            this.push(new Op(typeid+'.on', op.spec.stamp(), this.source));
+            this._push(new Op(typeid+'.on', op.spec.stamp(), this.source));
         }
 
         // FIXME descending state!!! see the pacman note
@@ -315,7 +317,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
     // }
-    this.push(on_op);
+    this._push(on_op);
 
     return syncable;
 };
@@ -330,7 +332,7 @@ Host.prototype.abandonSyncable = function (obj) {
         delete this.syncables[typeid];
         var off_spec = obj.spec().add('.off');
         var off_op = new Op (off_spec, '', this.source);
-        this.push(off_op);
+        this._push(off_op);
     }
 };
 
@@ -397,6 +399,12 @@ Host.prototype.submitOp = function (op) { // TODO sig
     }
 
     this._write(op); // not recommended by node docs :)
+    this._push(op);
+};
+
+
+Host.prototype._push = function (op) {
+    Host.debug && console.log('<-'+this.ssn_id+'\t'+op);
     this.push(op);
 };
 
@@ -404,7 +412,7 @@ Host.prototype.submitOp = function (op) { // TODO sig
 Host.prototype.__end = Host.prototype.end;
 Host.prototype.end = function (chunk, enc, cb) {
     this.__end(chunk, enc, cb);
-    this.push(null);
+    this._push(null);
 };
 
 /*Host.prototype.end = function () {
