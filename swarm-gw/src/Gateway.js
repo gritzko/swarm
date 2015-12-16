@@ -67,16 +67,16 @@ Gateway.prototype.receive = function (op) {
     }
 };
 
-var abbrev = new Spec.Parsed('/Model');
+var abbrev = new Spec('/Model');
 
 function abbreviate (spec, stream_stamp) {
     abbrev._stamp = stream_stamp;
-    return new Spec.Parsed(spec).toString(abbrev);
+    return new Spec(spec).toString(abbrev);
 }
 
 function unabbreviate (spec, stream_stamp) {
     abbrev._stamp = stream_stamp;
-    return new Spec.Parsed(spec, abbrev).toString();
+    return new Spec(spec, abbrev).toString();
 }
 
 // on every change, send full object state to subscribers

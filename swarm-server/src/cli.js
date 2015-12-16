@@ -9,12 +9,15 @@ var argv = require('yargs')
     .alias('d', 'db')
     .default('db', 'test_db')
     .alias('D', 'debug')
+    .alias('p', 'db_path')
+    .default('db_path', 'database')
     .argv;
 
 var server = new SwarmServer({
         listen: argv.listen,
         ssn_id: 'swarm~0',
         db_id:  argv.db,
+        db_path: argv.db_path,
         callback: report_start
     });
 

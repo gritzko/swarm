@@ -20,9 +20,10 @@
   "dependencies": {
     "swarm-syncable": "^1.0.3"
   },
-  "scripts": {
-    "test": "true"
-  },
   "devDependencies": {
+    "swarm-bat": "^1.0.2"
+  },
+  "scripts": {
+    "test": "make test"
   }
 }
