@@ -1,13 +1,14 @@
 "use strict";
-var Gateway = require('..');
-var Syncable = require('swarm-syncable');
+var Swarm = require('..');
+var Gateway = Swarm.Gateway;
+var Syncable = Swarm.Syncable;
 var tape = require('tap').test;
 
 var bat = require('swarm-bat');
 var BatStream = bat.BatStream;
 
 function createHost() {
-    return new Syncable.Host({
+    return new Swarm.Host({
         ssn_id: 'anon',
         db_id: 'db',
     });
