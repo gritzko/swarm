@@ -1,9 +1,10 @@
 "use strict";
 var bat = require('swarm-bat');
-var SwarmClient = require('../src/Client');
-var Replica = SwarmClient.Replica;
-var Model = SwarmClient.Model;
-var Host = SwarmClient.Host;
+var Swarm = require('../');
+var SwarmClient = Swarm.Client;
+var Replica = Swarm.Replica;
+var Model = Swarm.Model;
+var Host = Swarm.Host;
 var tap = require('tap');
 var tape = tap.test;
 // tap.on('data', function (d) {

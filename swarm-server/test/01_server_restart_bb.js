@@ -2,8 +2,8 @@
 require('stream-url-node');
 var fs = require('fs');
 var rimraf = require('rimraf');
-var stamp = require('swarm-stamp');
-var SwarmServer = require('..');
+var Swarm = require('..');
+var SwarmServer = Swarm.Server;
 var bat = require('swarm-bat');
 
 var tape = require('tap').test;
@@ -53,7 +53,7 @@ tape ('server.1.A log aggregation', function (t) {
         ssn_id: 'swarm~1A',
         db_id:  'db',
         db_path: db_path,
-        clock:  stamp.LamportClock,
+        clock:  Swarm.LamportClock,
         callback: run
     });
 

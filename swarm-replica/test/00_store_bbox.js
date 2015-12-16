@@ -1,6 +1,6 @@
 "use strict";
-var stamp = require('swarm-stamp');
-var Replica = require('..');
+var Swarm = require('..');
+var Replica = Swarm.Replica;
 
 var bat = require('swarm-bat');
 var BatMux = bat.BatMux;
@@ -154,7 +154,7 @@ tape ('replica.00.A basic cases', function(t){
         ssn_id:     'user~ssn',
         db_id:      'db',
         connect:    'loopback:1Aup',
-        clock:      new stamp.LamportClock('user~ssn'),
+        clock:      new Swarm.LamportClock('user~ssn'),
         listen:     'loopback:1Arepl',
         prefix:     true
     }, start_tests);
@@ -298,7 +298,7 @@ tape   ('replica.00.B reorders', function(t){
         ssn_id:     'me~ssn',
         db_id:      'db',
         upstream:   'lo:1Bup',
-        clock:      new stamp.LamportClock('me~ssn'),
+        clock:      new Swarm.LamportClock('me~ssn'),
         listen:     'loopback:1B',
         prefix:     true
     }, start_tests);
@@ -399,7 +399,7 @@ tape ('replica.00.C various errors / incorrect messages', function(t){
         ssn_id:     'me~ssn',
         db_id:      'db',
         upstream:   'lo:1Cup',
-        clock:      new stamp.LamportClock('me~ssn'),
+        clock:      new Swarm.LamportClock('me~ssn'),
         listen:     'loopback:1C',
         prefix:     true
     }, start_tests);

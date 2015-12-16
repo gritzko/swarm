@@ -1,9 +1,11 @@
 "use strict";
-var sync = require('swarm-syncable');
-var Replica = require('swarm-replica');
-var Host = sync.Host;
+var Swarm = require('swarm-replica');
+var Replica = Swarm.Replica;
+var Host = Swarm.Host;
 //var EventEmitter = require('eventemitter3');
 var util = require('util');
+
+// TODO import ws stream wrapper in a browser
 
 // Swarm (caching) client
 function Client (options) {
@@ -42,11 +44,9 @@ function Client (options) {
 
 }
 //util.inherits(Client, EventEmitter);
-module.exports = Client;
 
-Client.Replica = Replica;
-Client.Host = Host;
-Client.Model = sync.Model;
+Swarm.Client = Client;
+module.exports = Swarm;
 
 
 Client.prototype.get = function (id) {

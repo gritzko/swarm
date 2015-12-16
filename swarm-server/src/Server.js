@@ -1,8 +1,8 @@
 "use strict";
 var fs = require('fs');
-var Replica = require('swarm-replica');
-var sync = require('swarm-syncable');
-var Host = sync.Host;
+var Swarm = require('swarm-replica');
+var Replica = Swarm.Replica;
+var Host = Swarm.Host;
 var level = require('level');
 require('stream-url-ws');
 
@@ -67,5 +67,5 @@ Server.prototype.close = function () {
     });
 };
 
-
-module.exports = Server;
+Swarm.Server = Server;
+module.exports = Swarm;

@@ -1,6 +1,6 @@
 {
   "name": "swarm-stamp",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -16,7 +16,6 @@
     "index.js",
     "src/*.js",
     "test/*.js",
-    "test/index.html",
     "LICENSE",
     "README.md"
   ],

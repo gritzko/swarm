@@ -1,7 +1,8 @@
 "use strict";
-var Syncable = require('swarm-syncable');
-var Spec = Syncable.Spec;
-var Op = Syncable.Op;
+var Swarm = require('swarm-syncable');
+var Syncable = Swarm.Syncable;
+var Spec = Swarm.Spec;
+var Op = Swarm.Op;
 
 //
 //    client ---> gateway ---> logics ---> host ---> storage, server
@@ -18,7 +19,8 @@ function Gateway (host) {
     this.streams = {};
     this.subscribers = {};
 }
-module.exports = Gateway;
+Swarm.Gateway = Gateway;
+module.exports = Swarm;
 
 Gateway.prototype.removeStream = function (stream_id) {
     delete this.streams[stream_id];

@@ -1,7 +1,7 @@
 "use strict";
 var stamp = require('swarm-stamp');
 var sync = require('swarm-syncable');
-var Replica = require('..');
+var Replica = require('..').Replica;
 var Host = sync.Host;
 var Model = sync.Model;
 

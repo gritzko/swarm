@@ -1,12 +1,12 @@
 "use strict";
 var stream_url = require('stream-url');
 var levelup = require('level');
-var stamp = require('swarm-stamp');
-var LamportTimestamp = stamp.LamportTimestamp;
 var EventEmitter = require('eventemitter3');
 var util         = require("util");
 
-var sync     = require('swarm-syncable');
+var Swarm = require('swarm-syncable');
+var sync = Swarm;
+var LamportTimestamp = Swarm.LamportTimestamp;
 var Spec = sync.Spec;
 var Op = sync.Op;
 var OpStream = sync.OpStream;
@@ -86,7 +86,8 @@ function Replica (options, callback) {
     }
 }
 util.inherits(Replica, EventEmitter);
-module.exports = Replica;
+Swarm.Replica = Replica;
+module.exports = Swarm;
 // FIXME uniform export interface
 
 
@@ -165,7 +166,7 @@ Replica.prototype.createClock = function (ssn_id) {
     this.ssn_id = lamp.source();
     this.user_id = lamp.author();
     if (!options.clock) {
-        this.clock = new stamp.Clock(this.ssn_id);
+        this.clock = new Swarm.Clock(this.ssn_id);
     } else if (options.clock.constructor===Function) {
         this.clock = new options.clock(this.ssn_id);
     } else {
@@ -201,7 +202,7 @@ Replica.prototype.issueDownstreamSessionId = function () {
         throw new Error('not ready yet');
     }
     var seq = ++this.last_ds_ssn;
-    var ssn_id = this.ssn_id + '~' + stamp.base64.int2base(seq, 1);
+    var ssn_id = this.ssn_id + '~' + Swarm.base64.int2base(seq, 1);
     this.saveDatabaseHandshake();
     return ssn_id;
 };
@@ -623,7 +624,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     }
 
     function check_ssn_action () {
-        var lamp = new stamp.LamportTimestamp(op.stamp());
+        var lamp = new Swarm.LamportTimestamp(op.stamp());
         if (lamp.time()==='0') {
             var policy = options.session_policy || Replica.seq_ssn_policy;
             policy.call(self, op, op_stream, act_on_ssn_policy_action);
@@ -680,7 +681,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
 // the default agree-to-everything cumulative-numbering ssn assignment policy
 Replica.seq_ssn_policy =  function (op, op_stream, callback) {
     var replica = this;
-    var lamp = new stamp.LamportTimestamp(op.stamp());
+    var lamp = new Swarm.LamportTimestamp(op.stamp());
     if (replica.user_id!=='swarm' && lamp.author() && lamp.author()!==replica.user_id) {
         callback('wrong user');
         return;
@@ -688,7 +689,7 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
     //var ds_user_id = lamp.author();
     var seq = ++replica.last_ds_ssn;
     var parent = replica.user_id==='swarm' ? lamp.author() : replica.ssn_id;
-    var new_ssn = parent + '~' + stamp.base64.int2base(seq, 1);
+    var new_ssn = parent + '~' + Swarm.base64.int2base(seq, 1);
     // FIXME recursive
     replica.saveDatabaseHandshake(); // FIXME callback (prevent double-grant on restart)
     callback(null, new_ssn);
