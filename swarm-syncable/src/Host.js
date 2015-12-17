@@ -179,6 +179,7 @@ Host.prototype._write = function (op, encoding, callback) {
         syncable.emit('change', {
             version: crdt._version,
             changes: null,
+            target:  syncable,
             op:      op
         });
     }
