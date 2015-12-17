@@ -18,7 +18,8 @@ function Client (options) {
         throw new Error('user or session id is required');
     }
     if (!options.connect) {
-        throw new Error('need a server url');
+        //throw new Error('need a server url');
+        console.warn("no server URL specified");
     }
 
     this.replica = new Replica({
@@ -26,6 +27,7 @@ function Client (options) {
         user_id: options.user_id,
         db_id:   options.db_id,
         connect: options.connect,
+        db:      options.db,
         callback: connect_em
     });
 

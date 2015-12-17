@@ -1,5 +1,5 @@
 "use strict";
-var SwarmServer = require('../');
+var Swarm = require('../');
 require('stream-url-node');
 require('stream-url-ws');
 var argv = require('yargs')
@@ -13,7 +13,12 @@ var argv = require('yargs')
     .default('db_path', 'database')
     .argv;
 
-var server = new SwarmServer({
+if (argv.debug) {
+    Swarm.Replica.debug = true;
+    Swarm.Host.debug = true;
+}
+
+var server = new Swarm.Server({
         listen: argv.listen,
         ssn_id: 'swarm~0',
         db_id:  argv.db,
@@ -28,5 +33,14 @@ function report_start (err) {
         process.exit(-1);
     }
     console.log('swarm database', argv.db, 'is listening at', argv.listen);
-    require('repl').start('> ');
+    if (argv.repl) {
+        global.Swarm = Swarm;
+        global.Server = server;
+        var repl = require('repl')
+        repl.start({
+            prompt: '\u2276 ',
+            useGlobal: true,
+            replMode: repl.REPL_MODE_STRICT
+        });
+    }
 }

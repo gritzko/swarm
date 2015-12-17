@@ -1,6 +1,6 @@
 {
   "name": "swarm-client",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -24,8 +24,7 @@
       "swarm-client" : "src/cli.js"
   },
   "dependencies": {
-      "levelup":        "^1.2.1",
-      "level-js":       "^2.2.2",
+      "level":          "^1.3.0",
       "swarm-syncable": "^1.0.3",
       "swarm-replica":  "^1.0.4",
       "swarm-bat":      "^1.0.2",
