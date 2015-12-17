@@ -10,7 +10,7 @@ var argv = require('yargs')
     .default('db', 'test_db')
     .alias('D', 'debug')
     .alias('p', 'db_path')
-    .default('db_path', 'database')
+    .default('db_path', 'swarm.db')
     .argv;
 
 if (argv.debug) {
