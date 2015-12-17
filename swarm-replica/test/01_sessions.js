@@ -5,6 +5,7 @@ var Replica = require('..').Replica;
 var sync = require('swarm-syncable');
 
 var bat = require('swarm-bat');
+var StreamTest = bat.StreamTest;
 var BatMux = bat.BatMux;
 
 var tape = require('tap').test;
@@ -164,7 +165,7 @@ tape ('replica.01.B handshake errors', function (t) {
         accept_ids: ['up']
     });
 
-    var bt = new bat.StreamTest(mux, AUTH, compare);
+    var bt = new bat.StreamTest(mux, AUTH, t.equal.bind(t), StreamTest.collapse_spaces);
     bt.run( t.end.bind(t) );
 
     var replica = new Replica({
@@ -183,11 +184,6 @@ tape ('replica.01.B handshake errors', function (t) {
         callback( ok ? null : 'wrong password' );
     }
 
-    function compare (a,b,c) {
-        a = a.replace(/[\t\s]+/g, ' ');
-        b = b.replace(/[\t\s]+/g, ' ');
-        t.equal(a,b,c);
-    }
 
     replica.once('connection', function (ev) {
         if (!ev.upstream) {return;}

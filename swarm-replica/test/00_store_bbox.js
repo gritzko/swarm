@@ -3,6 +3,7 @@ var Swarm = require('..');
 var Replica = Swarm.Replica;
 
 var bat = require('swarm-bat');
+var StreamTest = bat.StreamTest;
 var BatMux = bat.BatMux;
 
 var tape = require('tap').test;
@@ -304,14 +305,12 @@ tape   ('replica.00.B reorders', function(t){
     }, start_tests);
 
     function compare (a,b,c) {
-        a = a.replace(/[\t\s]+/g, ' ');
-        b = b.replace(/[\t\s]+/g, ' ');
         t.equal(a,b,c);
     }
 
     function start_tests () {
 
-        var bt = new bat.StreamTest(mux, REORDERS, compare);
+        var bt = new bat.StreamTest(mux, REORDERS, compare, StreamTest.collapse_spaces);
 
         bt.run( t.end.bind(t) );
     }
@@ -405,14 +404,12 @@ tape ('replica.00.C various errors / incorrect messages', function(t){
     }, start_tests);
 
     function compare (a,b,c) {
-        a = a.replace(/[\t\s]+/g, ' ');
-        b = b.replace(/[\t\s]+/g, ' ');
         t.equal(a,b,c);
     }
 
     function start_tests () {
 
-        var bt = new bat.StreamTest(mux.trunk, ERRORS, compare);
+        var bt = new bat.StreamTest(mux.trunk, ERRORS, compare, StreamTest.collapse_spaces);
 
         bt.run( t.end.bind(t) );
 

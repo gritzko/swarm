@@ -62,7 +62,11 @@ tape ('client.01.A 2 clients sync', function (t) {
             if (obj1.client!==2) {
                 console.warn('what?');
             }
+            client1.close();
+            client2.close();
+            serv_replica.close();
             t.end();
+            process.exit(0);
         });
 
         var obj2 = client2.get(obj1.typeid());
