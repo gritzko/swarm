@@ -393,6 +393,7 @@ Replica.prototype.close = function (callback, err) {
 
     // TODO FINISH processing all ops,
     // don't accept any further ops
+    var self = this;
     var err_op = err ? new Op('.error', err) : null;
 
     var srv_urls = Object.keys(this.servers);
@@ -402,27 +403,29 @@ Replica.prototype.close = function (callback, err) {
 
     var stamps = Object.keys(this.streams);
     var closing = 0;
+
+    var check_count = 0;
+    var close_check = setInterval(try_close, 100);
+
     while (stamps.length) {
-        var stream = this.streams[stamps.pop()];
-        closing++;
-        stream.pause();
-        stream.end(err?err_op:undefined, function () {
-
-            // FIXME some requests are still in progress
-            // this.terminate_on_done
-            // on error, still invoke done()!
-
-            if (!--closing) {
-                this.db.close(function () {
-                    process.exit(err?1:0);
-                });
-                this.db = null;
-            }
-
-        });
+        var stamp = stamps.pop();
+        self.removeStream(stamp);
     }
 
-    callback && callback(); // FIXME :()
+    function try_close () {
+        var keys = Object.keys(self.streams);
+        if ((0===keys.length || ++check_count>10) && self.db) {
+            close_db();
+            clearInterval(close_check);
+        } else {
+            console.warn('waiting for', keys);
+        }
+    }
+
+    function close_db () {
+        self.db.close(callback);
+        self.db = null;
+    }
 
 };
 
@@ -706,7 +709,7 @@ Replica.prototype.removeStream = function (op_stream) {
         op_stream = this.streams[op_stream];
     }
     if (!op_stream) { return; }
-    var stamp = op_stream.peer_stamp;
+    var stamp = op_stream.source;
     if (stamp===this.upstream_ssn) {
         this.upstream_ssn = null;
         this.upstream_stamp = null;
@@ -716,7 +719,9 @@ Replica.prototype.removeStream = function (op_stream) {
         delete this.streams[stamp];
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
-        op_stream.end(off);
+        op_stream.isOpen() && op_stream.end(off);
+    } else {
+        console.warn('the stream is not on the list', stamp);
     }
 };
 

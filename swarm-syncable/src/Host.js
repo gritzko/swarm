@@ -412,8 +412,13 @@ Host.prototype._push = function (op) {
 
 Host.prototype.__end = Host.prototype.end;
 Host.prototype.end = function (chunk, enc, cb) {
-    this.__end(chunk, enc, cb);
+    //this.__end(chunk, enc, cb);
     this._push(null);
+};
+
+
+Host.prototype.isOpen = function () {
+    return true;
 };
 
 /*Host.prototype.end = function () {

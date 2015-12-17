@@ -111,6 +111,12 @@ OpStream.prototype.flush = function () {
     }
 };
 
+
+OpStream.prototype.isOpen = function () {
+    return !!this.stream;
+};
+
+
 OpStream.prototype.end = function (something) {
     if (!this.stream) {
         throw new Error('this op stream is not open');
@@ -119,6 +125,7 @@ OpStream.prototype.end = function (something) {
         this.write(something);
     }
     this.stream.end();
+    this.stream.destroy && this.stream.destroy();
     this.stream = null;
 };
 
@@ -208,7 +215,7 @@ OpStream.prototype.sendHandshake = function (op) {
 OpStream.prototype.onStreamEnded = function () {
     // this.stream.removeAllListeners();
     // this.stream = null;
-    // this.emit('end', this);
+    //this.emit('end', this);
     this.push(null);
 };
 
@@ -242,7 +249,7 @@ OpStream.prototype._read = function () {};
 
 
 OpStream.prototype.destroy = function () {
-    this.stream.destroy && this.stream.destroy();
+    this.stream && this.stream.destroy && this.stream.destroy();
     this.mute = true;
 };
 
