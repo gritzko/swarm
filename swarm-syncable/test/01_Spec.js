@@ -4,6 +4,7 @@ var Spec = sync.Spec;
 var Op = sync.Op;
 var tape = require('tap').test;
 
+
 tape ('syncable.01.b basic specifier syntax', function (tap) {
     var testSpec = '/Class#ID!7Umum+gritzko~ssn.event';
     var spec = new Spec(testSpec);

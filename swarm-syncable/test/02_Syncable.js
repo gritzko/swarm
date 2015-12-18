@@ -6,10 +6,11 @@ var Host = sync.Host;
 var Model = sync.Model;
 var Spec = sync.Spec;
 var Op = sync.Op;
-
 var tape = require('tap').test;
 
+
 Host.multihost = true;
+
 
 tape ('syncable.02.A empty cycle', function (t) {
     var host = new Host({

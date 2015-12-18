@@ -52,6 +52,28 @@ module.exports = Host;
 Host.debug = false;
 Host.multihost = false;
 Host.localhost = null;
+Host.hosts = Object.create(null);
+
+
+Host.defaultHost = function () {
+    if (!Host.localhost) {
+        throw new Error('no host specified');
+    } else {
+        if (Host.multihost) {
+            console.warn('implicit host in mutihost mode');
+        }
+        return Host.localhost;
+    }
+};
+
+
+Host.getOwnerHost = function (syncable) {
+    if (Host.multihost) {
+        return Host.hosts[syncable._ssn];
+    } else {
+        return Host.localhost;
+    }
+}
 
 
 Host.prototype._read = function () {
@@ -94,7 +116,7 @@ Host.prototype.time = function () {
 // An innner state getter; needs /type#id spec for the object.
 Host.prototype.getCRDT = function (obj) {
     if (obj._type) {
-        if (obj._owner!==this) {
+        if (obj._ssn!==this.ssn_id) {
             throw new Error('an alien object');
         }
         return this.crdts[obj.typeid()];
@@ -117,6 +139,15 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     }
     this.ssn_id = ssn_id;
     this.db_id = db_id;
+    if (this.syncables) {
+        var ids = Object.keys(this.syncables);
+        for(var i=0; i<ids.length; i++) {
+            this.syncables[ids[i]]._ssn = ssn_id;
+        }
+    }
+    if (Host.multihost) {
+        Host.hosts[ssn_id] = this;
+    }
     this.emit('writable', this.handshake());
 };
 
@@ -275,7 +306,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     if (!type_fn || type_fn!==syncable.constructor) {
         throw new Error('not a registered syncable type');
     }
-    if (syncable._owner) {
+    if (syncable._ssn) {
         throw new Error('the syncable belongs to some host already');
     }
 
@@ -314,7 +345,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
-    syncable._owner = this;
+    syncable._ssn = this.ssn_id || null;
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
     // }
@@ -375,7 +406,7 @@ Host.prototype.get = function (spec, callback) {
 
 // author a new operation
 Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
-    if (syncable._owner!==this) {
+    if (syncable._ssn!==this.ssn_id) {
         throw new Error('alien op submission');
     }
     if (!this.clock) {

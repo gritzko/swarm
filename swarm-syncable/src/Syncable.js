@@ -56,16 +56,11 @@ function Syncable(init_op, host) {
     EventEmitter.call(this);
     this._id = null;
     this._version = null;
-    this._owner = null;
+    this._ssn = null;
     this._events = {change: null};
 
     if (host===undefined) { // null means "no host"
-        if (!Host.localhost) {
-            throw new Error('no host specified');
-        } else {
-            Host.multihost && console.warn('implicit host in mutihost mode');
-            host = Host.localhost;
-        }
+        host = Host.defaultHost();
     }
 
     var copy = host && host.adoptSyncable(this, init_op);
@@ -77,7 +72,7 @@ Syncable.DEFAULT_TYPE = new Spec('/Model');
 
 
 Syncable.prototype.ownerHost = function () {
-    return Host.multihost ? this._owner : Host.localhost;
+    return Host.getOwnerHost(this);
 };
 
 

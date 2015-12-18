@@ -15,7 +15,7 @@ var tape = require('tap').test;
 
 tape ('syncable.04.A Model CRDT / Syncable', function (t) {
 
-    t.plan(8);
+    t.plan(6);
 
     // CRDT
     var a = new Model.Inner();
@@ -44,11 +44,12 @@ tape ('syncable.04.A Model CRDT / Syncable', function (t) {
             submit = {name: name, value: value};
         }
     };
-    m._owner = owner;
 
-    m.set({y: false});
-    t.equal(submit.name, 'set', 'makes new op');
-    t.equal(submit.value, '{"y":false}');
+    // m._owner = owner;
+    //
+    // m.set({y: false});
+    // t.equal(submit.name, 'set', 'makes new op');
+    // t.equal(submit.value, '{"y":false}');
 
 });
 
