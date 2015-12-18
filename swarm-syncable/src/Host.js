@@ -141,14 +141,20 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     this.db_id = db_id;
     if (this.syncables && Host.multihost) {
         var ids = Object.keys(this.syncables);
+        var mark = this.getSsnMark();
         for(var i=0; i<ids.length; i++) {
-            this.syncables[ids[i]]._ssn = ssn_id;
+            this.syncables[ids[i]]._ssn = mark;
         }
     }
     if (Host.multihost) {
-        Host.hosts[ssn_id] = this;
+        Host.hosts[this.getSsnMark()] = this;
     }
     this.emit('writable', this.handshake());
+};
+
+
+Host.prototype.getSsnMark = function () {
+    return this.db_id + '+' + this.ssn_id;
 };
 
 
@@ -346,7 +352,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
     if (Host.multihost) {
-        syncable._ssn = this.ssn_id || null;
+        syncable._ssn = this.getSsnMark() || null;
     }
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
