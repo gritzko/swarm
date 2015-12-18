@@ -61,7 +61,7 @@ Set.prototype.addSpec = function (arg) {
     if (!typeId.type() || ! typeId.id()) {
         throw new Error('invalid argument');
     }
-    return this._owner.submit( this, 'add', typeId.toString() );
+    return this.submit('add', typeId.toString() );
 };
 
 
@@ -91,7 +91,7 @@ Set.prototype.removeSpec = function (typeId) {
     var rm = Object.keys(story).filter(function(stamp) {
         return story[stamp]===typeid;
     });
-    rm.length && this._owner.submit(this, 'rm', rm.join());
+    rm.length && this.submit('rm', rm.join());
 };
 
 // only for instances of Model
@@ -231,9 +231,9 @@ ORSet.prototype.write = function (op) {
 };
 
 
-ORSet.prototype.updateSyncable = function (syncable) {
+ORSet.prototype.updateSyncable = function (syncable, getSyncable) {
     var objects = Object.create(null), old_objects = syncable.objects;
-    var added = this.added, owner = syncable._owner;
+    var added = this.added;
     var lstn = syncable.onObjectChange;
     Object.keys(added).forEach(function(stamp){
         var typeid = added[stamp];
@@ -241,7 +241,7 @@ ORSet.prototype.updateSyncable = function (syncable) {
         if (object) {
             delete old_objects[typeid];
         } else {
-            object = owner.get(typeid);
+            object = getSyncable(typeid);
             // subscribe to member object changes
             object.on('change', lstn, syncable);
         }
@@ -253,6 +253,7 @@ ORSet.prototype.updateSyncable = function (syncable) {
         var removed = old_objects[typeid];
         removed.off('change', lstn, syncable);
     });
+    syncable._version = this._version;
 };
 
 

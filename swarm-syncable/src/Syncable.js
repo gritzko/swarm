@@ -76,17 +76,22 @@ module.exports = Syncable;
 Syncable.DEFAULT_TYPE = new Spec('/Model');
 
 
+Syncable.prototype.ownerHost = function () {
+    return Host.multihost ? this._owner : Host.localhost;
+};
+
+
 Syncable.prototype._crdt = function () {
-    return this.host().getCRDT(this);
+    return this.ownerHost().getCRDT(this);
 };
 
 //
 Syncable.prototype.save = function () {
-    var host = this.host();
+    var host = this.ownerHost();
     var clean_state = host.getCRDT().updateSyncable({});
     var diff = this.diff(clean_state);
     while (diff && diff.length) {
-        this._owner.submitOp(this, diff.unshift());
+        host.submitOp(this, diff.unshift());
     }
 };
 
@@ -97,12 +102,7 @@ Syncable.prototype.diff = function (base_state) {
 
 
 Syncable.prototype.submit = function (op_name, op_value) {
-    this._owner.submit(op_name, op_value);
-};
-
-
-Syncable.prototype.host = function () {
-    return Host.multihost ? this._owner : Host.localhost;
+    this.ownerHost().submit(this, op_name, op_value);
 };
 
 //
@@ -203,7 +203,7 @@ Syncable.prototype.isStateful = Syncable.prototype.hasState;
 
 // Deallocate everything, free all resources.
 Syncable.prototype.close = function () {
-    this.host().abandonSyncable(this);
+    this.ownerHost().abandonSyncable(this);
 };
 
 // Once an object is not listened by anyone it is perfectly safe

@@ -104,7 +104,7 @@ tape ('syncable.06.B Set CRDT / Syncable', function (t) {
     };
     var s = new Set(null, null);
     s._owner = owner;
-    a.updateSyncable(s);
+    a.updateSyncable(s, owner.get.bind(owner));
     t.ok(s.containsSpec('/Model#some+id'), 'contains'); // TODO abbrev
     s.forEach(function (obj, spec){
         t.equal(obj.spec.id(), 'some+id', 'forEach object iteration');

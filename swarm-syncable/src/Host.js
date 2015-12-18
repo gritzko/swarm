@@ -175,7 +175,7 @@ Host.prototype._write = function (op, encoding, callback) {
     if (crdt && syncable && is_changed) {
         // We bundle events (e.g. a sequence of ops we
         // received on handshake after spending some time offline).
-        crdt.updateSyncable(syncable);
+        crdt.updateSyncable(syncable, this.get.bind(this));
         syncable.emit('change', {
             version: crdt._version,
             changes: null,
@@ -229,11 +229,11 @@ Host.prototype.consume = function (typeid, syncable, op) {
 
         // FIXME descending state!!! see the pacman note
         if (this.syncables) {// FIXME get rid of 'init' ?!!
-            crdt.updateSyncable(syncable);
-            syncable._version = op.stamp();
+            crdt.updateSyncable(syncable, this.get.bind(this));
             syncable.emit('init', {
                 version: crdt._version,
-                changes: null
+                changes: null,
+                target: syncable
             });
         }
         break;
@@ -295,7 +295,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         this.crdts[typeid] = crdt;
         crdt._version = stamp;
-        crdt.updateSyncable(syncable);
+        crdt.updateSyncable(syncable, this.get.bind(this));
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing

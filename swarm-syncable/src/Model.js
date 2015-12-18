@@ -23,7 +23,7 @@ function Model (values, owner) {
         }
         init_op = new Op('.set', JSON.stringify(values)); // TODO 1.0 refs
     }
-    // _owner _id _events
+    // _id _events etc
     Syncable.call(this, init_op, owner);
 }
 Model.prototype = Object.create( Syncable.prototype );
@@ -44,7 +44,7 @@ Model.prototype.set = function (keys_values) {
     if (bad) {
         throw new Error("malformed field name");
     }
-    return this._owner.submit( this, 'set', JSON.stringify(keys_values) );
+    return this.submit( 'set', JSON.stringify(keys_values) );
 };
 
 
@@ -158,12 +158,12 @@ LWWObject.prototype.write = function (op) {
 };
 
 // Produces the outer state from the inner state.
-LWWObject.prototype.updateSyncable = function (syncable) {
+LWWObject.prototype.updateSyncable = function (syncable, getSyncable) {
     var values = this.values;
     Object.keys(values).forEach(function(k){
         var val = values[k].value;
         if (val.constructor===Object && val.ref) {
-            val = syncable._owner.get(val.ref); // FIXME ugly
+            val = getSyncable(val.ref); // FIXME ugly
         }
         syncable[k] = val;
     });
@@ -173,6 +173,7 @@ LWWObject.prototype.updateSyncable = function (syncable) {
     missing_keys.forEach(function(key){
         delete syncable[key];
     });
+    syncable._version = this._version;
 };
 
 // Serializes the inner state to a string. The constructor must
