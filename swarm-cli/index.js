@@ -38,6 +38,10 @@ function onExit (code) {
     });
 }
 
+if (argv._) {
+    // TODO run scripts
+}
+
 if (argv.repl) {
     console.log('REPL');
     var repl = require('repl');

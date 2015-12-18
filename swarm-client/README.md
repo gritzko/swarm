@@ -1,25 +1,13 @@
 # Swarm: browser client
 
-A Swarm sync client backed by IndexedDB (optionally, WebStorage).
+A Swarm sync client.
+Use dependency injection for any particular storage or transport method (LevelUP and stream-url based, respectively).
 
-Simple command-line use examples:
-
-```
-    npm install -g swarm-client
-    swarm-client --connect ws://localhost:8080 --db test_db \
-        --ssn user~ssn --repl
-    > new Swarm.Model({a:1});
-    { _id: "8V7N8+user~ssn",
-      _version: "8V7N8+user~ssn",
-      a: 1 }
-```
-
-swarm-client --connect ws://localhost:8080 --db test_db \
-    --ssn user~ssn connect_and_run_the_script.js
 
 API use example:
 
     var SwarmClient = require('swarm-client');
+    require('stream-url-ws');
 
     var swarm = new SwarmClient({
         user_id: 'joe',
@@ -39,4 +27,4 @@ API use example:
 
 
 for working examples, see the `swarm-examples` package.
-for server-side daemon, see `swarm-server`.
+for a server-side daemon, see `swarm-server`.
