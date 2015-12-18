@@ -86,8 +86,7 @@ function Replica (options, callback) {
     }
 }
 util.inherits(Replica, EventEmitter);
-Swarm.Replica = Replica;
-module.exports = Swarm;
+module.exports = Replica;
 // FIXME uniform export interface
 
 

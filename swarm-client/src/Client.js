@@ -45,10 +45,8 @@ function Client (options) {
     }
 
 }
-//util.inherits(Client, EventEmitter);
-
-Swarm.Client = Client;
-module.exports = Swarm;
+//util.inherits(Client, EventEmitter);  TODO
+module.exports = Client;
 
 
 Client.prototype.get = function (id) {
