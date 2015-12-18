@@ -2,6 +2,9 @@
 var Swarm = require('..');
 var Replica = Swarm.Replica;
 
+var levelup = require('levelup');
+var memdown = require('memdown');
+
 var bat = require('swarm-bat');
 var StreamTest = bat.StreamTest;
 var BatMux = bat.BatMux;
@@ -151,9 +154,12 @@ tape ('replica.00.A basic cases', function(t){
         accept_ids: ['up']
     });
 
+    var db = levelup('replica/00/A', { db: memdown });
+
     var replica = new Replica({
         ssn_id:     'user~ssn',
         db_id:      'db',
+        db:         db,
         connect:    'loopback:1Aup',
         clock:      new Swarm.LamportClock('user~ssn'),
         listen:     'loopback:1Arepl',
@@ -295,9 +301,12 @@ tape   ('replica.00.B reorders', function(t){
         accept_ids: ['up']
     });
 
+    var db = levelup('replica/00/B', { db: memdown });
+
     var replica = new Replica({
         ssn_id:     'me~ssn',
         db_id:      'db',
+        db:         db,
         upstream:   'lo:1Bup',
         clock:      new Swarm.LamportClock('me~ssn'),
         listen:     'loopback:1B',
@@ -394,9 +403,12 @@ tape ('replica.00.C various errors / incorrect messages', function(t){
         accept_ids: ['up']
     });
 
+    var db = levelup('replica/00/C', { db: memdown });
+
     var replica = new Replica({
         ssn_id:     'me~ssn',
         db_id:      'db',
+        db:         db,
         upstream:   'lo:1Cup',
         clock:      new Swarm.LamportClock('me~ssn'),
         listen:     'loopback:1C',

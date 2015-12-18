@@ -5,6 +5,9 @@ var Replica = require('..').Replica;
 var Host = sync.Host;
 var Model = sync.Model;
 
+var levelup = require('levelup');
+var memdown = require('memdown');
+
 var bat = require('swarm-bat');
 Host.multihost = true;
 
@@ -12,9 +15,12 @@ var tape = require('tap').test;
 
 
 tape ('replica.02.A simple Model sync', function(t){
+    var db = levelup('replica/02/A', { db: memdown });
     var replica = new Replica({
         ssn_id: 'user',
-        db_id: 'db'
+        db_id: 'db',
+        empty_db:   true,
+        db:    db
     });
     var host1 = new Host({
         ssn_id: 'user~ssn1',

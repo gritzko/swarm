@@ -7,6 +7,9 @@ var Model = Swarm.Model;
 var Host = Swarm.Host;
 var tap = require('tap');
 var tape = tap.test;
+
+var levelup = require('levelup');
+var memdown = require('memdown');
 // tap.on('data', function (d) {
 //     console.log(d.toString());
 // });
@@ -35,22 +38,29 @@ tape ('client.01.A 2 clients sync', function (t) {
 
     t.plan(2);
 
+    var db1 = levelup('client/01/A/1', { db: memdown });
+    var db2 = levelup('client/01/A/2', { db: memdown });
+    var db3 = levelup('client/01/A/3', { db: memdown });
+
     var serv_replica = new Replica({
         listen: 'lo:client1A',
         ssn_id: 'swarm',
-        db_id:  'db'
+        db_id:  'db',
+        db:     db1
     });
 
     var client1 = new SwarmClient({
         connect: 'lo:client1A',
         user_id: 'alice',
-        db_id:   'db'
+        db_id:   'db',
+        db:     db2
     });
 
     var client2 = new SwarmClient({
         connect: 'lo:client1A',
         ssn_id:  'bob~0',
-        db_id:   'db'
+        db_id:   'db',
+        db:      db3
     });
 
     client1.host.once('writable', function () {

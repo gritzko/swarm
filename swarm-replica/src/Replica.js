@@ -1,6 +1,5 @@
 "use strict";
 var stream_url = require('stream-url');
-var levelup = require('level');
 var EventEmitter = require('eventemitter3');
 var util         = require("util");
 
@@ -74,14 +73,14 @@ function Replica (options, callback) {
     // db related stuff
     this.prefix = options.prefix || '';
     if (!options.db) { // tests
-        var memdown = require('memdown');
-        if (!memdown) { throw new Error('no memdown!'); }
-        this.db = levelup(memdown);
-        this.loadDatabaseHandshake(null, null);
+        throw new Error('need a db (levelup-compatible)');
+    }
+    this.db = options.db;
+    // check the existing db; depending on the outcome,
+    // we'll proceed with the network stuff
+    if (options.empty_db) {
+        this.loadDatabaseHandshake(null, null); // for tests
     } else {
-        this.db = options.db;
-        // check the existing db; depending on the outcome,
-        // we'll proceed with the network stuff
         this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
     }
 }

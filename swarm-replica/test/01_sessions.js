@@ -4,6 +4,9 @@ var stamp = require('swarm-stamp');
 var Replica = require('..').Replica;
 var sync = require('swarm-syncable');
 
+var levelup = require('levelup');
+var memdown = require('memdown');
+
 var bat = require('swarm-bat');
 var StreamTest = bat.StreamTest;
 var BatMux = bat.BatMux;
@@ -46,9 +49,12 @@ tape ('replica.01.A ssn assignment', function(t){
         accept_ids: ['up']
     });
 
+    var db = levelup('replica/01/A', { db: memdown });
+
     var replica = new Replica({
         user_id:    'user',
         db_id:      'db',
+        db:         db,
         connect:    'lo:2Aup',
         clock:      stamp.LamportClock,
         listen:     'loopback:2A',
@@ -168,14 +174,18 @@ tape ('replica.01.B handshake errors', function (t) {
     var bt = new bat.StreamTest(mux, AUTH, t.equal.bind(t), StreamTest.collapse_spaces);
     bt.run( t.end.bind(t) );
 
+    var db = levelup('replica/00/B', { db: memdown });
+
     var replica = new Replica({
         user_id:    'user',
         db_id:      'db',
+        db:         db,
         upstream:   'loopback:1B_up',
         clock:      stamp.LamportClock,
         listen:     'loopback:2B',
         prefix:     true,
-        auth_policy: no_bye_policy
+        auth_policy: no_bye_policy,
+        empty_db:   true
     });
 
     function no_bye_policy (hs_op, op_stream, callback) {
