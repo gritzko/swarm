@@ -116,7 +116,7 @@ Host.prototype.time = function () {
 // An innner state getter; needs /type#id spec for the object.
 Host.prototype.getCRDT = function (obj) {
     if (obj._type) {
-        if (obj._ssn!==this.ssn_id) {
+        if (this.syncables[obj.typeid()]!==obj) {
             throw new Error('an alien object');
         }
         return this.crdts[obj.typeid()];
@@ -139,7 +139,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     }
     this.ssn_id = ssn_id;
     this.db_id = db_id;
-    if (this.syncables) {
+    if (this.syncables && Host.multihost) {
         var ids = Object.keys(this.syncables);
         for(var i=0; i<ids.length; i++) {
             this.syncables[ids[i]]._ssn = ssn_id;
@@ -345,7 +345,9 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
-    syncable._ssn = this.ssn_id || null;
+    if (Host.multihost) {
+        syncable._ssn = this.ssn_id || null;
+    }
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
     // }
@@ -406,7 +408,7 @@ Host.prototype.get = function (spec, callback) {
 
 // author a new operation
 Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
-    if (syncable._ssn!==this.ssn_id) {
+    if (Host.multihost && syncable!==this.syncables[syncable.typeid()]) {
         throw new Error('alien op submission');
     }
     if (!this.clock) {

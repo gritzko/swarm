@@ -56,7 +56,6 @@ function Syncable(init_op, host) {
     EventEmitter.call(this);
     this._id = null;
     this._version = null;
-    this._ssn = null;
     this._events = {change: null};
 
     if (host===undefined) { // null means "no host"
