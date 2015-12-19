@@ -71,17 +71,21 @@ function Replica (options, callback) {
     this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
     this.clock = null;
     // db related stuff
-    this.prefix = options.prefix || '';
     if (!options.db) { // tests
         throw new Error('need a db (levelup-compatible)');
     }
     this.db = options.db;
     // check the existing db; depending on the outcome,
     // we'll proceed with the network stuff
+    if (options.prefix===true) {
+        this.prefix = this.db_id;
+    } else {
+        this.prefix = options.prefix || '';
+    }
     if (options.empty_db) {
         this.loadDatabaseHandshake(null, null); // for tests
     } else {
-        this.db.get( '.on', this.loadDatabaseHandshake.bind(this) );
+        this.db.get( this.prefix+'.on', this.loadDatabaseHandshake.bind(this) );
     }
 }
 util.inherits(Replica, EventEmitter);
@@ -175,9 +179,6 @@ Replica.prototype.createClock = function (ssn_id) {
     } else {
         this.clock = options.clock;
     }
-    if (options.prefix===true) {
-        this.prefix = '*'+this.db_id;
-    }
     this.saveDatabaseHandshake();
     if (options.listen) {
         this.listen(options.listen, options, function (err) {
@@ -217,10 +218,7 @@ Replica.prototype.saveDatabaseHandshake = function () {
     hs.patch = []; // TODO bad style: make handshake() ret a spec
     hs.patch.push(new Op('.last_ds_ssn', ''+this.last_ds_ssn));
 
-
-    this.db.put('.on', hs.toString()); // FIXME prefix!!!
-
-
+    this.db.put(this.prefix+'.on', hs.toString());
 
 };
 
