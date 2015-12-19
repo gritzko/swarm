@@ -89,10 +89,15 @@ module.exports = Replica;
 // FIXME uniform export interface
 
 
+function isNFE (err) {
+    return err.notFound || err.message==='NotFound' || err.name==='NotFoundError';
+}
+
+
 Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
     // FIXME upstream session id MUST be stored in the db
     // FIXME max child ssn id too
-    if (err && err.name==='NotFoundError') {
+    if (err && isNFE(err)) {
         err = null;
     } else if (err) {
         return this.noClock('db error: '+err.name);
@@ -435,7 +440,7 @@ Replica.prototype.loadMeta = function (activeEntry) {
     var self = this;
     var key = this.prefix + activeEntry.typeid + '.meta'; // BAD
     this.db.get(key, function (err, value){
-        if (err && err.name!=='NotFoundError') {
+        if (err && !isNFE(err)) {
             console.error('data load failed', key, err);
             self.close();
         } else {
