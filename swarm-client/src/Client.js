@@ -10,6 +10,7 @@ var util = require('util');
 // Swarm (caching) client
 function Client (options) {
 //    EventEmitter.call(this);
+    var self = this;
     this.options = options;
     if (!options.db_id) {
         throw new Error('db id is required');
@@ -39,7 +40,6 @@ function Client (options) {
         onwritable: options.onwritable
     });
 
-    var self = this;
     function connect_em () {
         self.replica.addOpStreamDown(self.host);
     }
