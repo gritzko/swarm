@@ -22,13 +22,14 @@ function Client (options) {
         //throw new Error('need a server url');
         console.warn("no server URL specified");
     }
-
+    // relay all the relevant options
     this.replica = new Replica({
         ssn_id:  options.ssn_id,
         user_id: options.user_id,
         db_id:   options.db_id,
         connect: options.connect,
         db:      options.db,
+        empty_db : options.empty_db,
         callback: connect_em
     });
 

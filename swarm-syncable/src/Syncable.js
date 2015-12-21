@@ -1,7 +1,7 @@
 "use strict";
 
 var Spec = require('./Spec');
-var Op = require('./Op');
+//var Op = require('./Op');
 var Host = require('./Host');
 var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
 var util = require('util');
@@ -25,8 +25,6 @@ var util = require('util');
  * and separate operations of the tail, but we need some atomicity here.
  * @this {Syncable}
  */
-
-
 /**
  * All CRDT model classes must extend syncable directly or indirectly. Syncable
  * provides all the necessary oplog- and state-related primitives and methods.
@@ -50,7 +48,7 @@ var util = require('util');
  // (1) changes once the object's state changes
  // (2) does it monotonically (in the alphanum order sense)
 
-
+//
 function Syncable(init_op, host) {
 
     EventEmitter.call(this);

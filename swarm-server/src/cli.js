@@ -9,6 +9,7 @@ var argv = require('yargs')
     .alias('d', 'db')
     .default('db', 'test_db')
     .alias('D', 'debug')
+    .alias('T', 'trace')
     .alias('p', 'db_path')
     .default('db_path', 'swarm.db')
     .argv;
@@ -16,6 +17,9 @@ var argv = require('yargs')
 if (argv.debug) {
     Swarm.Replica.debug = true;
     Swarm.Host.debug = true;
+}
+if (argv.trace) {
+    Swarm.Replica.trace = true;
 }
 
 var server = new Swarm.Server({

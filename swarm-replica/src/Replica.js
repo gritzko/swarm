@@ -90,7 +90,8 @@ function Replica (options, callback) {
 }
 util.inherits(Replica, EventEmitter);
 module.exports = Replica;
-// FIXME uniform export interface
+Replica.debug = false;
+Replica.trace = false;
 
 
 function isNFE (err) {
@@ -101,6 +102,7 @@ function isNFE (err) {
 Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
     // FIXME upstream session id MUST be stored in the db
     // FIXME max child ssn id too
+    Replica.trace && console.log('DB_HS', err, hs_str);
     if (err && isNFE(err)) {
         err = null;
     } else if (err) {
@@ -122,7 +124,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
             this.createClock(hs.origin());
             this.clock.seeTimestamp(hs.stamp());
         }
-        if (hs.patch) {
+        /*if (hs.patch) {
             var kv = Object.create(null);
             hs.patch.forEach(function(op){
                 kv[op.name()] = op.value;
@@ -133,7 +135,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
                 this.last_ds_ssn = 0;
             }
             this.last_us_stamp;
-        }
+        }*/
     } else { // fresh db, no records
         this.last_ds_ssn = 0;
         this.last_us_stamp = '';
@@ -216,9 +218,11 @@ Replica.prototype.saveDatabaseHandshake = function () {
     var hs = this.handshake();
     hs.value = this.last_us_stamp;
     hs.patch = []; // TODO bad style: make handshake() ret a spec
-    hs.patch.push(new Op('.last_ds_ssn', ''+this.last_ds_ssn));
+    //hs.patch.push(new Op('.last_ds_ssn', ''+this.last_ds_ssn));
 
-    this.db.put(this.prefix+'.on', hs.toString());
+    this.db.put(this.prefix+'.on', hs.toString(), function () {
+        // level-js feels insecure with no callback provided
+    });
 
 };
 
@@ -392,6 +396,7 @@ Replica.prototype.upscribe = function () {
 
 Replica.prototype.close = function (callback, err) {
 
+    Replica.trace && console.log('CLOSE', err);
     // TODO FINISH processing all ops,
     // don't accept any further ops
     var self = this;
@@ -568,6 +573,7 @@ Replica.prototype.addStreamDown = function (stream) {
     }, 3000); // the stream has 3 sec to? complete the handshake
 
     op_stream.on('error', function onError (msg) {
+        Replica.trace && console.log('STREAM_ERR', msg);
         try {
             op_stream.end(new Op('.error',msg||'handshake error'));
             op_stream.destroy();
@@ -582,6 +588,7 @@ Replica.prototype.addOpStreamDown = function (stream) {
     if (!this.ssn_id) {
         throw new Error('not initialized yet!');
     }
+    Replica.trace && console.log('STR_DOWN');
     stream.once('data', function (op) {
         self.onDownstreamHandshake(op, stream);
     });
@@ -654,6 +661,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
 
     function accept_handshake_action () {
 
+        Replica.trace && console.log('HS_ACCEPT', peer_stamp);
         op_stream.on('data', self.write.bind(self));
         op_stream.on('end', function () {
             self.removeStream(op_stream);
@@ -673,6 +681,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     }
 
     function reject_handshake_action (err) {
+        Replica.trace && console.log('HS_REJECT', peer_stamp, err);
         var err_op = new Op(hs.spec.setOp('error'), err);
         op_stream.write(err_op);
         op_stream.destroy && op_stream.destroy();
