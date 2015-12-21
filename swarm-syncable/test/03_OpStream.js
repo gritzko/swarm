@@ -179,6 +179,30 @@ tape ('syncable.03.H write to a closed stream', function (t) {
     stream.end();
 });
 
+tape ('syncable.03.I opstream write', function (t) {
+    var stream = new BatStream();
+    var opstream = new OpStream(stream.pair);
+
+    stream.once('data', function (chunk) {
+        t.equal(chunk.toString(), '/Swarm#db+cluster!stamp+swarm~ssn\t\n\n');
+        stream.once('data', function (chunk) {
+            t.equal(chunk.toString(), '#stamp!time\t\n\n');
+            stream.once('data', function (chunk) {
+                t.fail(chunk.toString());
+            });
+        });
+    });
+    stream.on('end', function () {
+        t.end();
+    });
+    var parsed = Op.parse('/Swarm#db+cluster!stamp+swarm~ssn.on\t\n' +
+                          '/Model#stamp!time.on\t\n');
+
+    t.equal(parsed.ops.length, 2);
+    opstream.write(parsed.ops[0]);
+    opstream.write(parsed.ops[1]);
+    opstream.end();
+});
 
 // tape.skip('syncable.03.I stream .write()/.read() interface', function (t) {
 //     var stream = new BatStream();
