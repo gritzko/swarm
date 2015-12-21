@@ -127,8 +127,8 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
             hs.patch.forEach(function(op){
                 kv[op.name()] = op.value;
             });
-            if (kv['.last_ds_ssn']) {
-                this.last_ds_ssn = parseInt(kv['.last_ds_ssn']);
+            if (kv['last_ds_ssn']) {
+                this.last_ds_ssn = parseInt(kv['last_ds_ssn']);
             } else {
                 this.last_ds_ssn = 0;
             }
@@ -395,7 +395,6 @@ Replica.prototype.close = function (callback, err) {
     // TODO FINISH processing all ops,
     // don't accept any further ops
     var self = this;
-    var err_op = err ? new Op('.error', err) : null;
 
     var srv_urls = Object.keys(this.servers);
     for(var i=0; i<srv_urls.length; i++) {
@@ -403,7 +402,6 @@ Replica.prototype.close = function (callback, err) {
     }
 
     var stamps = Object.keys(this.streams);
-    var closing = 0;
 
     var check_count = 0;
     var close_check = setInterval(try_close, 100);
@@ -720,7 +718,7 @@ Replica.prototype.removeStream = function (op_stream) {
         delete this.streams[stamp];
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
-        op_stream.isOpen() && op_stream.end(off);
+        op_stream.isOpen() && op_stream.end(new Op(off));
     } else {
         console.warn('the stream is not on the list', stamp);
     }
