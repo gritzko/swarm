@@ -27,7 +27,7 @@
       "swarm-client":   "^1.0.7",
       "minimist":       "^1.2.0",
       "stream-url-ws":  "^0.1.2",
-      "stream-url-node":"^0.0.1"
+      "stream-url-node":"~0.0.1"
   },
   "scripts": {
     "test": "true"

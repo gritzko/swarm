@@ -383,9 +383,9 @@ Replica.prototype.done = function (request) {
 // replay all subscriptions to a newly connected upstream
 Replica.prototype.upscribe = function () {
     var tis = Object.keys(this.entries);
-    for(var i=0; i<this.length; i++){
+    for(var i=0; i<tis.length; i++){
         var entry = this.entries[tis[i]];
-        entry.queueOps([new Op('.on')]);
+        entry.queueOps([new Op(tis[i] + '.on', null)]);
     }
 };
 
