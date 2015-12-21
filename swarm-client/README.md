@@ -1,4 +1,4 @@
-# Swarm: browser client
+# Swarm: generic client
 
 A Swarm sync client.
 Use dependency injection for any particular storage or transport method (LevelUP and stream-url based, respectively).

@@ -1,7 +1,8 @@
+'use strict';
 var replica = require('swarm-replica');
 var Client = require('./src/Client');
 
-var Swarm = { 
+var Swarm = {
     Client: Client
 };
 

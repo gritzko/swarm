@@ -1,4 +1,4 @@
-# Swarm: browser client
+# Swarm: command-line client
 
 A Swarm client caching all the data in a LevelDB database.
 

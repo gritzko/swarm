@@ -1,0 +1,34 @@
+{
+  "name": "swarm-browser",
+  "version": "1.0.8",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "test/*.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "browser": "index.js",
+  "dependencies": {
+      "level-js":       "^2.2.3",
+      "swarm-client":   "^1.0.7",
+      "stream-url-ws":  "^0.1.2"
+  },
+  "devDependencies": {
+      "swarm-server":   "^1.0.6",
+      "stream-url-node":"^0.0.1"
+  },
+  "scripts": {
+    "test": "webpack test/test.js test/bundle.js"
+  }
+}

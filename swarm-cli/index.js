@@ -20,7 +20,7 @@ options.ssn_id = argv.ssn_id || argv.s;
 options.db_id = argv.db_id || argv.d;
 
 var db_path = argv.db_path || argv.p ||
-    (options.ssn_id ? options.ssn_id+'.db' : 'swarm_client.db');
+    (options.ssn_id ? options.db_id+'-'+options.ssn_id+'.db' : 'swarm_client.db');
 if (!fs.existsSync(db_path)) {
     fs.mkdirSync(db_path);
 }
