@@ -1,7 +1,7 @@
 "use strict";
 var fs = require('fs');
 var level = require('level');
-var Swarm = require('../');
+var Swarm = require('swarm-client');
 require('stream-url-node');
 require('stream-url-ws');
 var argv = require('minimist')(process.argv.slice(2));
