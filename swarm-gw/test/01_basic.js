@@ -1,7 +1,6 @@
 "use strict";
 var Swarm = require('..');
 var Gateway = Swarm.Gateway;
-var only = require('tap').test;
 var tape = require('tap').test;
 
 var bat = require('swarm-bat');
@@ -24,8 +23,8 @@ tape ('Gateway.1.A.empty model', function (tap) {
     stream.write('/Model.STATE\t{}\n');
     stream.on('data', function (data) {
         var reply = data.toString();
-        tap.ok(/\/Model#[\d\w]+\+anon![\d\w]+\+anon\.STATE\t{}\n$/.test(reply),
-               'Proper reply for an empty model');
+        tap.match(data.toString(),
+                  /\/Model#[\d\w~]+\+anon![\d\w~]+\+anon\.STATE\t{}\n$/);
         host.close();
         tap.end();
     });
@@ -40,10 +39,8 @@ tape ('Gateway.1.B.nonempty model', function (tap) {
 
     stream.write('/Model.STATE\t{"key":"value"}\n');
     stream.on('data', function (data) {
-        var reply = data.toString();
-        tap.ok(/\/Model#[\d\w]+\+anon![\d\w]+\+anon\.STATE\t{"key":"value"}\n$/.test(reply),
-               'Proper reply for given initial state');
-
+        tap.match(data.toString(),
+                  /\/Model#[\d\w~]+\+anon![\d\w~]+\+anon\.STATE\t{"key":"value"}\n$/);
         host.close();
         tap.end();
     });
@@ -69,9 +66,9 @@ tape ('Gateway.1.C.two streams', function (tap) {
     stream2.on('data', function (data) {
         var reply = data.toString();
         tap.ok(subscribed, 'Received a message on second stream after subscription');
-        tap.ok(/\/Model#[\d\w]+\+anon![\d\w]+\+anon\.STATE\t{"key":"value"}\n$/.test(reply),
-               'Proper reply for given initial state');
-
+        tap.match(reply,
+                  /\/Model#[\d\w~]+\+anon![\d\w~]+\+anon\.STATE\t{"key":"value"}\n$/,
+                  'Proper reply for given initial state');
         host.close();
         tap.end();
     });
