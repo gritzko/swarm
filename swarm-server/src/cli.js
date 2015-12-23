@@ -40,7 +40,7 @@ function report_start (err) {
     if (argv.repl) {
         global.Swarm = Swarm;
         global.Server = server;
-        var repl = require('repl')
+        var repl = require('repl');
         repl.start({
             prompt: '\u2276 ',
             useGlobal: true,
@@ -48,3 +48,8 @@ function report_start (err) {
         });
     }
 }
+
+
+process.on('uncaughtException', function (err) {
+  console.error("UNCAUGHT EXCEPTION", err, err.stack);
+});

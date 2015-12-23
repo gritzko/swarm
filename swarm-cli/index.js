@@ -53,3 +53,8 @@ if (argv.repl) {
         replMode: repl.REPL_MODE_STRICT
     })
 }
+
+
+process.on('uncaughtException', function (err) {
+  console.error("UNCAUGHT EXCEPTION", err, err.stack);
+});
