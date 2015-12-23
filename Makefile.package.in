@@ -2,7 +2,7 @@ BIN = ../node_modules/.bin
 .PHONY: install test clean
 
 test:
-	@if [ -d "test" ]; then $(BIN)/tap test/*.js; else true; fi;
+	@if [ -d "test" ]; then $(BIN)/tap $(TAP_PARAMS) test/*.js; else true; fi;
 
 clean:
 	@rm -rf node_modules
