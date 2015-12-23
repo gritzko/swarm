@@ -37,6 +37,7 @@ function report_start (err) {
         process.exit(-1);
     }
     console.log('swarm database', argv.db, 'is listening at', argv.listen);
+    run_scripts();
     if (argv.repl) {
         global.Swarm = Swarm;
         global.Server = server;
@@ -47,6 +48,16 @@ function report_start (err) {
             replMode: repl.REPL_MODE_STRICT
         });
     }
+}
+
+
+function run_scripts () {
+    var path = require('path');
+    var scripts = argv._ || [];
+    scripts.forEach(function(script){
+        var p = path.resolve('.', script);
+        require(p);
+    });
 }
 
 

@@ -25,6 +25,7 @@ if (!fs.existsSync(db_path)) {
     fs.mkdirSync(db_path);
 }
 options.db = level(db_path);
+options.callback = run_scripts;
 
 var client = new Swarm.Client(options);
 
@@ -38,9 +39,16 @@ function onExit (code) {
     });
 }
 
-if (argv._) {
-    // TODO run scripts
+
+function run_scripts () {
+    var path = require('path');
+    var scripts = argv._ || [];
+    scripts.forEach(function(script){
+        var p = path.resolve('.', script);
+        require(p);
+    });
 }
+
 
 if (argv.repl) {
     console.log('REPL');
@@ -51,7 +59,7 @@ if (argv.repl) {
         prompt: '\u2276 ',
         useGlobal: true,
         replMode: repl.REPL_MODE_STRICT
-    })
+    });
 }
 
 

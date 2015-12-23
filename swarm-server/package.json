@@ -1,6 +1,6 @@
 {
     "name": "swarm-server",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -21,7 +21,7 @@
     ],
     "main": "./src/Server.js",
     "bin":  {
-        "swarm-server": "./src/cli.js"
+        "swarm-server": "./src/cli-server.js"
     },
     "dependencies": {
         "swarm-stamp": "^1.0.0",
