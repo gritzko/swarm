@@ -28,6 +28,7 @@ var Entry  = require('./Entry');
 //      db_id
 //      connect
 //      listen
+//      callback
 //      snapshot_slave
 //      prefix
 //      clock

@@ -3,5 +3,89 @@
         <script type="text/javascript" src="bundle.js"></script>
     </head>
     <body>
+        <img src='test_card.png' style='float:right; width: 50%; padding: 20px'/>
+        <h1>Swarm client test page</h1>
+
+        <p>This page is a simple Swarm-in-a-browser demo.
+        The replica connects to the server by WebSocket
+        and caches data in IndexedDB. You may open several
+        windows to see how they sync, restart the client,
+        restart the server, kill the server and work offline,
+        and so on and so forth.
+
+        <h2>Server</h2>
+
+        <p> First, start a server with debugging on:
+        <p> <tt>swarm-server --db test --listen ws://localhost:10000
+                -D --repl</tt>
+
+        <p>Then, open this index.html in the browser.
+        <p>
+        <label>status
+            <input id='online_status' value='offline' disabled size='5'/>
+        </label>
+
+
+        <h2>Micro MVC demo</h2>
+        <p>Now, you can play with a syncable object:</p>
+
+        <p><label>voice
+            <select id=voice>
+                <OPTION value="1">one</OPTION>
+                <OPTION selected value="2">two</OPTION>
+                <OPTION value="3">three</OPTION>
+            </select>
+        </label>
+        <label>
+            comment
+            <input type=text id=comment value='microphone check'/>
+        </label>
+        </p>
+
+        <p>See the debug log of the server for the actual ops
+        (model mutations). Open another window to see them sync
+        (preferably, in the incognito mode, so the database is not shared).
+        Mutations are saved both at the client and at the server.
+        Restart the client and the server, work offline.
+
+        <h2>API</h2>
+        <p>Try out the API in the console:</p>
+        <tt><pre>
+    var z = Swarm.get('/Model#one');
+    z.get('comment');
+    z.comment;
+    // this affects the controls above
+    z.set({voice: 3});
+    z.set({comment: 'check check check'});
+
+    var m = new Swarm.Model({a: 1});
+    m.get('a');
+    m._version
+    m._version === m._id
+    m.set({b: 2})
+    m._version
+    m._id
+
+    // in the other window:
+    var m = Swarm.get('one'); // same as /Model#one
+    m.set({comment: 'check from another window'});
+
+    // collections:
+    var s = new Swarm.Set();
+    s.add(m);
+    s.add(one);
+        </pre></tt>
+
+        <h2>CLI client</h2>
+
+        Try the API from the command line.
+
+        <tt><pre>
+    swarm-cli --db test --connect ws://localhost:10000 --user bob
+    &#x2276; Swarm; // see the classes available
+    &#x2276; var m = Swarm.get('one');
+    &#x2276; m.set({comment: "command line client"});
+        </pre></tt>
+
     </body>
 </html>

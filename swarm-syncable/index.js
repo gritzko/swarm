@@ -1,3 +1,4 @@
+'use strict';
 var stamp = require("swarm-stamp");
 
 var Swarm = {
@@ -7,8 +8,13 @@ var Swarm = {
     Syncable: require('./src/Syncable'),
     OpStream: require('./src/OpStream'),
     Model: require('./src/Model'),
-    Set: require('./src/Set')
+    Set: require('./src/Set'),
+    get: get_fn
 };
+
+function get_fn (id) {
+    return Swarm.Host.localhost.get(id);
+}
 
 Object.keys(stamp).forEach(function(key){
     Swarm[key] = Swarm[key] || stamp[key];
