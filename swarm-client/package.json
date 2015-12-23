@@ -32,6 +32,6 @@
       "levelup": "^1.3.0"
   },
   "scripts": {
-    "test": "true"
+    "test": "make test"
   }
 }
