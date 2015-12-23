@@ -194,7 +194,7 @@ Entry.prototype.ssn_id = function () {
 };
 
 
-Entry.prototype.process = function () {
+Entry.prototype.process = function (op, queue, db_read_cb) {
     //var is_source_upstream = this.current.source === this.upstream();
     var op = this.op;
 
@@ -241,7 +241,7 @@ Entry.prototype.processOn = function () {
     var upstream = this.upstream();
     var op = this.op;
     var subs = this.state.subscribers;
-    var stateful = '0'!==this.state.state;
+    var stateful = '0'!==this.state.tip;
     var patch_up, patch_down;
 
     // subscribe to the uplink
@@ -260,7 +260,14 @@ Entry.prototype.processOn = function () {
         // TODO leave this for downstream-stamped objects only
         // TODO consider LRU/LFU caches
         // FIXME tests for cache poisoning
+        var dstream_has_no_state = (this.op.value==='0' || !this.op.value);
+        var no_upstream = !upstream || this.op.source===upstream;
         patch_down = this.op.reply('on', '');
+        if (dstream_has_no_state && no_upstream) {
+            patch_down.patch = [new Op(this.op.typeid()+'!0.~state', '')];
+        } else {
+            patch_down.patch = [];
+        }
     }
 
     if (patch_up) {
@@ -349,6 +356,7 @@ Entry.prototype.patchUpstream = function () {
 // our arrival order. We also add an acknowledgement for the received patch.
 Entry.prototype.patchDownstream = function () {
     var pos = this.op.value||'0', add_state = false;
+    var upstream = this.upstream();
     if (!Lamp.is(pos)) {
         return this.op.error('malformed bookmark');
     }
@@ -375,7 +383,6 @@ Entry.prototype.patchDownstream = function () {
         this.loadMoreData(pos);
         return LATER;
     }
-
 
     var patch = this.makePatch(pos, ack_vv, add_state);
 

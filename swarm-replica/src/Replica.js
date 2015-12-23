@@ -312,6 +312,7 @@ Replica.prototype.send = function (op) {
             this.snapshot_slave.write(op);
         }
     } else {
+        Replica.debug && console.log('<='+this.ssn_id+'\t'+op.toString());
         stream.write(op);
     }
 };
@@ -477,7 +478,6 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
     });
 
 };
-
 
 
 //        N E T W O R K I N G        //

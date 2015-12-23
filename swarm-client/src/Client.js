@@ -3,7 +3,7 @@ var Swarm = require('swarm-replica');
 var Replica = Swarm.Replica;
 var Host = Swarm.Host;
 //var EventEmitter = require('eventemitter3');
-var util = require('util');
+// var util = require('util');
 
 // TODO import ws stream wrapper in a browser
 
