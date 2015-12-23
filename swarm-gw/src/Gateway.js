@@ -104,20 +104,23 @@ Gateway.prototype.sendState = function (obj, stream_id) {
 // a new subscriber for an object
 Gateway.prototype.ON = function (op, stream_id, once) {
     var spec = op.spec.filter('/#');
-    var subs = this.subscribers[spec], self = this;
     var obj = this.host.get(spec);
-    //if (obj.hasState()) {
-    //    this.sendState(obj, stream_id);
-    //} // else the 'init' event will trigger our onChange
+    return this._ON(obj, stream_id);
+};
+
+Gateway.prototype._ON = function (obj, stream_id) {
+    var self = this;
+    var spec = obj.typeid();
+    var subs = this.subscribers[spec]
     if (subs) {
         subs.push(stream_id);
     } else {
         subs = this.subscribers[spec] = [stream_id];
         obj.on('change', self.onChange); // TODO test for machinegunning
     }
-    obj.onInit(function(){
+    if (obj.hasState()) {
         self.sendState(obj, stream_id);
-    });
+    }
 };
 
 // Retrieve once, no listen. Equals (.ON .OFF)
@@ -158,6 +161,6 @@ Gateway.prototype.STATE = function (op, stream_id) {
     outer.set(json);
     // this triggers events that trigger onChange, so the stream gets a response
     if (!op.id()) {
-        this.ON(new Op(outer.spec(), ''), stream_id);
+        this._ON(outer, stream_id);
     }
 };
