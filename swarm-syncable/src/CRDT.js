@@ -8,14 +8,13 @@
 // in the API. A Syncable is a mere projection of its CRDT. Still, all mutations
 // originate at a Syncable. This architecture is very similar to MVC, where
 // Syncable is a "View", CRDT is a "Model" and the Host is a "Controller".
-
-// CRDT itself is an abstract no-op class, all the actual CRDTs inherit from it.
-
-// The same applies to Syncable.
-function CRDT (state_string, syncable) {
+// CRDT itself is an abstract no-op class that manifests all the necessary
+// methods. All the actual CRDTs may inherit from it for simply take it a an
+// example.
+function CRDT (serialized_state_string, syncable) {
     this._version = null;
     this._syncable = syncable || null;
-    state_string; // ...parse the serialized state
+    serialized_state_string; // must be parsed in the ancestor class
 }
 module.exports = CRDT;
 
@@ -29,14 +28,27 @@ CRDT.prototype.updateSyncable = function (obj) {
 
 // Returns the serialized state that the constructor understands.
 CRDT.prototype.toString = function () {
-    return '';
+    return 'this must be overloaded';
 };
 
-// it must never throw!
+// Syncable CmRDT objects use state machine replication. The only
+// difference from the classic case is that operations are not linear
+// but partially ordered (http://bit.ly/1Nl3ink, http://bit.ly/1F07aZ0)
+// Thus, a state of a CRDT object is transferred to a replica using
+// some combination of state snapshots (POJO) and operation logs.
+// The .~state pseuso-operation ferries states from replica to replica.
+// Its value is produced by CRDT's toString() and consumed by the
+// constructor. Other ops are consumed by write() which is a dispatcher
+// method. This method must never throw!
 CRDT.prototype.write = function (op) {
     switch(op.name()) {
-    // case 'op': this.op(op.value, op.stamp());
-    default: console.error("Syncable has no ops", op);
+    case 'noop': this.noop(op.value, op.stamp()); break;
+    default: console.error("no such op", op);
     }
     this._version = op.stamp();
+};
+
+
+CRDT.prototype.noop = function (value, stamp) {
+    "do nothing";
 };
