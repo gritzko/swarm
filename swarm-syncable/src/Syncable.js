@@ -22,10 +22,10 @@ function Syncable(init_op, host) {
     this._id = null;
     // The most correct way to specify a version is the version vector,
     // but that one may consume more space than the data itself in some cases.
-    // Hence, _version is not a fully specified version vector (see version()
-    // instead). _version is essentially is the last operation timestamp
-    // (Lamport-like, i.e. "time+source")
+    // Hence, _version is not a version vector (see version() but the last
+    // operation's timestamp (Lamport-like, i.e. "time+source")
     this._version = null;
+    // EventEmitter stuff
     this._events = {change: null};
 
     if (host===undefined) { // null means "no host"

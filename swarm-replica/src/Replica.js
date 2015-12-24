@@ -75,7 +75,7 @@ function Replica (options, callback) {
     if (!options.db) { // tests
         throw new Error('need a db (levelup-compatible)');
     }
-    this.db = options.db;
+    this.db = options.db || Swarm.createDatabase(this.db_id);
     // check the existing db; depending on the outcome,
     // we'll proceed with the network stuff
     if (options.prefix===true) {
@@ -319,6 +319,7 @@ Replica.prototype.send = function (op) {
 
 
 Replica.prototype.onSnaphotSlaveOp = function (op) {
+    Replica.trace && console.log('~>'+this.ssn_id, op.toString());
     if (op.name()==='on' || op.name()==='off') {
         return;
     }

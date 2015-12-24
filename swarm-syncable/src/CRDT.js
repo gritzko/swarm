@@ -9,7 +9,7 @@
 // originate at a Syncable. This architecture is very similar to MVC, where
 // Syncable is a "View", CRDT is a "Model" and the Host is a "Controller".
 // CRDT itself is an abstract no-op class that manifests all the necessary
-// methods. All the actual CRDTs may inherit from it for simply take it a an
+// methods. All the actual CRDTs may inherit from it or simply take it as an
 // example.
 function CRDT (serialized_state_string, syncable) {
     this._version = null;

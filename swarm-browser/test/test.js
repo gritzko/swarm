@@ -3,11 +3,11 @@ var Swarm = require('../'); //('swarm-browser');
 
 var app = window.app = {};
 
-app.db = Swarm.DB('test')
-app.db.open(function(){
-    console.log('open', arguments);
-    start_client();
-});
+// app.db.open(function(){
+//     console.log('open', arguments);
+//     start_client();
+// });
+start_client();
 
 function start_client () {
     app.client = new Swarm.Client({
@@ -15,7 +15,6 @@ function start_client () {
         ssn_id: 'test',
         connect: 'ws://localhost:10000',
 //        empty_db: true,
-        db:     app.db,
         callback: start_mvc
     });
     console.log(app.client);
@@ -26,11 +25,8 @@ var model;
 
 
 function start_mvc () {
-    model = new Swarm.Model({
-        voice:   2,
-        comment: "microphone check"
-    });
-    render();
+    model = new Swarm.get('/Model#form');
+    //render();
     model.on('change', render);
     var voice_el = window.document.getElementById('voice');
     var comment_el = window.document.getElementById('comment');

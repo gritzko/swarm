@@ -11,6 +11,7 @@ var argv = require('yargs')
     .alias('D', 'debug')
     .alias('T', 'trace')
     .alias('p', 'db_path')
+    .alias('a', 'api')
     .default('db_path', 'swarm.db')
     .argv;
 
@@ -21,8 +22,9 @@ if (argv.debug) {
 if (argv.trace) {
     Swarm.Replica.trace = true;
 }
+Swarm.Host.multihost = true;
 
-var server = new Swarm.Server({
+var server = Swarm.Server.local = new Swarm.Server({
         listen: argv.listen,
         ssn_id: 'swarm~0',
         db_id:  argv.db,

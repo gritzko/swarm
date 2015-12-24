@@ -39,7 +39,7 @@ function Server (options) {
         ssn_id: options.ssn_id,
         db_id:  options.db_id,
         clock:  options.clock,
-        api:    false, // FIXME api?
+        api:    false,
         snapshot: 'immediate'
     });
 

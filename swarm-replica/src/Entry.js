@@ -98,9 +98,10 @@ Entry.prototype.prependStoredRecords= function (records) {
 };
 
 
-Entry.prototype.appendNewRecord = function () {
-    this.records.push(this.op);
-    var stamp = this.op.stamp();
+Entry.prototype.appendNewRecord = function ( ugly_op ) {
+    var op = ugly_op || this.op;
+    this.records.push(op);
+    var stamp = op.stamp();
     if (stamp>this.state.tip) { // fast path
         this.state.tip = stamp;
     } else { // prepend reordered op keys to ensure arrival order
@@ -113,8 +114,8 @@ Entry.prototype.appendNewRecord = function () {
     }
     this.save_queue.push({
         type: 'put',
-        key:  '!' + this.state.tip + '.' + this.op.name(),
-        value:this.op.value
+        key:  '!' + this.state.tip + '.' + op.name(),
+        value:op.value
     });
 };
 
@@ -264,7 +265,9 @@ Entry.prototype.processOn = function () {
         var no_upstream = !upstream || this.op.source===upstream;
         patch_down = this.op.reply('on', '');
         if (dstream_has_no_state && no_upstream) {
-            patch_down.patch = [new Op(this.op.typeid()+'!0.~state', '')];
+            var zero_state = new Op(this.op.typeid()+'!0.~state', '');
+            this.appendNewRecord(zero_state); //FIXME
+            patch_down.patch = [zero_state];
         } else {
             patch_down.patch = [];
         }
@@ -356,7 +359,6 @@ Entry.prototype.patchUpstream = function () {
 // our arrival order. We also add an acknowledgement for the received patch.
 Entry.prototype.patchDownstream = function () {
     var pos = this.op.value||'0', add_state = false;
-    var upstream = this.upstream();
     if (!Lamp.is(pos)) {
         return this.op.error('malformed bookmark');
     }

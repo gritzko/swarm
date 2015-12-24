@@ -4,7 +4,7 @@ SERVER="node ../../swarm-server/src/cli.js"
 # SERVER=swarm-server
 
 if webpack test.js bundle.js ; then
-    $SERVER -l ws://localhost:10000 -d test --repl -D -p test.db/
+    $SERVER -l ws://localhost:10000 -d test --repl -D -p test.db/ -- init.js
     echo Now, please open swarm/swarm-browser/test/index.html in the browser
 fi
 
