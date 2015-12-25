@@ -72,10 +72,7 @@ function Replica (options, callback) {
     this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
     this.clock = null;
     // db related stuff
-    if (!options.db) { // tests
-        throw new Error('need a db (levelup-compatible)');
-    }
-    this.db = options.db || Swarm.createDatabase(this.db_id);
+    this.db = options.db || Replica.createDatabase(this.db_id);
     // check the existing db; depending on the outcome,
     // we'll proceed with the network stuff
     if (options.prefix===true) {
@@ -93,6 +90,11 @@ util.inherits(Replica, EventEmitter);
 module.exports = Replica;
 Replica.debug = false;
 Replica.trace = false;
+
+
+Replica.createDatabase = function (db_id) {
+    throw new Error('this dependency injection factory method must be overloaded');
+};
 
 
 function isNFE (err) {

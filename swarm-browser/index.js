@@ -5,7 +5,7 @@ var levelup = require('levelup');
 require('stream-url-ws');
 
 window.Swarm = Swarm;
-Swarm.createDatabase = function (name) {
+Swarm.Replica.createDatabase = function (name) {
     return levelup(name, { db: level });
 };
 
