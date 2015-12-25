@@ -4,5 +4,12 @@ BIN = ../node_modules/.bin
 test:
 	@if [ -d "test" ]; then $(BIN)/tap $(TAP_PARAMS) test/*.js; else true; fi;
 
+release:
+	npm version patch
+	git add package.json
+	git commit
+	git push
+	npm publish .
+
 clean:
 	@rm -rf node_modules
