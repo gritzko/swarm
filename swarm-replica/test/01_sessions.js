@@ -1,8 +1,7 @@
-
 "use strict";
-var stamp = require('swarm-stamp');
-var Replica = require('..').Replica;
-var sync = require('swarm-syncable');
+var Swarm = require('..');
+var Replica = Swarm.Replica;
+var LamportClock = Swarm.LamportClock;
 
 var levelup = require('levelup');
 var memdown = require('memdown');
@@ -56,7 +55,7 @@ tape ('replica.01.A ssn assignment', function(t){
         db_id:      'db',
         db:         db,
         connect:    'lo:2Aup',
-        clock:      stamp.LamportClock,
+        clock:      LamportClock,
         listen:     'loopback:2A',
         adopt:      true,
         prefix:     true,
@@ -181,7 +180,7 @@ tape ('replica.01.B handshake errors', function (t) {
         db_id:      'db',
         db:         db,
         upstream:   'loopback:1B_up',
-        clock:      stamp.LamportClock,
+        clock:      LamportClock,
         listen:     'loopback:2B',
         prefix:     true,
         auth_policy: no_bye_policy,
@@ -197,10 +196,10 @@ tape ('replica.01.B handshake errors', function (t) {
 
     replica.once('connection', function (ev) {
         if (!ev.upstream) {return;}
-        var host = new sync.Host({clock: stamp.LamportClock});
+        var host = new Swarm.Host({clock: LamportClock});
         replica.addOpStreamDown(host);
         host.on('writable', function () {
-            new sync.Model({test:true}, host);
+            new Swarm.Model({test:true}, host);
         });
     });
 
