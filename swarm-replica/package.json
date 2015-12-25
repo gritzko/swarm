@@ -1,6 +1,6 @@
 {
     "name": "swarm-replica",
-    "version": "1.0.8",
+    "version": "1.0.12",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -22,8 +22,7 @@
     "main": "index.js",
     "browser": "index.js",
     "dependencies": {
-        "swarm-stamp": "^1.0.0",
-        "swarm-syncable": "^1.0.3",
+        "swarm-syncable": "1.0.x",
         "stream-url": "~0.0.12",
         "eventemitter3": "~1.1.1"
     },
