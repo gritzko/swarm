@@ -34,7 +34,7 @@ tape ('syncable.05.A Model set/get - Host protocol', function (t) {
     host.on('end', function() {
         t.equal(collect,
             '/Swarm+Host#db!00001+anon~5A.on\t\n\n' +
-            '/Model#00002+anon~5A!0.on\t0\n' +
+            '/Model#00002+anon~5A!0.on\t\n' +
                 '\t!00002+anon~5A.~state\t{"00002+anon~5A":{"x":1}}\n\n' +
             '/Model#00002+anon~5A!00003+anon~5A.set\t{"y":2}\n' +
             '/Model#00002+anon~5A!00004+anon~5A.set\t{"x":3}\n',

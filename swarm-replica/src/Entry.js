@@ -244,6 +244,9 @@ Entry.prototype.processOn = function () {
     var subs = this.state.subscribers;
     var stateful = '0'!==this.state.tip;
     var patch_up, patch_down;
+    if (!this.op.value) {
+        this.op.value = '0'; // fast fix
+    }
 
     // subscribe to the uplink
     if (subs.length===0 && upstream) {
@@ -261,7 +264,7 @@ Entry.prototype.processOn = function () {
         // TODO leave this for downstream-stamped objects only
         // TODO consider LRU/LFU caches
         // FIXME tests for cache poisoning
-        var dstream_has_no_state = (this.op.value==='0' || !this.op.value);
+        var dstream_has_no_state = this.op.value==='0';
         var no_upstream = !upstream || this.op.source===upstream;
         patch_down = this.op.reply('on', '');
         if (dstream_has_no_state && no_upstream) {
