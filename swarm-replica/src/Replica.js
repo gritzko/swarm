@@ -541,7 +541,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.upstream_stamp = hs_op.stamp();
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', function () {
-        self.removeStream(op_stream);
+        self.removeStream(op_stream, true);
     });
     Replica.debug && console.log('U>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
@@ -673,7 +673,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
         Replica.trace && console.log('HS_ACCEPT', peer_stamp);
         op_stream.on('data', self.write.bind(self));
         op_stream.on('end', function () {
-            self.removeStream(op_stream);
+            self.removeStream(op_stream, true);
         });
         self.streams[peer_stamp] = op_stream;
         op_stream.source = peer_stamp;
@@ -718,7 +718,7 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
 };
 
 
-Replica.prototype.removeStream = function (op_stream) {
+Replica.prototype.removeStream = function (op_stream, closed) {
     if (!op_stream) {
         throw new Error('no op_stream given to removeStream');
     }
@@ -732,11 +732,16 @@ Replica.prototype.removeStream = function (op_stream) {
         this.upstream_stamp = null;
     }
     if (stamp in this.streams) {
-        op_stream.removeAllListeners();
+        op_stream.removeAllListeners('data');
+        op_stream.removeAllListeners('end');
+
         delete this.streams[stamp];
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
-        op_stream.isOpen() && op_stream.end(new Op(off));
+        if (!closed)
+            op_stream.isOpen() && op_stream.end(new Op(off));
+        else
+            op_stream.end();
     } else {
         console.warn('the stream is not on the list', stamp);
     }

@@ -64,6 +64,11 @@ function OpStream (stream, options) {
     //options.burstWaitTime;
     //OpStream.debug && console.log("OpStream open", this.options);
     this.readable = false;
+
+    this.once('finish', function on_finish () {
+        stream.end();
+        stream.destroy && stream.destroy();
+    });
 }
 util.inherits(OpStream, Duplex);
 module.exports = OpStream;
@@ -94,8 +99,6 @@ OpStream.prototype._write = function (op, encoding, callback) {
     callback();
 };
 
-OpStream.prototype.deliver = OpStream.prototype.send = OpStream.prototype.write;
-
 OpStream.prototype.flush = function () {
     if (!this.stream) {return;}
     var parcel = this.pending_s.join('');
@@ -115,20 +118,6 @@ OpStream.prototype.flush = function () {
 OpStream.prototype.isOpen = function () {
     return !!this.stream;
 };
-
-
-OpStream.prototype.end = function (something) {
-    if (!this.stream) {
-        throw new Error('this op stream is not open');
-    }
-    if (something) {
-        this.write(something);
-    }
-    this.stream.end();
-    this.stream.destroy && this.stream.destroy();
-    this.stream = null;
-};
-
 
 OpStream.prototype.onStreamReadable = function () {
     var buf;
