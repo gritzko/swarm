@@ -149,6 +149,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
         }
     }
     options.connect = options.connect || options.upstream; // old name
+    this.connects = [];
     if (options.connect) {
         this.connect();
     } else if (!this.clock) {
@@ -162,9 +163,9 @@ Replica.prototype.connect = function (url) {
         throw new Error('db not specified');
     }
     url = url || this.options.connect;
-    stream_url.connect(this.options.connect, {
-        reconnect: true // TODO  reconnect: true
-    }, this.addStreamUp.bind(this));
+    this.connects.push(stream_url.connect(this.options.connect, {
+        reconnect: true
+    }, this.addStreamUp.bind(this)));
 };
 
 // The end of initialization: replica creates its logical clocks.
@@ -415,6 +416,10 @@ Replica.prototype.close = function (callback, err) {
 
     var check_count = 0;
     var close_check = setInterval(try_close, 100);
+
+    self.connects.forEach(function (c) {
+        c.disable();
+    });
 
     while (stamps.length) {
         var stamp = stamps.pop();
