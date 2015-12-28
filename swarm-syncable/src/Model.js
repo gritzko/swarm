@@ -35,14 +35,14 @@ Model.prototype.set = function (keys_values) {
     var bad = Object.keys(keys_values).some(function(key){
         return !Syncable.reFieldName.test(key);
     });
+    if (bad) {
+        throw new Error("malformed field name");
+    }
     for(var key in keys_values) {
         var val = keys_values[key];  // FIXME ugly
         if (val._type) {
             keys_values[key] = {ref: val.typeid()};
         }
-    }
-    if (bad) {
-        throw new Error("malformed field name");
     }
     return this.submit( 'set', JSON.stringify(keys_values) );
 };
@@ -94,7 +94,10 @@ Model.prototype.keys = function () {
 };
 
 Model.prototype.toString = function () {
-    return JSON.stringify(this, this.keys());
+    var self = this;
+    return JSON.stringify(self, function (key, val) {
+        return (this != self || Syncable.reFieldName.test(key)) ? val : undefined;
+    });
 };
 
 

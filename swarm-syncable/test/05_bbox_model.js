@@ -378,3 +378,19 @@ tape ('syncable.05.F snapshotting', function (t) {
 
     });
 });*/
+
+tape ('syncable.05.H Model serialization', function (t) {
+    var host = new Host({
+        ssn_id: 'anon~5A',
+        db_id: 'db',
+        clock: new stamp.LamportClock('anon~5A')
+    });
+    var m = new Model({a:1, b: "2"}, host);
+    t.equal(m.toString(), '{"a":1,"b":"2"}');
+    m.set({a:[1,2,3]});
+    t.equal(m.toString(), '{"a":[1,2,3],"b":"2"}');
+    m.set({b:{c:{},d:[]}});
+    t.equal(m.toString(), '{"a":[1,2,3],"b":{"c":{},"d":[]}}');
+    host.end();
+    t.end();
+});
