@@ -27,7 +27,7 @@
         "eventemitter3": "~1.1.1"
     },
     "devDependencies": {
-        "swarm-bat": "^1.0.2",
+        "swarm-bat": "1.0.x",
         "memdown": "^1.0.0",
         "levelup": "^1.3.0"
     },

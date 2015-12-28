@@ -21,7 +21,7 @@
     "swarm-syncable": "^1.0.3"
   },
   "devDependencies": {
-    "swarm-bat": "^1.0.2"
+    "swarm-bat": "1.0.x"
   },
   "scripts": {
     "test": "make test"

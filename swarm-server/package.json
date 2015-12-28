@@ -32,7 +32,7 @@
         "yargs": "^3.30.0"
     },
     "devDependencies": {
-        "swarm-bat": "^1.0.2",
+        "swarm-bat": "1.0.x",
         "memdown": "^1.0.0",
         "rimraf": "~2.4.4"
     },

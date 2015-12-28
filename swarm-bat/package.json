@@ -1,6 +1,10 @@
 {
     "name": "swarm-bat",
-    "version": "1.0.2",
+    "version": "1.0.3",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/gritzko/swarm.git"
+    },
     "files": [
         "src/*.js",
         "bat.js",
@@ -8,6 +12,8 @@
         "README.md",
         "LICENSE"
     ],
+    "email": "swarm.js@gmail.com",
+    "license": "MIT",
     "main": "bat.js",
     "dependencies": {
         "stream-url": "~0.0.12",
