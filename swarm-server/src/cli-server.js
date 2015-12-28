@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 var Swarm = require('../');
 require('stream-url-node');
