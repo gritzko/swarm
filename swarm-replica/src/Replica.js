@@ -366,6 +366,12 @@ Replica.prototype.done = function (request) {
         save_queue.forEach(function(rec){
             rec.key = key_prefix + rec.key;
         });
+        save_queue.forEach(function(rec){
+            rec.key = key_prefix + rec.key;
+            if (!rec.value) {
+                rec.value = ' ';
+            }
+        });
 
         this.db.batch(save_queue, send_ops);
     } else {
@@ -374,10 +380,11 @@ Replica.prototype.done = function (request) {
     // second, send responses
     function send_ops (err) {
         if (err) {
+            console.error('db write fail', err);
             // must not send anything but an error
             // an acknowledgement for a non-saved op will ruin sync
             self.send(request.op.error('db write error'));
-            // TODO EXIT stop everything, terminate the process
+            // TODO FIXME EXIT stop everything, terminate the process
         } else {
             for(var i=0; i<send_queue.length; i++) {
                 self.send(send_queue[i]);
@@ -469,6 +476,7 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
         lt: lt_key // don't read the next object's ops
     }).on('data', function (data){
         data.key = data.key.substr(prefix.length);
+        if (data.value===' ') { data.value = ''; }
         recs.push(data);
     }).on('error', function(err){
         console.error('data load failed', typeid, mark, error);
