@@ -149,6 +149,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
         }
     }
     options.connect = options.connect || options.upstream; // old name
+    this.connects = [];
     if (options.connect) {
         this.connect();
     } else if (!this.clock) {
@@ -162,9 +163,9 @@ Replica.prototype.connect = function (url) {
         throw new Error('db not specified');
     }
     url = url || this.options.connect;
-    stream_url.connect(this.options.connect, {
-        reconnect: true // TODO  reconnect: true
-    }, this.addStreamUp.bind(this));
+    this.connects.push(stream_url.connect(this.options.connect, {
+        reconnect: true
+    }, this.addStreamUp.bind(this)));
 };
 
 // The end of initialization: replica creates its logical clocks.
@@ -423,6 +424,10 @@ Replica.prototype.close = function (callback, err) {
     var check_count = 0;
     var close_check = setInterval(try_close, 100);
 
+    self.connects.forEach(function (c) {
+        c.disable();
+    });
+
     while (stamps.length) {
         var stamp = stamps.pop();
         self.removeStream(stamp);
@@ -537,14 +542,17 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         // FIXME   op_stream stamps
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
-    var source = hs_op.origin();
-    op_stream.source = hs_op.stamp();
-    this.streams[hs_op.stamp()] = op_stream;
-    this.upstream_ssn = source;
-    this.upstream_stamp = hs_op.stamp();
+    var hs_op_ssn = hs_op.origin();
+    var hs_op_stamp = hs_op.stamp();
+
+    op_stream.source = hs_op_stamp;
+    this.streams[hs_op_stamp] = op_stream;
+    this.upstream_ssn = hs_op_ssn;
+    this.upstream_stamp = hs_op_stamp;
+
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', function () {
-        self.removeStream(op_stream);
+        self.removeStream(op_stream, true);
     });
     Replica.debug && console.log('U>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
@@ -553,8 +561,8 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.emit('connection', {
         op_stream: op_stream,
         upstream: true,
-        ssn_id: source,
-        stamp:  hs_op.stamp()
+        ssn_id: hs_op_ssn,
+        stamp:  hs_op_stamp,
     });
 };
 
@@ -676,7 +684,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
         Replica.trace && console.log('HS_ACCEPT', peer_stamp);
         op_stream.on('data', self.write.bind(self));
         op_stream.on('end', function () {
-            self.removeStream(op_stream);
+            self.removeStream(op_stream, true);
         });
         self.streams[peer_stamp] = op_stream;
         op_stream.source = peer_stamp;
@@ -721,7 +729,7 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
 };
 
 
-Replica.prototype.removeStream = function (op_stream) {
+Replica.prototype.removeStream = function (op_stream, closed) {
     if (!op_stream) {
         throw new Error('no op_stream given to removeStream');
     }
@@ -730,16 +738,23 @@ Replica.prototype.removeStream = function (op_stream) {
     }
     if (!op_stream) { return; }
     var stamp = op_stream.source;
-    if (stamp===this.upstream_ssn) {
+    if (stamp === this.upstream_stamp) {
         this.upstream_ssn = null;
         this.upstream_stamp = null;
+        this.emit('disconnect');
     }
+
     if (stamp in this.streams) {
-        op_stream.removeAllListeners();
+        op_stream.removeAllListeners('data');
+        op_stream.removeAllListeners('end');
+
         delete this.streams[stamp];
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
-        op_stream.isOpen() && op_stream.end(new Op(off));
+        if (!closed)
+            op_stream.isOpen() && op_stream.end(new Op(off));
+        else
+            op_stream.end();
     } else {
         console.warn('the stream is not on the list', stamp);
     }
