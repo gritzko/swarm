@@ -3,7 +3,7 @@ var stamp = require('swarm-stamp');
 var sync = require('..');
 var Op = sync.Op;
 var Model = sync.Model;
-var OpStream = sync.OpStream;
+var StreamOpSource = sync.StreamOpSource;
 var Host = sync.Host;
 var bat = require('swarm-bat');
 
@@ -20,9 +20,12 @@ tape ('syncable.05.A Model set/get - Host protocol', function (t) {
         clock: new stamp.LamportClock('anon~5A')
     });
     var collect = '';
-    host.on('data', function(op){
+    host.on('handshake', remember);
+    host.on('op', remember);
+    function remember (op){
         collect += op.toString();
-    });
+    }
+    host.emitHandshake();
     var m = new Model({x:1}, host);
     t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
@@ -129,15 +132,19 @@ tape ('syncable.05.C refs - blackbox', function (t) {
     });
 
     var bs = new bat.BatStream();
-    var os = new OpStream(bs.pair);
+    var os = new StreamOpSource(bs.pair);
 
     var bt = new bat.StreamTest(bs, REFS, t.equal.bind(t));
 
     // create syncables
     var alice = host.get('/Model#Alice+herself');
 
-    os.pipe(host);
-    host.pipe(os);
+    os.on('handshake', host.write.bind(host));
+    os.on('op', host.write.bind(host));
+    host.on('handshake', os.write.bind(os));
+    host.on('op', os.write.bind(os));
+
+    host.emitHandshake();
 
     var bob = host.get('/Model#Bob+himself');
 
@@ -337,12 +344,16 @@ tape ('syncable.05.F snapshotting', function (t) {
     });
 
     var bs = new bat.BatStream();
-    var os = new OpStream(bs.pair);
+    var os = new StreamOpSource(bs.pair);
 
     var bt = new bat.StreamTest(bs, SNAPSHOTS, t.equal.bind(t));
 
-    os.pipe(host);
-    host.pipe(os);
+    os.on('handshake', host.write.bind(host));
+    os.on('op', host.write.bind(host));
+    host.on('handshake', os.write.bind(os));
+    host.on('op', os.write.bind(os));
+
+    host.emitHandshake();
 
     bt.run(function(){
         t.equal('/Model#object' in host.crdts, false, 'no state remaining');

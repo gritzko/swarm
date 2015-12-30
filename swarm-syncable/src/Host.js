@@ -3,8 +3,7 @@ var swarm_stamp = require('swarm-stamp');
 var Spec = require('./Spec');
 var Op = require('./Op');
 var util = require("util");
-//var EventEmitter = require("eventemitter3");
-var Duplex = require('readable-stream').Duplex;
+var EventEmitter = require("eventemitter3");
 
 // ## TODO ##
 // 1. no-clock "slave mode" (make options orderly)
@@ -23,7 +22,7 @@ var Duplex = require('readable-stream').Duplex;
 function Host (options) {
     options = options || {};
     this._events = {data: null};
-    Duplex.call(this, {objectMode: true});
+    EventEmitter.call(this, {objectMode: true});
     // id, router, offset_ms
     this.options = options;
     this.ssn_id = null;
@@ -42,12 +41,24 @@ function Host (options) {
         }
         Host.localhost = this;
     }
-    var hs = this.handshake();
-    this.source = hs.stamp();
-    this._push(hs);
+    this.source = null;
 }
-util.inherits(Host, Duplex);
+util.inherits(Host, EventEmitter);
 module.exports = Host;
+
+
+Host.prototype.emitHandshake = function () {
+    this.emit('handshake', this.handshake());
+    // TODO these ifs are really annoying; snapshot slave may be its own class
+    if (this.syncables) {
+        var pre = Object.keys(this.syncables);
+        for(var i=0; i<pre.length; i++) {
+            var obj = this.syncables [pre[i]];
+            this.emit('op', new Op(obj.typeid()+'.on', obj._version||'', 'FIXME'));
+        }
+    }
+};
+
 
 Host.debug = false;
 Host.multihost = false;
@@ -73,12 +84,8 @@ Host.getOwnerHost = function (syncable) {
     } else {
         return Host.localhost;
     }
-}
-
-
-Host.prototype._read = function () {
-    return;
 };
+
 
 // import Syncable only after exporting Host - Syncable will import Host
 // itself, so otherwise it will get an incomplete object.
@@ -149,7 +156,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     if (Host.multihost) {
         Host.hosts[this.getSsnMark()] = this;
     }
-    this.emit('writable', this.handshake());
+    this.emit('writable', this.handshake()); // ?! not an OpSource event
 };
 
 
@@ -158,7 +165,7 @@ Host.prototype.getSsnMark = function () {
 };
 
 
-Host.prototype._writeHandshake = function (op) {
+Host.prototype.writeHandshake = function (op, callback) {
     var options = this.options;
     if (op.spec.op()==='error') {
         console.error('handshake failed', op.value);
@@ -177,23 +184,23 @@ Host.prototype._writeHandshake = function (op) {
         }
     } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this._push(new Op('.error', 'handshake mismatch', this.source));
+        this._emit('op', new Op('.error', 'handshake mismatch', this.source));
         this.end(); // TODO destroy?
     }
+    callback && callback();
 };
 
 // Applies a serialized operation (or a batch thereof) to this replica
-Host.prototype._write = function (op, encoding, callback) {
+Host.prototype.write = function (op, callback) {
 
-    var typeid = op.spec.typeid(), stamp = op.stamp(), self=this;
+    var typeid = op.spec.typeid();
     if (!typeid || typeid==='null') {
         throw new Error('what?');
     }
     Host.debug && console.log('->'+this.ssn_id+'\t'+op);
 
     if (op.spec.Type().time()==='Swarm') { // FIXME repeats
-        this._writeHandshake(op);
-        callback && callback();
+        this.writeHandshake(op, callback);
         return;
     }
     // NOTE that a slave host has no clocks and still functions
@@ -223,7 +230,7 @@ Host.prototype._write = function (op, encoding, callback) {
 
     if (crdt && is_changed && this.options.snapshot==='immediate') {
         var spec = op.spec.set(crdt._version, '!').set('~state', '.');
-        this._push(new Op(spec, crdt.toString()), this.source);
+        this.emit('op', new Op(spec, crdt.toString()), this.source);
     }
 
     if (callback) {
@@ -248,7 +255,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
             console.warn('upstream disappears for', typeid);
         } else {
             delete this.crdts[typeid];
-            this._push(new Op(typeid+'.off', '', this.source));
+            this._emit('op', new Op(typeid+'.off', '', this.source));
         }
         break;
     case '~state':
@@ -261,7 +268,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
         crdt._version = op.stamp();
         this.crdts[typeid] = crdt;
         if (!have_or_wait_state) { // FIXME obey
-            this._push(new Op(typeid+'.on', op.spec.stamp(), this.source));
+            this.emit ('op', new Op(typeid+'.on', op.spec.stamp(), this.source));
         }
 
         // FIXME descending state!!! see the pacman note
@@ -357,7 +364,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
     // }
-    this._push(on_op);
+    this._emit('op', on_op);
 
     return syncable;
 };
@@ -372,7 +379,7 @@ Host.prototype.abandonSyncable = function (obj) {
         delete this.syncables[typeid];
         var off_spec = obj.spec().add('.off');
         var off_op = new Op (off_spec, '', this.source);
-        this._push(off_op);
+        this._emit('op', off_op);
     }
 };
 
@@ -438,43 +445,24 @@ Host.prototype.submitOp = function (op) { // TODO sig
         throw new Error('have no state, hence can not modify');
     }
 
-    this._write(op); // not recommended by node docs :)
-    this._push(op);
+    this.write(op);
+    this._emit('op', op);
 };
 
 
-Host.prototype._push = function (op) {
+Host.prototype._emit = function (ev, op) {
     Host.debug && console.log('<-'+this.ssn_id+'\t'+op);
-    this.push(op);
+    this.emit(ev, op);
 };
 
 
 Host.prototype.__end = Host.prototype.end;
 Host.prototype.end = function (chunk, enc, cb) {
     //this.__end(chunk, enc, cb);
-    this._push(null);
-};
-
-
-Host.prototype.isOpen = function () {
-    return true;
-};
-
-/*Host.prototype.end = function () {
     this.emit('end');
 };
-Host.prototype.pause = function () {
-};
 
-// Emit subscriptions for all the open objects, include
-// last known versions and patches for unacknowledged ops.
-Host.prototype.pipe = function (opstream) {
-    this.on('data', opstream.write.bind(opstream));
-};
-*/
-Host.prototype.peerSessionId = function () {
-    return this.ssn_id;
-};
-Host.prototype.peerSessionStamp = function () { // ???!!!!
-    return this.run_id;
-};
+
+// Host.prototype.isOpen = function () {
+//     return true;
+// };
