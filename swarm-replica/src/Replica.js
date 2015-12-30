@@ -534,11 +534,14 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         // FIXME   op_stream stamps
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
-    var source = hs_op.origin();
-    op_stream.source = hs_op.stamp();
-    this.streams[hs_op.stamp()] = op_stream;
-    this.upstream_ssn = source;
-    this.upstream_stamp = hs_op.stamp();
+    var hs_op_ssn = hs_op.origin();
+    var hs_op_stamp = hs_op.stamp();
+
+    op_stream.source = hs_op_stamp;
+    this.streams[hs_op_stamp] = op_stream;
+    this.upstream_ssn = hs_op_ssn;
+    this.upstream_stamp = hs_op_stamp;
+
     op_stream.on('data', this.write.bind(this));
     op_stream.on('end', function () {
         self.removeStream(op_stream, true);
@@ -550,8 +553,8 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.emit('connection', {
         op_stream: op_stream,
         upstream: true,
-        ssn_id: source,
-        stamp:  hs_op.stamp()
+        ssn_id: hs_op_ssn,
+        stamp:  hs_op_stamp,
     });
 };
 
@@ -727,10 +730,12 @@ Replica.prototype.removeStream = function (op_stream, closed) {
     }
     if (!op_stream) { return; }
     var stamp = op_stream.source;
-    if (stamp===this.upstream_ssn) {
+    if (stamp === this.upstream_stamp) {
         this.upstream_ssn = null;
         this.upstream_stamp = null;
+        this.emit('disconnect');
     }
+
     if (stamp in this.streams) {
         op_stream.removeAllListeners('data');
         op_stream.removeAllListeners('end');
