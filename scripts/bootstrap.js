@@ -48,8 +48,10 @@ function bootstrap(config) {
           if (root.pkg.devDependencies && !ver) ver = root.pkg.devDependencies[sub.name];
           if (!ver) return done();
 
+          /* TODO: Need to do proper semver comparison?
           // ensure that this is referring to a local package
           if (ver[0] !== "^" || ver[1] !== config.currentVersion[0]) return done();
+          */
 
           var linkSrc = path.resolve(path.join(config.packagesLoc, sub.folder));
           var linkDest = path.join(nodeModulesLoc, sub.name);
@@ -71,18 +73,6 @@ function bootstrap(config) {
             });
           });
         }, done);
-      });
-
-      tasks.push(function (done) {
-        child.exec("npm install", {
-          cwd: path.join(config.packagesLoc, root.folder)
-        }, function (err, stdout, stderr) {
-          if (err != null) {
-            done(stderr);
-          } else {
-            done();
-          }
-        });
       });
 
       tasks.push(function (done) {
