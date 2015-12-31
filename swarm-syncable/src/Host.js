@@ -56,7 +56,7 @@ Host.prototype.emitHandshake = function () {
         var pre = Object.keys(this.syncables);
         for(var i=0; i<pre.length; i++) {
             var obj = this.syncables [pre[i]];
-            this.emit('op', new Op(obj.typeid()+'.on', obj._version||'', this.hs.stamp()));
+            this.emit('op', new Op(obj.typeid()+'!0.on', obj._version||'', this.hs.stamp()));
         }
     }
 };
