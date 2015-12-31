@@ -11,10 +11,13 @@ PACKAGES = \
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)
 
-.PHONY: bootstrap test
+.PHONY: bootstrap install test
 
-bootstrap:
+install:
 	@npm install .
+	@$(call foreach_package, npm install)
+
+bootstrap: install
 	@node ./scripts/bootstrap.js
 
 test:
