@@ -148,6 +148,9 @@ var BASIC = [
 
 tape ('replica.00.A basic cases', function(t){
 
+    //Swarm.StreamOpSource.debug = true;
+    //Replica.trace = true;
+
     var mux = new BatMux({
         connect: 'loopback:1Arepl',
         listen:  'loopback:1Aup',

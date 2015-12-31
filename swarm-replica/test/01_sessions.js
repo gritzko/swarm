@@ -154,7 +154,8 @@ var AUTH = [
 {
     comment: 'downstream#3 no handshake',
     query:   '[down3]#zid+author!stamp+user.set\t{}\n',
-    response:'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
+    response://'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
+             '[down3].error Error: invalid handshake\n[EOF]'
 }
 // FIXME: denied downstream push
 ];
@@ -162,7 +163,8 @@ var AUTH = [
 
 tape ('replica.01.B handshake errors', function (t) {
 
-    //Replica.debug = true;
+    // Replica.debug = true;
+    // Swarm.StreamOpSource.debug = true;
 
     var mux = new BatMux({
         connect: 'loopback:2B',
@@ -201,6 +203,7 @@ tape ('replica.01.B handshake errors', function (t) {
         host.on('writable', function () {
             new Swarm.Model({test:true}, host);
         });
+        host.emitHandshake();
     });
 
 });

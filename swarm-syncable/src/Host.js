@@ -42,19 +42,21 @@ function Host (options) {
         Host.localhost = this;
     }
     this.source = null;
+    this.hs = null;
 }
 util.inherits(Host, EventEmitter);
 module.exports = Host;
 
 
 Host.prototype.emitHandshake = function () {
-    this.emit('handshake', this.handshake());
+    this.hs = this.handshake();
+    this.emit('handshake', this.hs);
     // TODO these ifs are really annoying; snapshot slave may be its own class
     if (this.syncables) {
         var pre = Object.keys(this.syncables);
         for(var i=0; i<pre.length; i++) {
             var obj = this.syncables [pre[i]];
-            this.emit('op', new Op(obj.typeid()+'.on', obj._version||'', 'FIXME'));
+            this.emit('op', new Op(obj.typeid()+'.on', obj._version||'', this.hs.stamp()));
         }
     }
 };

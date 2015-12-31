@@ -8,30 +8,32 @@ var sync = Swarm;
 var LamportTimestamp = Swarm.LamportTimestamp;
 var Spec = sync.Spec;
 var Op = sync.Op;
-var OpStream = sync.OpStream;
+var StreamOpSource = sync.StreamOpSource;
 var Entry  = require('./Entry');
 
 // ## TODO ##
 // 1. ssn_id/db_id modes => document, unify
 
-// Swarm database node backed by an ordered op storage
-// Has an object stream based interface.
-// Consumes ops, emits ops that need to be delivered to their op.source.
-// For the actual object subscription/ op propagation
-// logic see Subscription.js.
-// Provides general infrastructure: db access, network connections.
-// Any actual replication logic is scoped to a replicated object (syncable)
-// see Entry.js.
-// Options:
-//      ssn_id
-//      user_id
-//      db_id
-//      connect
-//      listen
-//      callback
-//      snapshot_slave
-//      prefix
-//      clock
+/**
+    Swarm database node backed by an ordered op storage
+    Has an object stream based interface.
+    Consumes ops, emits ops that need to be delivered to their op.source.
+    For the actual object subscription/ op propagation
+    logic see Subscription.js.
+    Provides general infrastructure: db access, network connections.
+    Any actual replication logic is scoped to a replicated object (syncable)
+    see Entry.js.
+    Options:
+         ssn_id
+         user_id
+         db_id
+         connect
+         listen
+         callback
+         snapshot_slave
+         prefix
+         clock
+*/
 function Replica (options, callback) {
     EventEmitter.call(this);
     if (callback) {
@@ -67,7 +69,7 @@ function Replica (options, callback) {
     //
     this.snapshot_slave = options.snapshot_slave || null;
     if (this.snapshot_slave) {
-        this.snapshot_slave.on('data', this.onSnaphotSlaveOp.bind(this));
+        this.snapshot_slave.on('op', this.onSnaphotSlaveOp.bind(this));
     }
     this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
     this.clock = null;
@@ -400,7 +402,7 @@ Replica.prototype.done = function (request) {
 // replay all subscriptions to a newly connected upstream
 Replica.prototype.upscribe = function () {
     var tis = Object.keys(this.entries);
-    for(var i=0; i<tis.length; i++){
+    for(var i=0; i<this.length; i++){
         var entry = this.entries[tis[i]];
         entry.queueOps([new Op(tis[i] + '.on', null)]);
     }
@@ -516,11 +518,11 @@ Replica.prototype.addStreamUp = function (err, stream) {
         console.warn('upsteram conn fail', err);
         return;
     }
-    var op_stream = new OpStream (stream), self = this;
-    op_stream.once('data', function(data) {
+    var op_stream = new StreamOpSource (stream), self = this;
+    op_stream.once('handshake', function(data) {
         self.onUpstreamHandshake(data, op_stream);
     });
-    op_stream.sendHandshake(this.handshake());
+    op_stream.writeHandshake(this.handshake());
 };
 // FIXME  Muxer accepts connections to stream ids
 
@@ -550,7 +552,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.upstream_ssn = hs_op_ssn;
     this.upstream_stamp = hs_op_stamp;
 
-    op_stream.on('data', this.write.bind(this));
+    op_stream.on('op', this.write.bind(this));
     op_stream.on('end', function () {
         self.removeStream(op_stream, true);
     });
@@ -571,11 +573,11 @@ Replica.prototype.addStreamDown = function (stream) {
     if (!this.ssn_id) {
         return stream.end('.error\tsession not initialized yet\n');
     }
-    var op_stream = new OpStream (stream, {
+    var op_stream = new StreamOpSource (stream, {
         authorize: this.options.authorize // needs the stream
     });
     var self = this;
-    op_stream.once('data', function (op) {
+    op_stream.once('handshake', function (op) {
         if (op.spec.Type().time()==='Swarm') {
             self.onDownstreamHandshake(op, op_stream);
         } else {
@@ -586,7 +588,7 @@ Replica.prototype.addStreamDown = function (stream) {
     });
 
     setTimeout(function kill(){
-        if (!op_stream.source) {
+        if (!op_stream.peer_hs) {
             stream.destroy();
             op_stream.destroy();
         }
@@ -609,7 +611,7 @@ Replica.prototype.addOpStreamDown = function (stream) {
         throw new Error('not initialized yet!');
     }
     Replica.trace && console.log('STR_DOWN');
-    stream.once('data', function (op) {
+    stream.once('handshake', function (op) {
         self.onDownstreamHandshake(op, stream);
     });
 };
@@ -682,7 +684,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     function accept_handshake_action () {
 
         Replica.trace && console.log('HS_ACCEPT', peer_stamp);
-        op_stream.on('data', self.write.bind(self));
+        op_stream.on('op', self.write.bind(self));
         op_stream.on('end', function () {
             self.removeStream(op_stream, true);
         });
@@ -745,16 +747,17 @@ Replica.prototype.removeStream = function (op_stream, closed) {
     }
 
     if (stamp in this.streams) {
-        op_stream.removeAllListeners('data');
+        op_stream.removeAllListeners('op');
         op_stream.removeAllListeners('end');
 
         delete this.streams[stamp];
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
-        if (!closed)
+        if (!closed) {
             op_stream.isOpen() && op_stream.end(new Op(off));
-        else
+        } else {
             op_stream.end();
+        }
     } else {
         console.warn('the stream is not on the list', stamp);
     }

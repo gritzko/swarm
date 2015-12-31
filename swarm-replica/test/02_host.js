@@ -15,6 +15,9 @@ var tape = require('tap').test;
 
 tape ('replica.02.A simple Model sync', function(t){
     var db = levelup('replica/02/A', { db: memdown });
+    // Replica.debug = true;
+    // Host.debug = true;
+    // Replica.trace = true;
     var replica = new Replica({
         ssn_id: 'user',
         db_id: 'db',
@@ -36,6 +39,9 @@ tape ('replica.02.A simple Model sync', function(t){
     //replica.onDownstreamHandshake(host2.handshake(), host2);
     replica.addOpStreamDown(host1);
     replica.addOpStreamDown(host2);
+
+    host1.emitHandshake();
+    host2.emitHandshake();
 
     var obj1 = new Model({a:1}, host1);
     var obj2 = host2.get(obj1.spec());

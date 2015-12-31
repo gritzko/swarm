@@ -108,13 +108,15 @@ StreamOpSource.prototype.isOpen = function () {
 };
 
 
-StreamOpSource.prototype.end = function (something, callback) {
+StreamOpSource.prototype.end = function (err_op, callback) {
     if (!this.stream) {
-        throw new Error('this op stream is not open');
+        console.warn(new Error('this op stream is not open').stack);
+        return;
     }
     this.flush();
     var stream = this.stream;
-    this.stream.end(something, "utf8", function () {
+    var err = err_op ? err_op.toString() : '';
+    this.stream.end(err, "utf8", function () {
         stream.removeAllListeners(); // we possess the stream
         stream.destroy && stream.destroy();
         callback && callback();
@@ -173,10 +175,11 @@ StreamOpSource.prototype.onHandshake = function (op) {
     if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
         op.op().toLowerCase()!=='on') {
         console.error('not a handshake:', op);
-        return this.onStreamError(new Error('invalid handshake'));
+        this.onStreamError(new Error('invalid handshake'));
+    } else {
+        this.peer_hs = op;
+        this.emit('handshake', op);
     }
-    this.peer_hs = op;
-    this.emit('handshake', op);
 };
 
 
@@ -186,7 +189,7 @@ StreamOpSource.prototype.onStreamEnded = function () {
 
 
 StreamOpSource.prototype.onStreamError = function (err) {
-    StreamOpSource.debug && console.error('stream error', err);
+    StreamOpSource.debug && console.error('stream error', err.message, err.stack);
     if (this.stream) {
         this.emit('error', err);
         if (this.stream) {
