@@ -43,6 +43,7 @@ function Client (options) {
 
     function connect_em () {
         self.replica.addOpStreamDown(self.host);
+        self.host.emitHandshake();
         options.callback && options.callback();
     }
 

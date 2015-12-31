@@ -1,5 +1,5 @@
 "use strict";
-var bat = require('swarm-bat');
+require('swarm-bat');
 var Swarm = require('../');
 var SwarmClient = Swarm.Client;
 var Replica = Swarm.Replica;

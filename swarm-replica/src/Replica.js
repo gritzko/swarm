@@ -427,7 +427,7 @@ Replica.prototype.close = function (callback, err) {
     var close_check = setInterval(try_close, 100);
 
     self.connects.forEach(function (c) {
-        c.disable();
+        // c.disable(); ???? FIXME
     });
 
     while (stamps.length) {

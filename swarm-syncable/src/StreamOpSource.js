@@ -220,3 +220,8 @@ StreamOpSource.prototype.destroy = function () {
     this.end();
     this.mute = true;
 };
+
+
+StreamOpSource.prototype.isOpen = function () {
+    return !! this.stream;
+};

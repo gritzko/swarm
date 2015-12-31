@@ -465,6 +465,6 @@ Host.prototype.end = function (chunk, enc, cb) {
 };
 
 
-// Host.prototype.isOpen = function () {
-//     return true;
-// };
+Host.prototype.isOpen = function () {
+    return true;
+};
