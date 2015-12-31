@@ -1,6 +1,6 @@
 {
   "name": "swarm-cli",
-  "version": "1.0.12",
+  "version": "1.0.14",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -26,8 +26,8 @@
       "level":          "^1.3.0",
       "swarm-client":   "1.0.x",
       "minimist":       "^1.2.0",
-      "stream-url-ws":  "^0.1.2",
-      "stream-url-node":"~0.0.1"
+      "stream-url-ws":  "0.1.x",
+      "stream-url-node":"0.1.x"
   },
   "scripts": {
     "test": "true"

@@ -1,6 +1,6 @@
 {
   "name": "swarm-syncable",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -23,7 +23,6 @@
   "browser": "index.js",
   "dependencies": {
       "swarm-stamp": "1.0.x",
-      "readable-stream": "2.0.5",
       "eventemitter3": "^1.1.1"
   },
   "devDependencies": {

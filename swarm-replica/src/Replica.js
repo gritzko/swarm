@@ -151,7 +151,7 @@ Replica.prototype.loadDatabaseHandshake = function (err, hs_str) {
         }
     }
     options.connect = options.connect || options.upstream; // old name
-    this.connects = [];
+    this.su_handle = null;
     if (options.connect) {
         this.connect();
     } else if (!this.clock) {
@@ -164,10 +164,13 @@ Replica.prototype.connect = function (url) {
     if (!this.db_id) {
         throw new Error('db not specified');
     }
+    if (this.su_handle) {
+        throw new Error('uplink connection is already on');
+    }
     url = url || this.options.connect;
-    this.connects.push(stream_url.connect(this.options.connect, {
+    this.su_handle = stream_url.connect(this.options.connect, {
         reconnect: true
-    }, this.addStreamUp.bind(this)));
+    }, this.addStreamUp.bind(this));
 };
 
 // The end of initialization: replica creates its logical clocks.
@@ -401,10 +404,11 @@ Replica.prototype.done = function (request) {
 
 // replay all subscriptions to a newly connected upstream
 Replica.prototype.upscribe = function () {
-    var tis = Object.keys(this.entries);
-    for(var i=0; i<this.length; i++){
-        var entry = this.entries[tis[i]];
-        entry.queueOps([new Op(tis[i] + '.on', null)]);
+    var typeids = Object.keys(this.entries);
+    for(var i=0; i<typeids.length; i++){
+        var typeid = typeids[i];
+        var entry = this.entries[typeid];
+        entry.queueOps([new Op(typeid + '.on', null)]);
     }
 };
 
@@ -426,9 +430,9 @@ Replica.prototype.close = function (callback, err) {
     var check_count = 0;
     var close_check = setInterval(try_close, 100);
 
-    self.connects.forEach(function (c) {
-        // c.disable(); ???? FIXME
-    });
+    if (this.su_handle) {
+        this.su_handle.cancel();
+    }
 
     while (stamps.length) {
         var stamp = stamps.pop();
