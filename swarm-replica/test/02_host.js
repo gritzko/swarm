@@ -40,8 +40,8 @@ tape ('replica.02.A simple Model sync', function(t){
     replica.addOpStreamDown(host1);
     replica.addOpStreamDown(host2);
 
-    host1.emitHandshake();
-    host2.emitHandshake();
+    host1.go();
+    host2.go();
 
     var obj1 = new Model({a:1}, host1);
     var obj2 = host2.get(obj1.spec());

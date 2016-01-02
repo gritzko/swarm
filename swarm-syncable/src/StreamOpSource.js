@@ -97,7 +97,7 @@ StreamOpSource.prototype.flush = function (callback) {
         this.stream.write(parcel, "utf8", callback);
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
-        console.error(ioex);
+        console.error(ioex, ioex.stack);
         this.onStreamError(ioex);
     }
 };
@@ -161,7 +161,7 @@ StreamOpSource.prototype.onStreamDataReceived = function (data) {
         }
 
     } catch (ex) {
-        console.error(ex);
+        console.error(ex, ex.stack);
         this.onStreamError(ex);
     }
 };

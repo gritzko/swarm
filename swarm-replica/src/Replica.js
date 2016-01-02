@@ -261,10 +261,12 @@ Replica.prototype.write = function (op) {
         throw new Error('consumes swarm-syncable Op objects only');
     }
     if (!this.streams[op.source]) {
+        console.error(new Error('bad origin').stack);
         console.warn('op origin unknown');
     }
     if (op.spec.pattern()!=='/#!.') { // TODO validate nested patterns
-        this.send(op.error('invalid op'));
+        console.warn('invalid op', op.spec, new Error().stack);
+        this.send(op.error('invalid opz'));
         this.removeStream(op.source);
         return;
     }

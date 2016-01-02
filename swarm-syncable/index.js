@@ -6,6 +6,7 @@ var Swarm = {
     Op: require('./src/Op'),
     Host: require('./src/Host'),
     Syncable: require('./src/Syncable'),
+    OpSource: require('./src/OpSource'),
     StreamOpSource: require('./src/StreamOpSource'),
     OpQueue: require('./src/OpQueue'),
     Model: require('./src/Model'),

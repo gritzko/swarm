@@ -18,6 +18,7 @@ tape ('syncable.02.A empty cycle', function (t) {
         db_id: 'db',
         clock: new stamp.LamportClock('anon')
     });
+    host.go();
     var empty = new Syncable(null, host);
     t.equal(empty._version, empty._id, 'version id OK');
     t.ok(empty._id, 'id is assigned');
@@ -52,6 +53,7 @@ tape('syncable.02.C batch events', function (t) {
         db_id:  'db',
         clock: stamp.LamportClock
     });
+    host.go();
     var empty = new Model({}, host);
 
     var spec = new Spec(empty.typeid()+'.set');

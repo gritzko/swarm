@@ -53,6 +53,7 @@ function Server (options) {
         callback: options.callback
     });
 
+    this.snapshot_slave.go(); //?
     // this.rest_api = ...; TODO
 }
 

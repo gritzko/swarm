@@ -17,7 +17,8 @@ tape ('syncable.06.A Set basic API', function (t) {
         db_id: 'db',
         clock: new stamp.LamportClock('syncable~05~A')
     });
-
+    host.go();
+    
     var a = new Model({name: 'Alice'}, host);
     var b = new Model({name: 'Bob'}, host);
 

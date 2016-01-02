@@ -1,9 +1,9 @@
 'use strict';
-var swarm_stamp = require('swarm-stamp');
+var SwarmStamp = require('swarm-stamp');
 var Spec = require('./Spec');
 var Op = require('./Op');
 var util = require("util");
-var EventEmitter = require("eventemitter3");
+var OpSource = require("./OpSource");
 
 // ## TODO ##
 // 1. no-clock "slave mode" (make options orderly)
@@ -22,7 +22,7 @@ var EventEmitter = require("eventemitter3");
 function Host (options) {
     options = options || {};
     this._events = {data: null};
-    EventEmitter.call(this, {objectMode: true});
+    OpSource.call(this);
     // id, router, offset_ms
     this.options = options;
     this.ssn_id = null;
@@ -44,28 +44,31 @@ function Host (options) {
     this.source = null;
     this.hs = null;
 }
-util.inherits(Host, EventEmitter);
+util.inherits(Host, OpSource);
 module.exports = Host;
-
-
-Host.prototype.emitHandshake = function () {
-    this.hs = this.handshake();
-    this.emit('handshake', this.hs);
-    // TODO these ifs are really annoying; snapshot slave may be its own class
-    if (this.syncables) {
-        var pre = Object.keys(this.syncables);
-        for(var i=0; i<pre.length; i++) {
-            var obj = this.syncables [pre[i]];
-            this.emit('op', new Op(obj.typeid()+'!0.on', obj._version||'', this.hs.stamp()));
-        }
-    }
-};
-
 
 Host.debug = false;
 Host.multihost = false;
 Host.localhost = null;
 Host.hosts = Object.create(null);
+
+
+Host.prototype.go = function () {
+
+
+    var hs = this.handshake(); // FIXME one run
+
+
+    this.emitHandshake(hs.spec, hs.value);
+    // TODO these ifs are really annoying; snapshot slave may be its own class
+    if (this.syncables) {
+        var pre = Object.keys(this.syncables);
+        for(var i=0; i<pre.length; i++) {
+            var obj = this.syncables [pre[i]];
+            this.emitOp(new Op(obj.typeid()+'!0.on', obj._version||'', this.hs.stamp()));
+        }
+    }
+};
 
 
 Host.defaultHost = function () {
@@ -140,7 +143,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     ssn_id = ssn_id || options.ssn_id;
     db_id = db_id || options.db_id;
     if (!options.clock) {
-        this.clock = new swarm_stamp.Clock(ssn_id);
+        this.clock = new SwarmStamp.Clock(ssn_id);
     } else if (options.clock.constructor===Function) {
         this.clock = new options.clock(ssn_id);
     } else {
@@ -167,49 +170,43 @@ Host.prototype.getSsnMark = function () {
 };
 
 
-Host.prototype.writeHandshake = function (op, callback) {
+Host.prototype._writeHandshake = function (op, callback) {
     var options = this.options;
-    if (op.spec.op()==='error') {
-        console.error('handshake failed', op.value);
-        this.end();
-        return;
-    }
-    var lamp = new swarm_stamp.LamportTimestamp(op.value);
+    var lamp = new SwarmStamp.LamportTimestamp(op.value);
     var new_ssn = lamp.source();
     if (!this.clock) {
         // get ssn, adjust clocks
         if (options.db_id && options.db_id!==op.id()) {
-            this.end();
-            throw new Error('handshake for a wrong database');
+            this.emitError('handshake for a wrong database');
+            this.emitEnd();
         } else {
             this.createClock(op.id(), new_ssn); // FIXME check monotony
         }
     } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this._emit('op', new Op('.error', 'handshake mismatch', this.source));
-        this.end(); // TODO destroy?
+        this.emitError('handshake mismatch');
+        this.emitEnd();
     }
     callback && callback();
 };
 
 // Applies a serialized operation (or a batch thereof) to this replica
-Host.prototype.write = function (op, callback) {
+Host.prototype._write = function (op, callback) {
 
     var typeid = op.spec.typeid();
     if (!typeid || typeid==='null') {
         throw new Error('what?');
     }
-    Host.debug && console.log('->'+this.ssn_id+'\t'+op);
 
     if (op.spec.Type().time()==='Swarm') { // FIXME repeats
         this.writeHandshake(op, callback);
         return;
     }
-    // NOTE that a slave host has no clocks and still functions
+    // NOTE that a snap slave host has no clocks and still functions
 
     var syncable = this.syncables && this.syncables[typeid];
     if (!syncable && this.options.api!==false) {
-        throw new Error('syncable not open');
+        this.emitError('syncable not open');
     } // FIXME specify modes: api, obey, snapshot
     var crdt = this.crdts[typeid];
     var old_ver = crdt && crdt._version;
@@ -232,7 +229,7 @@ Host.prototype.write = function (op, callback) {
 
     if (crdt && is_changed && this.options.snapshot==='immediate') {
         var spec = op.spec.set(crdt._version, '!').set('~state', '.');
-        this.emit('op', new Op(spec, crdt.toString()), this.source);
+        this.emitOp(spec, crdt.toString());
     }
 
     if (callback) {
@@ -257,7 +254,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
             console.warn('upstream disappears for', typeid);
         } else {
             delete this.crdts[typeid];
-            this._emit('op', new Op(typeid+'.off', '', this.source));
+            this.emitOp(typeid+'.off', '');
         }
         break;
     case '~state':
@@ -316,7 +313,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
 // from the storage/uplink. Till the state is received, the object
 // is stateless (`syncable.version()===undefined && !syncable.hasState()`)
 Host.prototype.adoptSyncable = function (syncable, init_op) {
-    var type = syncable._type, on_op;
+    var type = syncable._type;
     var type_fn = Syncable.types[type];
     if (!type_fn || type_fn!==syncable.constructor) {
         throw new Error('not a registered syncable type');
@@ -347,7 +344,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         // the state is sent up in the handshake as the uplink has nothing
         var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.source);
         var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
-        on_op = new Op(on_spec, '', this.source, [state_op]);
+        this.emitOp(on_spec, '', [state_op]);
 
     } else {
         var spec = syncable.spec().toString();
@@ -356,7 +353,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         this.crdts[syncable.spec().typeid()] = null; // wait for the state
         // 0 up
-        on_op = new Op(syncable.spec().add('!0').add('.on'), '', this.source);
+        this.emitOp(syncable.spec().add('!0').add('.on'), '');
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
@@ -366,7 +363,6 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     // if (on_op.patch) {
     //     this.unacked_ops[typeid] = on_op.patch.slice(); // FIXME state needs an ack
     // }
-    this._emit('op', on_op);
 
     return syncable;
 };
@@ -380,8 +376,7 @@ Host.prototype.abandonSyncable = function (obj) {
         }
         delete this.syncables[typeid];
         var off_spec = obj.spec().add('.off');
-        var off_op = new Op (off_spec, '', this.source);
-        this._emit('op', off_op);
+        this.emitOp (off_spec, '');
     }
 };
 
@@ -448,13 +443,7 @@ Host.prototype.submitOp = function (op) { // TODO sig
     }
 
     this.write(op);
-    this._emit('op', op);
-};
-
-
-Host.prototype._emit = function (ev, op) {
-    Host.debug && console.log('<-'+this.ssn_id+'\t'+op);
-    this.emit(ev, op);
+    this.emitOp(op.spec, op.value); // FIXME ugly
 };
 
 

@@ -74,7 +74,7 @@ tape ('replica.01.A ssn assignment', function(t){
     //function start_tests () {
 
     mux.on('error', function (err) {
-        console.error(err);
+        console.error(err, err.stack);
     });
 
     var bt = new bat.StreamTest(mux, NEW_SSN, t.equal.bind(t));
@@ -165,6 +165,7 @@ tape ('replica.01.B handshake errors', function (t) {
 
     // Replica.debug = true;
     // Swarm.StreamOpSource.debug = true;
+    // Swarm.OpSource.debug = true;
 
     var mux = new BatMux({
         connect: 'loopback:2B',
@@ -201,9 +202,10 @@ tape ('replica.01.B handshake errors', function (t) {
         var host = new Swarm.Host({clock: LamportClock});
         replica.addOpStreamDown(host);
         host.on('writable', function () {
+            console.log('REACH 2');
             new Swarm.Model({test:true}, host);
         });
-        host.emitHandshake();
+        host.go();
     });
 
 });

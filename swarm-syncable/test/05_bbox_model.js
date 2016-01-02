@@ -25,7 +25,9 @@ tape ('syncable.05.A Model set/get - Host protocol', function (t) {
     function remember (op){
         collect += op.toString();
     }
-    host.emitHandshake();
+
+    host.go();
+
     var m = new Model({x:1}, host);
     t.equal(m.x, 1, 'constructor arg value');
     m.set({y:2});
@@ -55,6 +57,7 @@ tape ('syncable.05.B concurrent ops', function (t) {
         ssn_id: 'anon~5B',
         db_id: 'db'
     });
+    host.go();
     var duckling = new Model({}, host);
     host.write( new Op(
             duckling.spec()+'!1time+user2.set',
@@ -136,16 +139,15 @@ tape ('syncable.05.C refs - blackbox', function (t) {
 
     var bt = new bat.StreamTest(bs, REFS, t.equal.bind(t));
 
-    // create syncables
-    var alice = host.get('/Model#Alice+herself');
-
     os.on('handshake', host.write.bind(host));
     os.on('op', host.write.bind(host));
     host.on('handshake', os.write.bind(os));
     host.on('op', os.write.bind(os));
 
-    host.emitHandshake();
+    host.go();
 
+    // create syncables
+    var alice = host.get('/Model#Alice+herself');
     var bob = host.get('/Model#Bob+himself');
 
     bt.run ( checkCarol );
@@ -353,7 +355,7 @@ tape ('syncable.05.F snapshotting', function (t) {
     host.on('handshake', os.write.bind(os));
     host.on('op', os.write.bind(os));
 
-    host.emitHandshake();
+    host.go();
 
     bt.run(function(){
         t.equal('/Model#object' in host.crdts, false, 'no state remaining');
@@ -396,6 +398,7 @@ tape ('syncable.05.H Model serialization', function (t) {
         db_id: 'db',
         clock: new stamp.LamportClock('anon~5A')
     });
+    host.go();
     var m = new Model({a:1, b: "2"}, host);
     t.equal(m.toString(), '{"a":1,"b":"2"}');
     m.set({a:[1,2,3]});
