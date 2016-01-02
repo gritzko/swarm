@@ -579,18 +579,10 @@ Replica.prototype.addStreamDown = function (stream) {
     if (!this.ssn_id) {
         return stream.end('.error\tsession not initialized yet\n');
     }
-    var op_stream = new StreamOpSource (stream, {
-        authorize: this.options.authorize // needs the stream
-    });
+    var op_stream = new StreamOpSource (stream);
     var self = this;
     op_stream.once('handshake', function (op) {
-        if (op.spec.Type().time()==='Swarm') {
-            self.onDownstreamHandshake(op, op_stream);
-        } else {
-            var err_op = new Op(self.handshake().spec.setOp('error'), 'no handshake');
-            op_stream.write(err_op);
-            op_stream.destroy();
-        }
+        self.onDownstreamHandshake(op, op_stream);
     });
 
     setTimeout(function kill(){
@@ -760,9 +752,9 @@ Replica.prototype.removeStream = function (op_stream, closed) {
         var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
         if (!closed) {
-            op_stream.isOpen() && op_stream.end(new Op(off));
+            op_stream.isOpen() && op_stream.writeEnd(new Op(off));
         } else {
-            op_stream.end();
+            op_stream.writeEnd();
         }
     } else {
         console.warn('the stream is not on the list', stamp);

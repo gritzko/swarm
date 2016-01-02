@@ -155,7 +155,7 @@ var AUTH = [
     comment: 'downstream#3 no handshake',
     query:   '[down3]#zid+author!stamp+user.set\t{}\n',
     response://'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
-             '[down3].error Error: invalid handshake\n[EOF]'
+             '[down3].error not a handshake\n[EOF]'
 }
 // FIXME: denied downstream push
 ];

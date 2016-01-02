@@ -2,7 +2,7 @@
 var Op = require('./Op');
 var Spec = require('./Spec');
 var util         = require("util");
-var EventEmitter = require('eventemitter3');
+var OpSource = require('./OpSource');
 
 /**
     Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
@@ -22,7 +22,7 @@ var EventEmitter = require('eventemitter3');
     Handshake data is remembered as `peer_hs`.
     No ops can be received ahead of the incoming handshake. In case
     options.stamp and options.db_id are defined, our handshake is sent out
-    immediately. Use opstream.sendHandshake(op) to send a handshake later on.
+    immediately. Use opstream.writeHandshake(op) to send a handshake later on.
     NOTE: StreamOpSource posesses its underlying stream
     @constructor
     @param stream - the underlying byte stream
@@ -31,7 +31,7 @@ function StreamOpSource (stream, options) {
     if (!stream || !stream.on) {
         throw new Error('no stream provided');
     }
-    EventEmitter.call(this, {objectMode: true});
+    OpSource.call(this);
     this.stream = stream;
     this.options = options = options || {};
     this.pending_s = []; // FIXME this is not our business
@@ -41,11 +41,8 @@ function StreamOpSource (stream, options) {
     // this.db_id = options.db_id || null;
     // this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
-    // this.peer_hs = null;
     this.source = options.source || null;
     this.mute = false;
-    this.peer_hs = null; // peer handshake
-    this.hs = null; // our handshake
     // unparsed bytes
     this.remainder = '';
     //
@@ -60,17 +57,14 @@ function StreamOpSource (stream, options) {
     //StreamOpSource.debug && console.log("StreamOpSource open", this.options);
     this.readable = false;
 }
-util.inherits(StreamOpSource, EventEmitter);
+util.inherits(StreamOpSource, OpSource);
 module.exports = StreamOpSource;
 StreamOpSource.debug = false;
 StreamOpSource.DEFAULT = new Spec('/Model!0.on');
 StreamOpSource.SEND_DELAY_MS = 1;
 
 
-StreamOpSource.prototype.write = function (op, callback) {
-    if (!this.hs) {
-        this.hs = op;
-    }
+StreamOpSource.prototype._write = function (op, callback) {
     this.pending_s.push( op.toString(StreamOpSource.DEFAULT) );
     if (this.asyncFlush) {
         var self = this;
@@ -108,7 +102,7 @@ StreamOpSource.prototype.isOpen = function () {
 };
 
 
-StreamOpSource.prototype.end = function (err_op, callback) {
+StreamOpSource.prototype._end = function (err_op, callback) {
     if (!this.stream) {
         console.warn(new Error('this op stream is not open').stack);
         return;
@@ -136,10 +130,11 @@ StreamOpSource.prototype.onStreamDataReceived = function (data) {
 
     try {
 
+        // FIXME make ops in OpSource ?!!
         parsed = Op.parse(this.remainder, this.source, StreamOpSource.DEFAULT);
 
     } catch (ex) {
-        this.onStreamError(new Error('bad op format'));
+        this.onStreamError(new Error('bad op format')); // FIXME fail prop
         return;
     }
 
@@ -149,15 +144,22 @@ StreamOpSource.prototype.onStreamDataReceived = function (data) {
 
     try {
 
-        if (!this.peer_hs && ops.length) { // we expect a handshake
-             this.onHandshake(ops.shift());
+        if (!this.hs && ops.length) { // we expect a handshake
+            var hs = ops.shift();
+            if (OpSource.isHandshake(hs)) {
+                this.emitHandshake(hs.spec, hs.value, hs.patch); // FIXME ugly
+            } else {
+                console.warn('not a handshake', hs.spec);
+                this.emitError('not a handshake'); // FIXME make default?
+                this.emitEnd();
+                this.writeError('not a handshake');
+                this.writeEnd();
+                return;
+            }
         }
 
         for(var i = 0; i < ops.length; i++) {
-            if (StreamOpSource.debug) {
-                console.log(this.peer_hs.stamp()||'?', '>', this.hs.stamp()||'?', ops[i]);
-            }
-            this.emit('op', ops[i]);
+            this.emitOp(ops[i].spec, ops[i].value, ops[i].patch); // FIXME ugly
         }
 
     } catch (ex) {
@@ -167,34 +169,21 @@ StreamOpSource.prototype.onStreamDataReceived = function (data) {
 };
 
 
-StreamOpSource.prototype.writeHandshake = StreamOpSource.prototype.write;
-StreamOpSource.prototype.sendHandshake = StreamOpSource.prototype.write;
-
-
-StreamOpSource.prototype.onHandshake = function (op) {
-    if (op.spec.pattern()!=='/#!.' || !/Swarm(\+.+)?/.test(op.spec.type()) ||
-        op.op().toLowerCase()!=='on') {
-        console.error('not a handshake:', op);
-        this.onStreamError(new Error('invalid handshake'));
-    } else {
-        this.peer_hs = op;
-        this.emit('handshake', op);
-    }
-};
+StreamOpSource.prototype._writeHandshake = StreamOpSource.prototype._write;
 
 
 StreamOpSource.prototype.onStreamEnded = function () {
-    this.emit('end', this);
+    this.emitEnd();
 };
 
 
 StreamOpSource.prototype.onStreamError = function (err) {
     StreamOpSource.debug && console.error('stream error', err.message, err.stack);
     if (this.stream) {
-        this.emit('error', err);
-        if (this.stream) {
-            this.end( '.error\t' + err + '\n' );
-        }
+        this.emitError(err);
+        // if (this.stream) {
+        //     this.writeEnd( '.error', err );
+        // }
     }
 };
 
@@ -216,8 +205,8 @@ StreamOpSource.prototype.onTimer = function () {
 };
 
 
-StreamOpSource.prototype.destroy = function () {
-    this.end();
+StreamOpSource.prototype.destroy = function () { // FIXME fail prop
+    this._end();
     this.mute = true;
 };
 

@@ -7,8 +7,9 @@ var util = require("util");
 
 function OpSource () {
     EventEmitter.call(this, {objectMode: true});
-    this.hs = null;
-    this.peer_hs = null;
+    this.peer_hs = null; // peer handshake
+    this.hs = null; // our handshake
+    this.source = '0';
 }
 util.inherits(OpSource, EventEmitter);
 module.exports = OpSource;
@@ -24,18 +25,25 @@ OpSource.prototype.label = function (inbound) {
 OpSource.prototype.log = function (op, inbound, event) {
     console.log(
         this.label(inbound) +
-        (event ? '\t['+event+']\t' : '\t') +
-        (op ? op.toString() : '')
+        (event ? '\t['+event+']' : '') +
+        (op ? '\t'+op.toString() : '')
     );
 };
 
 
 OpSource.prototype.emitOp = function (spec, value, patch) {
-    var op = new Op(spec, value, this.hs.stamp(), patch);
+    var op = new Op(spec, value, this.source, patch);
     if (OpSource.debug) {
         this.log(op, false);
     }
     this.emit('op', op);
+};
+
+
+OpSource.isHandshake = function (op) {
+    return  op.spec.pattern()==='/#!.' &&
+            /Swarm(\+.+)?/.test(op.spec.type()) &&
+            op.op().toLowerCase()==='on' ;
 };
 
 
@@ -46,6 +54,7 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
     var spec = new Spec(sp);
     var hs = new Op(spec, value, spec.stamp(), patch);
     this.hs = hs;
+    this.source = hs.stamp();
     if (OpSource.debug) {
         this.log(hs, false, 'HS');
     }
@@ -63,13 +72,13 @@ OpSource.prototype.emitEnd = function () {
 
 OpSource.prototype.emitError = function (spec, msg) {
     if (util.isError(spec)) {
-        msg = spec.replace('/\s+/mg', ' ').substr(0,140);
+        msg = spec.message.replace('/\s+/mg', ' ').substr(0,140);
         spec = '.error';
     } else if (!msg) {
         msg=spec;
         spec='.error';
     }
-    var err_op = new Op(spec, msg, this.hs.stamp());
+    var err_op = new Op(spec, msg, this.source);
     if (OpSource.debug) {
         this.log(err_op, false, 'ERROR');
     }
@@ -86,13 +95,13 @@ OpSource.prototype.write = function (op, callback) {
 
 
 OpSource.prototype.writeHandshake = function (hs, callback) {
-    if (OpSource.debug) {
-        this.log(hs, true, 'HS');
-    }
     if (this.peer_hs) {
         throw new Error('handshake repeat by the peer');
     }
     this.peer_hs = hs;
+    if (OpSource.debug) {
+        this.log(hs, true, 'HS');
+    }
     this._writeHandshake(hs, callback);
 };
 
@@ -108,6 +117,9 @@ OpSource.prototype.writeEnd = function (op, callback) {
 OpSource.prototype.writeError = function (err_op, callback) {
     if (OpSource.debug) {
         this.log(err_op, true, 'ERROR');
+    }
+    if (err_op.constructor===String) {
+        err_op = new Op('.error', err_op); // FIXME unify, DOCUMENT  fail prop
     }
     this._write(err_op, callback);
 };
