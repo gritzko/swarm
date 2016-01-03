@@ -262,7 +262,7 @@ Replica.prototype.write = function (op) {
     }
     if (!this.streams[op.source]) {
         console.error(new Error('bad origin').stack);
-        console.warn('op origin unknown');
+        console.warn('op origin unknown', op.source, Object.keys(this.streams));
     }
     if (op.spec.pattern()!=='/#!.') { // TODO validate nested patterns
         console.warn('invalid op', op.spec, new Error().stack);
@@ -532,6 +532,7 @@ Replica.prototype.addStreamUp = function (err, stream) {
 };
 // FIXME  Muxer accepts connections to stream ids
 
+
 Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     var self = this;
     if (this.db_id) {
@@ -547,13 +548,13 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         }
         var stamp = new LamportTimestamp(hs_op.value);
         this.createClock(stamp.source());
-        // FIXME   op_stream stamps
+        op_stream.peer_hs.spec = // :(
+            op_stream.peer_hs.spec.setStamp(stamp.source());
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
     var hs_op_ssn = hs_op.origin();
     var hs_op_stamp = hs_op.stamp();
 
-    op_stream.source = hs_op_stamp;
     this.streams[hs_op_stamp] = op_stream;
     this.upstream_ssn = hs_op_ssn;
     this.upstream_stamp = hs_op_stamp;
@@ -687,15 +688,15 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
             self.removeStream(op_stream, true);
         });
         self.streams[peer_stamp] = op_stream;
-        op_stream.source = peer_stamp;
 
-
-        op_stream.write(hs);
+        op_stream.writeHandshake(hs);
+        op_stream.hs.spec = // :(
+            op_stream.hs.spec.setStamp(peer_stamp);
 
         self.emit('connection', {
             op_stream: op_stream,
             upstream: false,
-            ssn_id: op_stream.source
+            ssn_id: op_stream.source()
         });
 
     }
@@ -737,7 +738,7 @@ Replica.prototype.removeStream = function (op_stream, closed) {
         op_stream = this.streams[op_stream];
     }
     if (!op_stream) { return; }
-    var stamp = op_stream.source;
+    var stamp = op_stream.source();
     if (stamp === this.upstream_stamp) {
         this.upstream_ssn = null;
         this.upstream_stamp = null;

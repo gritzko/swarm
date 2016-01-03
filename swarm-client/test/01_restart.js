@@ -24,8 +24,9 @@ Host.multihost = true;
 
 tape ('client.01.A 2 clients sync', function (t) {
 
-    // Replica.debug = true;
-    // Host.debug = true;
+    //Replica.debug = true;
+    //Host.debug = true;
+    //Swarm.OpSource.debug = true;
 
     // ## Action list
     // 1. user_id '*' (swarm? multiuser cache?)
@@ -70,7 +71,7 @@ tape ('client.01.A 2 clients sync', function (t) {
         obj1.once('change', function(){
             t.equal(obj1.client, 2);
             if (obj1.client!==2) {
-                console.warn('what?');
+                console.log('what?', this===obj1, this, new Error().stack);
             }
             client1.close();
             client2.close();

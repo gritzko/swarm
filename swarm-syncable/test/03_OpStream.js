@@ -11,7 +11,7 @@ var tape = require('tap').test;
 tape ('syncable.03.A simple cases', function (t) {
     var stream = new BatStream();
 
-    OpSource.debug = true;
+    //OpSource.debug = true;
 
     var pair = new StreamOpSource(stream.pair, {});
     var opstream = new StreamOpSource(stream, {});
@@ -80,7 +80,6 @@ tape ('syncable.03.D handshake', function (t) {
     opstream.once('handshake', function(hs_op) {
         t.equal(hs_op.origin(), 'swarm~cluster');
         t.equal(hs_op.id(), 'db+shard');
-        opstream.source = hs_op.stamp();
         opstream.on('op', more_data);
     });
     function more_data(recv_op){
@@ -147,7 +146,6 @@ tape ('syncable.03.G dialog', function (t) {
 
     pair.once('handshake', function (op) {
         t.equal(''+op.spec, '/Swarm#db+cluster!stream.on', 'spec matches');
-        pair.source = 'stream';
         pair.on('op', more_data);
     });
 

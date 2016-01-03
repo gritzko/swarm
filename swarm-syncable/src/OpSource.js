@@ -9,7 +9,6 @@ function OpSource () {
     EventEmitter.call(this, {objectMode: true});
     this.peer_hs = null; // peer handshake
     this.hs = null; // our handshake
-    this.source = '0';
 }
 util.inherits(OpSource, EventEmitter);
 module.exports = OpSource;
@@ -31,8 +30,13 @@ OpSource.prototype.log = function (op, inbound, event) {
 };
 
 
+OpSource.prototype.source = function () {
+    return this.hs ? this.hs.stamp() : '0';
+};
+
+
 OpSource.prototype.emitOp = function (spec, value, patch) {
-    var op = new Op(spec, value, this.source, patch);
+    var op = new Op(spec, value, this.source(), patch);
     if (OpSource.debug) {
         this.log(op, false);
     }
@@ -54,7 +58,6 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
     var spec = new Spec(sp);
     var hs = new Op(spec, value, spec.stamp(), patch);
     this.hs = hs;
-    this.source = hs.stamp();
     if (OpSource.debug) {
         this.log(hs, false, 'HS');
     }
@@ -78,7 +81,7 @@ OpSource.prototype.emitError = function (spec, msg) {
         msg=spec;
         spec='.error';
     }
-    var err_op = new Op(spec, msg, this.source);
+    var err_op = new Op(spec, msg, this.source());
     if (OpSource.debug) {
         this.log(err_op, false, 'ERROR');
     }
@@ -104,6 +107,7 @@ OpSource.prototype.writeHandshake = function (hs, callback) {
     }
     this._writeHandshake(hs, callback);
 };
+
 
 /** Anti-handshake, in a sense. */
 OpSource.prototype.writeEnd = function (op, callback) {

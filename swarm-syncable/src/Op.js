@@ -23,7 +23,7 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
     this.spec = spec && spec.constructor===Spec ?
         spec : new Spec(spec);
     this.value = value ? value.toString() : '';
-    this.source = source ? source.id || source.toString() : '';
+    this.source = source ? source.toString() : '';
     this.patch = patch || null;
     if (patch && patch.constructor!==Array) {
         throw new Error('need a patch as an array of Ops');

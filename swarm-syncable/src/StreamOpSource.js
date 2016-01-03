@@ -41,7 +41,6 @@ function StreamOpSource (stream, options) {
     // this.db_id = options.db_id || null;
     // this.stamp = options.stamp || '0';
     // Peer session/database/timestamp
-    this.source = options.source || null;
     this.mute = false;
     // unparsed bytes
     this.remainder = '';
@@ -131,7 +130,7 @@ StreamOpSource.prototype.onStreamDataReceived = function (data) {
     try {
 
         // FIXME make ops in OpSource ?!!
-        parsed = Op.parse(this.remainder, this.source, StreamOpSource.DEFAULT);
+        parsed = Op.parse(this.remainder, this.source(), StreamOpSource.DEFAULT);
 
     } catch (ex) {
         this.onStreamError(new Error('bad op format')); // FIXME fail prop

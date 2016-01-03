@@ -26,6 +26,7 @@ function Host (options) {
     // id, router, offset_ms
     this.options = options;
     this.ssn_id = null;
+    this.user_id = options.user_id || null;
     this.db_id = null;
     this.clock = null;
     // syncables, API objects, outer state
@@ -41,7 +42,6 @@ function Host (options) {
         }
         Host.localhost = this;
     }
-    this.source = null;
     this.hs = null;
 }
 util.inherits(Host, OpSource);
@@ -117,7 +117,7 @@ Host.prototype.handshake = function () {
     }
     var key = new Spec('/Swarm+Host').add(this.db_id||'0', '#')
         .add(stamp,'!').add('.on');
-    return new Op(key, '', this.source);
+    return new Op(key, '', this.source());
 };
 
 // Returns a new timestamp from the host's clock.
@@ -139,6 +139,9 @@ Host.prototype.getCRDT = function (obj) {
 
 // does not interfere with Replica clock
 Host.prototype.createClock = function (db_id, ssn_id) {
+    if (this.clock) {
+        throw new Error('already have clock');
+    }
     var options = this.options;
     ssn_id = ssn_id || options.ssn_id;
     db_id = db_id || options.db_id;
@@ -151,6 +154,11 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     }
     this.ssn_id = ssn_id;
     this.db_id = db_id;
+    this.user_id = new SwarmStamp.LamportTimestamp(ssn_id).author();
+    if (this.hs) {
+        this.hs.spec = // :(
+            this.hs.spec.setStamp(ssn_id);
+    }
     if (this.syncables && Host.multihost) {
         var ids = Object.keys(this.syncables);
         var mark = this.getSsnMark();
@@ -267,7 +275,7 @@ Host.prototype.consume = function (typeid, syncable, op) {
         crdt._version = op.stamp();
         this.crdts[typeid] = crdt;
         if (!have_or_wait_state) { // FIXME obey
-            this.emit ('op', new Op(typeid+'.on', op.spec.stamp(), this.source));
+            this.emit ('op', new Op(typeid+'.on', op.spec.stamp(), this.source()));
         }
 
         // FIXME descending state!!! see the pacman note
@@ -333,7 +341,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         var crdt = new syncable.constructor.Inner(null, syncable); // 0 state
         if (init_op) {
             var stamped_spec = typeid.add(stamp,'!').add(init_op.op(),'.');
-            var stamped_op = new Op(stamped_spec, init_op.value, this.source);
+            var stamped_op = new Op(stamped_spec, init_op.value, this.source());
             crdt.write(stamped_op);
         }
         this.crdts[typeid] = crdt;
@@ -342,7 +350,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
-        var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.source);
+        var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.source());
         var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
         this.emitOp(on_spec, '', [state_op]);
 
@@ -426,7 +434,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
     }
     var typeid = syncable.typeid();
     var spec = new Spec(typeid).add(this.time(),'!').add(op_name,'.');
-    var op = new Op(spec, value, this.source);
+    var op = new Op(spec, value, this.source());
     this.submitOp(op);
 };
 

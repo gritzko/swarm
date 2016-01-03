@@ -202,7 +202,6 @@ tape ('replica.01.B handshake errors', function (t) {
         var host = new Swarm.Host({clock: LamportClock});
         replica.addOpStreamDown(host);
         host.on('writable', function () {
-            console.log('REACH 2');
             new Swarm.Model({test:true}, host);
         });
         host.go();
