@@ -44,7 +44,9 @@ var AGG = [
 tape ('server.1.A log aggregation', function (t) {
     var db_path = '.test_db_server.1.A_'+(new Date().getTime());
     fs.existsSync(db_path) && rimraf.sync(db_path);
-    var listen_url = 'tcp://localhost:44055';
+    // an heuristic to avoid overlap with parallel test runs
+    var port = 40000 + process.pid%10000;
+    var listen_url = 'tcp://localhost:'+port;
     if (fs.existsSync(db_path)) {
         fs.unlinkSync(db_path);
     }
