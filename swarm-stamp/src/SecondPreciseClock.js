@@ -39,6 +39,8 @@ var SecondPreciseClock = function (processId, timeOffsetMs, seqWidth) {
 
 var epochDate = new Date("Wed, 01 Jan 2014 00:00:00 GMT");
 SecondPreciseClock.EPOCH = epochDate.getTime();
+/** We allow clocks to be 1 minute off. */
+SecondPreciseClock.BACK_TO_THE_FUTURE = 60;
 
 SecondPreciseClock.prototype.adjustTime = function (trueMs) {
     var localTime = this.ms();
@@ -123,15 +125,19 @@ SecondPreciseClock.unparseTimestamp = function unparse (parsed) {
 };
 SecondPreciseClock.prototype.unparseTimestamp = SecondPreciseClock.unparseTimestamp;
 
-// Freshly issued Lamport logical timestamps must be greater than
-// any timestamps previously seen.
+/**
+    Newly issued timestamps must be greater than any timestamps previously seen.
+    That is the key feature of (logical) Lamport timestamps. SecondPreciseClock
+    is clock-based *when possible*, but wallclock time is nice-to-have and
+    monotonous order is must-have, so sometimes we'll go ahead of the clock.
+*/
 SecondPreciseClock.prototype.seeTimestamp = function see (ts) {
     if (ts<this.lastTimestamp) { return true; }
     var parsed = this.parseTimestamp(ts);
     if (parsed.time<this.lastTimeSeen) { return true; }
     var sec = this.seconds();
-    if (parsed.time>sec+1) {
-        return false; // back to the future
+    if (parsed.time > sec+SecondPreciseClock.BACK_TO_THE_FUTURE) {
+        throw new Error('the timestamp is too far ahead');
     }
     this.lastTimeSeen = parsed.time;
     this.lastSeqSeen = parsed.seq;

@@ -3,7 +3,7 @@ var base64 = require('./base64');
 var LamportTimestamp = require('./LamportTimestamp');
 
 /** Pure logical-time Lamport clocks. */
-var LamportClock = function (processId, options) { 
+var LamportClock = function (processId, options) {
     if (!base64.reTok.test(processId)) {
         throw new Error('invalid process id: '+processId);
     }
@@ -40,6 +40,14 @@ LamportClock.prototype.parseTimestamp = function parse (ts) {
         seq: base64.base2int(m[1]),
         process: m[2]
     };
+};
+
+
+LamportClock.prototype.seeTimestamp = function see (ts) {
+    var parsed = this.parseTimestamp(ts);
+    if (parsed.seq>=this.seq) {
+        this.seq = parsed.seq + 1;
+    }
 };
 
 /** Lamport partial order  imperfect semi-logical*/

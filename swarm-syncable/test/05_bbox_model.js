@@ -96,7 +96,7 @@ var REFS = [
 {
     comment: 'Alice gets a link to Bob',
     query:   '#Alice+herself!time1+herself.set\t{"next":{"ref":"#Bob+himself"}}\n',
-    response:'#Alice+herself!00002+me~5C.set\t{"me":{"ref":"/Model#Alice+herself"}}\n'
+    response:'#Alice+herself!time2+me~5C.set\t{"me":{"ref":"/Model#Alice+herself"}}\n'
 },
 /*{
     comment: 'a link added through API',

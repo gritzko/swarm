@@ -433,6 +433,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
         throw new Error('host has no clock, hence not writable');
     }
     var typeid = syncable.typeid();
+    this.clock.seeTimestamp(syncable._version||'0'); // FIXME don't read syncable.
     var spec = new Spec(typeid).add(this.time(),'!').add(op_name,'.');
     var op = new Op(spec, value, this.source());
     this.submitOp(op);
