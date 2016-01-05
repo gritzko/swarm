@@ -65,6 +65,7 @@ util.inherits(StreamOpSource, OpSource);
 module.exports = StreamOpSource;
 StreamOpSource.debug = false;
 StreamOpSource.SEND_DELAY_MS = 1;
+StreamOpSource.SYNC_FLUSH = false;
 
 
 StreamOpSource.prototype._write = function (op, callback) {
@@ -84,7 +85,7 @@ StreamOpSource.prototype.deliver = StreamOpSource.prototype.write;
 
 
 StreamOpSource.prototype.scheduleFlush = function (callback) {
-    if (this.options.syncFlush) {
+    if (this.options.syncFlush || StreamOpSource.SYNC_FLUSH) {
         return this.flush(callback);
     }
     var self = this;

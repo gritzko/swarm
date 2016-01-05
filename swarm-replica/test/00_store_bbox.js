@@ -226,10 +226,10 @@ var REORDERS = [
     query:   '[up]#object!time3+joe.op op (2)\n' +
              '[dsII]#object!time2+me~ssn~dsII.op op (3)\n',
     response:'[dsI]#object!time3+joe.op op (2)\n' +
-             '#object!time2+me~ssn~dsII.op op (3)\n' +
              '[dsII]#object!time3+joe.op op (2)\n' +
-             '#object!time2+me~ssn~dsII.op op (3)\n' +
-             '[up]#object!time2+me~ssn~dsII.op op (3)\n'
+             '[up]#object!time2+me~ssn~dsII.op op (3)\n' +
+             '[dsI]#object!time2+me~ssn~dsII.op op (3)\n' +
+             '[dsII]#object!time2+me~ssn~dsII.op op (3)\n' 
 },
 {
     comment: 'order preservation in a patch',
@@ -298,6 +298,8 @@ var REORDERS = [
 
 tape   ('replica.00.B reorders', function(t){
 
+    Swarm.StreamOpSource.SYNC_FLUSH = true;
+
     var mux = new BatMux({
         connect: 'loopback:1B',
         listen:  'loopback:1Bup',
@@ -324,7 +326,10 @@ tape   ('replica.00.B reorders', function(t){
 
         var bt = new bat.StreamTest(mux, REORDERS, compare, StreamTest.collapse_spaces);
 
-        bt.run( t.end.bind(t) );
+        bt.run( function () {
+            t.end();
+            Swarm.StreamOpSource.SYNC_FLUSH = false;
+        } );
     }
 
         // FIXME close/reopen db!!!
