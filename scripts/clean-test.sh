@@ -16,19 +16,9 @@ export PATH=$NODE_HOME/bin:/bin:/usr/bin
 node -v
 npm -v
 
-#if ! npm test; then
-#    echo
-#    echo something happened
-#    echo
-#    read
-#fi
-
 make bootstrap
 
 if [ $LOOP ]; then
-    pwd
-    ls
-    env
     ./scripts/forever-test.sh
     read
 else
