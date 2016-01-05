@@ -65,7 +65,7 @@ Host.prototype.go = function () {
         var pre = Object.keys(this.syncables);
         for(var i=0; i<pre.length; i++) {
             var obj = this.syncables [pre[i]];
-            this.emitOp(new Op(obj.typeid()+'!0.on', obj._version||'', this.hs.stamp()));
+            this.emitOp(obj.typeid()+'!0.on', obj._version||'');
         }
     }
 };
@@ -152,9 +152,10 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     } else {
         this.clock = options.clock;
     }
-    this.ssn_id = ssn_id;
+    var lamp = new SwarmStamp.LamportTimestamp(ssn_id);
+    this.ssn_id = lamp.source();
+    this.user_id = lamp.author();
     this.db_id = db_id;
-    this.user_id = new SwarmStamp.LamportTimestamp(ssn_id).author();
     if (this.hs) {
         this.hs.spec = // :(
             this.hs.spec.setStamp(ssn_id);
@@ -350,9 +351,11 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
-        var state_op = new Op(typeid+'!'+stamp+'.~state', crdt.toString(), this.source());
         var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
-        this.emitOp(on_spec, '', [state_op]);
+        this.emitOp(on_spec, '', [{
+            key:    typeid+'!'+stamp+'.~state',
+            value:  crdt.toString()
+        }]);
 
     } else {
         var spec = syncable.spec().toString();

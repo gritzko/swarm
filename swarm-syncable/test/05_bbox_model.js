@@ -38,9 +38,9 @@ tape ('syncable.05.A Model set/get - Host protocol', function (t) {
     t.equal(m.y, 2, 'merge OK');
     host.on('end', function() {
         t.equal(collect,
-            '/Swarm+Host#db!00001+anon~5A.on\t\n\n' +
+            '/Swarm+Host#db!00001+anon~5A.on\t\n' +
             '/Model#00002+anon~5A!0.on\t\n' +
-                '\t!00002+anon~5A.~state\t{"00002+anon~5A":{"x":1}}\n\n' +
+                '\t!00002+anon~5A.~state\t{"00002+anon~5A":{"x":1}}\n' +
             '/Model#00002+anon~5A!00003+anon~5A.set\t{"y":2}\n' +
             '/Model#00002+anon~5A!00004+anon~5A.set\t{"x":3}\n',
             'full upstream output'
@@ -75,8 +75,8 @@ var REFS = [
 {
     comment: 'upstream handshake, subscriptions initiated (i)',
     query:   '',
-    response:'/Swarm+Host#db!00001+me~5C\t\n\n'+
-             '#Alice+herself\t\n\n#Bob+himself\t\n\n'
+    response:'/Swarm+Host#db!00001+me~5C\t\n'+
+             '#Alice+herself\t\n#Bob+himself\t\n\n'
 },
 {
     comment: 'upstream handshake, subscriptions initiated (ii)',
@@ -319,7 +319,7 @@ var SNAPSHOTS = [
     query:   '#object\toriginal+author\n'+
              '\t!original+author.~state\t{"original+author":{"default":"value"}}\n'+
              '\t!version+author.set\t{"update":true}\n\n',
-    response:'#object\toriginal+author\n\n'+
+    response:'#object\toriginal+author\n'+
              '#object!version+author.~state\t{"original+author":{"default":"value"},"version+author":{"update":true}}\n'
 },
 {

@@ -80,6 +80,7 @@ Op.parse = function (str, source, context) {
     return {ops: ops, remainder: rem};
 };
 
+
 Op.prototype.origin = function () {
     return this.spec.source();
 };
@@ -117,13 +118,10 @@ Op.prototype.toString = function (context) {
     var spec_str = context ?
         this.spec.toAbbrevString(context) : this.spec.toString();
     var line = spec_str + '\t' + this.value + '\n';
-    if (this.name()==='on') {
-        if (this.patch) {
-            this.patch.forEach(function(o){
-                line += '\t' + o.toShortString();
-            });
-        }
-        line += '\n';
+    if (this.name()==='on' && this.patch) {
+        this.patch.forEach(function(o){
+            line += '\t' + o.toShortString();
+        });
     }
     return line;
 };

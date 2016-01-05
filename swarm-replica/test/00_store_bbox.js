@@ -104,7 +104,7 @@ var BASIC = [
 },
 {
     comment: 'repeated subscription, responded with a patch',
-    query:   '[down]#stamp2+remote\tstampA+user~b\n',
+    query:   '[down]#stamp2+remote\tstampA+user~b\n\n',
     response:'[down]#stamp2+remote\t!0\n' +
                 '\t!stampB+user~ssn~two.op\tsomething happens (B)\n'+
                 '\t!stampC+user~ssn~two.op\tsomething happens (C)\n\n'
@@ -130,7 +130,7 @@ var BASIC = [
 },
 {
     comment: 'tail-seeking subscription (responded with the tail)',
-    query:   '[down]#stamp2+remote\tstamp2+remote\n',
+    query:   '[down]#stamp2+remote\tstamp2+remote\n\n',
     response:'[down]#stamp2+remote\t!0\n' +
                 '\t!stampA+user~b.op\tsomething happens (A)\n'+
                 '\t!stampB+user~ssn~two.op\tsomething happens (B)\n'+
@@ -138,7 +138,7 @@ var BASIC = [
 },
 {
     comment: 'blanc subscription (responded with the state)',
-    query:   '[down2]#stamp2+remote\t0\n',
+    query:   '[down2]#stamp2+remote\t0\n\n',
     response:'[down2]#stamp2+remote\t!0\n' +
                 '\t!stampC+user~ssn~two.~state\tup to the C\n\n'
 }
@@ -226,10 +226,10 @@ var REORDERS = [
     query:   '[up]#object!time3+joe.op op (2)\n' +
              '[dsII]#object!time2+me~ssn~dsII.op op (3)\n',
     response:'[dsI]#object!time3+joe.op op (2)\n' +
+             '#object!time2+me~ssn~dsII.op op (3)\n' +
              '[dsII]#object!time3+joe.op op (2)\n' +
-             '[up]#object!time2+me~ssn~dsII.op op (3)\n' +
-             '[dsI]#object!time2+me~ssn~dsII.op op (3)\n' +
-             '[dsII]#object!time2+me~ssn~dsII.op op (3)\n'
+             '#object!time2+me~ssn~dsII.op op (3)\n' +
+             '[up]#object!time2+me~ssn~dsII.op op (3)\n'
 },
 {
     comment: 'order preservation in a patch',
@@ -386,7 +386,7 @@ var ERRORS = [
 },*/
 {
     comment: 'bookmark > tip',
-    query:   '[dsII]#object ~book+mark\n',
+    query:   '[dsII]#object ~book+mark\n\n',
     response:'[dsII]#object.error bookmark is ahead!\n'
 },
 {

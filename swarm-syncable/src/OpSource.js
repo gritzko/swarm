@@ -12,6 +12,7 @@ function OpSource () {
 }
 util.inherits(OpSource, EventEmitter);
 module.exports = OpSource;
+OpSource.DEFAULT = new Spec('/Model!0.on');
 
 
 OpSource.prototype.label = function (inbound) {
@@ -35,8 +36,20 @@ OpSource.prototype.source = function () {
 };
 
 
-OpSource.prototype.emitOp = function (spec, value, patch) {
-    var op = new Op(spec, value, this.source(), patch);
+OpSource.prototype.emitOp = function (key, value, kv_patch) {
+    var patch = null, source = this.source();
+    var spec = new Spec(key, null, OpSource.DEFAULT);
+    if (kv_patch) {
+        if (kv_patch.constructor!==Array) {
+            throw new Error('need an array of {key,value} objects');
+        }
+        var typeId = spec.typeId();
+        patch = kv_patch.map(function(kv){
+            var sp = new Spec(kv.key, typeId, OpSource.DEFAULT);
+            return new Op(sp, kv.value, source);
+        });
+    }
+    var op = new Op(spec, value, source, patch);
     if (OpSource.debug) {
         this.log(op, false);
     }
@@ -44,10 +57,10 @@ OpSource.prototype.emitOp = function (spec, value, patch) {
 };
 
 
-OpSource.isHandshake = function (op) {
-    return  op.spec.pattern()==='/#!.' &&
-            /Swarm(\+.+)?/.test(op.spec.type()) &&
-            op.op().toLowerCase()==='on' ;
+OpSource.isHandshake = function (spec) {
+    return  spec.pattern()==='/#!.' &&
+            /Swarm(\+.+)?/.test(spec.type()) &&
+            spec.op()==='on';
 };
 
 
@@ -95,6 +108,7 @@ OpSource.prototype.write = function (op, callback) {
     }
     this._write(op, callback);
 };
+OpSource.prototype.writeOp = OpSource.prototype.write;
 
 
 OpSource.prototype.writeHandshake = function (hs, callback) {

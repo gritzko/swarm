@@ -11,10 +11,11 @@ var tape = require('tap').test;
 tape ('syncable.03.A simple cases', function (t) {
     var stream = new BatStream();
 
-    //OpSource.debug = true;
+    OpSource.debug = true;
+    StreamOpSource.debug = true;
 
-    var pair = new StreamOpSource(stream.pair, {});
-    var opstream = new StreamOpSource(stream, {});
+    var pair = new StreamOpSource(stream.pair, {syncFlush: true});
+    var opstream = new StreamOpSource(stream, {syncFlush: true});
 
     var send_ops = Op.parse(
         '/Model#stamp+author!time3+user3~ssn.on\tpos\n'+
@@ -23,8 +24,7 @@ tape ('syncable.03.A simple cases', function (t) {
         'time1+user1~ssn'
     ).ops;
     var send = send_ops[0];
-
-    t.plan(6);
+    t.equal(send_ops.length, 1, 'parse is OK');
 
     opstream.on('handshake', function(hs) {
         t.equal(hs.spec+'', '/Swarm+Host#db+cluster!time1+user1~ssn.on', 'hs spec');
@@ -38,23 +38,33 @@ tape ('syncable.03.A simple cases', function (t) {
         t.deepEqual(op.patch, send.patch, 'patch matches');
     });
 
+    opstream.on('end', function() {
+        t.end();
+    });
+
+    opstream.on('error', function(err) {
+        console.warn('some error', err.value);
+        t.fail('some error');
+    });
+
     pair.writeHandshake(new Op('/Swarm+Host#db+cluster!time1+user1~ssn.on', ''));
     pair.write(send);
     pair.flush(); // keepalive must cause no reaction
+    pair.writeEnd();
 });
 
 tape ('syncable.03.B defragmentation', function (t) {
     var stream = new BatStream();
     var opstream = new StreamOpSource(stream.pair, {source: 'pair'});
     var op = new Op('/Swarm#db+cluster!stream.on', '', 'pair');
-    var str = op.toString();
-
-    t.plan(2);
+    var str = op.toString()+'\n';
 
     opstream.on('handshake', function(recv_op){
         t.equal(''+recv_op.spec, ''+op.spec, 'spec matches');
         t.equal(recv_op.value, op.value, 'value matches');
+        t.end();
     });
+
     for (var i = 0; i < str.length; i++) {
         stream.write(str.charAt(i));
     }
@@ -64,11 +74,14 @@ tape ('syncable.03.C error', function (t) {
     var stream = new BatStream();
     var opstream = new StreamOpSource(stream.pair, {});
     t.plan(1);
-    opstream.on('data', function(recv_op){
+    opstream.on('op', function(recv_op){
         t.fail('no ops here');
     });
     opstream.on('error', function(msg) {
         t.pass(msg);
+    });
+    opstream.on('end', function() {
+        t.end();
     });
     stream.write("!не операция\n");
 });
@@ -90,7 +103,7 @@ tape ('syncable.03.D handshake', function (t) {
         t.fail('no error here');
     });
     stream.write("/Swarm#db+shard!stamp+swarm~cluster.on\t\n");
-    stream.write("/Model#stamp!time.on\t\n");
+    stream.write("/Model#stamp!time.on\t\n\n");
 });
 
 tape ('syncable.03.E destroy()', function (t) {
@@ -144,6 +157,10 @@ tape ('syncable.03.G dialog', function (t) {
         opstream.write(sample_op);
     });
 
+    opstream.on('error', function (err) {
+        t.fail('some error: '+err);
+    });
+
     pair.once('handshake', function (op) {
         t.equal(''+op.spec, '/Swarm#db+cluster!stream.on', 'spec matches');
         pair.on('op', more_data);
@@ -156,7 +173,7 @@ tape ('syncable.03.G dialog', function (t) {
         t.end();
     }
 
-    pair.write(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
+    pair.writeHandshake(new Op('/Swarm#db+cluster!pair.on', '', 'stream'));
 });
 
 
@@ -177,17 +194,15 @@ tape ('syncable.03.H write to a closed stream', function (t) {
     stream.end();
 });
 
+
 tape ('syncable.03.I opstream write', function (t) {
     var stream = new BatStream();
-    var opstream = new StreamOpSource(stream.pair);
+    var opstream = new StreamOpSource(stream.pair, {syncFlush: false});
 
     stream.once('data', function (chunk) {
-        t.equal(chunk.toString(), '/Swarm#db+cluster!stamp+swarm~ssn\t\n\n');
-        stream.once('data', function (chunk) {
-            t.equal(chunk.toString(), '#stamp!time\t\n\n');
-            stream.once('data', function (chunk) {
-                t.fail(chunk.toString());
-            });
+        t.equal(chunk.toString(), '/Swarm#db+cluster!stamp+swarm~ssn\t\n#stamp!time\t\n\n');
+        stream.on('data', function (chunk) {
+            t.fail(chunk.toString());
         });
     });
     stream.on('end', function () {
@@ -197,7 +212,7 @@ tape ('syncable.03.I opstream write', function (t) {
                           '/Model#stamp!time.on\t\n');
 
     t.equal(parsed.ops.length, 2);
-    opstream.write(parsed.ops[0]);
+    opstream.writeHandshake(parsed.ops[0]);
     opstream.write(parsed.ops[1]);
     opstream.writeEnd();
 });
