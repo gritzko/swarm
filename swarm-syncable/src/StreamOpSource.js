@@ -36,11 +36,6 @@ function StreamOpSource (stream, options) {
     this.options = options = options || {};
     this.pending_s = []; // FIXME this is not our business
 
-    // Local session/database/timestamp
-    // this.ssn_id = options.ssn_id || null;
-    // this.db_id = options.db_id || null;
-    // this.stamp = options.stamp || '0';
-    // Peer session/database/timestamp
     this.mute = false;
     // unparsed bytes
     this.remainder = '';
@@ -65,7 +60,7 @@ StreamOpSource.SEND_DELAY_MS = 1;
 
 StreamOpSource.prototype._write = function (op, callback) {
     this.pending_s.push( op.toString(StreamOpSource.DEFAULT) );
-    if (this.asyncFlush) {
+    if (this.syncFlush) {
         var self = this;
         this.flush_timeout = this.flush_timeout || setTimeout(function(){
             self.flush_timeout = null;

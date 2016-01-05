@@ -264,7 +264,8 @@ Entry.prototype.processOn = function () {
         // TODO consider LRU/LFU caches
         // FIXME tests for cache poisoning
         var dstream_has_no_state = this.op.value==='0';
-        var no_upstream = !upstream || this.op.source===upstream;
+        var no_upstream = this.replica.user_id==='swarm' &&
+            (!upstream || this.op.source===upstream); // ? TODO shaky
         patch_down = this.op.reply('on', '');
         if (dstream_has_no_state && no_upstream) {
             var zero_state = new Op(this.op.typeid()+'!0.~state', '');
