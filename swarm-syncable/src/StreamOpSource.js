@@ -186,7 +186,6 @@ StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
 };
 
 StreamOpSource.prototype.eatLines = function (till) {
-    var last = null, patch = [];
     for(var i=0; i<till; i++)  {
         var pline = this.lines[i], key = pline[2], value = pline[3];
         if (!key) { continue; } // blank line
@@ -261,3 +260,15 @@ StreamOpSource.prototype.destroy = function () { // FIXME fail prop
 StreamOpSource.prototype.isOpen = function () {
     return !! this.stream;
 };
+
+
+if (typeof(Buffer)==='function') {
+    if (!Buffer.prototype.indexOf) {
+        Buffer.prototype.indexOf = function (char, start) {
+            for(var i=start; i<this.length; i++) {
+                if (this[i]===char) { return i; }
+            }
+            return -1;
+        };
+    }
+}
