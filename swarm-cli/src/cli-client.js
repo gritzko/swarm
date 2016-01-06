@@ -10,19 +10,19 @@ var argv = require('minimist')(process.argv.slice(2));
 /**
  */
 
-if (argv.help) {
-    console.log('\n\
-    Command-line Swarm client \n\
-     \n\
-    Arguments: \n\
-      --db_id -d   database name \n\
-      --ssn_id -s  session id \n\
-      --connect -c server URL to connect to \n\
-      --user_id -u user id (ssn_id is assigned by the server)\n\
-      --db_path -p path to the leveldb database \n\
-      --repl -r    REPL (interactive mode) \n\
-      --debug -D   debug printing \n\
-      ');
+if (argv.help || argv.h) {
+     console.log('\n' +
+'    Command-line Swarm client \n' +
+'     \n' +
+'    Arguments: \n' +
+'      --db_id -d   database name \n' +
+'      --ssn_id -s  session id \n' +
+'      --connect -c server URL to connect to \n' +
+'      --user_id -u user id (ssn_id is assigned by the server)\n' +
+'      --db_path -p path to the leveldb database \n' +
+'      --repl -r    REPL (interactive mode) \n' +
+'      --debug -D   debug printing \n'
+    );
     process.exit(0);
 }
 

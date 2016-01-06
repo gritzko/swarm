@@ -1,6 +1,6 @@
 {
     "name": "swarm-server",
-    "version": "1.0.16",
+    "version": "1.0.17",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -29,7 +29,7 @@
         "stream-url-ws": "0.1.x",
         "stream-url-node": "0.1.x",
         "eventemitter3": "^1.1.1",
-        "yargs": "^3.30.0"
+        "minimist":       "^1.2.0"
     },
     "devDependencies": {
         "swarm-bat": "1.0.x",

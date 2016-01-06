@@ -11,8 +11,8 @@ var tape = require('tap').test;
 tape ('syncable.03.A simple cases', function (t) {
     var stream = new BatStream();
 
-    OpSource.debug = true;
-    StreamOpSource.debug = true;
+    // OpSource.debug = true;
+    // StreamOpSource.debug = true;
 
     var pair = new StreamOpSource(stream.pair, {syncFlush: true});
     var opstream = new StreamOpSource(stream, {syncFlush: true});

@@ -6,6 +6,7 @@ PACKAGES = \
 	swarm-replica \
 	swarm-server \
 	swarm-client \
+	swarm-cli \
 	swarm-gw \
 
 
