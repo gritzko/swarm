@@ -373,13 +373,11 @@ Replica.prototype.done = function (request) {
         var key_prefix = this.prefix + request.typeid;
         save_queue.forEach(function(rec){
             rec.key = key_prefix + rec.key;
-        });
-        save_queue.forEach(function(rec){
-            rec.key = key_prefix + rec.key;
             if (!rec.value) {
                 rec.value = ' ';
             }
         });
+        Replica.trace && console.log('SAVE', save_queue);
 
         this.db.batch(save_queue, send_ops);
     } else {
@@ -470,6 +468,7 @@ Replica.prototype.loadMeta = function (activeEntry) {
             console.error('data load failed', key, err);
             self.close();
         } else {
+            Replica.trace && console.log('META', key, value);
             activeEntry.setMeta(new Entry.State(value));
         }
     });
