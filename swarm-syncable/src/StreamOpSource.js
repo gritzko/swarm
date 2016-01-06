@@ -109,7 +109,6 @@ StreamOpSource.prototype.flush = function (callback) {
     }
     p_o.length = 0;
     try {
-        StreamOpSource.debug && this.log(parcel, true, 'FLUSH');
         this.stream.write(parcel, "utf8", callback);
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
@@ -225,7 +224,11 @@ StreamOpSource.prototype.onStreamEnded = function () {
 
 
 StreamOpSource.prototype.onStreamError = function (err) {
-    StreamOpSource.debug && console.error('stream error', err.message, err.stack);
+    if (util.isError(err)) {
+        StreamOpSource.debug && console.warn(err.stack);
+        err = err.message;
+    }
+    StreamOpSource.debug && console.error('stream error', err);
     if (this.stream) {
         this.writeError( err );
         this.writeEnd( );

@@ -26,7 +26,7 @@ OpSource.prototype.log = function (op, inbound, event) {
     console.log(
         this.label(inbound) +
         (event ? '\t['+event+']' : '') +
-        (op ? '\t'+op.toString() : '')
+        (op ? '\t'+op.spec.toString()+'\t'+op.value : '')
     );
 };
 
@@ -133,11 +133,11 @@ OpSource.prototype.writeEnd = function (op, callback) {
 
 
 OpSource.prototype.writeError = function (err_op, callback) {
+    if (err_op.constructor!==Op) {
+        err_op = new Op('.error', err_op); // FIXME unify, DOCUMENT  fail prop
+    }
     if (OpSource.debug) {
         this.log(err_op, true, 'ERROR');
-    }
-    if (err_op.constructor===String) {
-        err_op = new Op('.error', err_op); // FIXME unify, DOCUMENT  fail prop
     }
     this._write(err_op, callback);
 };
