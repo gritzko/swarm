@@ -18,7 +18,7 @@ function Client (options) {
     if (!options.ssn_id && !options.user_id) {
         throw new Error('user or session id is required');
     }
-    if (!options.connect) {
+    if (!options.ssn_id && !options.connect) {
         //throw new Error('need a server url');
         console.warn("no server URL specified");
     }
