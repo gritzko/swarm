@@ -33,6 +33,7 @@ tape ('syncable.02.A empty cycle', function (t) {
     t.equal(zero._version, empty._id, 'default state version !0');
     t.equal(empty._version, empty._id, 'syncable rebuilt');
     host.close();
+
     t.end();
 });
 
@@ -78,6 +79,38 @@ tape('syncable.02.C batch events', function (t) {
         t.end();
     }, 1);
 
+});
+
+
+tape('syncable.02.D Host.get / Swarm.get', function (t) {
+    var host = new Host({
+        ssn_id: 'anon~02~D',
+        db_id:  'db',
+        clock:  stamp.LamportClock
+    });
+    host.go();
+
+    var empty_model = host.get();
+    t.equal(empty_model.constructor, Model);
+    t.equal(empty_model._version, empty_model._id);
+
+    var model_2 = host.get('/Model');
+    t.equal(model_2.constructor, Model);
+    t.equal(model_2._version, model_2._id);
+
+    var model_2B = host.get(model_2._id);
+    t.ok(model_2===model_2B);
+
+    var model_2C = host.get(model_2.typeid());
+    t.ok(model_2===model_2C);
+
+    var model_2D = host.get(model_2.typeId());
+    t.ok(model_2===model_2D);
+
+    t.throws(function(){host.get('/Not-a-spec@#$%$%')});
+
+    host.end();
+    t.end();
 });
 
 

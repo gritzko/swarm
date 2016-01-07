@@ -39,7 +39,7 @@ var stamp = require('swarm-stamp');
 function Spec (spec, scope, defaults) {
     if (defaults) {
         if (defaults.constructor!==Spec) {
-            defaults = new Spec(defaults);
+            throw new Error('defaults is not a Spec');
         }
         this._type = defaults._type;
         this._id = defaults._id;
@@ -71,7 +71,7 @@ function Spec (spec, scope, defaults) {
     }
     if (scope) {
         if (scope.constructor!==Spec) {
-            scope = new Spec(scope);
+            throw new Error('scope is not a Spec');
         }
         if (scope._type) { this._type = scope._type; }
         if (scope._id) { this._id = scope._id; }

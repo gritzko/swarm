@@ -27,7 +27,7 @@ tape ('syncable.01.b basic specifier syntax', function (tap) {
 
 
 tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
-    var spec = new Spec('!stamp', '/Type#id', '.on');
+    var spec = new Spec('!stamp', new Spec('/Type#id'), new Spec('.on'));
     tap.equal(spec.toString(), '/Type#id!stamp.on', 'scope/default');
     tap.equal(spec.type(), 'Type');
     tap.equal(spec.id(), 'id');
@@ -41,17 +41,17 @@ tape ('syncable.01.b.2 parsed specifier (scopes and defaults)', function (tap) {
     tap.equal(spec4.toString(), spec2.toString());
 
     var test = '/Type.op2';
-    tap.equal(new Spec(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
-    tap.equal(new Spec(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp5.op1')).toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp6.op1')).toString(), '/Type!stamp6.op1');
     tap.equal(new Spec(test, new Spec('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
-    tap.equal(new Spec(test, null, '/Type!stamp8.op1').toString(), '/Type!stamp8.op2');
+    tap.equal(new Spec(test, null, new Spec('/Type!stamp8.op1')).toString(), '/Type!stamp8.op2');
     tap.equal(new Spec(test, null, new Spec('/Type!stamp9.op1')).toString(), '/Type!stamp9.op2');
 
     test = new Spec('/Type.op2');
-    tap.equal(new Spec(test, '/Type!stamp5.op1').toString(), '/Type!stamp5.op1');
-    tap.equal(new Spec(test, '/Type!stamp6.op1').toString(), '/Type!stamp6.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp5.op1')).toString(), '/Type!stamp5.op1');
+    tap.equal(new Spec(test, new Spec('/Type!stamp6.op1')).toString(), '/Type!stamp6.op1');
     tap.equal(new Spec(test, new Spec('/Type!stamp7.op1')).toString(), '/Type!stamp7.op1');
-    tap.equal(new Spec(test, null, '/Type!stamp8.op1').toString(), '/Type.op2');
+    tap.equal(new Spec(test, null, new Spec('/Type!stamp8.op1')).toString(), '/Type.op2');
     tap.equal(new Spec(test, null, new Spec('/Type!stamp9.op1')).toString(), '/Type.op2');
 
     tap.end();

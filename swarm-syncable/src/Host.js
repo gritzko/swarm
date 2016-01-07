@@ -1,5 +1,6 @@
 'use strict';
 var SwarmStamp = require('swarm-stamp');
+var Lamp = SwarmStamp.LamportTimestamp;
 var Spec = require('./Spec');
 var Op = require('./Op');
 var util = require("util");
@@ -152,7 +153,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     } else {
         this.clock = options.clock;
     }
-    var lamp = new SwarmStamp.LamportTimestamp(ssn_id);
+    var lamp = new Lamp(ssn_id);
     this.ssn_id = lamp.source();
     this.user_id = lamp.author();
     this.db_id = db_id;
@@ -181,7 +182,7 @@ Host.prototype.getSsnMark = function () {
 
 Host.prototype._writeHandshake = function (op, callback) {
     var options = this.options;
-    var lamp = new SwarmStamp.LamportTimestamp(op.value);
+    var lamp = new Lamp(op.value);
     var new_ssn = lamp.source();
     if (!this.clock) {
         // get ssn, adjust clocks
@@ -396,13 +397,18 @@ var just_model = new Spec('/Model'); // FIXME
 // Retrieve an object by its spec (type and id).
 // Optionally, invoke a callback once the state is actually available.
 Host.prototype.get = function (spec, callback) {
-    if (spec.constructor===Function) {
-        spec = new Spec('/'+spec._type);
-    }
-    if (spec.constructor!==Spec) {
-        spec = new Spec(spec.toString(), null, just_model);
-    }
-    if (!spec.type()) {
+    if (!spec) {
+        spec = new Spec(just_model);
+    } else if (spec.constructor!==Spec) {
+        var str = spec.toString();
+        if (Lamp.is(str)) {
+            spec = new Spec('#'+str, just_model);
+        } else if (Spec.is(str)) {
+            spec = new Spec(str, null, just_model);
+        } else {
+            throw new Error('incorrect spec');
+        }
+    } else if (!spec.type()) {
         throw new Error('type not specified');
     }
     var type_fn = Syncable.types[spec.type()];
