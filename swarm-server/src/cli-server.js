@@ -17,6 +17,7 @@ if (argv.help || argv.h) {
 '      --user_id -u user id (ssn_id is assigned by the upstream server)\n' +
 '      --db_path -p path to the leveldb database \n' +
 '      --repl -r    REPL (interactive mode) \n' +
+'      --stdio -i   treat stdin/stdout as a downstream replica \n' +
 '      --debug -D   debug printing \n' +
 '      --trace -T   trace printing \n'
     );
@@ -43,6 +44,10 @@ var options = {
     callback: report_start
 };
 
+if (!options.db_path) {
+    options.db_path = options.db_id + '-' + options.ssn_id + '.db';
+}
+
 var server = Swarm.Server.local = new Swarm.Server(options);
 
 function report_start (err) {
@@ -54,15 +59,30 @@ function report_start (err) {
     console.log('swarm database', options.db_id, 'is listening at', options.listen);
     run_scripts();
     if (argv.repl || argv.r) {
-        global.Swarm = Swarm;
-        global.Server = server;
-        var repl = require('repl');
-        repl.start({
-            prompt: '\u2276 ',
-            useGlobal: true,
-            replMode: repl.REPL_MODE_STRICT
-        });
+        start_repl();
+    } else if (argv.stdio || argv.i) {
+        start_stdio();
     }
+}
+
+
+function start_repl () {
+    global.Swarm = Swarm;
+    global.Server = server;
+    var repl = require('repl');
+    repl.start({
+        prompt: '\u2276 ',
+        useGlobal: true,
+        replMode: repl.REPL_MODE_STRICT
+    });
+}
+
+
+function start_stdio () {
+    var duplexer = require('duplexer');
+    var stdio = duplexer(process.stdout, process.stdin);
+    Swarm.Replica.HS_WAIT_TIME = 24*60*60*1000; // 24h :)
+    server.replica.addStreamDown(stdio);
 }
 
 

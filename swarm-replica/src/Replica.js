@@ -590,7 +590,7 @@ Replica.prototype.addStreamDown = function (stream) {
             stream.destroy();
             op_stream.destroy();
         }
-    }, 3000); // the stream has 3 sec to? complete the handshake
+    }, Replica.HS_WAIT_TIME); // the stream has some time to complete the handshake
 
     op_stream.on('error', function onError (msg) {
         Replica.trace && console.log('STREAM_ERR', msg);
@@ -601,6 +601,7 @@ Replica.prototype.addStreamDown = function (stream) {
     });
 
 };
+Replica.HS_WAIT_TIME = 3000;
 
 
 Replica.prototype.addOpStreamDown = function (stream) {
