@@ -107,7 +107,9 @@ tape('syncable.02.D Host.get / Swarm.get', function (t) {
     var model_2D = host.get(model_2.typeId());
     t.ok(model_2===model_2D);
 
-    t.throws(function(){host.get('/Not-a-spec@#$%$%')});
+    t.throws(function(){
+        host.get('/Not-a-spec@#$%$%');
+    });
 
     host.end();
     t.end();

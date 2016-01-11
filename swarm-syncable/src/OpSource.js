@@ -4,7 +4,35 @@ var Spec = require('./Spec');
 var EventEmitter = require("eventemitter3");
 var util = require("util");
 
-
+/**
+*    OpSource is an interface for a stream of ops arriving from
+*    some (backing) replica. It can be a local host, a remote
+*    client or a database. This definition is a bit tautological
+*    as a "replica" is anything that creates/consumes/relays
+*    CRDT ops (correctly). OpSource implies some order guarantees
+*    (no causal reordering etc, see "causal broadcast").
+*    Essentially, OpSource is an end of a "pipe" that goes to
+*    to some another replica.
+*    OpSource emits three types of events:
+*
+*    * `handshake` specifies the context for the rest of the ops,
+*      such as the id of the session on the other end, the id
+*      of the database, the id of the connection and suchlike,
+*    * `op` is a regular CRDT op (such as `.set`) or a subscription/
+*       unsubscription pseudo-op (`.on`, `.off`), or an `.error`,
+*    * `end` is the end of this stream; no further events allowed.
+*
+*    A special note on error handling. OpStream has no dedicated
+*    `error` event. All transient (recoverable) errors are transmitted
+*    in the stream as `.error` operations and emitted as such.
+*    Those may be scoped to particular objects and operations.
+*    Irrecovearable errors are passed to/emitted with the `end` event.
+*
+*    This class is abstract; see StreamOpSource for an OpSource for
+*    a remote replica connected by a binary stream, Host for a local
+*    CRDT replica, LevelOpSource for a LevelDB-backed replica.
+*    @class
+*/
 function OpSource () {
     EventEmitter.call(this, {objectMode: true});
     this.peer_hs = null; // peer handshake
@@ -30,12 +58,17 @@ OpSource.prototype.log = function (op, inbound, event) {
     );
 };
 
-
+/**
+*   Source is an unique id for an op source ("pipe end") that is
+*   (normally) a Lamport timestamp issued by its backing replica.
+*/
 OpSource.prototype.source = function () {
     return this.hs ? this.hs.stamp() : '0';
 };
 
-
+/**
+* For use by descendant classes: emit an op.
+*/
 OpSource.prototype.emitOp = function (key, value, kv_patch) {
     var patch = null, source = this.source();
     var spec = new Spec(key, null, OpSource.DEFAULT);
@@ -59,11 +92,15 @@ OpSource.prototype.emitOp = function (key, value, kv_patch) {
 
 OpSource.isHandshake = function (spec) {
     return  spec.pattern()==='/#!.' &&
-            /Swarm(\+.+)?/.test(spec.type()) &&
-            spec.op()==='on';
+            /Swarm(\+.+)?/.test(spec.type());
+//            spec.op()==='on';
 };
 
 
+/**
+*   For use by descendant classes: emit a handshake (sent by the
+*   backing replica).
+*/
 OpSource.prototype.emitHandshake = function (sp, value, patch) {
     if (this.hs) {
         throw new Error('handshake repeat');
@@ -77,41 +114,38 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
     this.emit('handshake', hs);
 };
 
-
-OpSource.prototype.emitEnd = function () {
+/**
+*   End of the stream. No more ops from the backing replica will arrive.
+*/
+OpSource.prototype.emitEnd = function (error) {
     if (OpSource.debug) {
-        this.log(null, false, 'END');
+        this.log(new Op('.off', error), false, 'END');
     }
-    this.emit('end');
+    this.emit('end', error);
 };
 
 
-OpSource.prototype.emitError = function (spec, msg) {
-    if (util.isError(spec)) {
-        msg = spec.message.replace('/\s+/mg', ' ').substr(0,140);
-        spec = '.error';
-    } else if (!msg) {
-        msg=spec;
-        spec='.error';
-    }
-    var err_op = new Op(spec, msg, this.source());
-    if (OpSource.debug) {
-        this.log(err_op, false, 'ERROR');
-    }
-    this.emit('error', err_op);
-};
-
-
-OpSource.prototype.write = function (op, callback) {
+/**
+*   Send an op to the backing replica. No completion callback;
+*   the interface is a fully asynchronous fire-and-forget.
+*   (The reason: the fact we send somehitng by the network does
+*   not mean it will reach the destination; even if it reaches
+*   destination, the backing replica may forget it. Such cases
+*   are resolved at the protocol level: acknowledgements, echos,
+*   subscription handshakes, etc. Callbacks are useless here,
+*   for the end callback, that conveys the fact all the ops were
+*   "sent" or "saved" and that we can do no better this time.)
+*/
+OpSource.prototype.writeOp = function (op) {
     if (OpSource.debug) {
         this.log(op, true);
     }
-    this._write(op, callback);
+    this._writeOp(op);
 };
-OpSource.prototype.writeOp = OpSource.prototype.write;
+OpSource.prototype.write = OpSource.prototype.writeOp;
 
-
-OpSource.prototype.writeHandshake = function (hs, callback) {
+/** Send a handshake to the backing replica. */
+OpSource.prototype.writeHandshake = function (hs) {
     if (this.peer_hs) {
         throw new Error('handshake repeat by the peer');
     }
@@ -119,43 +153,41 @@ OpSource.prototype.writeHandshake = function (hs, callback) {
     if (OpSource.debug) {
         this.log(hs, true, 'HS');
     }
-    this._writeHandshake(hs, callback);
+    this._writeHandshake(hs);
 };
 
-
-/** Anti-handshake, in a sense. */
+/**
+*   Close this "pipe". Optionally, transmits an error message.
+*   Invokes a callback once everything is done.
+*/
 OpSource.prototype.writeEnd = function (op, callback) {
+    if (!op || op.constructor===String) {
+        op = new Op('.off', op||'');
+    }
     if (OpSource.debug) {
         this.log(op, true, 'END');
     }
-    this._end(op, callback);
+    this._writeEnd(op, callback);
 };
+OpSource.prototype.end = OpSource.prototype.writeEnd;
 
-
-OpSource.prototype.writeError = function (err_op, callback) {
-    if (err_op.constructor!==Op) {
-        err_op = new Op('.error', err_op); // FIXME unify, DOCUMENT  fail prop
-    }
-    if (OpSource.debug) {
-        this.log(err_op, true, 'ERROR');
-    }
-    this._write(err_op, callback);
-};
-
-
-OpSource.prototype._write = function (op, callback) {
+/**  `writeOp` implementation (to be overridden)
+*    @virtual */
+OpSource.prototype._writeOp = function (op, callback) {
     // not implemented
     callback && callback();
 };
 
-
+/**  `writeHandshake` implementation (to be overridden)
+*    @virtual  */
 OpSource.prototype._writeHandshake = function (op, callback) {
     // not implemented
     callback && callback();
 };
 
-
-OpSource.prototype._end = function (op, callback) {
+/**  `writeEnd` implementation (to be overridden)
+*    @virtual */
+OpSource.prototype._writeEnd = function (op, callback) {
     // not implemented
     callback && callback();
 };

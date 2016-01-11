@@ -265,9 +265,8 @@ Replica.prototype.write = function (op) {
         console.warn('op origin unknown', op.source, Object.keys(this.streams));
     }
     if (op.spec.pattern()!=='/#!.') { // TODO validate nested patterns
-        console.warn('invalid op', op.spec, new Error().stack);
-        this.send(op.error('invalid opz'));
-        this.removeStream(op.source);
+        console.warn('invalid op pattern', op.spec, new Error().stack);
+        this.removeStream(op.source, 'invalid op pattern');
         return;
     }
     var typeid = op.typeid();
@@ -408,6 +407,7 @@ Replica.prototype.upscribe = function () {
     for(var i=0; i<typeids.length; i++){
         var typeid = typeids[i];
         var entry = this.entries[typeid];
+        // FIXME WRONG -- need a real upscribe
         entry.queueOps([new Op(typeid + '.on', null)]);
     }
 };
@@ -560,7 +560,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
 
     op_stream.on('op', this.write.bind(this));
     op_stream.on('end', function () {
-        self.removeStream(op_stream, true);
+        self.removeStream(op_stream);
     });
     Replica.debug && console.log('U>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
@@ -581,24 +581,23 @@ Replica.prototype.addStreamDown = function (stream) {
     }
     var op_stream = new StreamOpSource (stream);
     var self = this;
-    op_stream.once('handshake', function (op) {
+    function on_pre_hs_fail (err) {
+        op_stream.removeListener('handshake', on_hs);
+        op_stream.writeEnd(err);
+    }
+    function on_hs(op) {
+        op_stream.removeListener('end', on_pre_hs_fail);
         self.onDownstreamHandshake(op, op_stream);
-    });
+    }
+    op_stream.once('end', on_pre_hs_fail);
+    op_stream.once('handshake', on_hs);
 
     setTimeout(function kill(){
         if (!op_stream.peer_hs) {
             stream.destroy();
-            op_stream.destroy();
+            op_stream.removeAllListeners();
         }
     }, Replica.HS_WAIT_TIME); // the stream has some time to complete the handshake
-
-    op_stream.on('error', function onError (msg) {
-        Replica.trace && console.log('STREAM_ERR', msg);
-        try {
-            op_stream.end(new Op('.error',msg||'handshake error'));
-            op_stream.destroy();
-        } catch (ex) {}
-    });
 
 };
 Replica.HS_WAIT_TIME = 3000;
@@ -684,8 +683,8 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
 
         Replica.trace && console.log('HS_ACCEPT', peer_stamp);
         op_stream.on('op', self.write.bind(self));
-        op_stream.on('end', function () {
-            self.removeStream(op_stream, true);
+        op_stream.on('end', function (err) {
+            self.removeStream(op_stream);
         });
         self.streams[peer_stamp] = op_stream;
 
@@ -704,8 +703,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
     function reject_handshake_action (err) {
         Replica.trace && console.log('HS_REJECT', peer_stamp, err);
         var err_op = new Op(hs.spec.setOp('error'), err);
-        op_stream.write(err_op);
-        op_stream.destroy && op_stream.destroy();
+        op_stream.writeEnd(err_op); // MUST DO AUTOMATICALLY
     }
 
 };
@@ -730,14 +728,14 @@ Replica.seq_ssn_policy =  function (op, op_stream, callback) {
 };
 
 
-Replica.prototype.removeStream = function (op_stream, closed) {
+Replica.prototype.removeStream = function (op_stream, err_msg) {
     if (!op_stream) {
         throw new Error('no op_stream given to removeStream');
     }
     if (op_stream.constructor===String) {
         op_stream = this.streams[op_stream];
+        if (!op_stream) { return; }
     }
-    if (!op_stream) { return; }
     var stamp = op_stream.source();
     if (stamp === this.upstream_stamp) {
         this.upstream_ssn = null;
@@ -746,17 +744,20 @@ Replica.prototype.removeStream = function (op_stream, closed) {
     }
 
     if (stamp in this.streams) {
+        // FIXME do gently (not all)
         op_stream.removeAllListeners('op');
         op_stream.removeAllListeners('end');
 
         delete this.streams[stamp];
-        var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
+        op_stream.writeEnd(err_msg);
+
+        /*var off = new Spec('/Swarm+Replica').add(this.db_id, '#')
             .add(op_stream.stamp, '!').add('.off');
         if (!closed) {
             op_stream.isOpen() && op_stream.writeEnd(new Op(off));
         } else {
             op_stream.writeEnd();
-        }
+        }*/
     } else {
         console.warn('the stream is not on the list', stamp);
     }
@@ -790,6 +791,15 @@ Replica.prototype.listen = function (url, options, on_ready) {
 };
 
 
+Replica.prototype.stats = function () {
+    var stats = {
+        ssn_id: this.ssn_id,
+        db_id:  this.db_id,
+        time:   this.clock.issueTimestamp(),
+        activeStreamsDown: Object.keys(this.streams).length
+    };
+    return stats;
+};
 // # Session numbers
 // we remember upstream handshakes
 // upstream handshake stash

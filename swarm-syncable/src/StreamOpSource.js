@@ -10,9 +10,9 @@ var Op = require('./Op');
     router, host - all consume op streams. To make all those part able to run
     remotely all the op (de)serialization logic is put behind a generic OpSource
     interface consisting of:
-    (1) `handshake` and `op` (operation) events, also `error`, `end`
-    (2) `write(op)` and `writeHandshake(op)` methods,
-    (3) `end()` method.
+    (1) `handshake`, `op` (operation), and `end` events
+    (2) `writeHandshake(op)`, `writeOp(op)`, and `writeEnd()` methods,
+    (3)  method.
     StreamOpSource runs on top of any regular byte stream (1st argument).
     On the outer side, StreamOpSource talks Swarm ops only.
     All arriving operations are marked with source id (options.peer_stamp or
@@ -53,11 +53,11 @@ function StreamOpSource (stream, options) {
             self.onStreamDataReceived(buf);
         } catch (ex) {
             StreamOpSource.debug && console.warn(ex.message, ex.stack);
-            self.onStreamError(ex.message||'error processing data');
+            self.onStreamFailure(ex.message||'error processing data');
         }
     });
     this.stream.on('end', this.onStreamEnded.bind(this));
-    this.stream.on('error', this.onStreamError.bind(this));
+    this.stream.on('error', this.onStreamFailure.bind(this));
     //StreamOpSource.debug && console.log("StreamOpSource open", this.options);
     this.readable = false;
 }
@@ -68,7 +68,7 @@ StreamOpSource.SEND_DELAY_MS = 1;
 StreamOpSource.SYNC_FLUSH = false;
 
 
-StreamOpSource.prototype._write = function (op, callback) {
+StreamOpSource.prototype._writeOp = function (op, callback) {
     this.pending_ops.push( op );
     this.scheduleFlush(callback);
 };
@@ -113,7 +113,7 @@ StreamOpSource.prototype.flush = function (callback) {
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
         console.error(ioex, ioex.stack);
-        this.onStreamError(ioex);
+        this.onStreamFailure(ioex);
     }
 };
 
@@ -123,7 +123,7 @@ StreamOpSource.prototype.isOpen = function () {
 };
 
 
-StreamOpSource.prototype._end = function (err_op, callback) {
+StreamOpSource.prototype._writeEnd = function (err_op, callback) {
     if (!this.stream) {
         console.warn(new Error('this op stream is not open').stack);
         return;
@@ -195,14 +195,22 @@ StreamOpSource.prototype.eatLines = function (till) {
             patch.push({key: pl[2], value: pl[3]});
             i=j;
         }
-        if (!this.hs) { // we expect a handshake
+        if (key==='.off') {
+            this.stream.removeAllListeners();
+            this.emitEnd(value);
+            break;
+        } else if (!this.hs) { // we expect a handshake
             var spec = new Spec(key, null, OpSource.DEFAULT);
             if (!OpSource.isHandshake(spec)) {
                 StreamOpSource.debug && console.warn('not a handshake: '+key);
                 throw new Error('not a handshake');
+            } else {
+                this.emitHandshake(spec, value, patch);
             }
-            this.emitHandshake(spec, value, patch);
         } else {
+            if (!Spec.is(key)) {
+                throw new Error('protocol violation');
+            }
             this.emitOp(key, value, patch);
         }
     }
@@ -223,18 +231,14 @@ StreamOpSource.prototype.onStreamEnded = function () {
 };
 
 
-StreamOpSource.prototype.onStreamError = function (err) {
+StreamOpSource.prototype.onStreamFailure = function (err) {
     if (util.isError(err)) {
         StreamOpSource.debug && console.warn(err.stack);
         err = err.message;
     }
     StreamOpSource.debug && console.error('stream error', err);
-    if (this.stream) {
-        this.writeError( err );
-        this.writeEnd( );
-    }
-    this.emitError(err);
-    this.emitEnd();
+    this.stream.removeAllListeners();
+    this.emitEnd(err);
 };
 
 
@@ -256,7 +260,7 @@ StreamOpSource.prototype.onTimer = function () {
 
 
 StreamOpSource.prototype.destroy = function () { // FIXME fail prop
-    this._end();
+    this._writeEnd();
     this.mute = true;
 };
 

@@ -180,43 +180,40 @@ Host.prototype.getSsnMark = function () {
 };
 
 
-Host.prototype._writeHandshake = function (op, callback) {
+Host.prototype._writeHandshake = function (op) {
     var options = this.options;
     var lamp = new Lamp(op.value);
     var new_ssn = lamp.source();
     if (!this.clock) {
         // get ssn, adjust clocks
         if (options.db_id && options.db_id!==op.id()) {
-            this.emitError('handshake for a wrong database');
-            this.emitEnd();
+            this.emitEnd('handshake for a wrong database');
         } else {
             this.createClock(op.id(), new_ssn); // FIXME check monotony
         }
     } else if (op.id()!==this.db_id || (new_ssn && new_ssn!==this.ssn_id)) {
         // check everything matches
-        this.emitError('handshake mismatch');
-        this.emitEnd();
+        this.emitEnd('handshake mismatch');
     }
-    callback && callback();
 };
 
 // Applies a serialized operation (or a batch thereof) to this replica
-Host.prototype._write = function (op, callback) {
+Host.prototype._writeOp = function (op) {
 
     var typeid = op.spec.typeid();
     if (!typeid || typeid==='null') {
         throw new Error('what?');
     }
 
-    if (op.spec.Type().time()==='Swarm') { // FIXME repeats
-        this.writeHandshake(op, callback);
-        return;
+    if (op.spec.Type().time()==='Swarm') {
+        return this.writeHandshake(op);
     }
     // NOTE that a snap slave host has no clocks and still functions
+    // TODO replica/ SnapshotSlave.js
 
     var syncable = this.syncables && this.syncables[typeid];
     if (!syncable && this.options.api!==false) {
-        this.emitError('syncable not open');
+        this.emitOp(op.spec.set('.error'), 'syncable not open');
     } // FIXME specify modes: api, obey, snapshot
     var crdt = this.crdts[typeid];
     var old_ver = crdt && crdt._version;
@@ -242,9 +239,6 @@ Host.prototype._write = function (op, callback) {
         this.emitOp(spec, crdt.toString());
     }
 
-    if (callback) {
-        callback();
-    }
 };
 
 
@@ -460,15 +454,14 @@ Host.prototype.submitOp = function (op) { // TODO sig
         throw new Error('have no state, hence can not modify');
     }
 
-    this.write(op);
+    this.writeOp(op);
     this.emitOp(op.spec, op.value); // FIXME ugly
 };
 
 
-Host.prototype.__end = Host.prototype.end;
-Host.prototype.end = function (chunk, enc, cb) {
-    //this.__end(chunk, enc, cb);
-    this.emit('end');
+Host.prototype._writeEnd = function (op, callback) {
+    this.emitEnd(op);
+    callback && callback();
 };
 
 

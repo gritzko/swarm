@@ -155,7 +155,7 @@ var AUTH = [
     comment: 'downstream#3 no handshake',
     query:   '[down3]#zid+author!stamp+user.set\t{}\n',
     response://'[down3]/Swarm+Replica#db!00009+user~ssn.error\tno handshake\n\n[EOF]'
-             '[down3].error not a handshake\n[EOF]'
+             '[down3].off not a handshake\n[EOF]'
 }
 // FIXME: denied downstream push
 ];
@@ -176,7 +176,7 @@ tape ('replica.01.B handshake errors', function (t) {
     var bt = new bat.StreamTest(mux, AUTH, t.equal.bind(t), StreamTest.collapse_spaces);
     bt.run( t.end.bind(t) );
 
-    var db = levelup('replica/00/B', { db: memdown });
+    var db = levelup('replica_01_B', { db: memdown });
 
     var replica = new Replica({
         user_id:    'user',

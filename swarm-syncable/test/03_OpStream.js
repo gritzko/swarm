@@ -73,14 +73,17 @@ tape ('syncable.03.B defragmentation', function (t) {
 tape ('syncable.03.C error', function (t) {
     var stream = new BatStream();
     var opstream = new StreamOpSource(stream.pair, {});
-    t.plan(1);
+    var opstream2 = new StreamOpSource(stream, {});
+    t.plan(2);
     opstream.on('op', function(recv_op){
         t.fail('no ops here');
     });
-    opstream.on('error', function(msg) {
-        t.pass(msg);
+    opstream.on('end', function(error) {
+        t.equal(error, 'unparseable input');
+        opstream.writeEnd('you provided unparseable input');
     });
-    opstream.on('end', function() {
+    opstream2.on('end', function(error) {
+        t.equal(error, 'you provided unparseable input');
         t.end();
     });
     stream.write("!не операция\n");
@@ -147,18 +150,18 @@ tape ('syncable.03.G dialog', function (t) {
     var stream = new BatStream();
     var pair = new StreamOpSource(stream.pair, {});
     var opstream = new StreamOpSource(stream, {});
-    var sample_op = new Op('/Host#db+cluster!time1+user1~ssn.on', '', 'pair');
+    var sample_op = new Op('/Host#db+cluster!time1+user1~ssn.zz', '', 'pair');
 
     t.plan(5);
 
     opstream.once('handshake', function (op) {
         t.equal(''+op.spec, '/Swarm#db+cluster!pair.on', 'spec matches');
         opstream.writeHandshake(new Op('/Swarm#db+cluster!stream.on', '', 'pair'));
-        opstream.write(sample_op);
+        opstream.writeOp(sample_op);
     });
 
-    opstream.on('error', function (err) {
-        t.fail('some error: '+err);
+    opstream.on('end', function (err) {
+        console.error('some error: '+err);
     });
 
     pair.once('handshake', function (op) {
@@ -202,7 +205,7 @@ tape ('syncable.03.I opstream write', function (t) {
     stream.once('data', function (chunk) {
         t.equal(chunk.toString(), '/Swarm#db+cluster!stamp+swarm~ssn\t\n#stamp!time\t\n\n');
         stream.on('data', function (chunk) {
-            t.fail(chunk.toString());
+            t.equal(chunk.toString(), '.off\t\n');
         });
     });
     stream.on('end', function () {
