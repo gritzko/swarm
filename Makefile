@@ -12,7 +12,7 @@ PACKAGES = \
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)
 
-.PHONY: bootstrap install test doc
+.PHONY: bootstrap install test doc todo
 
 install:
 	@npm install .
@@ -27,6 +27,9 @@ test:
 clean:
 	@rm -rf node_modules
 	@$(call foreach_package, make clean)
+
+todo:
+	@scripts/todos.sh
 
 doc:
 	@jsdoc -d doc -R README.md -c .jsdoc.json swarm-*/src/*.js
