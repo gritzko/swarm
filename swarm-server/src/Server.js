@@ -58,7 +58,7 @@ function Server (options) {
 }
 
 Server.prototype.close = function (callback) {
-    console.warn('Server.close');
+    this.options && this.options.debug && console.warn('Server.close');
     var self = this;
     self.replica.close(function(){
         self.snapshot_slave.close();
