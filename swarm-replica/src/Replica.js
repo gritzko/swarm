@@ -560,7 +560,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
 
     op_stream.on('op', this.write.bind(this));
     op_stream.on('end', function () {
-        self.removeStream(op_stream);
+        self.removeStream(hs_op_stamp);
     });
     Replica.debug && console.log('U>>'+this.ssn_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
@@ -684,7 +684,7 @@ Replica.prototype.onDownstreamHandshake = function (op, op_stream){
         Replica.trace && console.log('HS_ACCEPT', peer_stamp);
         op_stream.on('op', self.write.bind(self));
         op_stream.on('end', function (err) {
-            self.removeStream(op_stream);
+            self.removeStream(peer_stamp);
         });
         self.streams[peer_stamp] = op_stream;
 
@@ -732,10 +732,13 @@ Replica.prototype.removeStream = function (op_stream, err_msg) {
     if (!op_stream) {
         throw new Error('no op_stream given to removeStream');
     }
-    if (op_stream.constructor===String) {
-        op_stream = this.streams[op_stream];
-        if (!op_stream) { return; }
+    if (op_stream.constructor!==String) {
+        throw new Error('removeStream expects a stream identifier');
+    } else {
     }
+    op_stream = this.streams[op_stream];
+    if (!op_stream) return;
+
     var stamp = op_stream.source();
     if (stamp === this.upstream_stamp) {
         this.upstream_ssn = null;
