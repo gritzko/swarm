@@ -8,6 +8,7 @@ PACKAGES = \
 	swarm-client \
 	swarm-cli \
 	swarm-gw \
+	swarm-tests
 
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)

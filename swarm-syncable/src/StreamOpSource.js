@@ -206,7 +206,7 @@ StreamOpSource.prototype.eatLines = function (till) {
             i=j;
         }
         if (key==='.off') {
-            this.stream.removeAllListeners();
+            this.stream && this.stream.removeAllListeners();
             this.emitEnd(value);
             break;
         } else if (!this.hs) { // we expect a handshake

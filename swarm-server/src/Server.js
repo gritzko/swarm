@@ -57,13 +57,16 @@ function Server (options) {
     // this.rest_api = ...; TODO
 }
 
-Server.prototype.close = function () {
-    console.warn('Server.close');
+Server.prototype.close = function (callback) {
+    this.options && this.options.debug && console.warn('Server.close');
     var self = this;
     self.replica.close(function(){
         self.snapshot_slave.close();
         self.db.close(function(){
-            process.exit(0);
+            if (callback)
+                callback();
+            else
+                process.exit(0);
         });
     });
 };
