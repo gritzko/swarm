@@ -11,29 +11,29 @@ var Op = sync.Op;
 var StreamOpSource = sync.StreamOpSource;
 var Entry  = require('./Entry');
 
-// ## TODO ##
-// 1. ssn_id/db_id modes => document, unify
-
 /**
-    Swarm database node backed by an ordered op storage
-    Has an object stream based interface.
-    Consumes ops, emits ops that need to be delivered to their op.source.
-    For the actual object subscription/ op propagation
-    logic see Subscription.js.
-    Provides general infrastructure: db access, network connections.
-    Any actual replication logic is scoped to a replicated object (syncable)
-    see Entry.js.
-    Options:
-         ssn_id
-         user_id
-         db_id
-         connect
-         listen
-         callback
-         snapshot_slave
-         prefix
-         clock
-*/
+ *  Replica is a "proper" Swarm replica that is backed by an op/state storage
+ *  and can talk to its upstream and any number of downstream replicas
+ *  (either Hosts or full Replicas, [the protocol]{@link OpSource} is the same).
+ *  Replica handles all the pub/sub work.
+ *
+ *  The backing database is normally an ordered key-value storage, also
+ *  with an OpSource interface {@link LevelOpSource}. There happens all the
+ *  patch-related logic.
+ *
+ *  Options:
+ *  * ssn_id
+ *  * user_id
+ *  * db_id
+ *  * connect
+ *  * listen
+ *  * callback
+ *  * snapshot_slave
+ *  * prefix
+ *  * clock
+ *
+ *  @class
+ */
 function Replica (options, callback) {
     EventEmitter.call(this);
     if (callback) {
@@ -290,6 +290,14 @@ Replica.prototype.write = function (op) {
         this.send(op.error('unknown object'));
     }
 };
+
+/*   TODO per-op access checks
+    if (op.source!==upstream && !Spec.inSubtree(origin, src_lamp.source())) {
+        this.send(op.error('invalid op origin'));
+        this.next();  // FIXME quite ugly and error-prone
+        return;
+    }
+*/
 
 
 Replica.prototype.send = function (op) {

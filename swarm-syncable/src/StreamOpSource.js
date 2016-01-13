@@ -6,28 +6,36 @@ var OpSource = require('./OpSource');
 var Op = require('./Op');
 
 /**
-    Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
-    router, host - all consume op streams. To make all those part able to run
-    remotely all the op (de)serialization logic is put behind a generic OpSource
-    interface consisting of:
-    (1) `handshake`, `op` (operation), and `end` events
-    (2) `writeHandshake(op)`, `writeOp(op)`, and `writeEnd()` methods,
-    (3)  method.
-    StreamOpSource runs on top of any regular byte stream (1st argument).
-    On the outer side, StreamOpSource talks Swarm ops only.
-    All arriving operations are marked with source id (options.peer_stamp or
-    the stamp taken from the incoming handshake).
+ *  Swarm subsystem interfaces are asynchronous and op-based: clients, storage,
+ *  router, host - all consume op streams. To make all those part able to run
+ *  remotely all the op (de)serialization logic is put behind a generic OpSource
+ *  interface consisting of:
 
-    Every op stream starts with a Swarm handshake, like:
-    `/Swarm+Service#db+cluster!timestamp+user~session.on   {other:params}`.
-    Handshake data is remembered as `peer_hs`.
-    No ops can be received ahead of the incoming handshake. In case
-    options.stamp and options.db_id are defined, our handshake is sent out
-    immediately. Use opstream.writeHandshake(op) to send a handshake later on.
-    NOTE: StreamOpSource posesses its underlying stream
-    @constructor
-    @param stream - the underlying byte stream
-*/
+ *  * Three events:
+ *      * `handshake` (stream starts, tells the db id and the ssn id),
+ *      * `op` (operation, both CRDT ops and pub-sub pseudo-ops), and
+ *      * `end` (stream ended, no more ops will be emitted).
+ *  * and three matching methods:
+ *      * `writeHandshake(op)`,
+ *      * `writeOp(op)`, and
+ *      * `writeEnd(err)`.
+ *
+ *  StreamOpSource runs on top of any regular byte stream (1st argument).
+ *  On the outer side, StreamOpSource talks Swarm ops only.
+ *  All arriving operations are marked with source id (options.peer_stamp or
+ *  the stamp taken from the incoming handshake).
+ *
+ *  Every op stream starts with a Swarm handshake, like:
+ *  `/Swarm+Service#db+cluster!timestamp+user~session.on   {other:params}`.
+ *  Handshake data is remembered as `peer_hs`.
+ *  No ops can be received ahead of the incoming handshake. In case
+ *  options.stamp and options.db_id are defined, our handshake is sent out
+ *  immediately. Use opstream.writeHandshake(op) to send a handshake later on.
+ *  NOTE: StreamOpSource posesses its underlying stream
+ *  @constructor
+ *  @param stream - the underlying byte stream
+ *  @implements {OpSource}
+ */
 function StreamOpSource (stream, options) {
     if (!stream || !stream.on) {
         throw new Error('no stream provided');
@@ -63,6 +71,8 @@ function StreamOpSource (stream, options) {
 }
 util.inherits(StreamOpSource, OpSource);
 module.exports = StreamOpSource;
+/** The most accurate way of debugging Swarm internals is to log all
+  * ins and outs of every OpSource  */
 StreamOpSource.debug = false;
 StreamOpSource.SEND_DELAY_MS = 1;
 StreamOpSource.SYNC_FLUSH = false;
@@ -214,11 +224,7 @@ StreamOpSource.prototype.eatLines = function (till) {
             this.emitOp(key, value, patch);
         }
     }
-    // if (till===this.lines.length) {
-    //     this.lines.length = 0;
-    // } else {
     this.lines = this.lines.slice(till);
-    // }
 };
 StreamOpSource.rough_line_re = new RegExp( '^(\\s*)(?:(' + Op.rsSpec + ')\\s+(.*))?$' );
 
@@ -259,18 +265,12 @@ StreamOpSource.prototype.onTimer = function () {
 };
 
 
-StreamOpSource.prototype.destroy = function () { // FIXME fail prop
-    this._writeEnd();
-    this.mute = true;
-};
-
-
 StreamOpSource.prototype.isOpen = function () {
     return !! this.stream;
 };
 
 
-if (typeof(Buffer)==='function') {
+if (typeof(Buffer)==='function') { // for older versions of node
     if (!Buffer.prototype.indexOf) {
         Buffer.prototype.indexOf = function (char, start) {
             for(var i=start; i<this.length; i++) {
