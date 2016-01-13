@@ -21,7 +21,8 @@ if (argv.help || argv.h) {
 '      --user_id -u user id (ssn_id is assigned by the server)\n' +
 '      --db_path -p path to the leveldb database \n' +
 '      --repl -r    REPL (interactive mode) \n' +
-'      --debug -D   debug printing \n'
+'      --debug -D   debug printing \n' +
+'      --dump -P    dump the database (optionally, at a prefix) \n'
     );
     process.exit(0);
 }
@@ -47,7 +48,13 @@ if (!fs.existsSync(db_path)) {
 options.db = level(db_path);
 options.callback = run_scripts;
 
-var client = new Swarm.Client(options);
+var dump_prefix = argv.dump || argv.P;
+if (dump_prefix) {
+    var lvldump = require('./LevelDump');
+    lvldump(options.db.db, dump_prefix===true?undefined:dump_prefix);
+} else { // TODO real-time continuous dump
+    var client = new Swarm.Client(options);
+}
 
 process.on('SIGTERM', onExit);
 process.on('SIGINT', onExit);
