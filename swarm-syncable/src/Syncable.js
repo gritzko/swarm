@@ -5,26 +5,26 @@ var Host = require('./Host');
 var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
 var util = require('util');
 
-// Swarm objects are split into two orthogonal parts, kind of Jekyll and Hyde.
-// The inner state (CRDT) is a cleanroom math-only CRDT implementation.
-// It is entirely passive and perfectly serializable.
-// CRDT travels on the wire, gets saved into the DB, etc.
-// The outer state (Syncable) is a "regular" JavaScript object which is exposed
-// in the API. A Syncable is a mere projection of its CRDT. Still, all mutations
-// originate at a Syncable. This architecture is very similar to MVC, where
-// Syncable is a "View", CRDT is a "Model" and the Host is a "Controller".
-// All syncables are expected to inherit from Syncable.
+/**
+ * Swarm objects are split into two orthogonal parts, kind of Jekyll and Hyde.
+ * The inner state (CRDT) is a cleanroom math-only CRDT implementation.
+ * It is entirely passive and perfectly serializable.
+ * CRDT travels on the wire, gets saved into the DB, etc.
+ * The outer state (Syncable) is a "regular" JavaScript object which is exposed
+ * in the API. A Syncable is a mere projection of its CRDT. Still, all mutations
+ * originate at a Syncable. This architecture is very similar to MVC, where
+ * Syncable is a "View", CRDT is a "Model" and the Host is a "Controller".
+ * All syncables are expected to inherit from Syncable.
+ * @constructor
+ */
 function Syncable(init_op, host) {
 
     EventEmitter.call(this);
-    // The id of an object is typically the timestamp of the first (init)
-    // operation. Still, it can be any Base64 string (see swarm-stamp).
+    /** The id of an object is typically the timestamp of the first
+        operation. Still, it can be any Base64 string (see swarm-stamp). */
     this._id = null;
-    // The most correct way to specify a version is the version vector,
-    // but that one may consume more space than the data itself in some cases.
-    // Hence, _version is not a version vector (see version() but the last
-    // operation's timestamp (Lamport-like, i.e. "time+source")
-    this._version = null;
+    /** Timestamp of the last change op. */
+    this._version = '';
     // EventEmitter stuff
     this._events = {change: null};
 
@@ -39,7 +39,8 @@ util.inherits(Syncable, EventEmitter);
 module.exports = Syncable;
 Syncable.DEFAULT_TYPE = new Spec('/Model');
 
-
+/** The Host this syncable is registered with (the db name, the user
+ *  name and the session id). */
 Syncable.prototype.ownerHost = function () {
     return Host.getOwnerHost(this);
 };
@@ -140,25 +141,27 @@ Syncable.prototype.stateSpec = function () {
     return this.spec() + (this._version || '!0');
 };
 
-
-/** Syncable object version transitions:
- *
- *             ''                    state unknown
- *              ↓
- *             !0                    default/initial state
- *              ↓
- *   ↻ !time1+src1!time2+src2        version vector
- *              ↓
- *             !~                    deleted
- *
- * @returns {Spec.Map} the version vector for this object
+/**
+ *  The most correct way to specify a version in a distibuted system
+ *  with partial order is a *version vector*. Unfortunately, a vvector
+ *  may consume more space than the data itself in some cases.
+ *  So, `version()` is not a version vector, but the last applied
+ *  operation's timestamp (Lamport-like, i.e. "time+origin").
+ *  It changes every time the object changes, but not monotonously.
+ *  For a stateless object (e.g. the state did not arrive from the server
+ *  yet), `o.version()===''`. For objects with the default state (no ops
+ *  applied yet), `o.version()==='0'`. Deleted objects (no further
+ *  writes possible) have `o.version()==='~'`. For a normal stateful
+ *  object, version is the timestamp of the last op applied, according
+ *  to the local order (in other replicas, the order may differ).
  */
 Syncable.prototype.version = function () {
     return this._version;
 };
 
-// External objects (those you create by supplying an id) need first to query
-// the uplink for their state. Before the state arrives they are stateless.
+/* External objects (those you create by supplying an id) need first to query
+ * the upstream for their state. Until the state arrives, they are stateless.
+ */
 Syncable.prototype.hasState = function () {
     return !!this._version;
 };
@@ -185,8 +188,8 @@ Syncable.prototype.onLoad = function (callback) {
     this.once('load', callback);
 };
 
-// Syntactic sugar: invokes the callback immediately if the object has
-// state or waits for state arrival, i.e. once('init', callback).
+/** Syntactic sugar: if the object has the state already then invokes the
+  * callback immediately; otherwise, waits for state arrival. */
 Syncable.prototype.onInit = function (callback) {
     if (this.isStateful()) {
         // if a callback flaps between sync and async execution

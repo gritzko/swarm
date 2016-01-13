@@ -4,14 +4,17 @@ var Op = require('./Op');
 var Syncable = require('./Syncable');
 var LamportTimestamp = stamp.LamportTimestamp;
 
-// This most basic class is a key-value JavaScript-style object.
-// It is also also an example of how to implement Syncables.
-// Model's distributed/concurrent behavior is of a very classic
-// Last-Write-Wins object where all changes are timestamped and
-// the greater timestamp "wins" (LWW is a corner-case CRDT too).
-// Note that changes are merged in the sense that a change may
-// leave values untouched: !time1.set {x:1, y:1}, then
-// !time2.set {y:2}, results in {x:1, y:2}.
+/**
+ * This most basic syncable is a key-value JavaScript-style object.
+ * It is also also an example of how to implement Syncables.
+ * Model's distributed/concurrent behavior is of a very classic
+ * Last-Write-Wins object where all changes are timestamped and
+ * the greater timestamp "wins" (yes, LWW is a CRDT too).
+ * Note that changes are merged field-by-field:
+ * `!time1.set {x:1, y:1}`, then
+ * `!time2.set {y:2}`, results in `{x:1, y:2}`.
+ * @class
+ */
 function Model (values, owner) {
     var init_op = null;
     if (values) {
@@ -29,8 +32,11 @@ function Model (values, owner) {
 Model.prototype = Object.create( Syncable.prototype );
 Model.prototype.constructor = Model;
 
-// The API method for the .set op has the same name as the op, which is
-// not always the case. It composes the op and submits it for execution.
+/** Set fields to values, according to the map provided.
+  * Values are arbitrary JSON, field names are `[a-z][a-z0-9]*([A-Z][a-z0-9]*)*`
+  * The API method for the .set op has the same name as the op, which is
+  * not always the case in other classes.
+  */
 Model.prototype.set = function (keys_values) {
     var bad = Object.keys(keys_values).some(function(key){
         return !Syncable.reFieldName.test(key);
@@ -48,10 +54,12 @@ Model.prototype.set = function (keys_values) {
 };
 
 
-// The API user may directly modify the outer state and invoke save(),
-// which converts de-facto changes into proper ops. ops change the
-// inner state, the outer state gets regenerated, ops propagate
-// to other replicas.
+/** An API user may directly modify the outer state and invoke save()
+ * post-factum. save)_ converts de-facto changes into proper ops.
+ * Those ops are applied to the inner state, the outer state gets
+ * regenerated (hopefully to the same value as set by the user),
+ * ops propagate to other replicas.
+ */
 Model.prototype.save = function (inner) {
     var dirty = this.toPojo();
     var dirty_keys = this.keys();
@@ -73,18 +81,16 @@ Model.prototype.save = function (inner) {
     changed && this.set(changes);
 };
 
-// A bit of syntactic sugar for Model listeners.
-// Invoke model.onFieldChange('field', cb) to listen to that particular field.
+/** A bit of syntactic sugar for Model listeners. Invoke
+  * `model.onFieldChange('field', callback)` to listen to that particular field
+  */
 Model.prototype.onFieldChange = function (field, callback, context) {
-    /*if (filter.constructor===Function) {  ?
-        context = callback;
-        callback = filter;
-        filter = null;
-    }*/
-    var filter = function (ev) {
-        return field in ev.value;
-    };
-    Syncable.prototype.on.call(this, filter, callback, context);
+    throw new Error('TODO :)');
+    // TODO update
+    // var filter = function (ev) {
+    //     return field in ev.value;
+    // };
+    // Syncable.prototype.on.call(this, filter, callback, context);
 };
 
 Model.prototype.keys = function () {

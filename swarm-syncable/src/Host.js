@@ -6,33 +6,44 @@ var Op = require('./Op');
 var util = require("util");
 var OpSource = require("./OpSource");
 
-// ## TODO ##
-// 1. no-clock "slave mode" (make options orderly)
-// 2. separate Duplex from Host
-
-// Host is the world of actual replicated/synchronized objects of various types.
-// Host contains inner CRDT objects and their outer API parts (Syncables).
-// A host is (a) passive and (b) synchronous.
-// Host has an OpStream-like interface, consuming and emitting ops.
-// To keep a host synchronized, it has to be connected to some
-// transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
-// it does not persist any information between runs. Hence, it dies once
-// disconnected from the upstream (Replica).
-// If assigned dynamically, ssn_id of a Host is derived from
-// the ssn_id of its Replica (the same for the first host, ~1 for the next, etc)
+/**
+ * Host is the world of actual replicated/synchronized objects of various types.
+ * Host contains inner CRDT objects and their outer API parts (Syncables).
+ * A host is (a) passive and (b) synchronous.
+ * Host has an OpSource interface, consuming and emitting ops.
+ * To keep a host synchronized, it has to be connected to some
+ * transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
+ * it does not persist any information between runs. Hence, it dies once
+ * disconnected from its upstream (Replica).
+ *
+ * Host implements generic events for Syncables. Namely, on every state
+ * change, every syncable emits a `change` event. Once the state is first
+ * obtained, `init` event is also emitted. Newly created objects
+ * (like `new Model()`) get their state immediately. Objects retrieved
+ * by their id remain stateless till some state arrives from a local
+ * cache or an upstream server.
+ * @class
+ */
 function Host (options) {
     options = options || {};
     this._events = {data: null};
     OpSource.call(this);
     // id, router, offset_ms
     this.options = options;
+    /** Id of this session (replica in the general sense).
+        ssn_id of a Host is derived from the ssn_id of its upstream
+        replica e.g. `user~repl => user~repl~host`. */
     this.ssn_id = null;
+    /** id of the owner (user). */
     this.user_id = options.user_id || null;
+    /** database id */
     this.db_id = null;
+    /** CLock used to stamp all events originated at this Host.
+        Produces Lamport timestamps (`timestamp+user~session`) */
     this.clock = null;
-    // syncables, API objects, outer state
+    /** syncables, API objects, the outer state */
     this.syncables = options.api===false ? null : Object.create(null);
-    // CRDTs, inner state
+    /** CRDTs, the inner state */
     this.crdts = Object.create(null);
     if (options.db_id && options.ssn_id) {
         this.createClock();
@@ -43,7 +54,6 @@ function Host (options) {
         }
         Host.localhost = this;
     }
-    this.hs = null;
 }
 util.inherits(Host, OpSource);
 module.exports = Host;
@@ -53,7 +63,7 @@ Host.multihost = false;
 Host.localhost = null;
 Host.hosts = Object.create(null);
 
-
+// FIXME this is a workaround, use options.onhandshake instead
 Host.prototype.go = function () {
 
 
@@ -462,9 +472,4 @@ Host.prototype.submitOp = function (op) { // TODO sig
 Host.prototype._writeEnd = function (op, callback) {
     this.emitEnd(op);
     callback && callback();
-};
-
-
-Host.prototype.isOpen = function () {
-    return true;
 };
