@@ -1,6 +1,6 @@
 {
     "name": "swarm-server",
-    "version": "1.0.18",
+    "version": "1.0.19",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
