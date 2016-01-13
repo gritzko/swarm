@@ -88,6 +88,7 @@ tape ('1.A Reopening database', function (t) {
 
     function end_test() {
         close_client(function () {
+            fs.existsSync(db_path) && rimraf.sync(db_path);
             t.end();
         });
     }
@@ -323,6 +324,7 @@ tape ('1.E Client restarts from the scratch', function (t) {
             t.pass('Closing server...');
             server.close(function () {
                 t.pass('Server closed');
+                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
                 t.end();
             });
         });
@@ -420,6 +422,8 @@ tape ('1.F Client restarts without a server', function (t) {
             t.equal(sameModel.version(), testModel.version(), 'Version should be the same');
             t.equal(sameModel.key, 'second');
             close_client(function () {
+                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
+                fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
                 t.end();
             });
         });
@@ -442,8 +446,6 @@ tape ('1.G Server and two clients', function (t) {
     var listen_url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
-    fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
 
     var server = new Server({
         ssn_id: 'swarm~0',
@@ -521,6 +523,8 @@ tape ('1.G Server and two clients', function (t) {
             t.pass('Close second client');
             client2.close(function () {
                 t.pass('Second client closed');
+                fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
+                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
                 t.end();
             });
         });
