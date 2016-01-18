@@ -544,3 +544,57 @@ tape ('1.H Client creates an unknown object', function (t) {
         });
     }, 3000);
 });
+
+tape ('1.I Object updates', function (t) {
+    var db_path = '.test_db.1I_' + (new Date().getTime());
+
+    var client = new Client({
+        ssn_id: 'swarm~0',
+        db_id: 'testdb1',
+        db: level(db_path),
+        callback: function () {
+            t.pass('Client is ready');
+            create_models();
+        },
+    });
+
+    function create_models() {
+        t.ok(client, 'Expect the client to be instantiated');
+
+        var models = [];
+
+        models.push(new Swarm.Model({a: 'initial value of a', b: 'initial value of b'}, client.host));
+        models.push(new Swarm.Model({a: 'initial value of a', b: 'initial value of b'}, client.host));
+        models.push(new Swarm.Model({a: 'initial value of a', b: 'initial value of b'}, client.host));
+
+        models.forEach(function (m) {
+            m.on('change', function () {
+                t.pass(m.typeid() + ' changed to ' + m.version() + ' a: ' + m.a + ' b: ' + m.b);
+            });
+        });
+
+        function updateWith(m, func) {
+            func(function () {
+                t.pass(m.typeid() + ' first update ...');
+                m.set({a: 'updated'});
+                func(function () {
+                    t.pass(m.typeid() + ' second update ...');
+                    m.set({a: 'updated again', b: 'also updated'});
+                });
+            });
+        }
+
+        updateWith(models[0], process.nextTick);
+        // updateWith(models[1], function (cb) { setTimeout(cb, 0); });
+        // updateWith(models[2], function (cb) { setTimeout(cb, 100); });
+
+        setTimeout(end_test, 1000);
+    }
+
+    function end_test() {
+        client.close(function () {
+            fs.existsSync(db_path) && rimraf.sync(db_path);
+            t.end();
+        });
+    }
+});
