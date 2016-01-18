@@ -11,12 +11,13 @@ var level = require('level');
 var memdown = require('memdown');
 
 var tape = require('tap').test;
+var skip = function () {};
 
 Swarm.Host.multihost = true;
 // Swarm.Host.debug = true;
 // Swarm.Replica.trace = true;
 // Swarm.Replica.debug = true;
-Swarm.StreamOpSource.debug = true;
+// Swarm.StreamOpSource.debug = true;
 
 function on_connection(client, callback) {
     client.replica.on('connection', function (op_stream) {
@@ -45,17 +46,8 @@ tape ('1.A Reopening database', function (t) {
 
     function create_model() {
         t.ok(client, 'Expect the client to be instantiated');
-
         testModel = new Swarm.Model({initial: 'some state'}, client.host);
-
-        //testModel = client.get('/Model');
-        //testModel.set({"initial": 'some state'});
-
         t.pass('New model created: ' + testModel.typeid() + ' ' + testModel._version);
-
-        setTimeout(function () {
-            // testModel.set({"initial": 'some state'});
-        }, 100);
 
         setTimeout(function () {
             close_client(function () {
@@ -76,13 +68,11 @@ tape ('1.A Reopening database', function (t) {
         var sameModel = client.get(testModel.typeid());
         sameModel.onInit(function () {
             t.pass('Object initialized ' + sameModel.typeid() + ' ' + sameModel.version());
-            //t.equal(sameModel.version(), testModel.version(), 'Versions should be equal');
-            //t.equal(sameModel.initial, testModel.initial, 'Property value should be the same');
-            setTimeout(end_test, 1000);
 
         });
         sameModel.on('change', function () {
             t.pass('Object updated ' + sameModel.typeid() + ' ' + sameModel.version() + ' ' + sameModel.initial);
+            end_test();
         });
     }
 
@@ -298,10 +288,6 @@ tape ('1.E Client restarts from the scratch', function (t) {
             t.pass('Client closed');
             callback();
          });
-    }
-
-    function restart_client() {
-        t.pass('Re-creating a client...');
     }
 
     function fetch_model() {
@@ -529,4 +515,33 @@ tape ('1.G Server and two clients', function (t) {
             });
         });
     }
+});
+
+skip ('1.H Client creates an unknown object', function (t) {
+    var client = new Client({
+        ssn_id: 'swarm~1',
+        db_id: 'testdb',
+        db: level(memdown),
+        callback: function () {
+            t.pass('Client is ready');
+
+            var model = client.get('/Model#12345+swarm~0');
+            t.pass('Model created ' + model.typeid() + ' ' + model.version());
+
+            model.onInit(function () {
+                t.fail('Object should not be initialized without a server connection ' + model.typeid() + ' ' + model.version());
+            });
+            model.on('change', function () {
+                t.pass('Change event received ' + model.typeid() + ' ' + model.version());
+            });
+        },
+    });
+
+    setTimeout(function () {
+        t.pass('Closing the client...');
+        client.close(function () {
+            t.pass('Client closed');
+            t.end();
+        });
+    }, 3000);
 });
