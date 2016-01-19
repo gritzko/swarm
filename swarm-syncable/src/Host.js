@@ -23,6 +23,7 @@ var OpSource = require("./OpSource");
  * by their id remain stateless till some state arrives from a local
  * cache or an upstream server.
  * @class
+ * @implements {OpSource}
  */
 function Host (options) {
     options = options || {};
@@ -221,47 +222,69 @@ Host.prototype._writeOp = function (op) {
     // NOTE that a snap slave host has no clocks and still functions
     // TODO replica/ SnapshotSlave.js
 
+    if (op.origin()===this.ssn_id) {
+        if (op.stamp()>this.hs.stamp()) { // an echo
+            this.emit('echo', {
+                version: op.stamp(),
+                op:      op
+            });
+            // FIXME CRITICAL: test for old ops loaded (prev run id)
+            return;
+        }
+    }
+
     var syncable = this.syncables && this.syncables[typeid];
     if (!syncable && this.options.api!==false) {
         this.emitOp(op.spec.set('.error'), 'syncable not open');
-    } // FIXME specify modes: api, obey, snapshot
-    var crdt = this.crdts[typeid];
-    var old_ver = crdt && crdt._version;
-
-    this.consume(typeid, syncable, op);
-
-    crdt = crdt || this.crdts[typeid];
-    var is_changed = crdt && old_ver!==crdt._version;
-    if (crdt && syncable && is_changed) {
-        // We bundle events (e.g. a sequence of ops we
-        // received on handshake after spending some time offline).
-        crdt.updateSyncable(syncable, this.get.bind(this));
-        syncable.emit('change', {
-            version: crdt._version,
-            changes: null,
-            target:  syncable,
-            op:      op
-        });
-    }
-
-    if (crdt && is_changed && this.options.snapshot==='immediate') {
-        var spec = op.spec.set(crdt._version, '!').set('~state', '.');
-        this.emitOp(spec, crdt.toString());
+    } else {// FIXME snapshot slave
+        this.consumeOpAndUpdate(op);
     }
 
 };
 
 
-Host.prototype.consume = function (typeid, syncable, op) {
+Host.prototype.consumeOpAndUpdate = function (op) {
+
+    var typeid = op.spec.typeid();
+    var syncable = this.syncables && this.syncables[typeid];
+
+    var is_changed = this.consumeOp(op);
+
+    if (is_changed) {
+        var crdt = this.crdts[typeid];
+        // We bundle events (e.g. a sequence of ops we
+        // received on handshake after spending some time offline).
+        if (syncable) {
+            crdt.updateSyncable(syncable, this.get.bind(this));
+            syncable.emit('change', {
+                version: crdt._version,
+                changes: null,
+                target:  syncable,
+                op:      op
+            });
+        }
+
+        if (this.options.snapshot==='immediate') {
+            var spec = op.spec.set(crdt._version, '!').set('~state', '.');
+            this.emitOp(spec, crdt.toString());
+        }
+    }
+
+};
+
+
+Host.prototype.consumeOp = function (op) {
+    var typeid = op.typeid();
     var crdt = this.crdts[typeid];
+    var old_version = crdt && crdt._version;
 
     switch (op.op()) {
     case 'on':
         var patch = op.patch;
         for(var i=0; patch && i<patch.length; i++) {
-            this.consume(typeid, syncable, patch[i]);
+            this.consumeOp(patch[i]);
         }
-
+        crdt = this.crdts[typeid];
         break;
     case 'off':
         if (this.syncables && this.syncables[typeid]) {
@@ -285,8 +308,10 @@ Host.prototype.consume = function (typeid, syncable, op) {
         }
 
         // FIXME descending state!!! see the pacman note
-        if (this.syncables) {// FIXME get rid of 'init' ?!!
+        if (this.syncables) {
+            var syncable = this.syncables[typeid];
             crdt.updateSyncable(syncable, this.get.bind(this));
+            // FIXME get rid of 'init' which is only used by onInit()
             syncable.emit('init', {
                 version: crdt._version,
                 changes: null,
@@ -302,18 +327,19 @@ Host.prototype.consume = function (typeid, syncable, op) {
         console.error('something failed:', ''+op.spec, op.value);
     break;
     default: // actual ops
-        crdt = this.crdts[typeid];
         if (!crdt) {
             throw new Error('CRDT object was not initialized');
         }
         crdt.write(op);
         crdt._version = op.stamp();
         // replay protection - either Replica or an idempotent type
-        if (this.syncables) {
-            syncable._version = crdt._version;
-        }
+        // if (this.syncables) {
+        //     syncable._version = crdt._version;
+        // }
 
     }
+
+    return (crdt && crdt._version) !== old_version;
     // NOTE: merged ops, like
     //      !time+src.in text
     // should have their *last* stamp in the spec
@@ -464,7 +490,7 @@ Host.prototype.submitOp = function (op) { // TODO sig
         throw new Error('have no state, hence can not modify');
     }
 
-    this.writeOp(op);
+    this.consumeOpAndUpdate(op);
     this.emitOp(op.spec, op.value); // FIXME ugly
 };
 
