@@ -3,12 +3,13 @@ require('stream-url-node');
 var fs = require('fs');
 var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
-var SwarmClient = require('swarm-client');
+var Client = require('swarm-client').Client;
 var Server = Swarm.Server;
-var Client = SwarmClient.Client;
+var Host = Swarm.Host;
 var bat = require('swarm-bat');
 var level = require('level');
 var memdown = require('memdown');
+var util = require('../util');
 
 var tape = require('tap').test;
 var skip = function () {};
@@ -19,12 +20,6 @@ Swarm.Host.multihost = true;
 // Swarm.Replica.debug = true;
 // Swarm.StreamOpSource.debug = true;
 
-function on_connection(client, callback) {
-    client.replica.on('connection', function (op_stream) {
-        op_stream.upstream && callback();
-    });
-}
-
 /* Create a client with an empty database, create one object,
  * re-create a client, verify the data is accessible.
  */
@@ -32,28 +27,17 @@ tape ('1.A Reopening database', function (t) {
     var db_path = '.test_db.1A_' + (new Date().getTime());
     var client, testModel;
 
-    function start_client(callback) {
-        client = new Client({
-            ssn_id: 'swarm~0',
-            db_id: 'testdb1',
-            db: level(db_path),
-            callback: function () {
-                t.pass('Client is ready');
-                callback();
-            },
-        });
-    }
-
     function create_model() {
         t.ok(client, 'Expect the client to be instantiated');
         testModel = new Swarm.Model({initial: 'some state'}, client.host);
+
         t.pass('New model created: ' + testModel.typeid() + ' ' + testModel._version);
 
         setTimeout(function () {
             close_client(function () {
-                start_client(fetch_model);
+                client = util.start_client(null, db_path, fetch_model);
             });
-        }, 500);
+        }, 300);
     }
 
     function close_client(callback) {
@@ -72,7 +56,7 @@ tape ('1.A Reopening database', function (t) {
         });
         sameModel.on('change', function () {
             t.pass('Object updated ' + sameModel.typeid() + ' ' + sameModel.version() + ' ' + sameModel.initial);
-            end_test();
+            setTimeout(end_test, 100);
         });
     }
 
@@ -83,7 +67,7 @@ tape ('1.A Reopening database', function (t) {
         });
     }
 
-    start_client(create_model);
+    client = util.start_client(null, db_path, create_model);
 });
 
 /*
@@ -124,7 +108,6 @@ tape ('1.B Multiple clients', function (t) {
         });
     }, 500);
 });
-
 
 /*
  * Start the server/client pair.
@@ -231,7 +214,7 @@ tape ('1.D Client and Server', function (t) {
  * object back.
  */
 tape ('1.E Client restarts from the scratch', function (t) {
-    t.plan(17);
+    t.plan(13);
 
     var server_db_path = '.test_db.1E_server_' + (new Date().getTime());
 
@@ -253,20 +236,6 @@ tape ('1.E Client restarts from the scratch', function (t) {
 
     var client, testModel;
 
-    function start_client(callback) {
-        t.pass('Creating a client...');
-        client = new Client({
-            ssn_id: 'swarm~1',
-            db_id: 'testdb',
-            db: level(memdown),
-            connect: listen_url,
-            callback: function () {
-                t.pass('Client is ready');
-            },
-        });
-        on_connection(client, callback);
-    }
-
     function create_model() {
         t.ok(client, 'Expect the client to be instantiated');
 
@@ -277,7 +246,7 @@ tape ('1.E Client restarts from the scratch', function (t) {
 
         setTimeout(function () {
             close_client(function () {
-                start_client(fetch_model);
+                client = util.start_client(listen_url, null, null, fetch_model);
             });
         }, 1000);
     }
@@ -299,8 +268,8 @@ tape ('1.E Client restarts from the scratch', function (t) {
         });
 
         sameModel.on('change', function () {
-            t.equal(sameModel.version(), testModel.version());
-            t.equal(sameModel.key, 'first');
+            t.equal(sameModel.version(), testModel.version(), 'Version should match');
+            t.equal(sameModel.key, 'first', 'Property value should match');
             end_test();
         });
     }
@@ -316,14 +285,14 @@ tape ('1.E Client restarts from the scratch', function (t) {
         });
     }
 
-    start_client(create_model);
+    client = util.start_client(listen_url, null, null, create_model);
 });
 
 /* Start the client/server pair, create an object from the client,
  * restart the client with the same database and fetch the same object back.
  */
 tape ('1.F Client restarts without a server', function (t) {
-    t.plan(19);
+    t.plan(15);
 
     var client_db_path = '.test_db.1F_client_' + (new Date().getTime());
     var server_db_path = '.test_db.1F_server_' + (new Date().getTime());
@@ -347,23 +316,6 @@ tape ('1.F Client restarts without a server', function (t) {
 
     var client, testModel;
 
-    function start_client(callback, connection_callback) {
-        t.pass('Creating a client...');
-        client = new Client({
-            ssn_id: 'swarm~1',
-            db_id: 'testdb',
-            db: level(client_db_path),
-            connect: listen_url,
-            callback: function () {
-                t.pass('Client is ready');
-                callback && callback();
-            },
-        });
-
-        if (connection_callback)
-            on_connection(client, connection_callback);
-    }
-
     function create_model() {
         t.ok(client, 'Expect the client to be instantiated');
 
@@ -379,7 +331,7 @@ tape ('1.F Client restarts without a server', function (t) {
         server.close(function () {
             t.pass('Server closed');
             close_client(function () {
-                start_client(function () {
+                client = util.start_client(listen_url, client_db_path, function () {
                     t.pass('Client re-connected');
                     fetch_model();
                 });
@@ -415,7 +367,7 @@ tape ('1.F Client restarts without a server', function (t) {
         });
     }
 
-    start_client(null, create_model);
+    client = util.start_client(listen_url, client_db_path, null, create_model);
 });
 
 /*
@@ -455,7 +407,7 @@ tape ('1.G Server and two clients', function (t) {
                 t.pass('First client is ready');
             },
         });
-        on_connection(client1, create_model);
+        util.on_upstream_connection(client1, create_model);
     }
 
     function create_model() {
@@ -484,7 +436,7 @@ tape ('1.G Server and two clients', function (t) {
                 t.pass('Second client is ready');
             },
         });
-        on_connection(client2, fetch_model);
+        util.on_upstream_connection(client2, fetch_model);
     }
 
 
@@ -546,8 +498,56 @@ skip ('1.H Client creates an unknown object', function (t) {
     }, 3000);
 });
 
+skip ('1.HH Server creates an unknown object', function (t) {
+    var db_path = '.test_db.1HH_' + (new Date().getTime());
+    var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
+    var url = 'tcp://localhost:' + port;
+
+    Swarm.Host.multihost = true;
+    fs.existsSync(db_path) && rimraf.sync(db_path);
+
+    var serverHost;
+    var server = util.start_server(url, db_path, function () {
+        // Additional server host should be added once the server is ready
+        serverHost = util.create_server_host(server);
+    });
+    var client = util.start_client(url, null, null, create_model);
+
+    function create_model () {
+        var locallyCreated = new Swarm.Model({key: 'value'}, client.host);
+        t.ok(locallyCreated.version(), 'Locally created object should be stateful');
+        verify(locallyCreated.typeid());
+    }
+
+    function verify(typeid) {
+        var remotelyCreated = serverHost.get(typeid);
+        t.ok(remotelyCreated, 'Host.get should return a non-null object');
+        remotelyCreated.on('init', function () {
+            t.pass('Remotely created object is initialized');
+        });
+        remotelyCreated.on('change', function () {
+            t.pass('Remotely created object is updated');
+            t.equal(remotelyCreated.key, 'value', 'Property value should be updated');
+        });
+
+        setTimeout(end, 500);
+    }
+
+    function end() {
+        server.close(function () {
+            client.close(function () {
+                fs.existsSync(db_path) && rimraf.sync(db_path);
+                t.end();
+            });
+        });
+    }
+});
+
 tape ('1.I Object updates', function (t) {
     var db_path = '.test_db.1I_' + (new Date().getTime());
+    fs.existsSync(db_path) && rimraf.sync(db_path);
+
+    t.plan(14);
 
     var client = new Client({
         ssn_id: 'swarm~0',
@@ -588,7 +588,6 @@ tape ('1.I Object updates', function (t) {
         updateWith(models[0], process.nextTick);
         updateWith(models[1], function (cb) { setTimeout(cb, 0); });
         updateWith(models[2], function (cb) { setTimeout(cb, 100); });
-
         setTimeout(end_test, 1000);
     }
 
@@ -598,4 +597,5 @@ tape ('1.I Object updates', function (t) {
             t.end();
         });
     }
+
 });
