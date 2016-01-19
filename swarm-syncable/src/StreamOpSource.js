@@ -56,16 +56,21 @@ function StreamOpSource (stream, options) {
         this.timer = setInterval(this.onTimer.bind(this), 1000);
     }
     var self = this;
-    this.stream.on('data', function (buf) {
+    this.dataListener = function (buf) {
         try{
             self.onStreamDataReceived(buf);
         } catch (ex) {
             StreamOpSource.debug && console.warn(ex.message, ex.stack);
             self.onStreamFailure(ex.message||'error processing data');
         }
-    });
-    this.stream.on('end', this.onStreamEnded.bind(this));
-    this.stream.on('error', this.onStreamFailure.bind(this));
+    };
+    this.endListener = this.onStreamEnded.bind(this);
+    this.errorListener = this.onStreamFailure.bind(this);
+
+    this.stream.on('data', this.dataListener);
+    this.stream.on('end', this.endListener);
+    this.stream.on('error', this.errorListener);
+
     //StreamOpSource.debug && console.log("StreamOpSource open", this.options);
     this.readable = false;
 }
@@ -77,6 +82,14 @@ StreamOpSource.debug = false;
 StreamOpSource.SEND_DELAY_MS = 1;
 StreamOpSource.SYNC_FLUSH = false;
 
+
+StreamOpSource.prototype.removeStreamListeners = function () {
+    if (!this.stream) return;
+
+    this.stream.removeListener('data', this.dataListener);
+    this.stream.removeListener('end', this.endListener);
+    this.stream.removeListener('error', this.errorListener);
+};
 
 StreamOpSource.prototype._writeOp = function (op, callback) {
     this.pending_ops.push( op );
@@ -141,8 +154,9 @@ StreamOpSource.prototype._writeEnd = function (err_op, callback) {
     this.flush();
     var stream = this.stream;
     var err = err_op ? err_op.toString() : '';
+    var self = this;
     this.stream.end(err, "utf8", function () {
-        stream.removeAllListeners(); // we possess the stream
+        self.removeStreamListeners();
         stream.destroy && stream.destroy();
         callback && callback();
     });
@@ -206,7 +220,7 @@ StreamOpSource.prototype.eatLines = function (till) {
             i=j;
         }
         if (key==='.off') {
-            this.stream && this.stream.removeAllListeners();
+            this.removeStreamListeners();
             this.emitEnd(value);
             break;
         } else if (!this.hs) { // we expect a handshake
@@ -243,7 +257,7 @@ StreamOpSource.prototype.onStreamFailure = function (err) {
         err = err.message;
     }
     StreamOpSource.debug && console.error('stream error', err);
-    this.stream.removeAllListeners();
+    this.removeStreamListeners();
     this.emitEnd(err);
 };
 
