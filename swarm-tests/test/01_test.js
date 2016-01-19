@@ -11,6 +11,7 @@ var level = require('level');
 var memdown = require('memdown');
 
 var tape = require('tap').test;
+var skip = function () {};
 
 Swarm.Host.multihost = true;
 // Swarm.Host.debug = true;
@@ -516,7 +517,7 @@ tape ('1.G Server and two clients', function (t) {
     }
 });
 
-tape ('1.H Client creates an unknown object', function (t) {
+skip ('1.H Client creates an unknown object', function (t) {
     var client = new Client({
         ssn_id: 'swarm~1',
         db_id: 'testdb',
@@ -585,8 +586,8 @@ tape ('1.I Object updates', function (t) {
         }
 
         updateWith(models[0], process.nextTick);
-        // updateWith(models[1], function (cb) { setTimeout(cb, 0); });
-        // updateWith(models[2], function (cb) { setTimeout(cb, 100); });
+        updateWith(models[1], function (cb) { setTimeout(cb, 0); });
+        updateWith(models[2], function (cb) { setTimeout(cb, 100); });
 
         setTimeout(end_test, 1000);
     }
