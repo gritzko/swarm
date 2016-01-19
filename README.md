@@ -23,7 +23,7 @@ If you understand what [CmRDT][cmrdt] is, then you may [implement][syncable-type
 You may run your own [Swarm server][swarm-node].
 Free-as-in-freedom (MIT).
 
-![Swarm: deployment](doc/swarm-moscowjs-deployment.png)
+![Swarm: deployment](doc/ver0.3/swarm-moscowjs-deployment.png)
 
 ## How to start
 
@@ -121,7 +121,7 @@ Each op has a key which is an unique compound identifier (also named [*specifier
 Op value format depends on the object's CRDT type.
 Hence, it is treated as an opaque string by the protocol.
 
-![Swarm LEGO parts](doc/swarm1.0arch.png "Swarm 1.0 LEGO parts")
+![Swarm LEGO parts](doc/ver0.3/swarm1.0arch.png "Swarm 1.0 LEGO parts")
 
 ### Replica
 
