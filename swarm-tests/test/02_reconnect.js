@@ -1,68 +1,24 @@
 "use strict";
+
 require('stream-url-node');
 require('stream-url-ws');
 
 var fs = require('fs');
 var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
-var SwarmClient = require('swarm-client');
-var Server = Swarm.Server;
-var Client = SwarmClient.Client;
-var bat = require('swarm-bat');
-var level = require('level');
-var memdown = require('memdown');
+var util = require('../util');
 
-var tape  = require('tap').test;
+var tape = require('tap').test;
 
 Swarm.Host.multihost = true;
-
-function on_upstream_connection(client, callback) {
-    if (!callback) return;
-
-    function check_if_upstream (op_stream) {
-        if (op_stream.upstream) {
-            callback();
-        } else {
-            client.replica.once('connection', check_if_upstream);
-        }
-    }
-    client.replica.once('connection', check_if_upstream);
-}
-
-function start_client(url, ready_callback, connection_callback) {
-    var client = new Client({
-        ssn_id: 'swarm~0',
-        db_id: 'testdb',
-        db: level(memdown),
-        connect: url,
-        callback: function () {
-            ready_callback && ready_callback();
-        },
-    });
-    on_upstream_connection(client, connection_callback);
-    return client;
-}
-
-function start_server(db_path, url, ready_callback) {
-    var server = new Server({
-        ssn_id: 'swarm~0',
-        db_id: 'testdb',
-        db_path: db_path,
-        listen: url,
-        callback: function () {
-            ready_callback && ready_callback();
-        },
-    });
-    return server;
-}
 
 function basic_reconnect_test(t, db_path, url) {
     t.plan(5);
 
     fs.existsSync(db_path) && rimraf.sync(db_path);
 
-    var server = start_server(db_path, url);
-    var client = start_client(url, null, function () {
+    var server = util.start_server(url, db_path);
+    var client = util.start_client(url, null, null, function () {
         t.pass('Client is connected');
         setTimeout(restart, 100);
     });
@@ -70,7 +26,7 @@ function basic_reconnect_test(t, db_path, url) {
     function restart() {
         t.pass('Restarting the server...');
 
-        on_upstream_connection(client, function () {
+        util.on_upstream_connection(client, function () {
             t.pass('Client is reconnected');
             end();
         });
@@ -80,7 +36,7 @@ function basic_reconnect_test(t, db_path, url) {
 
         server.close(function () {
             t.pass('Server is closed');
-            server = start_server(db_path, url);
+            server = util.start_server(url, db_path);
         });
     }
 
@@ -108,4 +64,73 @@ tape ('2.B Client reconnects (using websockets)', function (t) {
     var url = 'ws://localhost:' + port;
 
     basic_reconnect_test(t, db_path, url);
+});
+
+tape ('2.C Object updated after reconnect', function (t) {
+    var db_path = '.test_db.2C_' + (new Date().getTime());
+    fs.existsSync(db_path) && rimraf.sync(db_path);
+
+    var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
+    var url = 'tcp://localhost:' + port;
+
+    var clientModel, serverModel, serverHost, connectionStamp;
+    var server = util.start_server(url, db_path, function () {
+        serverHost = util.create_server_host(server);
+    });
+    var client = util.start_client(url, null, null, function (op_stream_details) {
+        t.pass('Client is connected');
+        connectionStamp = op_stream_details.stamp;
+        create_model();
+    });
+
+    function create_model() {
+        clientModel = new Swarm.Model({key: 'initial'}, client.host);
+        t.pass('Model created: ' + clientModel.typeid() + ' ' + clientModel.version());
+        setTimeout(fetch_model, 500);
+    }
+
+    function fetch_model() {
+        t.pass('Create an instance ' + clientModel.typeid() + ' on the server...');
+        serverModel = serverHost.get(clientModel.typeid());
+        t.pass('Server model created ' + serverModel.typeid() + ' ' + serverModel.version());
+        serverModel.on('init', function () {
+            t.pass('Server model is initialized');
+        });
+        serverModel.on('change', function () {
+            t.pass('Server model is changed ' + serverModel.version() + ' ' + serverModel.key);
+            t.equal(serverModel.version(), clientModel.version(), 'Versions should match');
+            t.equal(serverModel.key, 'initial', 'Property value should match');
+            reconnect();
+        });
+    }
+
+    function reconnect() {
+        util.on_upstream_connection(client, update);
+        // Drop the connection forcing the client to reconnect
+        client.replica.removeStream(connectionStamp);
+    }
+
+    function update() {
+        t.pass('Client is re-connected, do an update from client side...');
+        clientModel.set({key: 'updated'});
+        t.equal(clientModel.key, 'updated', 'Expect the property to be updated');
+        setTimeout(verify, 1000);
+    }
+
+    function verify() {
+        t.pass('Verify an object ' + clientModel.typeid() + ' is updated on the server...');
+        t.equal(serverModel.version(), clientModel.version(), 'Versions should match');
+        t.equal(serverModel.key, 'updated', 'Expect the "key" property to be updated on the server');
+
+        end();
+    }
+
+    function end() {
+        client.close(function () {
+            server.close(function () {
+                fs.existsSync(db_path) && rimraf.sync(db_path);
+                t.end();
+            });
+        });
+    }
 });
