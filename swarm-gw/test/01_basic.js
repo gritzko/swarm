@@ -152,3 +152,17 @@ tape ('Gateway.1.F.add and remove stream', function (tap) {
         tap.end();
     }, 100);
 });
+
+tape ('Gateway.1.G.exceptions', function (tap) {
+    var stream = new BatStream();
+    var host = createHost();
+    var gateway = new Gateway(host);
+    gateway.addStream('stream', stream.pair);
+
+    var obj = host.get('/Model');
+    stream.write('/Model#' + obj._id + '.STATE\t{"malformed_key":"something"}\n');
+    setTimeout(function () {
+        host.close();
+        tap.end();
+    }, 100);
+});
