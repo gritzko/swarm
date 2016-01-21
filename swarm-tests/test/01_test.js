@@ -77,7 +77,7 @@ tape ('1.A Reopening database', function (t) {
 tape ('1.B Multiple clients', function (t) {
     t.plan(6);
     var client1 = new Client({
-        ssn_id: 'swarm~0',
+        ssn_id: 'alice~0',
         db_id: 'testdb1',
         db: level(memdown),
         callback: function () {
@@ -85,7 +85,7 @@ tape ('1.B Multiple clients', function (t) {
         },
     });
     var client2 = new Client({
-        ssn_id: 'swarm~1',
+        ssn_id: 'bob~1',
         db_id: 'testdb2',
         db: level(memdown),
         callback: function () {
@@ -133,7 +133,7 @@ tape ('1.C Client and Server', function (t) {
         },
     });
     var client = new Client({
-        ssn_id: 'swarm~1',
+        ssn_id: 'alice~1',
         db_id: 'testdb',
         db: level(memdown),
         connect: listen_url,
@@ -183,7 +183,7 @@ tape ('1.D Client and Server', function (t) {
         },
     });
     var client = new Client({
-        ssn_id: 'swarm~1',
+        ssn_id: 'carol~1',
         db_id: 'testdb',
         db: level(memdown),
         connect: listen_url,
@@ -399,7 +399,7 @@ tape ('1.G Server and two clients', function (t) {
 
     function start_first_client() {
         client1 = new Client({
-            ssn_id: 'swarm~1',
+            ssn_id: 'alice~1',
             db_id: 'testdb',
             db: level(client_db_path),
             connect: listen_url,
@@ -428,7 +428,7 @@ tape ('1.G Server and two clients', function (t) {
 
     function start_second_client() {
         client2 = new Client({
-            ssn_id: 'swarm~2',
+            ssn_id: 'bob~2',
             db_id: 'testdb',
             db: level(memdown),
             connect: listen_url,
@@ -469,9 +469,9 @@ tape ('1.G Server and two clients', function (t) {
     }
 });
 
-skip ('1.H Client creates an unknown object', function (t) {
+tape ('1.H Client creates an unknown object', function (t) {
     var client = new Client({
-        ssn_id: 'swarm~1',
+        ssn_id: 'alice~1',
         db_id: 'testdb',
         db: level(memdown),
         callback: function () {
@@ -550,7 +550,7 @@ tape ('1.I Object updates', function (t) {
     t.plan(14);
 
     var client = new Client({
-        ssn_id: 'swarm~0',
+        ssn_id: 'carol~0',
         db_id: 'testdb1',
         db: level(db_path),
         callback: function () {

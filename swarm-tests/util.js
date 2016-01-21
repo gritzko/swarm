@@ -1,3 +1,4 @@
+'use strict';
 var Swarm = require('swarm-server');
 var Client = require('swarm-client').Client;
 var Server = Swarm.Server;
@@ -20,7 +21,7 @@ function on_upstream_connection(client, callback) {
 
 function start_client(url, db_path, ready_callback, connection_callback) {
     var client = new Client({
-        ssn_id: 'swarm~1',
+        ssn_id: 'dave~1',
         db_id: 'testdb',
         db: level(db_path == null ? memdown : db_path),
         connect: url,

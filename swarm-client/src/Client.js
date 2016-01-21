@@ -17,6 +17,8 @@ function Client (options) {
     }
     if (!options.ssn_id && !options.user_id) {
         throw new Error('user or session id is required');
+    } else if (options.ssn_id && /^swarm/.test(options.ssn_id)) {
+        throw new Error('"swarm" is a server-only user id');
     }
     if (!options.ssn_id && !options.connect) {
         //throw new Error('need a server url');
