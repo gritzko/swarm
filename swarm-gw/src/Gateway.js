@@ -158,7 +158,11 @@ Gateway.prototype.STATE = function (op, stream_id) {
         return;
     }
     var outer = this.host.get(spec);
-    outer.set(json);
+    try {
+        outer.set(json);
+    } catch (e) {
+        console.log('Update failed ' + e);
+    }
     // this triggers events that trigger onChange, so the stream gets a response
     if (!op.id()) {
         this._ON(outer, stream_id);
