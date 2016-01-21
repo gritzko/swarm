@@ -18,6 +18,12 @@ Swarm.Host.multihost = true;
 // Swarm.Replica.debug = true;
 // Swarm.StreamOpSource.debug = true;
 
+function on_connection(client, callback) {
+    client.replica.on('connection', function (op_stream) {
+        op_stream.upstream && callback();
+    });
+}
+
 /* Create a client with an empty database, create one object,
  * re-create a client, verify the data is accessible.
  */
@@ -28,7 +34,6 @@ tape ('1.A Reopening database', function (t) {
     function create_model() {
         t.ok(client, 'Expect the client to be instantiated');
         testModel = new Swarm.Model({initial: 'some state'}, client.host);
-
         t.pass('New model created: ' + testModel.typeid() + ' ' + testModel._version);
 
         setTimeout(function () {
@@ -595,5 +600,4 @@ tape ('1.I Object updates', function (t) {
             t.end();
         });
     }
-
 });
