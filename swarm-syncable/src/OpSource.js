@@ -119,7 +119,7 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
 */
 OpSource.prototype.emitEnd = function (error) {
     if (OpSource.debug) {
-        this.log(new Op('.off', error), false, 'END');
+        this.log(new Op('.off', error||''), false, 'END');
     }
     this.emit('end', error);
 };
