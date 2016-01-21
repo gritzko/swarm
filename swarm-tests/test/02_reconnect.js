@@ -99,7 +99,7 @@ tape ('2.C Object updated after reconnect', function (t) {
         serverModel.on('change', function () {
             t.pass('Server model is changed ' + serverModel.version() + ' ' + serverModel.key);
             t.equal(serverModel.version(), clientModel.version(), 'Versions should match');
-            t.equal(serverModel.key, 'initial', 'Property value should match');
+            t.equal(serverModel.key, clientModel.key, 'Property value should match');
             reconnect();
         });
     }
