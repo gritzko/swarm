@@ -315,7 +315,8 @@ Host.prototype.consumeOp = function (op) {
             syncable.emit('init', {
                 version: crdt._version,
                 changes: null,
-                target: syncable
+                target: syncable,
+                op: op
             });
         }
         break;

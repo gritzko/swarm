@@ -5,8 +5,6 @@ var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
 var Client = require('swarm-client').Client;
 var Server = Swarm.Server;
-var Host = Swarm.Host;
-var bat = require('swarm-bat');
 var level = require('level');
 var memdown = require('memdown');
 var util = require('../util');
@@ -498,7 +496,7 @@ tape ('1.H Client creates an unknown object', function (t) {
     }, 3000);
 });
 
-skip ('1.HH Server creates an unknown object', function (t) {
+tape ('1.HH Server creates an unknown object', function (t) {
     var db_path = '.test_db.1HH_' + (new Date().getTime());
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var url = 'tcp://localhost:' + port;
@@ -522,10 +520,10 @@ skip ('1.HH Server creates an unknown object', function (t) {
     function verify(typeid) {
         var remotelyCreated = serverHost.get(typeid);
         t.ok(remotelyCreated, 'Host.get should return a non-null object');
-        remotelyCreated.on('init', function () {
+        remotelyCreated.on('init', function (ev) {
             t.pass('Remotely created object is initialized');
         });
-        remotelyCreated.on('change', function () {
+        remotelyCreated.on('change', function (ev) {
             t.pass('Remotely created object is updated');
             t.equal(remotelyCreated.key, 'value', 'Property value should be updated');
         });

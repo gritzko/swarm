@@ -263,11 +263,13 @@ Entry.prototype.processOn = function () {
         // TODO leave this for downstream-stamped objects only
         // TODO consider LRU/LFU caches
         // FIXME tests for cache poisoning
+        var lamp = new Lamp(op.id());
+        var looks_global = lamp.author()==='swarm' || lamp.time().charAt(0)==='0';
         var dstream_has_no_state = this.op.value==='0';
         var no_upstream = this.replica.user_id==='swarm' &&
             (!upstream || this.op.source===upstream); // ? TODO shaky
         patch_down = this.op.reply('on', '');
-        if (dstream_has_no_state && no_upstream) {
+        if (dstream_has_no_state && no_upstream && looks_global) {
             var zero_state = new Op(this.op.typeid()+'!0.~state', '');
             this.appendNewRecord(zero_state); //FIXME
             patch_down.patch = [zero_state];
@@ -300,6 +302,7 @@ Entry.prototype.processUpscribe = function () {
     var subs = this.state.subscribers;
     var patch_up = this.patchUpstream();
     if (patch_up===LATER) { return; }
+    patch_up.source = upstream;
     this.send( patch_up, upstream );
     if (subs.indexOf(upstream)===-1) {
         subs.push(upstream);
