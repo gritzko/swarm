@@ -5,7 +5,7 @@ var base64 = require('./base64');
 /** Swarm is based on the Lamport model of time and events in a
   * distributed system, so Lamport timestamps are essential to
   * its functioning. In most of the cases, it is useful to
-  * use actuall wall clock time to create timestamps. This
+  * use actual wall clock time to create timestamps. This
   * class creates second-precise Lamport timestamps.
   * Timestamp ordering is alphanumeric, length may vary.
   *

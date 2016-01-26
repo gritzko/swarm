@@ -165,7 +165,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
         this.clock = options.clock;
     }
     var lamp = new Lamp(ssn_id);
-    this.ssn_id = lamp.source();
+    this.ssn_id = lamp.origin();
     this.user_id = lamp.author();
     this.db_id = db_id;
     if (this.hs) {
@@ -194,7 +194,7 @@ Host.prototype.getSsnMark = function () {
 Host.prototype._writeHandshake = function (op) {
     var options = this.options;
     var lamp = new Lamp(op.value);
-    var new_ssn = lamp.source();
+    var new_ssn = lamp.origin();
     if (!this.clock) {
         // get ssn, adjust clocks
         if (options.db_id && options.db_id!==op.id()) {

@@ -82,7 +82,7 @@ Op.parse = function (str, source, context) {
 
 
 Op.prototype.origin = function () {
-    return this.spec.source();
+    return this.spec.origin();
 };
 Op.prototype.stamp = function () {
     return this.spec.stamp();

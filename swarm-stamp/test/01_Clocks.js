@@ -10,7 +10,7 @@ tape ('stamp.01._ Lamport timestamp', function(tap){
     tap.equal(lamp1.toString(), '0', 'zero str OK');
     var lamp2 = new Lamp('gritzko');
     tap.equal(lamp2.isZero(), true, 'sourced zero OK');
-    tap.equal(lamp2.toString(), '0+gritzko', 'zero str OK');
+    tap.equal(lamp2.toString(), '0+gritzko', 'zero time OK');
     tap.ok(lamp2.gt(lamp1), 'fancy order');
     tap.ok(lamp2.eq('gritzko'), 'fancy equals');
     tap.ok(lamp2.eq('0+gritzko'), 'fancy equals');
@@ -134,5 +134,25 @@ tape ('stamp.01.f. Lamport clocks', function(tap){
     tap.equal(preset.issueTimestamp(), 'now01+src', 'incs well');
     tap.equal(preset.issueTimestamp(), 'now02+src');
 
+    tap.end();
+});
+
+
+tape ('stamp.01.g replica tree', function (tap) {
+    var l1 = new Lamp('timeismoney+one~two~tree~four');
+    var p1 = l1.replicaTreePath();
+    tap.deepEqual(p1, ['swarm', 'one', 'two', 'tree', 'four']);
+    var p2 = new Lamp('~cluster~replica').replicaTreePath();
+    tap.deepEqual(p2, ['swarm', 'cluster', 'replica']);
+    var p3 = new Lamp('swarm').replicaTreePath();
+    tap.deepEqual(p3, ['swarm']);
+    tap.ok(new Lamp('~clu~joe').isInSubtree('swarm'));
+    tap.ok(new Lamp('~clu~joe').isInSubtree('~clu'));
+    tap.ok(new Lamp('joe~replica').isInSubtree('joe'));
+    tap.ok(new Lamp('~1~joe~replica').isInSubtree('~1~joe'));
+    tap.ok(new Lamp('~1~joe~replica').isInSubtree('~1'));
+    tap.notOk(new Lamp('~1~joe~replica').isInSubtree('~2~joe'));
+    tap.notOk(new Lamp('~1~joe').isInSubtree('~1~joe~replica'));
+    tap.ok(new Lamp('~1~joe~replica').isInSubtree('~1~joe~replica'));
     tap.end();
 });

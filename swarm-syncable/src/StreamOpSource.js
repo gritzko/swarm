@@ -60,7 +60,7 @@ function StreamOpSource (stream, options) {
         try{
             self.onStreamDataReceived(buf);
         } catch (ex) {
-            StreamOpSource.debug && console.warn(ex.message, ex.stack);
+            console.warn(ex.message, ex.stack);
             self.onStreamFailure(ex.message||'error processing data');
         }
     };
@@ -84,7 +84,7 @@ StreamOpSource.SYNC_FLUSH = false;
 
 
 StreamOpSource.prototype.removeStreamListeners = function () {
-    if (!this.stream) return;
+    if (!this.stream) { return; }
 
     this.stream.removeListener('data', this.dataListener);
     this.stream.removeListener('end', this.endListener);

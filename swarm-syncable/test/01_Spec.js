@@ -10,7 +10,7 @@ tape ('syncable.01.b basic specifier syntax', function (tap) {
     var spec = new Spec(testSpec);
     tap.equal(spec.stamp(),'7Umum+gritzko~ssn');
     tap.equal(spec.token('!').ext,'gritzko~ssn');
-    tap.equal(spec.source(),'gritzko~ssn');
+    tap.equal(spec.origin(),'gritzko~ssn');
     tap.equal(spec.author(),'gritzko');
     var rev = spec.toString();
     tap.equal(rev,testSpec);

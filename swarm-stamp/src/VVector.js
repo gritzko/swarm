@@ -1,7 +1,7 @@
 "use strict";
 var LT = require('./LamportTimestamp');
 
-// Version vector represented as a {source: time} map.
+// Version vector represented as a {origin: time} map.
 function VVector(vec) {
     this.map = {};
     if (vec) {
@@ -14,10 +14,10 @@ module.exports = VVector;
 // simple string serialization of the vector
 VVector.prototype.toString = function () {
     var stamps = [];
-    var sources = Object.keys(this.map);
-    for(var i=0; i<sources.length; i++) {
-        var source = sources[i], time = this.map[source];
-        stamps.push(source ? time+'+'+source : time);
+    var origins = Object.keys(this.map);
+    for(var i=0; i<origins.length; i++) {
+        var origin = origins[i], time = this.map[origin];
+        stamps.push(origin ? time+'+'+origin : time);
     }
     stamps.sort().reverse();
     stamps.unshift(stamps.length?'':'!0');
@@ -30,25 +30,25 @@ VVector.prototype.add = function (stamp) {
     if (stamp.constructor!==LT) {
         stamp = new LT(stamp.toString());
     }
-    var existing = this.map[stamp.source()] || '';
+    var existing = this.map[stamp.origin()] || '';
     if (stamp.time()>existing && stamp.time()!=='0') {
-        this.map[stamp.source()] = stamp.time();
+        this.map[stamp.origin()] = stamp.time();
     }
     return this;
 };
 
-VVector.norm_src = function (source) {
-    if (source.constructor===String && source.indexOf('+')!==-1) {
-        return new LT(source).source();
+VVector.norm_src = function (origin) {
+    if (origin.constructor===String && origin.indexOf('+')!==-1) {
+        return new LT(origin).origin();
     } else {
-        return source;
+        return origin;
     }
 };
 
 
-VVector.prototype.remove = function (source) {
-    source = VVector.norm_src(source);
-    delete this.map[source];
+VVector.prototype.remove = function (origin) {
+    origin = VVector.norm_src(origin);
+    delete this.map[origin];
     return this;
 };
 
@@ -66,22 +66,22 @@ VVector.prototype.addAll = function (new_ts) {
     return this;
 };
 
-VVector.prototype.get = function (source) {
-    source = VVector.norm_src(source);
-    var time = this.map[source];
-    return time ? time + '+' + source : '0';
+VVector.prototype.get = function (origin) {
+    origin = VVector.norm_src(origin);
+    var time = this.map[origin];
+    return time ? time + '+' + origin : '0';
 };
 
-VVector.prototype.has = function (source) {
-    source = VVector.norm_src(source);
-    return this.map.hasOwnProperty(source);
+VVector.prototype.has = function (origin) {
+    origin = VVector.norm_src(origin);
+    return this.map.hasOwnProperty(origin);
 };
 
 VVector.prototype.covers = function (version) {
     if (version.constructor!==LT) {
         version = new LT(version);
     }
-    return version.time() <= (this.map[version.source()] || '0');
+    return version.time() <= (this.map[version.origin()] || '0');
 };
 
 VVector.prototype.coversAll = function (vv) {

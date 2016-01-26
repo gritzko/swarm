@@ -1,5 +1,6 @@
 "use strict";
 var stamp = require('swarm-stamp');
+var Lamp = stamp.LamportTimestamp;
 
 //  S P E C I F I E R
 //
@@ -131,7 +132,7 @@ Spec.prototype.toAbbrevString = function (defaults) {
 
 Spec.prototype.type = function () { return this._type; };
 Spec.prototype.Type = function () {
-    return new stamp.LamportTimestamp(this._type);
+    return new Lamp(this._type);
 };
 Spec.prototype.id = function () { return this._id; };
 Spec.prototype.stamp = function () { return this._stamp; };
@@ -148,15 +149,19 @@ Spec.prototype.typeId = function () {
     clone._stamp = clone._op = null;
     return clone;
 };
-Spec.prototype.source = function () {
+Spec.prototype.origin = function () {
     if (!this._stamp) {return null;}
     var parsed = new stamp.LamportTimestamp(this._stamp);
-    return parsed.source();
+    return parsed.origin();
 };
+/**
+  *  @deprecated: the precise position of the user_id token depends on the
+  *  replica id tree scheme. It may not even exist.  
+  */
 Spec.prototype.author = function () {
-    var source = this.source();
-    var i = source.indexOf('~');
-    return i===-1 ? source : source.substring(0,i);
+    var origin = this.origin();
+    var i = origin.indexOf('~');
+    return i===-1 ? origin : origin.substring(0,i);
 };
 Spec.prototype.pattern = function () {
     return  (this._type?'/':'')+(this._id?'#':'')+
@@ -196,10 +201,7 @@ Spec.prototype.clone = function () {
 };
 
 Spec.inSubtree = function (ssn, parent_ssn) {
-    if (ssn===parent_ssn) { return true; }
-    if (ssn.length<=parent_ssn) { return false; }
-    if (ssn.charAt(parent_ssn.length)!=='~') { return false; }
-    return ssn.substr(0,parent_ssn.length)===parent_ssn;
+    return new Lamp(ssn).isInSubtree(parent_ssn);
 };
 
 Spec.prototype.filter = function (quants) {
