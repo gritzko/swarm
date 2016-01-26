@@ -2,8 +2,6 @@
 require('stream-url-node');
 require('stream-url-ws');
 
-var fs = require('fs');
-var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
 var util = require('../util');
 
@@ -14,7 +12,7 @@ Swarm.Host.multihost = true;
 function basic_reconnect_test(t, db_path, url) {
     t.plan(5);
 
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    util.prepare(db_path);
 
     var server = util.start_server(url, db_path);
     var client = util.start_client(url, null, null, function () {
@@ -42,7 +40,7 @@ function basic_reconnect_test(t, db_path, url) {
     function end() {
         client.close(function () {
             server.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
                 t.end();
             });
         });
@@ -66,8 +64,7 @@ tape ('2.B Client reconnects (using websockets)', function (t) {
 });
 
 tape ('2.C Object updated after reconnect', function (t) {
-    var db_path = '.test_db.2C_' + (new Date().getTime());
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    var db_path = util.prepare('.test_db.2C_' + (new Date().getTime()));
 
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var url = 'tcp://localhost:' + port;
@@ -127,7 +124,7 @@ tape ('2.C Object updated after reconnect', function (t) {
     function end() {
         client.close(function () {
             server.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
                 t.end();
             });
         });
@@ -135,8 +132,7 @@ tape ('2.C Object updated after reconnect', function (t) {
 });
 
 tape ('2.D Object updated after reconnect', function (t) {
-    var db_path = '.test_db.2D_' + (new Date().getTime());
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    var db_path = util.prepare('.test_db.2D_' + (new Date().getTime()));
 
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var url = 'tcp://localhost:' + port;
@@ -199,7 +195,7 @@ tape ('2.D Object updated after reconnect', function (t) {
     function end() {
         client.close(function () {
             server.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
                 t.end();
             });
         });
