@@ -178,10 +178,17 @@ Entry.prototype.send = function (op, to_ssn) {
 
 Entry.prototype.relay = function (except) { // FIXME saveAndRelay
     var subs = this.state.subscribers;
-    for(var i=0; i<subs.length; i++) {
+    var i = 0;
+    while (i < subs.length) {
         if (!except || subs[i]!==except) {
-            this.send(this.op, subs[i]);
+            if (this.replica.streams[subs[i]]) {
+                this.send(this.op, subs[i]);
+            } else {
+                subs.splice(i, 1);
+                i--;
+            }
         }
+        i++;
     }
 };
 

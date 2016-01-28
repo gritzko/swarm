@@ -1,7 +1,5 @@
 "use strict";
 require('stream-url-node');
-var fs = require('fs');
-var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
 var Client = require('swarm-client').Client;
 var Server = Swarm.Server;
@@ -10,7 +8,6 @@ var memdown = require('memdown');
 var util = require('../util');
 
 var tape = require('tap').test;
-var skip = function () {};
 
 Swarm.Host.multihost = true;
 // Swarm.Host.debug = true;
@@ -65,7 +62,7 @@ tape ('1.A Reopening database', function (t) {
 
     function end_test() {
         close_client(function () {
-            fs.existsSync(db_path) && rimraf.sync(db_path);
+            util.cleanup(db_path);
             t.end();
         });
     }
@@ -119,12 +116,11 @@ tape ('1.B Multiple clients', function (t) {
 tape ('1.C Client and Server', function (t) {
     t.plan(6);
 
-    var db_path = '.test_db.1C_' + (new Date().getTime());
+    var db_path = util.prepare('.test_db.1C_' + (new Date().getTime()));
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var listen_url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(db_path) && rimraf.sync(db_path);
 
     var server = new Server({
         ssn_id: 'swarm~0',
@@ -156,7 +152,7 @@ tape ('1.C Client and Server', function (t) {
         t.pass('Close server');
         server.close(function () {
             t.pass('Server closed');
-            fs.existsSync(db_path) && rimraf.sync(db_path);
+            util.cleanup(db_path);
             t.end();
         });
     }, 3000);
@@ -169,12 +165,11 @@ tape ('1.C Client and Server', function (t) {
 tape ('1.D Client and Server', function (t) {
     t.plan(6);
 
-    var db_path = '.test_db.1D_' + (new Date().getTime());
+    var db_path = util.prepare('.test_db.1D_' + (new Date().getTime()));
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var listen_url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(db_path) && rimraf.sync(db_path);
 
     var server = new Server({
         ssn_id: 'swarm~0',
@@ -205,7 +200,7 @@ tape ('1.D Client and Server', function (t) {
         t.pass('Close client');
         client.close(function () {
             t.pass('Client closed');
-            fs.existsSync(db_path) && rimraf.sync(db_path);
+            util.cleanup(db_path);
             t.end();
         });
     }, 3000);
@@ -219,13 +214,12 @@ tape ('1.D Client and Server', function (t) {
 tape ('1.E Client restarts from the scratch', function (t) {
     t.plan(13);
 
-    var server_db_path = '.test_db.1E_server_' + (new Date().getTime());
+    var server_db_path = util.prepare('.test_db.1E_server_' + (new Date().getTime()));
 
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var listen_url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
 
     var server = new Server({
         ssn_id: 'swarm~0',
@@ -282,7 +276,7 @@ tape ('1.E Client restarts from the scratch', function (t) {
             t.pass('Closing server...');
             server.close(function () {
                 t.pass('Server closed');
-                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
+                util.cleanup(server_db_path);
                 t.end();
             });
         });
@@ -297,15 +291,13 @@ tape ('1.E Client restarts from the scratch', function (t) {
 tape ('1.F Client restarts without a server', function (t) {
     t.plan(15);
 
-    var client_db_path = '.test_db.1F_client_' + (new Date().getTime());
-    var server_db_path = '.test_db.1F_server_' + (new Date().getTime());
+    var client_db_path = util.prepare('.test_db.1F_client_' + (new Date().getTime()));
+    var server_db_path = util.prepare('.test_db.1F_server_' + (new Date().getTime()));
 
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var listen_url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
-    fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
 
     var server = new Server({
         ssn_id: 'swarm~0',
@@ -363,8 +355,8 @@ tape ('1.F Client restarts without a server', function (t) {
             t.equal(sameModel.version(), testModel.version(), 'Version should be the same');
             t.equal(sameModel.key, 'second');
             close_client(function () {
-                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
-                fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
+                util.cleanup(server_db_path);
+                util.cleanup(client_db_path);
                 t.end();
             });
         });
@@ -464,8 +456,8 @@ tape ('1.G Server and two clients', function (t) {
             t.pass('Close second client');
             client2.close(function () {
                 t.pass('Second client closed');
-                fs.existsSync(client_db_path) && rimraf.sync(client_db_path);
-                fs.existsSync(server_db_path) && rimraf.sync(server_db_path);
+                util.cleanup(server_db_path);
+                util.cleanup(client_db_path);
                 t.end();
             });
         });
@@ -502,12 +494,11 @@ tape ('1.H Client creates an unknown object', function (t) {
 });
 
 tape ('1.HH Server creates an unknown object', function (t) {
-    var db_path = '.test_db.1HH_' + (new Date().getTime());
+    var db_path = util.prepare('.test_db.1HH_' + (new Date().getTime()));
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var url = 'tcp://localhost:' + port;
 
     Swarm.Host.multihost = true;
-    fs.existsSync(db_path) && rimraf.sync(db_path);
 
     var serverHost;
     var server = util.start_server(url, db_path, function () {
@@ -539,7 +530,7 @@ tape ('1.HH Server creates an unknown object', function (t) {
     function end() {
         server.close(function () {
             client.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
                 t.end();
             });
         });
@@ -547,8 +538,7 @@ tape ('1.HH Server creates an unknown object', function (t) {
 });
 
 tape ('1.I Object updates', function (t) {
-    var db_path = '.test_db.1I_' + (new Date().getTime());
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    var db_path = util.prepare('.test_db.1I_' + (new Date().getTime()));
 
     t.plan(14);
 
@@ -596,7 +586,7 @@ tape ('1.I Object updates', function (t) {
 
     function end_test() {
         client.close(function () {
-            fs.existsSync(db_path) && rimraf.sync(db_path);
+            util.cleanup(db_path);
             t.end();
         });
     }

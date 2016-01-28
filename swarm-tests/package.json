@@ -16,6 +16,8 @@
     "devDependencies": {
         "swarm-server": "1.0.x",
         "swarm-client": "1.0.x",
+        "swarm-replica": "1.0.x",
+        "swarm-gw": "../swarm-gw",
         "stream-url-ws": "0.1.x",
         "stream-url-node": "0.1.x",
         "swarm-bat": "1.0.x",
