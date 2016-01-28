@@ -46,7 +46,7 @@ Model.prototype.set = function (keys_values) {
     }
     for(var key in keys_values) {
         var val = keys_values[key];  // FIXME ugly
-        if (val._type) {
+        if (val && val._type) {
             keys_values[key] = {ref: val.typeid()};
         }
     }
@@ -170,6 +170,7 @@ LWWObject.prototype.write = function (op) {
 LWWObject.prototype.updateSyncable = function (syncable, getSyncable) {
     var values = this.values;
     Object.keys(values).forEach(function(k){
+        if (LWWObject.bad_words[k]) { return; }
         var val = values[k].value;
         if (val.constructor===Object && val.ref) {
             val = getSyncable(val.ref); // FIXME ugly
@@ -184,6 +185,7 @@ LWWObject.prototype.updateSyncable = function (syncable, getSyncable) {
     });
     syncable._version = this._version;
 };
+LWWObject.bad_words = learn_bad_words();
 
 // Serializes the inner state to a string. The constructor must
 // be able to parse this later.
@@ -200,6 +202,17 @@ LWWObject.prototype.toString = function () {
     return JSON.stringify(wire);
 };
 
+function learn_bad_words () {
+    var bad = Object.create(null);
+    bad.prototype = true;
+    function learn(word) {
+        bad[word] = true;
+    }
+    Object.getOwnPropertyNames(Object.prototype).forEach(learn);
+    Object.getOwnPropertyNames(Model.prototype).forEach(learn);
+    Object.getOwnPropertyNames(Syncable.prototype).forEach(learn);
+    return bad;
+}
 
 Model.Inner = LWWObject;
 Syncable.registerType('Model', Model);

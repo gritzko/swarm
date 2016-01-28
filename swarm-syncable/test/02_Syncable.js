@@ -1,5 +1,6 @@
 "use strict";
 var stamp = require('swarm-stamp');
+var Lamp = stamp.LamportTimestamp;
 var sync = require('..');
 var Syncable = sync.Syncable;
 var Host = sync.Host;
@@ -97,6 +98,22 @@ tape('syncable.02.D Host.get / Swarm.get', function (t) {
     var model_2 = host.get('/Model');
     t.equal(model_2.constructor, Model);
     t.equal(model_2._version, model_2._id);
+
+    t.throws(function(){
+        model_2.set({
+            "Model": false,
+            _id: null
+        });
+    });
+    model_2.set({
+        "prototype": 42,
+        "toString": null,
+    });
+    t.ok(model_2.Model!==false);
+    t.ok(model_2.prototype!==42);
+    t.ok(typeof model_2.toString === 'function');
+    t.ok(model_2._id.constructor===String);
+    t.ok(new Lamp(model_2._version).time() > new Lamp(model_2._id).time());
 
     var model_2B = host.get(model_2._id);
     t.ok(model_2===model_2B);
