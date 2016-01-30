@@ -27,7 +27,7 @@ Free-as-in-freedom (MIT).
 
 ## How to start
 
-### Install 
+### Install
 
 Install an example server:
 
@@ -51,7 +51,7 @@ Open console, start playing:
     swarm.host.syncables;
     swarm.host.gc();
 
-## Code examples 
+## Code examples
 
 
     var sync = require('swarm-syncable');

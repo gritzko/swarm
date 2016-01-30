@@ -8,7 +8,8 @@ PACKAGES = \
 	swarm-client \
 	swarm-cli \
 	swarm-gw \
-	swarm-tests
+	swarm-tests \
+	doc
 
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)
@@ -33,5 +34,5 @@ todo:
 	@scripts/todos.sh
 
 doc:
-	@jsdoc -d doc -R README.md -c .jsdoc.json swarm-*/src/*.js
+	cd doc && $(MAKE) doc
 

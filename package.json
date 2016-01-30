@@ -1,6 +1,6 @@
 {
   "name": "swarm",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -34,6 +34,7 @@
   "browser": "",
   "dependencies": {},
   "devDependencies": {
+    "marked": "^0.3.5",
     "async": "^1.5.0",
     "mkdirp": "^0.5.1",
     "rimraf": "^2.4.4",
