@@ -143,4 +143,8 @@ LamportTimestamp.prototype.isInSubtree = function (replica_id) {
     return i===path.length;
 };
 
+LamportTimestamp.tuple = function (stamp) {
+    return LamportTimestamp.reTokExt.exec(stamp);
+};
+
 module.exports = LamportTimestamp;

@@ -20,7 +20,7 @@ Hence, the downstream gets a new replica identifier.
 The identifier reflects the structure of the tree tree; it is tree path-like, using tilde as a separator.
 In our case of a single root server, the fourth downstream replica created for a user named `gritzko` will likely be named `swarm˜gritzko˜4` (full tree form).
 By convention, we abbreviate that to `gritzko˜4` (it’s annoying to mention `swarm` in every timestamp).
-Hence, the new replica’s handshake is `/Swarm+Client#data!mytime+gritzko˜4.on`.
+Hence, the new replica’s handshake is `/Client+Swarm#data!mytime+gritzko˜4.on`.
 
 Typically, downstream replicas are created empty, but it is possible to clone all the data to a new replica or bootstrap it with some subset.
 The latter is quite handy for server-side rendering and client-side rehydration.
@@ -30,11 +30,6 @@ That virtual upstream for `swarm˜gritzko˜4` is made with the sole purpose of m
 We may do just fine with `swarm˜27zK` or something.
 We may also use `swarm˜mycompany˜myname˜serial` or any other convention as long as de-facto upstream-downstream relations fit into the de-jure replica identifier tree.
 
-### Clone
-
-A Clone is a Client in all respects, except it is subscribed to all of the database by default.
-A Client is subscribed to nothing initially, so it needs to issue upstream subscriptions on per-object basis.
-
 ## Shard
 
 Suppose, one process/server can no longer handle the entire database.
@@ -42,14 +37,14 @@ Such a database needs to be *sharded* then.
 In such a case, a fork inherits a part of the data (by default, one half).
 Shards cover different subsets of objects, so their clocks can not conflict.
 Hence, they are still considered logically the same replica named `swarm`.
-The parent's handshake changes to `/Swarm+Shard#data+00W0!mytime+swarm.on` and the child has `/Swarm+Shard#data+W0˜˜!mytime+swarm.on`.
+The parent's handshake changes to `/Shard+Swarm#00W0+data!mytime+swarm.on` and the child has `/Shard+Swarm#W0˜˜+data!mytime+swarm.on`.
 Note that the name of a database is extended with Base64 hash value ranges, `[00,W0)` and `[W0,˜˜)`.
 A new shard may be bootstrapped with all the parent's data or it may incrementally download data from the upstream, depending on conditions.
 
 ## Switch
 
 Those shards must reside behind a *switch* replica that forwards all the incoming object subscriptions to proper shards.
-Its handshake is `/Swarm+Switch#data!mytime+swarm.on`.
+Its handshake is `/Switch+Swarm#data!mytime+swarm.on`.
 Switches are stateless and transparent, so there can be any number of them.
 Switches maintain subscription tables and multiplex ops, but they have no own storage and no own op order.
 Differently from all other roles, a switch has many upstream replicas, namely an array of Shards covering the entire key space.
@@ -67,7 +62,7 @@ Rings get their own replica identifiers: `swarm˜1` and `swarm˜2`.
 So, the former root database becomes their *virtual* upstream.
 In fact, they use each other as their upstream.
 If we’ll make three rings, they will form a circular chain (1>2>3>1). If one ring dies, the rest still form a connected chain and synchronize all the changes.
-Their handshakes are: `/Swarm+Ring#data!mytime+˜1.on`, `/Swarm+Ring#data!mytime+˜2.on` and so on.
+Their handshakes are: `/Ring+Swarm#data!mytime+˜1.on`, `/Ring+Swarm#data!mytime+˜2.on` and so on.
 
 Rings have different local operation orders. Hence, a client that was forked from one ring can not re-synchronize to another. Our end-user replica identifiers will look like `˜2˜gritzko˜4` (full form `swarm˜2˜gritzko˜4`).
 
@@ -80,10 +75,10 @@ All reads are done locally at a slave, while all the writes are forwarded to the
 Slaves have the master as their upstream replica, so they save and relay new ops in exactly the same order as the master.
 
 Slave handshakes look exactly like their master’s except for a different role, e.g.
-* `/Swarm+Slave#data!mytime+swarm.on` (slave of the root replica) or
-* `/Swarm+RingSlave#data!mytime+˜1.on` (mixed role, slave of a ring) or
-* `/Swarm+ShardRingSlave#data+W0˜˜!mytime+˜1.on` (wow, slave of a shard ring),
-* `/Swarm+ShardRingSlaveSlave#data+W0˜˜!mytime+˜1.on` (unbelievable, a slave of a slave of a shard ring).
+* `/Slave+Swarm#data!mytime+swarm.on` (slave of the root replica) or
+* `/RingSlave+Swarm#data!mytime+˜1.on` (mixed role, slave of a ring) or
+* `/ShardRingSlave+Swarm#W0˜˜+data!mytime+˜1.on` (wow, slave of a shard ring),
+* `/ShardRingSlaveSlave+Swarm#W0˜˜+data!mytime+˜1.on` (unbelievable, a slave of a slave of a shard ring).
 
 It may sound like a difficulty that shard rings have to synchronize to shard rings with equal ranges.
 The single-upstream replica tree structure simplifies everything so much that it is definitely worth the effort.

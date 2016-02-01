@@ -25,7 +25,7 @@ function create (args, done) {
             return new Swarm.Op('!0.'+k.substr(1), args[k]);
         });
         var db_name = args.create || 'test';
-        var hs_spec = new Swarm.Spec('/Swarm#'+db_name+'!0.on');
+        var hs_spec = new Swarm.Spec('/Swarm#'+db_name+'!swarm.on');
         var hs_op = new Swarm.Op(hs_spec, '', null, options);
         args.v && console.warn('db init with:', hs_op.toString());
         db.put('.on', hs_op.toString(), done);

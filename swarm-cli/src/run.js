@@ -30,29 +30,30 @@ function run (argv, done) {
     options.connect = argv.connect || argv.c;
     options.listen = argv.listen || argv.l;
     options.db_id = argv.db;
-    options.callback = on_start;
+    options.onReady = on_start;
+    options.onFail = done;
 
     var db = leveldown(home);
     db.open(function(err){
         if (err) {
             done(err);
         } else {
+            argv.v && console.warn('db open', home);
             client = new Swarm.Replica(db, options);
         }
     })
 }
 module.exports = run;
 
-function on_start () {
+function on_start (db_hs) {
+    args.v && console.warn('db is ready', db_hs.toString());
     var std = args.std || args.s;
     if (std) {
         start_stdio(std==='up');
     }
-    if (args.run || args._) {
-        var scripts = args._ || [];
-        if (args.run) {
-            scripts = scripts.concat(args.run.split(','));
-        }
+    var e = args.exec;
+    if (e) {
+        var scripts = e.constructor===Array ? e : [e];
         run_scripts(scripts);
     }
     if (args.repl || args.r) {
@@ -81,12 +82,12 @@ function run_scripts (scripts) {
 }
 
 function start_repl () {
-    console.log('REPL');
+    args.v && console.warn('launching REPL');
     var repl = require('repl');
     global.Swarm = Swarm;
     global.Client = client;
     repl.start({
-        prompt: '\u2276 ',
+        prompt: process.stdout.isTTY ? '\u2276 ' : '',
         useGlobal: true,
         replMode: repl.REPL_MODE_STRICT
     });

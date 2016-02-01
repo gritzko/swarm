@@ -3,61 +3,47 @@ var base64 = require('./base64');
 var LamportTimestamp = require('./LamportTimestamp');
 
 /** Pure logical-time Lamport clocks. */
-var LamportClock = function (processId, options) {
-    if (!base64.reTok.test(processId)) {
-        throw new Error('invalid process id: '+processId);
-    }
+function LamportClock (start_with, options) {
+    var start = new LamportTimestamp(start_with);
     options = options || {};
-    this.id = processId;
-    this.prefix = options.prefix || '';
-    // sometimes we assume our local clock has some offset
-    if (options.start && options.start.constructor===String) {
-        options.start = base64.base2int(options.start);
-    }
-    this.seq = options.start || 0;
-    this.length = options.length || 5;
-};
+    this.origin = start.origin();
+    //this.prefix = options.ClockPrefix || '';
+    this.seq = 0; //base64.base2int(start.time());
+    this.length = options.ClockLength || 5;
+    this.seeStamp(start);
+}
 
 LamportClock.prototype.adjustTime = function () {
 };
 
 LamportClock.prototype.issueTimestamp = function time () {
     var base = base64.int2base(this.seq++, this.length);
-    return this.prefix + base + '+' + this.id;
+    return /*this.prefix +*/ base + '+' + this.origin;
 };
 
-LamportClock.prototype.parseTimestamp = function parse (ts) {
-    if (this.prefix) {
+LamportClock.prototype.parseTimestamp = function parse (lamp) {
+    /*if (this.prefix) {
         var p = ts.substr(0, this.prefix.length);
         if (p!==this.prefix) {
             throw new Error('missing prefix');
         }
         ts = ts.substr(this.prefix.length);
-    }
-    var m = ts.match(LamportTimestamp.reTokExt);
-    if (!m) {throw new Error('malformed timestamp: '+ts);}
+    }*/
     return {
-        seq: base64.base2int(m[1]),
-        process: m[2]
+        seq: base64.base2int(lamp.time()),
+        origin: lamp.origin()
     };
 };
 
 
-LamportClock.prototype.seeTimestamp = function see (ts) {
+LamportClock.prototype.seeStamp = function see (ts) {
     var parsed = this.parseTimestamp(ts);
     if (parsed.seq>=this.seq) {
         this.seq = parsed.seq + 1;
     }
 };
+LamportClock.prototype.adjustTime = LamportClock.prototype.seeStamp;
 
-/** Lamport partial order  imperfect semi-logical*/
-LamportClock.prototype.checkTimestamp = function see (ts) {
-    var parsed = this.parseTimestamp(ts);
-    if (parsed.seq >= this.seq) {
-        this.seq = parsed.seq + 1;
-    }
-    return true;
-};
 
 LamportClock.prototype.time2date = function () {
     return undefined;

@@ -14,20 +14,20 @@ var util = require("util");
  *   Essentially, OpSource is an end of a "pipe" that goes to
  *   to some another replica.
  *   OpSource emits three types of events:
-*
+ *
  *   * `handshake` specifies the context for the rest of the ops,
  *     such as the id of the session on the other end, the id
  *     of the database, the id of the connection and suchlike,
  *   * `op` is a regular CRDT op (such as `.set`) or a subscription/
  *      unsubscription pseudo-op (`.on`, `.off`), or an `.error`,
  *   * `end` is the end of this stream; no further events allowed.
-*
+ *
  *   A special note on error handling. OpStream has no dedicated
  *   `error` event. All transient (recoverable) errors are transmitted
  *   in the stream as `.error` operations and emitted as such.
  *   Those may be scoped to particular objects and operations.
  *   Irrecovearable errors are passed to/emitted with the `end` event.
-*
+ *
  *   This class is abstract; see StreamOpSource for an OpSource for
  *   a remote replica connected by a binary stream, Host for a local
  *   CRDT replica, LevelOpSource for a LevelDB-backed replica.
@@ -38,9 +38,17 @@ function OpSource (options) {
     this.peer_hs = null; // peer handshake
     this.hs = null; // our handshake
     this.source_id = null;
-    options.onHandshake && this.on('handshake', options.onHandshake);
-    options.onOp && this.on('op', options.onOp);
-    options.onEnd && this.on('end', options.onEnd);
+    if (options) {
+        if (options.onHandshake) {
+            this.on('handshake', options.onHandshake);
+        }
+        if (options.onOp) {
+            this.on('op', options.onOp);
+        }
+        if (options.onEnd) {
+            this.on('end', options.onEnd);
+        }
+    }
 }
 util.inherits(OpSource, EventEmitter);
 module.exports = OpSource;

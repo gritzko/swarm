@@ -11,10 +11,11 @@ var args = require('minimist')(process.argv.slice(2));
  *  ADJECTIVES
  */
 
-if (args.help || args.h) {
+if (args.help) {
     var help = [
     '',
-    'Command-line Swarm client ',
+    'Command-line Swarm client. Usage: ',
+    '    swarm [options] database/home/dir/',
     '',
     'Database options',
     '--home -h      the home directory for the database',
@@ -25,7 +26,7 @@ if (args.help || args.h) {
     '',
     'Actions and their options',
     '--create -C    create a database (--create my_db_name)',
-    '--run          default, may take scripts (e.g. --run script.js)',
+    '--run          default, run a replica',
     '  --connect -c server URL to connect to (e.g. ws://localhost:8080)',
     '  --listen -l  URL to listen on (e.g. ws://localhost:8080)',
 //    '  --setc -C    server URL, remember and make the default',
@@ -33,6 +34,7 @@ if (args.help || args.h) {
     '  --repl -r    REPL interactive mode (e.g. swarm -r < script.js)',
     '  --std -s     read stdin/out as a connection (upstream: --std up)',
     '  --daemon -z  daemonize (e.g. by rampant propaganda)',
+    '  --exec -e    execute script(s), e.g. --exec init.js -e run.js',
     '  --quit -1    sync all data and quit',
     '--access -a    read/write the db directly at key/prefix',
     '  --read -R    default, read data (e.g. -a /Model#3uHRl -R)',
@@ -57,8 +59,18 @@ if (args.debug || args.D) {
     Swarm.OpSource.debug = true;
 }
 
-args.home = args.home || args.h;
+if (!args._.length) {
+    return done('home dir not specified');
+} else if (args._.length>1) {
+    return done('multiple home dirs?');
+}
+
+// argument normalization
+args.home = args._[0];
+args.exec = args.exec || args.e;
 args.db = args.db || args.d;
+args.stats = args.stats || args.S;
+
 if (!args.home) {
     if (!args.db) {
         args.db = 'test';
@@ -68,7 +80,7 @@ if (!args.home) {
 
 if (args.access || args.a) {
     require('./dump')(args, done);
-} else if (args.stats || args.S) {
+} else if (args.stats) {
     require('./stats')(args, done);
 } else if (args.fork || args.f) {
     require('./fork')(args, done);
@@ -79,6 +91,12 @@ if (args.access || args.a) {
 }
 
 function done (err) {
-    err && console.error(err);
+    if (err) {
+        if (args.v) {
+            console.error(new Error(err).stack);
+        } else {
+            console.error(err);
+        }
+    }
     process.exit(err?-1:0);
 }
