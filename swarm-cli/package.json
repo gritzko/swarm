@@ -1,6 +1,6 @@
 {
   "name": "swarm-cli",
-  "version": "1.0.16",
+  "version": "1.1.0",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -21,12 +21,13 @@
   ],
   "main": "index.js",
   "bin": {
-      "swarm-cli" : "src/cli-client.js"
+      "swarm-cli" : "src/cli.js"
   },
   "dependencies": {
       "level":          "^1.3.0",
       "swarm-client":   "1.0.x",
       "minimist":       "^1.2.0",
+      "duplexer":       "0.1.1",
       "stream-url-ws":  "0.1.x",
       "stream-url-node":"0.1.x"
   },
