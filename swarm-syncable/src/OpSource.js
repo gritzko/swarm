@@ -87,7 +87,7 @@ OpSource.prototype.emitOp = function (key, value, kv_patch) {
     if (OpSource.debug) {
         this.log(op, false);
     }
-    this.emit('op', op);
+    this.emit('op', op, this);
 };
 
 
@@ -113,7 +113,7 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
     if (OpSource.debug) {
         this.log(hs, false, 'HS');
     }
-    this.emit('handshake', hs);
+    this.emit('handshake', hs, this);
 };
 
 /**
@@ -123,7 +123,7 @@ OpSource.prototype.emitEnd = function (error) {
     if (OpSource.debug) {
         this.log(new Op('.off', error||''), false, 'END');
     }
-    this.emit('end', error);
+    this.emit('end', error, this);
 };
 
 
