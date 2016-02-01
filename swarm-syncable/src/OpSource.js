@@ -33,11 +33,14 @@ var util = require("util");
  *   CRDT replica, LevelOpSource for a LevelDB-backed replica.
  *   @class
  */
-function OpSource () {
-    EventEmitter.call(this, {objectMode: true});
+function OpSource (options) {
+    EventEmitter.call(this);
     this.peer_hs = null; // peer handshake
     this.hs = null; // our handshake
     this.source_id = null;
+    options.onHandshake && this.on('handshake', options.onHandshake);
+    options.onOp && this.on('op', options.onOp);
+    options.onEnd && this.on('end', options.onEnd);
 }
 util.inherits(OpSource, EventEmitter);
 module.exports = OpSource;
