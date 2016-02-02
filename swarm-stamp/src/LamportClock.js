@@ -18,7 +18,8 @@ LamportClock.prototype.adjustTime = function () {
 
 LamportClock.prototype.issueTimestamp = function time () {
     var base = base64.int2base(this.seq++, this.length);
-    return /*this.prefix +*/ base + '+' + this.origin;
+    /*this.prefix +*/
+    return new LamportTimestamp(base, this.origin);
 };
 
 LamportClock.prototype.parseTimestamp = function parse (lamp) {

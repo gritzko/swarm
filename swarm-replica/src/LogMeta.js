@@ -38,6 +38,9 @@ function LogMeta (string) {
     }
     // Everything defaults to a single snapshot being received from
     // the upstream and never updated.
+    if (this.base===null) {
+        this.base = '0';
+    }
     if (this.tip === null) {
         this.tip = this.base;
     }

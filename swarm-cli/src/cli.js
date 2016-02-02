@@ -57,6 +57,7 @@ if (args.help) {
 
 if (args.debug || args.D) {
     Swarm.OpSource.debug = true;
+    Swarm.Replica.debug = true;
 }
 
 if (!args._.length) {
@@ -100,3 +101,7 @@ function done (err) {
     }
     process.exit(err?-1:0);
 }
+
+process.on('uncaughtException', function (err) {
+  console.error("UNCAUGHT EXCEPTION", err, err.stack);
+});

@@ -138,6 +138,7 @@ Spec.prototype.id = function () { return this._id; };
 Spec.prototype.stamp = function () { return this._stamp; };
 Spec.prototype.version = function () { return '!'+this._stamp; };
 Spec.prototype.op = function () { return this._op; };
+Spec.prototype.name = Spec.prototype.op;
 Spec.prototype.typeid = function () {
     return '/'+this._type+'#'+this._id;
 };
@@ -156,7 +157,7 @@ Spec.prototype.origin = function () {
 };
 /**
   *  @deprecated: the precise position of the user_id token depends on the
-  *  replica id tree scheme. It may not even exist.  
+  *  replica id tree scheme. It may not even exist.
   */
 Spec.prototype.author = function () {
     var origin = this.origin();
@@ -168,6 +169,9 @@ Spec.prototype.pattern = function () {
             (this._stamp?'!':'')+(this._op?'.':'');
 };
 Spec.prototype.set = function (tok, quant) {
+    if (tok.constructor!==String) {
+        tok = tok.toString(); // well...
+    }
     if (!quant) {
         if (!tok || tok.charAt(0)>='0') {
             throw new Error('malformed quant');

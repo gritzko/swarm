@@ -5,9 +5,6 @@ var Swarm = require('swarm-replica');
 
 var client, args;
 
-process.on('uncaughtException', function (err) {
-  console.error("UNCAUGHT EXCEPTION", err, err.stack);
-});
 process.on('SIGTERM', onExit);
 process.on('SIGINT', onExit);
 process.on('SIGQUIT', onExit);
@@ -30,7 +27,7 @@ function run (argv, done) {
     options.connect = argv.connect || argv.c;
     options.listen = argv.listen || argv.l;
     options.db_id = argv.db;
-    options.onReady = on_start;
+    options.onWritable = on_start;
     options.onFail = done;
 
     var db = leveldown(home);
@@ -45,8 +42,8 @@ function run (argv, done) {
 }
 module.exports = run;
 
-function on_start (db_hs) {
-    args.v && console.warn('db is ready', db_hs.toString());
+function on_start () {
+    args.v && console.warn('replica is writable');
     var std = args.std || args.s;
     if (std) {
         start_stdio(std==='up');
@@ -77,6 +74,7 @@ function run_scripts (scripts) {
     var path = require('path');
     scripts.forEach(function(script){
         var p = path.resolve('.', script);
+        args.v && console.warn('run script', p);
         require(p);
     });
 }

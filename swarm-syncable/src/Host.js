@@ -28,7 +28,7 @@ var OpSource = require("./OpSource");
 function Host (options) {
     options = options || {};
     this._events = {data: null};
-    OpSource.call(this);
+    OpSource.call(this, options);
     // id, router, offset_ms
     this.options = options;
     /** Id of this session (replica in the general sense).
@@ -55,6 +55,7 @@ function Host (options) {
         }
         Host.localhost = this;
     }
+    this.go();
 }
 util.inherits(Host, OpSource);
 module.exports = Host;
@@ -64,19 +65,17 @@ Host.multihost = false;
 Host.localhost = null;
 Host.hosts = Object.create(null);
 
-// FIXME this is a workaround, use options.onhandshake instead
 Host.prototype.go = function () {
-
-
-    var hs = this.handshake(); // FIXME one run
-
-
+    var hs = this.upstreamHandshake();
     this.emitHandshake(hs.spec, hs.value);
     // TODO these ifs are really annoying; snapshot slave may be its own class
     if (this.syncables) {
         var pre = Object.keys(this.syncables);
         for(var i=0; i<pre.length; i++) {
             var obj = this.syncables [pre[i]];
+
+            // FIXME wait for re_hs, no !0
+
             this.emitOp(obj.typeid()+'!0.on', obj._version||'');
         }
     }
@@ -120,14 +119,9 @@ Host.prototype.gc = function (criteria) {
 };
 
 
-Host.prototype.handshake = function () {
-    var stamp = '0';
-    if (this.clock) {
-        stamp = this.time();
-    } else if (this.user_id) {
-        stamp = this.user_id;
-    }
-    var key = new Spec('/Swarm+Host').add(this.db_id||'0', '#')
+Host.prototype.upstreamHandshake = function () {
+    var stamp = this.ssn_id ? this.ssn_id : '0';
+    var key = new Spec('/Host+Swarm').add(this.db_id||'0', '#')
         .add(stamp,'!').add('.on');
     return new Op(key, '', this.source());
 };
@@ -182,7 +176,7 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     if (Host.multihost) {
         Host.hosts[this.getSsnMark()] = this;
     }
-    this.emit('writable', this.handshake()); // ?! not an OpSource event
+    this.emit('writable');
 };
 
 
@@ -383,7 +377,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         syncable._version = crdt._version = stamp;
 
         // the state is sent up in the handshake as the uplink has nothing
-        var on_spec = syncable.spec().add('!0').add('.on'); //.add(stamp,'!')
+        var on_spec = syncable.spec().add(this.source_id, '!').add('.on'); //.add(stamp,'!')
         this.emitOp(on_spec, '', [{
             key:    typeid+'!'+stamp+'.~state',
             value:  crdt.toString()
@@ -396,7 +390,7 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
         }
         this.crdts[syncable.spec().typeid()] = null; // wait for the state
         // 0 up
-        this.emitOp(syncable.spec().add('!0').add('.on'), '');
+        this.emitOp(syncable.spec().add(this.source_id, '!').add('.on'), '');
     }
 
     this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it

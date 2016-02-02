@@ -3,8 +3,8 @@ var Spec = require('./Spec');
 
 // *immutable* op: specifier, value and a patch (nested ops).
 // empty value is '', not null, not undefined
-function Op (spec, value, source, patch) { // FIXME source -> peer
-    if (value===undefined) {
+function Op (spec, value, source, patch) {
+    if (value===undefined) { // FIXME kill this, throw
         if (spec && spec.constructor===String) {
             var parsed = Op.parse(spec);
             if (parsed.ops.length!==1) {
@@ -22,6 +22,11 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
     }
     this.spec = spec && spec.constructor===Spec ?
         spec : new Spec(spec);
+
+    // if (value && value.constructor===Object) {
+    //     value = JSON.stringify(value);
+    // }
+
     this.value = value ? value.toString() : '';
     this.source = source ? source.toString() : '';
     this.patch = patch || null;
@@ -31,6 +36,10 @@ function Op (spec, value, source, patch) { // FIXME source -> peer
 }
 module.exports = Op;
 Op.handshake_ops = {on:1, off:1};
+
+Op.create = function (triplet, source) {
+    return new Op(triplet[0], triplet[1], source, triplet[2]);
+};
 
 // Epically monumental op-parsing regexes.
 Op.rsSpec = '(?:'+Spec.rsQuant+'=(?:\\+=)?)+'.replace(/=/g, Spec.rT);

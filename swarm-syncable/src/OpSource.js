@@ -35,12 +35,12 @@ var util = require("util");
  */
 function OpSource (options) {
     EventEmitter.call(this);
-    this.peer_hs = null; // peer handshake
-    this.hs = null; // our handshake
+    this.hs = null;
     this.source_id = null;
+    this.is_upstream = undefined;
     if (options) {
-        if (options.onHandshake) {
-            this.on('handshake', options.onHandshake);
+        if (options.onceHandshake) {
+            this.once('handshake', options.onceHandshake);
         }
         if (options.onOp) {
             this.on('op', options.onOp);
@@ -55,16 +55,9 @@ module.exports = OpSource;
 OpSource.DEFAULT = new Spec('/Model!0.on');
 
 
-OpSource.prototype.label = function (inbound) {
-    var peer = this.peer_hs ? this.peer_hs.stamp() : '?';
-    var us = this.hs ? this.hs.stamp() : '?';
-    return us + (inbound?'<':'>') + peer;
-};
-
-
 OpSource.prototype.log = function (op, inbound, event) {
-    console.log(
-        this.label(inbound) +
+    console.warn(
+        this.source_id + (this.is_upstream?' ^':' v') +
         (event ? '\t['+event+']' : '') +
         (op ? '\t'+op.spec.toString()+'\t'+op.value : '')
     );
@@ -82,8 +75,9 @@ OpSource.prototype.source = function () {
  * For use by descendant classes: emit an op.
  */
 OpSource.prototype.emitOp = function (key, value, kv_patch) {
-    var patch = null, source = this.source();
+    var patch = null;
     var spec = new Spec(key, null, OpSource.DEFAULT);
+    var source = this.source();
     if (kv_patch) {
         if (kv_patch.constructor!==Array) {
             throw new Error('need an array of {key,value} objects');
@@ -162,7 +156,10 @@ OpSource.prototype.writeHandshake = function (hs) {
     if (this.peer_hs) {
         throw new Error('handshake repeat by the peer');
     }
-    this.peer_hs = hs;
+    if (!this.hs) {
+        this.is_upstream = true;
+    }
+    this.hs = hs;
     this.source_id = hs.stamp();
     if (OpSource.debug) {
         this.log(hs, true, 'HS');

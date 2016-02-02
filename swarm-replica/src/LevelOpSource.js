@@ -4,6 +4,7 @@ var util = require('util');
 var OpSource = Swarm.OpSource;
 var Op = Swarm.Op;
 var LogMeta = require('./LogMeta');
+var Lamp = Swarm.LamportTimestamp;
 
 /**
  *  LevelDB based storage
@@ -43,9 +44,11 @@ function LevelOpSource (leveldown_db, options) {
     this.prefix = options.prefix || '';
     // single-liners describing object's log states (see LogState.js)
     this.meta = Object.create(null); // {typeid: state_str}
-    this.send_queue = [];
+    this.in_queue = [];
+    this.emit_queue = [];
     this.save_queue = [];
-    this.idle = false;
+    this.idle = true;
+    this.upstream_source = null;
     this.done = setImmediate.bind(this.next.bind(this));
     // TODO this.next = setImmediate()
     this.readDbHandshake();
@@ -57,8 +60,9 @@ module.exports = LevelOpSource;
 //    O P S O U R C E   I N T E R F A C E
 
 
-LevelOpSource.prototype._write = function (op) {
-    this.queue.offer(op);
+LevelOpSource.prototype._writeOp = function (op) {
+    //this.queue.offer(op);
+    this.in_queue.unshift(op);
     if (this.idle) {
         this.next();
     }
@@ -72,7 +76,7 @@ LevelOpSource.prototype._writeHandshake = function (op) {
 
 
 
-LevelOpSource.prototype._end = function () {
+LevelOpSource.prototype._writeEnd = function () {
     // emits the .off back once all processing is finished
     this.queue.offer(new Op('.off', ''));
 };
@@ -84,26 +88,33 @@ LevelOpSource.prototype._end = function () {
 LevelOpSource.prototype.next = function () {
     var self = this;
     self.idle = false;
-    var op = self.queue.poll();
+    var op = self.in_queue.pop(); //self.queue.poll();
+    console.error('next', op.toString());
     var typeid = op.typeid();
 
     // load state if needed
-    var cached_meta = self.meta[typeid], meta;
-    if (!cached_meta) {
-        this.readMeta(typeid, do_process);
-        //self.queue.push_back(upscribe); upscribe is commanded by
-        //Replica
+    if (op.spec.Type().origin()==='Swarm') {
+        this.processOuterHandshake(op, do_send);
     } else {
-        do_process(cached_meta);
+        var cached_meta = self.meta[typeid], meta;
+        if (!cached_meta) {
+            this.readMeta(typeid, do_process);
+            //self.queue.push_back(upscribe); upscribe is commanded by
+            //Replica
+        } else {
+            do_process(cached_meta);
+        }
     }
 
     function do_process (meta_str) {
+        console.warn('do_process');
         meta = new LogMeta(meta_str);
         self.process(op, meta, do_save);
     }
 
     // process() -> save() -> send() -> next()
     function do_save (error) {
+        console.warn('do_save');
         if (error) {
             // FIXME empty queues
             self.queueEmit(op.spec.set('.error'), error);
@@ -113,8 +124,9 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_send () {
+        console.warn('do_send');
         self.emitAll(op, meta);
-        if (!self.queue.isEmpty()) {
+        if (self.in_queue.length) {
             setImmediate(self.next.bind(self));
         } else {
             self.idle = true;
@@ -173,12 +185,15 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
     this.db.batch(this.save_queue, done);
 };
 
+LevelOpSource.prototype.queueEmit = function (op) {
+    this.emit_queue.push(op);
+};
 
 LevelOpSource.prototype.emitAll = function (op, meta) {
     for(var i=0; i<this.emit_queue.length; i++) {
         var op = this.emit_queue[i];
         if (op.name()!=='~state' || op.stamp()===meta.base) {
-            this.emitOp(op);
+            this.emitOp(op.spec, op.value, op.patch);
         }
     }
 };
@@ -194,24 +209,24 @@ LevelOpSource.prototype.saveDbHandshake = function (hs, done) {
 //    L O G I C S   &   P R O T O C O L
 
 
-LevelOpSource.prototype.process = function (op, state, done) {
+LevelOpSource.prototype.process = function (op, meta, done) {
     switch (op.name()) {
-    case 'on':      if (isUpstream(op)) { // TODO forced sub?
-                        this.processReciprocalOn(op, state, done);
+    case 'on':      if (op.stamp()===this.upstream_source) {
+                        this.processReciprocalOn(op, meta, done);
                     } else if (op.origin()===null) {
-                        this.processUpscribe(op, state, done);
+                        this.processUpscribe(op, meta, done);
                     } else {
-                        this.processOn(op, state, done);
+                        this.processOn(op, meta, done);
                     }
                     break;
     case 'off':     if (op.spec=='.off') {
-                        this.processEnd(op, state, done);
+                        this.processEnd(op, meta, done);
                     } else {
-                        this.processOff(op, state, done);
+                        this.processOff(op, meta, done);
                     }
                     break;
-    case '~state':  this.processState(op, state, done); break;
-    default:        this.processOp(op, state, done); break;
+    case '~state':  this.processState(op, meta, done); break;
+    default:        this.processOp(op, meta, done); break;
     }
 };
 
@@ -224,23 +239,30 @@ LevelOpSource.prototype.processEnd = function (op, state, done) {
     done();
 };
 
+LevelOpSource.prototype.processOuterHandshake = function (op, done) {
+    // TODO
+    this.queueEmit(op.spec, op.value);
+    done();
+};
+
 /**
-    As an upstream, we send a patch based on the provided position in
-    our arrival order. We also add an acknowledgement for the received patch.
-*/
+ * As an upstream, we send a patch based on the provided position in
+ * our arrival order. We also add acknowledgements for the received patch.
+ */
 LevelOpSource.prototype.processOn = function (op, meta, done) {
     var self = this;
     var stateful = '0'!==meta.tip; // FIXME the default must be 0
     var bookmark = op.value || '0';
     // check for obvious errors first
-    if (!Lamp.is(pos)) {
+    if (!Lamp.is(bookmark)) {
         return done('malformed bookmark');
     }
-    if (pos>self.state.tip) {
+    if (bookmark>meta.tip) {
         return done('bookmark is ahead!');
     }
     // make an acknowledgement for incoming ops
-    var ack_vv = new VVector();
+    var ack_vv = new Swarm.VVector();
+    console.warn('op', op.toString());
     if (op.patch) {
 
         //  FILTER OUT THE TRASH
@@ -248,8 +270,11 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
         op.patch.forEach(function(o){
             ack_vv.add(o.stamp());
         });
-        // filter the patch
-        self.filterKnown(op.patch, meta, do_accept_patch);
+        if (meta.tip!=='0') {
+            self.filterKnown(op.patch, meta, do_accept_patch);
+        } else {
+            do_accept_patch();
+        }
     } else {
         do_response();
     }
@@ -258,6 +283,7 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
         op.patch.forEach(function(o){
             self.appendNewRecord(o, meta);
         });
+        do_response();
     }
 
     function do_response () {
@@ -267,18 +293,20 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
         // we still can modify re_patch
 
         if (!stateful) { // we have nothing
-
+            /* THINK TWICE
             var dstream_has_no_state = bookmark==='0';
-            var no_upstream = self.replica.user_id==='swarm' &&
+            var no_upstream = self.source_id==='swarm' &&
                 (!upstream || self.op.source===upstream); // ? TODO shaky
             if (dstream_has_no_state && no_upstream) {
                 var zero_state = new Op(self.op.typeid()+'!0.~state', '');
                 self.appendNewRecord(zero_state, meta);
                 re_patch.push(zero_state);
             }
-
+            */
+            done();
         } else if (bookmark==='0') { // the client has nothing
 
+            meta.tip!=='0' &&
             self.readTail(meta.base+'.~state', function (o) {
                 if (o.name()!=='~state' || o.stamp()===meta.base) {
                     re_patch.push(o);
@@ -287,7 +315,8 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
 
         } else if (bookmark===meta.tip) { // no new ops yet
 
-            self.queueEmit(op.spec, ack_vv.toString());
+            //self.queueEmit(op.spec, ack_vv.toString());
+            done();
 
         } else { // OK, we likely have something to send
 
@@ -467,8 +496,8 @@ LevelOpSource.prototype.processState = function (op, meta, done) {
 
 LevelOpSource.isNFE = function (err) {
     return err && (
+        /NotFound/.test(err.message) ||
         err.notFound ||
-        err.message==='NotFound' ||
         err.name==='NotFoundError'
     );
 };
@@ -498,7 +527,8 @@ LevelOpSource.prototype.readDbHandshake = function () {
 
 LevelOpSource.prototype.readMeta = function (typeid, done) {
     var self = this;
-    var key = this.prefix + typeid + '.meta';
+    // for shortcut conns: /Type#id!~+peer.meta
+    var key = this.prefix + typeid + '!~.meta';
     this.db.get(key, function (err, value){
         if (err && !LevelOpSource.isNFE(err)) {
             console.error('meta read failed', key, err);
