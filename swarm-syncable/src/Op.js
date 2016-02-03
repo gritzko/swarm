@@ -40,12 +40,15 @@ Op.handshake_ops = {on:1, off:1};
 Op.create = function (triplet, source) {
     return new Op(triplet[0], triplet[1], source, triplet[2]);
 };
+Op.prototype.triplet = function () {
+    return [this.spec, this.value, this.patch];
+};
 
 // Epically monumental op-parsing regexes.
 Op.rsSpec = '(?:'+Spec.rsQuant+'=(?:\\+=)?)+'.replace(/=/g, Spec.rT);
 Op.rsPatchOp =  '\\n[ \\t]+' + Op.rsSpec + '[ \\t]+.*';
 Op.rsPatchOpB = '\\n[ \\t]+(' + Op.rsSpec + ')[ \\t]+(.*)';
-Op.rsOp = '(' + Op.rsSpec+')[ \\t]+(.*)((?:' + Op.rsPatchOp + ')*)(\\n+)';
+Op.rsOp = '(' + Op.rsSpec+')[ \\t]+(.*)((?:' + Op.rsPatchOp + ')*)';
 Op.reOp = new RegExp(Op.rsOp, 'mg');
 Op.rePatchOp = new RegExp(Op.rsPatchOpB, 'mg');
 
@@ -55,12 +58,9 @@ Op.parse = function (str, source, context) {
     var rem = str, m, mm, ops = [], d=0;
     while (m = Op.reOp.exec(rem)) {
         var spec = new Spec(m[1], null, context);
-        var value = m[2], patch_str = m[3], end = m[4];
+        var value = m[2], patch_str = m[3];
         var patch = null;
         if (patch_str) {
-            if (end.length<2) { // need \n\n termination
-                break;
-            }
             var typeId = spec.typeId();
             patch = [];
             Op.rePatchOp.lastIndex = 0;
@@ -80,6 +80,7 @@ Op.parse = function (str, source, context) {
         // TODO detect unparseable strings
     }
     if (rem.indexOf('\n')!==-1 && !Op.reOp.exec(rem)) {
+        console.error('unparseable input', rem);
         throw new Error('unparseable input');
     }
     if (rem.length>(1<<23)) { // 8MB op size limit? TODO
@@ -126,17 +127,17 @@ Op.prototype.bundleLength = function () {
 Op.prototype.toString = function (context) {
     var spec_str = context ?
         this.spec.toAbbrevString(context) : this.spec.toString();
-    var line = spec_str + '\t' + this.value + '\n';
+    var line = spec_str + '\t' + this.value;// + '\n';
     if (this.name()==='on' && this.patch) {
         this.patch.forEach(function(o){
-            line += '\t' + o.toShortString();
+            line += '\n\t' + o.toShortString();
         });
     }
     return line;
 };
 
 Op.prototype.toShortString = function () {
-    return this.spec.stampop() + '\t' + this.value + '\n';
+    return this.spec.stampop() + '\t' + this.value;// + '\n';
 };
 
 Op.prototype.error = function (msg, src) {

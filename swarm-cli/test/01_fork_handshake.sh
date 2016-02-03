@@ -21,15 +21,23 @@ $swarm server.db -a .off -E   || exit 5
 ( $swarm server.db -a .off | grep xoxo ) && exit 6
 # print db stats
 $swarm server.db --stats   || exit 7
-echo "new Swarm.Model({a:1}).typeid()" > newobj.txt
-( cat newobj.txt | $swarm server.db -r -D -v > typeid.txt ) || exit 8
+( $swarm server.db -r -D -v > typeid.txt ) <<EOF
+    Swarm.Host.localhost.on('echo', function(ev){
+        console.log('echo', ev.version);
+    });
+    var model=new Swarm.Model({a:1});
+    console.log('TYPEID', model.typeid());
+    model.set({b:2});
+EOF
 # evil genius perl
 #TYPEID=`awk '{gsub(/'"'"'/,"", $1); print $1;}' typeid.txt`
-TYPEID=`perl -ne '/(\/\w+#\w+\+\w+)/ && print "$1\n"' typeid.txt`
+export TYPEID=`perl -ne '/TYPEID\s+(\/\w+#\w+\+\w+)/ && print "$1\n"' typeid.txt`
 if [[ ! $TYPEID ]]; then exit 9; fi
+(grep 'js:' typeid.txt > /dev/null) && cat typeid.txt && exit 13;
 echo our object is $TYPEID
-( $swarm -a -- server.db | grep LamportClock ) || exit 10
-( $swarm server.db -a $TYPEID | grep $TYPEID ) || exit 11
+grep echo typeid.txt || exit 10
+( $swarm -a -- server.db | grep LamportClock ) || exit 11
+( $swarm server.db -a "$TYPEID" | grep "$TYPEID" ) || exit 12
 exit 0
 # clone
 $swarm server.db --fork client.db --clone

@@ -56,8 +56,10 @@ OpSource.DEFAULT = new Spec('/Model!0.on');
 
 
 OpSource.prototype.log = function (op, inbound, event) {
+    var upwards = (this.is_upstream && inbound) ||
+                  (!this.is_upstream && !inbound);
     console.warn(
-        this.source_id + (this.is_upstream?' ^':' v') +
+        (upwards?'^ ':'v ') + this.source_id +
         (event ? '\t['+event+']' : '') +
         (op ? '\t'+op.spec.toString()+'\t'+op.value : '')
     );

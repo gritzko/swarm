@@ -125,7 +125,7 @@ StreamOpSource.prototype.flush = function (callback) {
     if (!p_o.length) { return; }
     var parcel = '';
     p_o.forEach(function(op){
-        parcel += op.toString(OpSource.DEFAULT);
+        parcel += op.toString(OpSource.DEFAULT)+'\n';
     });
     if (p_o[p_o.length-1].op()==='on') {
         parcel += '\n'; // terminate the .on

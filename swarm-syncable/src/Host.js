@@ -67,7 +67,7 @@ Host.hosts = Object.create(null);
 
 Host.prototype.go = function () {
     var hs = this.upstreamHandshake();
-    this.emitHandshake(hs.spec, hs.value);
+    this.emitHandshake(hs, '');
     // TODO these ifs are really annoying; snapshot slave may be its own class
     if (this.syncables) {
         var pre = Object.keys(this.syncables);
@@ -123,7 +123,7 @@ Host.prototype.upstreamHandshake = function () {
     var stamp = this.ssn_id ? this.ssn_id : '0';
     var key = new Spec('/Host+Swarm').add(this.db_id||'0', '#')
         .add(stamp,'!').add('.on');
-    return new Op(key, '', this.source());
+    return key;
 };
 
 // Returns a new timestamp from the host's clock.
@@ -467,7 +467,7 @@ Host.prototype.submit = function (syncable, op_name, value) { // TODO sig
         throw new Error('host has no clock, hence not writable');
     }
     var typeid = syncable.typeid();
-    this.clock.seeTimestamp(syncable._version||'0'); // FIXME don't read syncable.
+    this.clock.seeStamp(syncable._version||'0'); // FIXME don't read syncable.
     var spec = new Spec(typeid).add(this.time(),'!').add(op_name,'.');
     var op = new Op(spec, value, this.source());
     this.submitOp(op);

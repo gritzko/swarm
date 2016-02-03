@@ -67,6 +67,7 @@ function Replica (database, options, callback) {
     this.servers = Object.create(null);
     // connections
     this.streams = Object.create(null);
+    this.subscriptions = Object.create(null);
     // policies
     //Replica.CONNECTION_POLICIES; TODO
     this.hs_policies = [];
@@ -154,8 +155,10 @@ Replica.prototype.saveHandshake = function () {
     var patch = ok.map(function(k){
         return new Op('!0.'+k, opts[k]);
     });
+    var hs_op = new Op(bare[0], bare[1], null, patch);
+    console.error('SAVING', hs_op);
     // handshake refresh is an op
-    this.dbos.writeOp(new Op(bare[0], bare[1], null, patch));
+    this.dbos.writeHandshake(hs_op);
 };
 
 
@@ -260,7 +263,46 @@ Replica.prototype.onDatabaseHandshake = function (hs) {
 
 };
 
+Replica.prototype.onDatabaseHsAck = function (op) {
+    Replica.debug && console.warn('HS_ACK', op.toString());
+};
+
 Replica.prototype.onDatabaseOp = function (op) {
+    Replica.debug && console.warn('DB_OP', op.toString());
+    var typeid = op.typeid();
+    if (op.spec.Type().origin()==='Swarm') {
+        return this.onDatabaseHsAck(op);
+    } else if (op.name()==='on') { // re subscription / upscribe
+        var source = op.stamp(); // true for .ons and .offs
+        var op_stream = this.streams[source];
+        if (op_stream) {
+            op_stream.writeOp(op);
+            var sub = this.subscriptions[typeid];
+            if (!sub) {
+                sub = this.subscriptions[typeid] = [];
+            }
+            if (sub.indexOf(source)===-1) {
+                sub.push(source);
+            }
+        } else {
+            Replica.debug && console.warn('ON_NOWHERE', op.toString());
+        }
+    } else if (op.name()==='off') { // unsubscription
+    } else { // regular op
+        sub = this.subscriptions[typeid];
+        if (sub) {
+            for(var i=0; i<sub.length; i++) {
+                op_stream = this.streams[sub[i]];
+                if (op_stream) {
+                    op_stream.writeOp(op);
+                } else {
+                    // maintain
+                }
+            }
+        } else {
+            Replica.debug && console.warn('OP_NOWHERE', op.toString());
+        }
+    }
 };
 
 Replica.prototype.onDatabaseEnd = function (off) {

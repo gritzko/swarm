@@ -56,6 +56,7 @@ function LevelOpSource (leveldown_db, options) {
 }
 util.inherits(LevelOpSource, OpSource);
 module.exports = LevelOpSource;
+LevelOpSource.debug = false;
 
 //    O P S O U R C E   I N T E R F A C E
 
@@ -69,9 +70,14 @@ LevelOpSource.prototype._writeOp = function (op) {
 };
 
 
-LevelOpSource.prototype._writeHandshake = function (op) {
-    // LevelOpSource plays a passive role here: we trust our Replica
-    this.saveDbHandshake(op);
+/**
+ * LevelOpSource plays a passive role here: we trust our Replica
+ */
+LevelOpSource.prototype._writeHandshake = function (hs) {
+    this.source_id = hs.origin()+'~lvl';
+    this.db.put('.on', hs.toString(), function () {
+        LevelOpSource.debug && console.warn('HS_SAVE', hs.toString());
+    });
 };
 
 
@@ -94,7 +100,7 @@ LevelOpSource.prototype.next = function () {
 
     // load state if needed
     if (op.spec.Type().origin()==='Swarm') {
-        this.processOuterHandshake(op, do_send);
+        return this.processOuterHandshake(op, do_send);
     } else {
         var cached_meta = self.meta[typeid], meta;
         if (!cached_meta) {
@@ -117,7 +123,7 @@ LevelOpSource.prototype.next = function () {
         console.warn('do_save');
         if (error) {
             // FIXME empty queues
-            self.queueEmit(op.spec.set('.error'), error);
+            self.queueEmit([op.spec.set('.error'), error]);
         } else {
             self.flushRecords(op, meta, do_send);
         }
@@ -143,7 +149,7 @@ LevelOpSource.prototype.next = function () {
 //    O U T P U T   M E T H O D S
 
 
-LevelOpSource.prototype.appendNewRecord = function (op, meta) {
+LevelOpSource.prototype.appendNewOp = function (op, meta) {
     var stamp = op.stamp();
     if (stamp>meta.tip) { // fast path
         meta.tip = stamp;
@@ -160,49 +166,45 @@ LevelOpSource.prototype.appendNewRecord = function (op, meta) {
         key:   '!' + meta.tip + '.' + op.name(),
         value: op.value
     });
-    this.queueEmit(op.spec, op.value);
+    this.queueEmit(op.triplet());
 };
 
 
 LevelOpSource.prototype.flushRecords = function (op, meta, done) {
     var typeid = op.typeid();
     var key_prefix = this.prefix + typeid;
-    this.save_queue.forEach(function(rec){
+    var save = this.save_queue;
+    this.save_queue = [];
+    save.forEach(function(rec){
         rec.key = key_prefix + rec.key;
         if (!rec.value) { // level-js workaround
             rec.value = ' ';
         }
     });
-    if (meta.toString()!==this.meta[typeid]) {
-        this.save_queue.push({
+    var meta_str = meta.toString();
+    if (meta_str!==this.meta[typeid]) {
+        save.push({
             type: 'put',
             key:   key_prefix + '.~meta',
-            value: meta.toString()
+            value: meta_str
         });
     }
-    LevelOpSource.trace && console.log('SAVE', this.save_queue);
-
-    this.db.batch(this.save_queue, done);
+    LevelOpSource.debug && console.warn('SAVE', JSON.stringify(save));
+    this.db.batch(save, done);
 };
 
-LevelOpSource.prototype.queueEmit = function (op) {
-    this.emit_queue.push(op);
+LevelOpSource.prototype.queueEmit = function (triplet) {
+    this.emit_queue.push(triplet);
 };
 
 LevelOpSource.prototype.emitAll = function (op, meta) {
     for(var i=0; i<this.emit_queue.length; i++) {
-        var op = this.emit_queue[i];
-        if (op.name()!=='~state' || op.stamp()===meta.base) {
-            this.emitOp(op.spec, op.value, op.patch);
-        }
+        var o = this.emit_queue[i];
+        this.emitOp(o[0], o[1], o.length>2?o[2]:null);
+        //if (o.name()!=='~state' || o.stamp()===meta.base) {
+        //} TODO snapshots
     }
-};
-
-
-LevelOpSource.prototype.saveDbHandshake = function (hs, done) {
-    hs.value = this.last_us_stamp;
-    hs.patch = [];
-    this.db.put(this.prefix+'.on', hs.toString(), done||function(){});
+    this.emit_queue.length = 0;
 };
 
 
@@ -241,7 +243,8 @@ LevelOpSource.prototype.processEnd = function (op, state, done) {
 
 LevelOpSource.prototype.processOuterHandshake = function (op, done) {
     // TODO
-    this.queueEmit(op.spec, op.value);
+    LevelOpSource.debug && console.warn('OUTER HS', op.toString());
+    this.queueEmit(op.triplet());
     done();
 };
 
@@ -264,32 +267,19 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
     var ack_vv = new Swarm.VVector();
     console.warn('op', op.toString());
     if (op.patch) {
-
-        //  FILTER OUT THE TRASH
-
         op.patch.forEach(function(o){
             ack_vv.add(o.stamp());
         });
-        if (meta.tip!=='0') {
-            self.filterKnown(op.patch, meta, do_accept_patch);
-        } else {
-            do_accept_patch();
-        }
+        this.processPatch(op.patch, meta, do_response);
     } else {
         do_response();
     }
 
-    function do_accept_patch (new_ops) {
-        op.patch.forEach(function(o){
-            self.appendNewRecord(o, meta);
-        });
-        do_response();
-    }
 
     function do_response () {
 
         var re_patch = [];
-        self.queueEmit(op.spec, ack_vv.toString(), re_patch);
+        self.queueEmit([op.spec, ack_vv.toString(), re_patch]);
         // we still can modify re_patch
 
         if (!stateful) { // we have nothing
@@ -299,7 +289,7 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
                 (!upstream || self.op.source===upstream); // ? TODO shaky
             if (dstream_has_no_state && no_upstream) {
                 var zero_state = new Op(self.op.typeid()+'!0.~state', '');
-                self.appendNewRecord(zero_state, meta);
+                self.appendNewOp(zero_state, meta);
                 re_patch.push(zero_state);
             }
             */
@@ -315,7 +305,7 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
 
         } else if (bookmark===meta.tip) { // no new ops yet
 
-            //self.queueEmit(op.spec, ack_vv.toString());
+            //self.queueEmit([op.spec, ack_vv.toString()]);
             done();
 
         } else { // OK, we likely have something to send
@@ -370,7 +360,7 @@ LevelOpSource.prototype.processUpscribeOn = function (op, meta, done) {
         '',
         patch
     );
-    self.queueEmit(patch_op);
+    self.queueEmit(patch_op.triplet());
 
     if (anchor==='0') {
         anchor = this.state.base;
@@ -395,23 +385,36 @@ LevelOpSource.prototype.processUpscribeOn = function (op, meta, done) {
 
 };
 
+LevelOpSource.prototype.processOp = function (op, meta, done) {
+    var stamp = op.stamp();
+    if ( this.upstream === op.source ) { // track the upstream
+        meta.last = stamp;
+        meta.vv.add(stamp);
+    }
+    if (stamp>meta.tip) {
+        this.appendNewOp(op, meta);
+        done();
+    } else if (stamp===meta.tip) {// fast track: replay/echo
+        done();
+    } else {
+        this.stampsSeen(op.typeId, stamp, function(vv){
+            if (!vv.covers(stamp)) {
+                this.appendNewOp(op, meta);
+            }
+            done();
+        });
+    }
+};
+
 /**
  *  Process incoming operations: check whether we have them already,
  *  save and emit if not.
  */
 LevelOpSource.prototype.processPatch = function (ops, meta, done) {
-
     if (!meta.base) {
         return done('no base state');
     }
-
-    var min_stamp = '~';
-    ops.forEach(function(o){
-        if (o.stamp() < min_stamp) {
-            min_stamp = o.stamp();
-        }
-    });
-
+    var self = this, typeid = ops[0].typeid();
     // track the upstream's progress and arrival order
     if ( this.upstream === ops[0].source ) {
         meta.last = ops[ops.length-1].stamp();
@@ -419,19 +422,20 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
             meta.vv.add(o.stamp());
         });
     }
-
+    // find the min timestamp
+    var min_stamp = '~';
+    ops.forEach(function(o){
+        if (o.stamp() < min_stamp) {
+            min_stamp = o.stamp();
+        }
+    });
+    // cases
     if ( min_stamp > meta.tip ) { // fast track: new ops
         do_add_new();
-    } else if ( min_stamp===meta.tip && ops.length===1 ) {
-        // fast track: replay/echo
-        done();
     } else { // still needs a replay check
-        var seen = new VVector();
-        this.readTail(function scan_for_overlaps(o) {
-            seen.add(o.stamp());
-        }, function filter_known () {
+        this.stampsSeen(typeid, min_stamp, function (seen_vv){
             ops = ops.filter(function(o){
-                return !seen.covers(o.stamp());
+                return !seen_vv.covers(o.stamp());
             });
             do_add_new();
         });
@@ -439,7 +443,7 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
 
     function do_add_new () {
         ops.forEach(function(o){
-            self.appendNewRecord(o, meta);
+            self.appendNewOp(o, meta);
         });
         done();
     }
@@ -458,7 +462,7 @@ LevelOpSource.prototype.processState = function (op, meta, done) {
     if ( meta.tip && op.source!==this.upstream ) {
         done('state overwrite from a downstream');
     } else if ( ! meta.tip ) {
-        this.appendNewRecord(op, meta);
+        this.appendNewOp(op, meta);
         meta.base = op.stamp();
         if (op.source===this.upstream) {
             meta.anchor = meta.last = op.stamp();
@@ -480,7 +484,7 @@ LevelOpSource.prototype.processState = function (op, meta, done) {
             // the upstream has acknowledged everything we know, so
             // this state eats everything we have => we can make it
             // our new base
-            self.appendNewRecord(op, meta);
+            self.appendNewOp(op, meta);
             meta.base = op.stamp();
             done();
         });
@@ -536,6 +540,18 @@ LevelOpSource.prototype.readMeta = function (typeid, done) {
         } else {
             LevelOpSource.trace && console.log('META', key, value);
             done(value);
+        }
+    });
+};
+
+
+LevelOpSource.prototype.stampsSeen = function (typeid, since, done) {
+    var seen = new Swarm.VVector();
+    this.readTail(typeid, '!'+since, function scan_for_overlaps(o) {
+        if (o) {
+            seen.add(o.stamp());
+        } else {
+            done(seen);
         }
     });
 };

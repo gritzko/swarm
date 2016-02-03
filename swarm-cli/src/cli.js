@@ -58,6 +58,7 @@ if (args.help) {
 if (args.debug || args.D) {
     Swarm.OpSource.debug = true;
     Swarm.Replica.debug = true;
+    Swarm.LevelOpSource.debug = true;
 }
 
 if (!args._.length) {
