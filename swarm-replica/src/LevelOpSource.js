@@ -74,6 +74,7 @@ LevelOpSource.prototype._writeOp = function (op) {
  * LevelOpSource plays a passive role here: we trust our Replica
  */
 LevelOpSource.prototype._writeHandshake = function (hs) {
+    this.repl_id = hs.origin();
     this.source_id = hs.origin()+'~lvl';
     this.db.put('.on', hs.toString(), function () {
         LevelOpSource.debug && console.warn('HS_SAVE', hs.toString());
@@ -161,7 +162,10 @@ LevelOpSource.prototype.appendNewOp = function (op, meta) {
         stack.push(stamp);
         meta.tip = stack.join('!');
     }
-    this.save_queue.push({
+    if (this.hs.spec.type()==='Root+Swarm') {
+       meta.anchor = meta.last = stamp; // me is the upstream
+    }
+   this.save_queue.push({
         type:  'put',
         key:   '!' + meta.tip + '.' + op.name(),
         value: op.value
@@ -183,13 +187,16 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
     });
     var meta_str = meta.toString();
     if (meta_str!==this.meta[typeid]) {
+        LevelOpSource.debug && console.warn('META', meta_str);
         save.push({
             type: 'put',
             key:   key_prefix + '.~meta',
             value: meta_str
         });
+        this.meta[typeid] = meta_str;
     }
-    LevelOpSource.debug && console.warn('SAVE', JSON.stringify(save));
+    LevelOpSource.debug && console.warn('SAVE',
+        save.map(function(e){return e.key;}).join(' '));
     this.db.batch(save, done);
 };
 
@@ -242,9 +249,13 @@ LevelOpSource.prototype.processEnd = function (op, state, done) {
 };
 
 LevelOpSource.prototype.processOuterHandshake = function (op, done) {
-    // TODO
-    LevelOpSource.debug && console.warn('OUTER HS', op.toString());
-    this.queueEmit(op.triplet());
+    if (op.origin()===this.hs.origin()) { // upstream hs
+        LevelOpSource.debug && console.warn('UPSTREAM HS', op.toString());
+        this.upstream_source = op.stamp();
+    } else {
+        LevelOpSource.debug && console.warn('OUTER HS', op.toString());
+        this.queueEmit(op.triplet());
+    }
     done();
 };
 
@@ -387,7 +398,7 @@ LevelOpSource.prototype.processUpscribeOn = function (op, meta, done) {
 
 LevelOpSource.prototype.processOp = function (op, meta, done) {
     var stamp = op.stamp();
-    if ( this.upstream === op.source ) { // track the upstream
+    if ( this.upstream_source === op.source ) { // track the upstream
         meta.last = stamp;
         meta.vv.add(stamp);
     }
@@ -411,43 +422,22 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
  *  save and emit if not.
  */
 LevelOpSource.prototype.processPatch = function (ops, meta, done) {
-    if (!meta.base) {
-        return done('no base state');
+    LevelOpSource.debug && console.warn('PATCH OF', ops.length);
+    var i = 0, self = this;
+    if (ops.length && ops[0].name()==='~state') {
+        this.processState(ops[i++], meta, next);
+    } else {
+        next();
     }
-    var self = this, typeid = ops[0].typeid();
-    // track the upstream's progress and arrival order
-    if ( this.upstream === ops[0].source ) {
-        meta.last = ops[ops.length-1].stamp();
-        ops.forEach(function(o){
-            meta.vv.add(o.stamp());
-        });
-    }
-    // find the min timestamp
-    var min_stamp = '~';
-    ops.forEach(function(o){
-        if (o.stamp() < min_stamp) {
-            min_stamp = o.stamp();
+    function next () {
+        if (i===ops.length) {
+            done();
+        } else if (ops[i].name()!=='~state') {
+            self.processOp(ops[i++], meta, next);
+        } else {
+            done('misplaced state snapshot');
         }
-    });
-    // cases
-    if ( min_stamp > meta.tip ) { // fast track: new ops
-        do_add_new();
-    } else { // still needs a replay check
-        this.stampsSeen(typeid, min_stamp, function (seen_vv){
-            ops = ops.filter(function(o){
-                return !seen_vv.covers(o.stamp());
-            });
-            do_add_new();
-        });
     }
-
-    function do_add_new () {
-        ops.forEach(function(o){
-            self.appendNewOp(o, meta);
-        });
-        done();
-    }
-
 };
 
 /**
@@ -458,38 +448,46 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
  *  * (local) state snapshot for local use - same as desc state.
  */
 LevelOpSource.prototype.processState = function (op, meta, done) {
-    var self = this;
-    if ( meta.tip && op.source!==this.upstream ) {
-        done('state overwrite from a downstream');
-    } else if ( ! meta.tip ) {
+    LevelOpSource.debug && console.warn('STATE', op.spec.toString());
+    var stamp = op.stamp();
+    if ( meta.tip==='0' ) {
         this.appendNewOp(op, meta);
-        meta.base = op.stamp();
-        if (op.source===this.upstream) {
-            meta.anchor = meta.last = op.stamp();
+        meta.base = stamp;
+        if (op.source===this.upstream_source) {
+            meta.anchor = meta.last = stamp;
         }
         done();
-    } else if (op.source===this.upstream) {
-
-        // FIXME upstream state echo
-
-        // check conditions are perfect (==tip, no compound)
-        var unacked = false;
-        this.readTail(meta.anchor, function(o) {
-            unacked |= !meta.vv.covers(o.stamp());
-        }, function on_unackd_check () {
-            if (unacked) {
-                done('have unacked ops; upstream state skipped');
-                return;
-            }
-            // the upstream has acknowledged everything we know, so
-            // this state eats everything we have => we can make it
-            // our new base
-            self.appendNewOp(op, meta);
-            meta.base = op.stamp();
+    } else if ( op.spec.origin()===this.repl_id ) { // snapshot
+        if (meta.tip===stamp) { // no preemptive ops
+            this.appendNewOp(op, meta);
+            meta.base = stamp;
+        }
+        done();
+    } else if (op.source===this.upstream_source) {
+        if (stamp<=meta.base) { //upstream state echo
+            meta.vv.add(stamp);
             done();
-        });
+        } else {
+            /* check conditions are perfect (==tip, no compound)
+            var unacked = false;
+            this.readTail(meta.anchor, function(o) {
+                unacked |= !meta.vv.covers(o.stamp());
+            }, function on_unackd_check () {
+                if (unacked) {
+                    done('have unacked ops; upstream state skipped');
+                    return;
+                }
+                // the upstream has acknowledged everything we know, so
+                // this state eats everything we have => we can make it
+                // our new base
+                self.appendNewOp(op, meta);
+                meta.base = op.stamp();
+                done();
+            });*/
+            done('state descend is not implemented yet');
+        }
     } else {
-        done('state o/w impossible');
+        done('can not accept state snapshot');
     }
 };
 
@@ -546,6 +544,7 @@ LevelOpSource.prototype.readMeta = function (typeid, done) {
 
 
 LevelOpSource.prototype.stampsSeen = function (typeid, since, done) {
+    // TODO make a cache entry /type#id!since : vv
     var seen = new Swarm.VVector();
     this.readTail(typeid, '!'+since, function scan_for_overlaps(o) {
         if (o) {

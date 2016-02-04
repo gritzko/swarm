@@ -37,8 +37,19 @@ if [[ ! $TYPEID ]]; then exit 9; fi
 echo our object is $TYPEID
 grep echo typeid.txt || exit 10
 ( $swarm -a -- server.db | grep LamportClock ) || exit 11
-( $swarm server.db -a "$TYPEID" | grep "$TYPEID" ) || exit 12
+cat > correct.txt <<EOF
+/Model#00003+swarm!00003+swarm.~state	{"00003+swarm":{"a":1}}
+/Model#00003+swarm!00004+swarm.set	{"b":2}
+/Model#00003+swarm.~meta	l:00004+swarm b:00003+swarm
+EOF
+$swarm server.db -a "$TYPEID" > fact.txt
+diff correct.txt fact.txt || exit 12
 exit 0
+
+##   01_stdio
+
+##   02_forks
+
 # clone
 $swarm server.db --fork client.db --clone
 $swarm client.db --dump $TYPEID
