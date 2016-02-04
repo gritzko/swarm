@@ -6,13 +6,13 @@ cd -
 
 swarm="node $SCRIPT_DIR/../src/cli.js"
 xtalk=$SCRIPT_DIR/../../scripts/xtalk.sh
-DIR=.cli-tests
+DIR=.cli-test-01
 OPS=$PWD/ops.txt
 
 rm -rf $DIR && mkdir $DIR && cd $DIR
 
 # create/write/dump
-$swarm server.db --create bash --DClock LamportClock --DHomeHost true  || exit 1
+$swarm server.db --create bash1 --DClock LamportClock --DHomeHost true  || exit 1
 # direct access
 $swarm server.db -a || exit 2
 $swarm server.db -a .off -P xoxo   || exit 3

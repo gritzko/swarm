@@ -38,7 +38,11 @@ module.exports = Op;
 Op.handshake_ops = {on:1, off:1};
 
 Op.create = function (triplet, source) {
-    return new Op(triplet[0], triplet[1], source, triplet[2]);
+    var patch = triplet[2] && triplet[2].map(function(o){
+        if (o.constructor===Op) {return o;} // FIXME demand triplets
+        return new Op(o[0],o[1],source,null);
+    });
+    return new Op(triplet[0], triplet[1], source, patch);
 };
 Op.prototype.triplet = function () {
     return [this.spec, this.value, this.patch];

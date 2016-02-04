@@ -48,6 +48,7 @@ function LevelOpSource (leveldown_db, options) {
     this.emit_queue = [];
     this.save_queue = [];
     this.idle = true;
+    this.ending = false;
     this.upstream_source = null;
     this.done = setImmediate.bind(this.next.bind(this));
     // TODO this.next = setImmediate()
@@ -83,9 +84,19 @@ LevelOpSource.prototype._writeHandshake = function (hs) {
 
 
 
-LevelOpSource.prototype._writeEnd = function () {
+LevelOpSource.prototype._writeEnd = function (off) {
     // emits the .off back once all processing is finished
-    this.queue.offer(new Op('.off', ''));
+    this.ending = true;
+    if (this.idle) {
+        this.closeDatabase();
+    }
+};
+
+LevelOpSource.prototype.closeDatabase = function () {
+    var self = this;
+    this.db.close(function(err){
+        self.emitEnd(err);
+    });
 };
 
 
@@ -137,6 +148,9 @@ LevelOpSource.prototype.next = function () {
             setImmediate(self.next.bind(self));
         } else {
             self.idle = true;
+            if (self.ending) {
+                self.closeDatabase();
+            }
         }
     }
 };

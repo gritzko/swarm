@@ -38,6 +38,7 @@ function OpSource (options) {
     this.hs = null;
     this.source_id = null;
     this.is_upstream = undefined;
+    this.default = OpSource.DEFAULT;
     if (options) {
         if (options.onceHandshake) {
             this.once('handshake', options.onceHandshake);
@@ -78,7 +79,7 @@ OpSource.prototype.source = function () {
  */
 OpSource.prototype.emitOp = function (key, value, kv_patch) {
     var patch = null;
-    var spec = new Spec(key, null, OpSource.DEFAULT);
+    var spec = new Spec(key, null, this.default);
     var source = this.source();
     if (kv_patch) {
         if (kv_patch.constructor!==Array) {
@@ -117,6 +118,7 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
     var hs = new Op(spec, value, spec.stamp(), patch);
     this.hs = hs;
     this.source_id = hs.stamp();
+    this.default = this.default.set(this.source_id, '!');
     if (OpSource.debug) {
         this.log(hs, false, 'HS');
     }
@@ -127,10 +129,9 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
  *  End of the stream. No more ops from the backing replica will arrive.
  */
 OpSource.prototype.emitEnd = function (error) {
-    if (OpSource.debug) {
-        this.log(new Op('.off', error||''), false, 'END');
-    }
-    this.emit('end', error, this);
+    var hs_end = new Op(this.hs.spec.set('.off'), error||'');
+    OpSource.debug && this.log(hs_end, false, 'END');
+    this.emit('end', hs_end, this);
 };
 
 
@@ -163,6 +164,7 @@ OpSource.prototype.writeHandshake = function (hs) {
     }
     this.hs = hs;
     this.source_id = hs.stamp();
+    this.default = this.default.set(this.source_id, '!');
     if (OpSource.debug) {
         this.log(hs, true, 'HS');
     }

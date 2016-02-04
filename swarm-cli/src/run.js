@@ -3,18 +3,18 @@ var fs = require('fs');
 var leveldown = require('leveldown');
 var Swarm = require('swarm-replica');
 
-var client, args;
+var replica, args;
 
 process.on('SIGTERM', onExit);
 process.on('SIGINT', onExit);
 process.on('SIGQUIT', onExit);
 
 function onExit (code) {
-    if (!client) { return; }
-    client.close(function (){
+    if (!replica) { return; }
+    replica.close(function (){
         process.exit(code);
     });
-    client = null;
+    replica = null;
 }
 
 function run (argv, done) {
@@ -36,7 +36,7 @@ function run (argv, done) {
             done(err);
         } else {
             argv.v && console.warn('db open', home);
-            client = new Swarm.Replica(db, options);
+            replica = new Swarm.Replica(db, options);
         }
     })
 }
@@ -61,11 +61,17 @@ function on_start () {
 function start_stdio (upstream) {
     var duplexer = require('duplexer');
     var stdio_stream = duplexer(process.stdout, process.stdin);
-    Swarm.Replica.HS_WAIT_TIME = 24*60*60*1000; // 24h :)
-    if (stdup) {
-        client.replica.addStreamUp(stdio_stream);
+    stdio_stream.end = function (op) {
+        process.stdout.write(op.toString()+'\n');
+        replica.close(function(err){
+            process.exit(err?1:0);
+        });
+    }
+    Swarm.Replica.HS_WAIT_TIME = 24*60*60*1000; // have your time :)
+    if (args.std==='up') {
+        replica.addStreamUp(stdio_stream);
     } else {
-        client.replica.addStreamDown(stdio_stream);
+        replica.addStreamDown(stdio_stream);
     }
 }
 
@@ -83,7 +89,7 @@ function start_repl () {
     args.v && console.warn('launching REPL');
     var repl = require('repl');
     global.Swarm = Swarm;
-    global.Client = client;
+    global.Client = replica;
     repl.start({
         prompt: process.stdout.isTTY ? '\u2276 ' : '',
         useGlobal: true,

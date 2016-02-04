@@ -10,9 +10,12 @@ Replica.HS_POLICIES.SeqReplicaIdPolicy = function SRIP (in_hs, out_hs, opsrc, do
     }
     var count = this.options.ForkCount || '0';
     var count_int = Swarm.base64.base2int(count);
-    var new_count = Swarm.base64.int2base(count_int+1);
+    var new_count = Swarm.base64.int2base(count_int+1, 1);
     this.options.ForkCount = new_count;
-    out_hs.spec = out_hs.spec.set(new_count, '!');
+    var stamp = this.clock.issueTimestamp();
+    out_hs[0]= out_hs[0].set(stamp.time()+'+'+new_count, '!');
+    out_hs[2].push(['!0.Clock', this.options.Clock]); // FIXME better place for this
+    // FIXME why !0 ???
     this.saveHandshake();
     done();
 };

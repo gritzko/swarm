@@ -56,14 +56,7 @@ function StreamOpSource (stream, options) {
         this.timer = setInterval(this.onTimer.bind(this), 1000);
     }
     var self = this;
-    this.dataListener = function (buf) {
-        try{
-            self.onStreamDataReceived(buf);
-        } catch (ex) {
-            console.warn(ex.message, ex.stack);
-            self.onStreamFailure(ex.message||'error processing data');
-        }
-    };
+    this.dataListener = this.onStreamDataReceived.bind(this);
     this.endListener = this.onStreamEnded.bind(this);
     this.errorListener = this.onStreamFailure.bind(this);
 
@@ -97,9 +90,8 @@ StreamOpSource.prototype._writeOp = function (op, callback) {
 };
 
 
-StreamOpSource.prototype._writeHandshake = function (op, callback) {
-    this.pending_ops.push( op );
-    this.scheduleFlush(callback);
+StreamOpSource.prototype._writeHandshake = function (hs, callback) {
+    this._actually_send(hs.toString()+'\n\n', callback);
 };
 
 
@@ -107,7 +99,7 @@ StreamOpSource.prototype.send = StreamOpSource.prototype.write;
 StreamOpSource.prototype.deliver = StreamOpSource.prototype.write;
 
 
-StreamOpSource.prototype.scheduleFlush = function (callback) {
+StreamOpSource.prototype.scheduleFlush = function (callback, flush) {
     if (this.options.syncFlush || StreamOpSource.SYNC_FLUSH) {
         return this.flush(callback);
     }
@@ -123,14 +115,18 @@ StreamOpSource.prototype.flush = function (callback) {
     if (!this.stream) {return;}
     var p_o = this.pending_ops;
     if (!p_o.length) { return; }
-    var parcel = '';
+    var parcel = '', def = this.default;
     p_o.forEach(function(op){
-        parcel += op.toString(OpSource.DEFAULT)+'\n';
+        parcel += op.toString(def)+'\n';
     });
     if (p_o[p_o.length-1].op()==='on') {
         parcel += '\n'; // terminate the .on
     }
     p_o.length = 0;
+    this._actually_send(parcel, callback);
+};
+
+StreamOpSource.prototype._actually_send = function (parcel, callback) {
     try {
         this.stream.write(parcel, "utf8", callback);
         this.lastSendTime = new Date().getTime();
@@ -146,27 +142,43 @@ StreamOpSource.prototype.isOpen = function () {
 };
 
 
-StreamOpSource.prototype._writeEnd = function (err_op, callback) {
+StreamOpSource.prototype._writeEnd = function (err_op) {
     if (!this.stream) {
         console.warn(new Error('this op stream is not open').stack);
         return;
     }
     this.flush();
     var stream = this.stream;
-    var err = err_op ? err_op.toString() : '';
-    var self = this;
-    this.stream.end(err, "utf8", function () {
-        self.removeStreamListeners();
-        stream.destroy && stream.destroy();
-        callback && callback();
-    });
     this.stream = null;
+    var err = err_op ? err_op.toString() : '';
+    try{
+        stream.end(err, "utf8", function () {
+            /*
+            self.removeStreamListeners();
+                if (stream.close) {
+                    stream.close();
+                } else if (stream.destroy) {  one-way or two-way close?
+                    stream.destroy();
+                }*/
+        });
+    } catch (ex) {
+        console.error(ex.stack);
+    }
+};
+
+StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
+    try{
+        this._parseIncomingBuf(new_read_buf);
+    } catch (ex) {
+        console.warn('stream parse failed', ex.message, ex.stack);
+        this.onStreamFailure('error processing data');
+    }
 };
 
 // Does rough parsing for serialized ops (it is possible that the last op
 // is interrupted midway, even in the middle of a Unicode char.
 // Passes results to OpSource emit methods.
-StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
+StreamOpSource.prototype._parseIncomingBuf = function (new_read_buf) {
     if (this.buf && this.buf.length) {
         this.buf = Buffer.concat([this.buf, new_read_buf]);
     } else {
@@ -178,7 +190,8 @@ StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
         var line = this.buf.toString('utf8', sol, eol);
         var m = StreamOpSource.rough_line_re.exec(line);
         if (!m) {
-            StreamOpSource.debug && console.warn('unparseable: '+line);
+            //StreamOpSource.debug &&
+            console.warn('unparseable: '+line);
             throw new Error('unparseable input');
         } else {
             this.lines.push(m);
@@ -219,12 +232,12 @@ StreamOpSource.prototype.eatLines = function (till) {
             patch.push({key: pl[2], value: pl[3]});
             i=j;
         }
-        if (key==='.off') {
-            this.removeStreamListeners();
-            this.emitEnd(value);
+        if (StreamOpSource.off_re.test(key)) { // the Victorian way,
+            this.removeStreamListeners();      // may just close it
+            this.emitEnd(value); // WARN if hs is relayed, check source_id
             break;
         } else if (!this.hs) { // we expect a handshake
-            var spec = new Spec(key, null, OpSource.DEFAULT);
+            var spec = new Spec(key);
             if (!OpSource.isHandshake(spec)) {
                 StreamOpSource.debug && console.warn('not a handshake: '+key);
                 throw new Error('not a handshake');
@@ -232,21 +245,21 @@ StreamOpSource.prototype.eatLines = function (till) {
                 this.emitHandshake(spec, value, patch);
             }
         } else {
-            if (!Spec.is(key)) {
-                throw new Error('protocol violation');
-            }
             this.emitOp(key, value, patch);
         }
     }
     this.lines = this.lines.slice(till);
 };
-StreamOpSource.rough_line_re = new RegExp( '^(\\s*)(?:(' + Op.rsSpec + ')\\s+(.*))?$' );
+StreamOpSource.rough_line_re = new RegExp
+    ( '^(\\s*)(?:(' + Op.rsSpec + ')(?:\\s+(.*)))?$' );
+StreamOpSource.off_re = /^\/(\w+\+)?Swarm#.*\.off$/;
 
 
 StreamOpSource.prototype.onStreamEnded = function () {
     if (this.lines.length) {
         this.eatLines(this.lines.length);
     }
+    this.removeStreamListeners();
     this.emitEnd();
 };
 
@@ -259,6 +272,17 @@ StreamOpSource.prototype.onStreamFailure = function (err) {
     StreamOpSource.debug && console.error('stream error', err);
     this.removeStreamListeners();
     this.emitEnd(err);
+    var stream = this.stream;
+    this.stream = null;
+    try {
+        if (stream.close) {
+            stream.close();
+        } else if (stream.destroy) {
+            stream.destroy();
+        }
+    } catch (ex) {
+        StreamOpSource.debug && console.warn('stream fails to close', ex.message);
+    }
 };
 
 
