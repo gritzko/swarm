@@ -24,34 +24,34 @@ function LogMeta (string) {
     this.vv = null; // as VV
     // The base state.
     this.base = null;
-    var m;
-    if (string) {
-        while (m=LogMeta.reKeyVal.exec(string)) {
-            switch (m[1]) {
-            case 'l': this.last = m[2]; break;
-            case 'b': this.base = m[2]; break;
-            case 'a': this.anchor = m[2]; break;
-            case 'v': this.vv = new VVector(m[2]); break;
-            case 't': this.tip = m[2]; break;
-            }
+    // Server produced base state (TODO shortcut sync)
+    // this.Base = null;
+    var m, expr=string||'';
+    while (m=LogMeta.reKeyVal.exec(expr)) {
+        switch (m[1]) {
+        case 'l': this.last = m[2]; break;
+        case 'b': this.base = m[2]; break;
+        case 'a': this.anchor = m[2]; break;
+        case 'v': this.vv = new VVector(m[2]); break;
+        case 't': this.tip = m[2]; break;
         }
     }
     // Everything defaults to a single snapshot being received from
     // the upstream and never updated.
-    if (this.base===null) {
-        this.base = '0';
-    }
-    if (this.tip === null) {
-        this.tip = this.base;
+    if (this.last === null) {
+        this.last = '0';
     }
     if (this.anchor === null) {
-        this.anchor = this.base;
-    }
-    if (this.last === null) {
-        this.last = this.base;
+        this.anchor = this.last;
     }
     if (this.vv === null) {
         this.vv = new VVector();
+    }
+    if (this.base===null) {
+        this.base = this.last;
+    }
+    if (this.tip === null) {
+        this.tip = this.last;
     }
 }
 LogMeta.reKeyVal = /(\w):(\S+)/g;
@@ -63,18 +63,21 @@ module.exports = LogMeta;
  *  constructor.
  */
 LogMeta.prototype.toString = function () {
-    var str = 'b:' + (this.base||'0');
-    if (this.last && this.last!==this.base) {
-        str = 'l:' + this.last;
+    var str = '';
+    if (this.last!=='0') {
+        str += ' l:' + this.last;
     }
-    if (this.anchor && this.anchor!==this.base) {
-        str += ' a:' + this.anchor;
-    }
-    if (this.tip && this.tip!==this.base) {
-        str += ' t:' + this.tip;
-    }
-    if (this.vv && !this.vv.isEmpty()) {
+    if (!this.vv.isEmpty()) {
         str += ' v:' + this.vv.toString();
     }
-    return str;
+    if (this.base!==this.last) {
+        str += ' b:' + this.base;
+    }
+    if (this.tip!==this.last) {
+        str += ' t:' + this.tip;
+    }
+    if (this.anchor!==this.last) {
+        str += ' a:' + this.anchor;
+    }
+    return str ? str.substr(1) : '';
 };
