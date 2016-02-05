@@ -1,8 +1,8 @@
 'use strict';
 var Swarm = require('..');
-var Op = require('./Op');
+var Op = Swarm.Op;
 var util = require("util");
-var OpSource = require("./OpSource");
+var OpSource = Swarm.OpSource;
 /**
 * SnapshotSlave is a trimmed-down Host. Its only function is to produce
 * state snapshots for CRDT types once Replica considers an op log "too long".
@@ -14,13 +14,14 @@ var OpSource = require("./OpSource");
 */
 function SnapshotSlave (options) {
     options = options || {};
-    OpSource.call(this);
+    OpSource.call(this, options);
     this.options = options;
     if (options.on_handshake) {
         this.on('handshake', options.on_handshake);
     }
+    var self = this;
     setImmediate(function(){ // hardly necessary
-        this.emitHandshake('/Swarm+SnapSlave#0!0.on', '');
+        self.emitHandshake('/Swarm+SnapSlave#0!0.on', '');
     });
 }
 util.inherits(SnapshotSlave, OpSource);
@@ -35,7 +36,7 @@ SnapshotSlave.prototype._writeOp = function (op) {
     var p = op.patch;
     if (!type_fn) {
         this.emitOp(op.spec.set('.error'), 'type unknown');
-    } else if (!p || !p.length) {
+    } else if (!p || p.length<=1) {
         this.emitOp(op.spec, op.value, op.patch);
     } else if (p[0].name()==='~state') { // snapshot
         var crdt = new type_fn.Inner(p[0].value);
@@ -44,12 +45,11 @@ SnapshotSlave.prototype._writeOp = function (op) {
             crdt.write(o);
             crdt._version = o.stamp();
         }
-        var state_spec = op.typeId().add(crdt._version,'!').add('.~state');
-        var state_op = new Op(state_spec, crdt.toString());
-        this.emit(op.spec, op.value, [state_op]);
+        var state_spec = op.spec.typeId().add(crdt._version,'!').add('.~state');
+        this.emitOp(op.spec, op.value, [[state_spec, crdt.toString()]]);
     } else if (type_fn.Inner.compact) { // compact
         var new_patch = type_fn.Inner.compact(p);
-        this.emit(op.spec, op.value, new_patch);
+        this.emitOp(op.spec, op.value, new_patch);
     } else {
         this.emitOp(op.spec, op.value, op.patch);
     }
