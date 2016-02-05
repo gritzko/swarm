@@ -2,7 +2,7 @@
     !0.Clock LamportClock
 
 #00003+1   !00003+1
-#00004+1   !00005+1
+#00004+1   !00006+1
 #00006+1.off causality violation
 
 /Client+Swarm#bash2!00004+1.off

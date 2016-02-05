@@ -72,7 +72,7 @@ module.exports = StreamOpSource;
 /** The most accurate way of debugging Swarm internals is to log all
   * ins and outs of every OpSource  */
 StreamOpSource.debug = false;
-StreamOpSource.SEND_DELAY_MS = 5;
+StreamOpSource.SEND_DELAY_MS = 10;
 StreamOpSource.SYNC_FLUSH = false;
 
 
@@ -229,7 +229,7 @@ StreamOpSource.prototype.eatLines = function (till) {
         var patch = [];
         for(var j=i+1; j<till && this.lines[j][1]; j++) {
             var pl = this.lines[j];
-            patch.push({key: pl[2], value: pl[3]});
+            patch.push([pl[2], pl[3]]);
             i=j;
         }
         if (StreamOpSource.off_re.test(key)) { // the Victorian way,

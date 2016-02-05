@@ -207,7 +207,7 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
         LevelOpSource.debug && console.warn('META', meta_str);
         save.push({
             type: 'put',
-            key:   key_prefix + '.~meta',
+            key:   key_prefix + '!~.meta',
             value: meta_str
         });
         this.meta[typeid] = meta_str;
@@ -224,7 +224,7 @@ LevelOpSource.prototype.queueEmit = function (triplet) {
 LevelOpSource.prototype.emitAll = function (op, meta) {
     for(var i=0; i<this.emit_queue.length; i++) {
         var o = this.emit_queue[i];
-        this.emitOp(o[0], o[1], o.length>2?o[2]:null);
+        this.emitOp(o[0], o[1], o[2]);
         //if (o.name()!=='~state' || o.stamp()===meta.base) {
         //} TODO snapshots
     }
@@ -283,18 +283,20 @@ LevelOpSource.prototype.processOuterHandshake = function (op, done) {
 LevelOpSource.prototype.processOn = function (op, meta, done) {
     var self = this;
     var stateful = '0'!==meta.tip; // FIXME the default must be 0
+    var typeid = op.typeid();
     var bookmark = op.value || '0';
     // check for obvious errors first
     if (!Lamp.is(bookmark)) {
         return done('malformed bookmark');
     }
     if (bookmark>meta.tip) {
+        LevelOpSource.debug && console.warn('bookmark is ahead:',bookmark,meta.tip);
         return done('bookmark is ahead!');
     }
     // make an acknowledgement for incoming ops
     var ack_vv = new Swarm.VVector();
     console.warn('op', op.toString());
-    if (op.patch) {
+    if (op.patch && op.patch.length) {
         op.patch.forEach(function(o){
             ack_vv.add(o.stamp());
         });
@@ -309,42 +311,48 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
             return done(err);
         }
         var re_patch = [];
-        self.queueEmit([op.spec, ack_vv.toString(), re_patch]);
+        var ack = ack_vv.isEmpty() ? '' : ack_vv.toString();
+        self.queueEmit([op.spec, ack, re_patch]);
         // we still can modify re_patch
 
         if (!stateful) { // we have nothing
-            /* THINK TWICE
-            var dstream_has_no_state = bookmark==='0';
-            var no_upstream = self.source_id==='swarm' &&
-                (!upstream || self.op.source===upstream); // ? TODO shaky
-            if (dstream_has_no_state && no_upstream) {
-                var zero_state = new Op(self.op.typeid()+'!0.~state', '');
-                self.appendNewOp(zero_state, meta);
-                re_patch.push(zero_state);
-            }
-            */
+
             done();
+
         } else if (bookmark==='0') { // the client has nothing
 
             meta.tip!=='0' &&
-            self.readTail(meta.base+'.~state', function (o) {
-                if (o.name()!=='~state' || o.stamp()===meta.base) {
-                    re_patch.push(o);
+            self.readTail(typeid, '!'+meta.base+'.~state', function (err, o) {
+                if (err) {
+                    done(err);
+                } else if (!o) {
+                    done(); // FIXME Correctness
+                } else if (o.name()!=='~state' || o.stamp()===meta.base) {
+                    re_patch.push([o.spec, o.value]); // FIXME conversions
                 }
-            }, done);
+            });
 
         } else if (bookmark===meta.tip) { // no new ops yet
 
-            //self.queueEmit([op.spec, ack_vv.toString()]);
             done();
 
         } else { // OK, we likely have something to send
-
-            self.readTail(bookmark, function (o) {
-                // check for bm-not-found
-                re_patch.push(o);
-            }, function(err) {
-                done(err); // 'bookmark not found' TODO full st
+            console.error('TAIL SCAN', typeid, '!'+bookmark);
+            var saw_bm = false;
+            self.readTail(typeid, '!'+bookmark, function (err, op) {
+                if (err) {
+                    done(err);
+                } else if (!op) {
+                    done(saw_bm ? null : 'bookmark not found');
+                } else if (!saw_bm) {
+                    if (op.stamp()===bookmark) {
+                        saw_bm = true;
+                    }
+                } else if (op.name()==='~state') {
+                    "skip it; state descend is not impl yet";
+                } else {
+                    re_patch.push([op.spec, op.value]);
+                }
             });
 
         }
@@ -454,7 +462,7 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
         if (i===ops.length) {
             done();
         } else if (causal_vv.covers(ops[i].stamp())) {
-            LevelOpSource.debug && console.warn('CAUSAL FAIL', ops[i]);
+            LevelOpSource.debug && console.warn('CAUSAL FAIL', ops[i].toString());
             done('causality violation');
         } else if (ops[i].name()!=='~state') {
             causal_vv.add(ops[i].stamp());
@@ -598,15 +606,22 @@ LevelOpSource.prototype.readTail = function (typeid, mark, on_entry) {
     });
     i.next(read_loop);
     var next_bound = i.next.bind(i, read_loop);
+    var stack_depth = 0;
 
     function read_loop (err, key, val) {
         if (err) {
             console.error(err);
-            on_entry(err, null);
+            i.end(function(){
+                on_entry(err, null);
+            });
         } else if (key) {
             on_entry(null, new Op(key, val, '(lvl)'));
-            //i.next(read_loop);
-            setImmediate(next_bound);
+            if (stack_depth++<50) {
+                i.next(read_loop);
+            } else {
+                stack_depth = 0;
+                setImmediate(next_bound);
+            }
         } else {
             i.end(on_entry);
         }

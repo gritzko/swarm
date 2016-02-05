@@ -83,11 +83,8 @@ function Replica (database, options, callback) {
     );
     // snapshot slave
 
-    this.snapshot_slave = options.snapshot_slave || null;
-    if (this.snapshot_slave) {
-        this.snapshot_slave.on('op', this.onSnaphotSlaveOp.bind(this));
-    }
-    this.snapshot_jobs = Object.create(null); // {id: {streams:[], stamp:''}}
+    this.snapshot_slave = null;
+    this.canned = Object.create(null);
 
     this.su_handle = null; // ?
     this.close_cb = null;
@@ -201,6 +198,9 @@ Replica.prototype.createClock = function (stamp) {
     if (this.options.HomeHost) {
         this.createHomeHost();
     }
+    if (this.options.SnapshotSlave) {
+        this.createSnapshotSlave();
+    }
     Replica.debug && console.error('WRITABLE');
     this.emit('writable');
 };
@@ -209,6 +209,12 @@ Replica.prototype.createClock = function (stamp) {
 Replica.prototype.noClock = function (reason) {
     //console.error('failed to create clocks', reason);
     this.emit('fail', reason);
+};
+
+Replica.prototype.createSnapshotSlave = function () {
+    var SnapshotSlave = require('./SnapshotSlave');
+    this.snapshot_slave = new SnapshotSlave(this.options); //TODO filter
+    this.snapshot_slave.on('op', this.onSnaphotSlaveOp.bind(this));
 };
 
 Replica.prototype.createHomeHost = function () {
@@ -287,37 +293,56 @@ Replica.prototype.onDatabaseOp = function (op) {
     } else if (op.name()==='on' || op.name()==='off') { // re/un/up scription
         var source = op.stamp(); // true for .ons and .offs
         var op_stream = this.streams[source];
-        if (op_stream) {
-            op_stream.writeOp(op);
-            var sub = this.subscriptions[typeid];
-            if (op.name()==='on') {
-                if (!sub) {
-                    sub = this.subscriptions[typeid] = [];
-                }
-                if (sub.indexOf(source)===-1) {
-                    sub.push(source);
-                }
-            } else {
-                if (sub) {
-                    var ind = sub.indexOf(source);
-                    ind!==-1 && sub.splice(ind,1);
-                    if (!sub.length) {
-                        delete this.subscriptions[typeid];
+        if (!op_stream) {
+            return Replica.debug && console.warn('ON_NOWHERE', op.toString());
+        }
+        var sub = this.subscriptions[typeid];
+        if (!sub) {
+            sub = this.subscriptions[typeid] = [];
+        }
+        if (op.name()==='on') {
+            var snap = false;
+            if (this.snapshot_slave && op.patch && op.patch.length>1 &&
+                op.patch[0].name()==='~state') {
+                    snap = true;
+                    this.snapshot_slave.writeOp(op);
+                    var can_key = op.typeid()+'!'+op.stamp();
+                    this.canned[can_key] = []; // FIXME two .ons?!
+                    if (sub.indexOf('!'+source)===-1) {
+                        sub.push('!'+source);
+                    }
+                } else {
+                    op_stream.writeOp(op);
+                    if (sub.indexOf(source)===-1) {
+                        sub.push(source);
                     }
                 }
-            }
         } else {
-            Replica.debug && console.warn('ON_NOWHERE', op.toString());
+            op_stream.writeOp(op);
+            if (sub) {
+                var ind = sub.indexOf(source);
+                ind!==-1 && sub.splice(ind,1);
+                if (!sub.length) {
+                    delete this.subscriptions[typeid];
+                }
+            }
         }
     } else { // regular op
+console.error('SEE', op.stamp());
+        this.clock.seeStamp(op.stamp());
         sub = this.subscriptions[typeid];
         if (sub) {
             for(var i=0; i<sub.length; i++) {
-                op_stream = this.streams[sub[i]];
-                if (op_stream) {
-                    op_stream.writeOp(op);
+                if (sub[i].charAt(0)==='!') {
+                    var can_id = op.typeid()+sub[i];
+                    this.canned[can_id].push(op);
                 } else {
-                    // maintain
+                    op_stream = this.streams[sub[i]];
+                    if (op_stream) {
+                        op_stream.writeOp(op);
+                    } else {
+                        // maintain
+                    }
                 }
             }
         } else {
@@ -461,24 +486,26 @@ Replica.prototype.send = function (op) {
 
 Replica.prototype.onSnaphotSlaveOp = function (op) {
     Replica.trace && console.log('~>'+this.repl_id, op.toString());
-    if (op.name()==='on' || op.name()==='off') {
-        return;
+    if (op.name()!=='on') {
+        throw new Error('misrouted op');
     }
-    var typeid = op.typeid();
-    var job = this.snapshot_jobs[typeid];
-    if (!job) {
-        this.snapshot_slave.write(new Op(typeid+'.off', ''));
-        return;
+    var stamp = op.stamp();
+    var source = this.streams[stamp];
+    if (source) {
+        source.writeOp(op);
     }
-    if (job.stamp!==op.stamp()) {
-        console.warn('waiting for a follow-up', job.stamp, op.stamp());
-        return;
-    }
-    var sms = job.streams;
-    delete this.snapshot_jobs[typeid];
-    this.snapshot_slave.write(new Op(typeid+'.off', ''));
-    for(var i=0; i<sms.length; i++) {
-        this.send(op.relay(sms[i]));
+    var can_id = op.typeid()+'!'+stamp;
+    var can = this.canned[can_id];
+    if (can) {
+        if (source) {
+            for (var i=0; i<can.length; i++) {
+                source.writeOp(can[i]);
+            }
+        }
+        var subs = this.subscriptions[op.typeid()];
+        var j = subs.indexOf('!'+op.stamp());
+        subs.splice(j,1);
+        delete this.canned[can_id];
     }
 };
 
@@ -567,7 +594,9 @@ Replica.prototype.close = function (err, callback) {
         self.dbos.writeOp(new Op(src.hs.set('.off'), 'exiting'));
     });
 
-    self.dbos.writeEnd(this.dbos.hs.spec.set('.off'), '');
+    this.saveHandshake();
+
+    self.dbos.writeEnd(new Op(this.dbos.hs.spec.set('.off'), ''));
 
 };
 

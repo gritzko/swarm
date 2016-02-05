@@ -37,12 +37,15 @@ function Op (spec, value, source, patch) {
 module.exports = Op;
 Op.handshake_ops = {on:1, off:1};
 
-Op.create = function (triplet, source) {
-    var patch = triplet[2] && triplet[2].map(function(o){
-        if (o.constructor===Op) {return o;} // FIXME demand triplets
-        return new Op(o[0],o[1],source,null);
-    });
-    return new Op(triplet[0], triplet[1], source, patch);
+Op.create = function (triplet, source, scope, defaults) {
+    var spec = new Spec(triplet[0], scope, defaults);
+    var patch = ! triplet[2] ? null :
+        triplet[2].map(function(o){
+            if (o.constructor===Op) {return o;} // FIXME demand triplets
+            var sp = new Spec(o[0], scope, defaults);
+            return new Op(sp, o[1], source, null);
+        });
+    return new Op(spec, (triplet[1]||'').toString(), source, patch);
 };
 Op.prototype.triplet = function () {
     return [this.spec, this.value, this.patch];

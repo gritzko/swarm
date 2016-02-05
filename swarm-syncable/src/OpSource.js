@@ -87,8 +87,8 @@ OpSource.prototype.emitOp = function (key, value, kv_patch) {
         }
         var typeId = spec.typeId();
         patch = kv_patch.map(function(kv){
-            var sp = new Spec(kv.key, typeId, OpSource.DEFAULT);
-            return new Op(sp, kv.value, source);
+            var sp = new Spec(kv[0], typeId, OpSource.DEFAULT);
+            return new Op(sp, kv[1], source);
         });
     }
     var op = new Op(spec, value, source, patch);

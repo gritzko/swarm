@@ -19,7 +19,7 @@ function create (args, done) {
         // write down the handshake, options
         var opt_keys = Object.keys(args).filter(function(o){
             // FIXME syntax
-            return o.charAt(0)==='D';
+            return o.length>1 && o.charAt(0)==='D'; //FIXME
         });
         var options = opt_keys.map(function(k){
             return new Swarm.Op('!0.'+k.substr(1), args[k]);

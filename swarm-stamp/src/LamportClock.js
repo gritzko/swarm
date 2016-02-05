@@ -22,7 +22,7 @@ LamportClock.prototype.issueTimestamp = function time () {
     return new LamportTimestamp(base, this.origin);
 };
 
-LamportClock.prototype.parseTimestamp = function parse (lamp) {
+LamportClock.prototype.parseTimestamp = function parse (stamp) {
     /*if (this.prefix) {
         var p = ts.substr(0, this.prefix.length);
         if (p!==this.prefix) {
@@ -30,6 +30,7 @@ LamportClock.prototype.parseTimestamp = function parse (lamp) {
         }
         ts = ts.substr(this.prefix.length);
     }*/
+    var lamp = new LamportTimestamp(stamp.toString()); // ??
     return {
         seq: base64.base2int(lamp.time()),
         origin: lamp.origin()

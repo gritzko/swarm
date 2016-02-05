@@ -16,7 +16,7 @@ fi
 
 DB=.`basename $SCRIPT_DIR`.db
 rm -rf $DB
-$SWARM $DB --create bash2 --DClock LamportClock --DSnapshotSlave on  || exit 1
+$SWARM $DB --create bash2 --DClock LamportClock --DSnapshotSlave on -D -v || exit 1
 
 SCRIPTS=`ls $SCRIPT_DIR/*.in.txt`
 
@@ -27,7 +27,7 @@ for input in $SCRIPTS; do
     correct=$base.out.txt
     diff=$base.diff
 
-    if ! $SWARM $DB --std >$fact 2>$log < $input; then
+    if ! $SWARM $DB --std -D >$fact 2>$log < $input; then
         echo cli crashed
         exit 2
     fi
@@ -36,7 +36,7 @@ for input in $SCRIPTS; do
     else
         echo -e "\e[91mFAIL\e[39m" $base
         cat $log
-        echo ---
+        echo 
         cat $diff
         exit 1
     fi
