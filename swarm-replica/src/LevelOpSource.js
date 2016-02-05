@@ -125,14 +125,12 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_process (meta_str) {
-        console.warn('do_process');
         meta = new LogMeta(meta_str);
         self.process(op, meta, do_save);
     }
 
     // process() -> save() -> send() -> next()
     function do_save (error) {
-        console.warn('do_save');
         if (error) {
             // FIXME empty queues
             self.queueEmit([op.spec.set('.error'), error]);
@@ -142,7 +140,6 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_send () {
-        console.warn('do_send');
         self.emitAll(op, meta);
         if (self.in_queue.length) {
             setImmediate(self.next.bind(self));

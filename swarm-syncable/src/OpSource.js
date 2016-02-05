@@ -129,7 +129,7 @@ OpSource.prototype.emitHandshake = function (sp, value, patch) {
  *  End of the stream. No more ops from the backing replica will arrive.
  */
 OpSource.prototype.emitEnd = function (error) {
-    var hs_end = new Op(this.hs.spec.set('.off'), error||'');
+    var hs_end = new Op(this.hs?this.hs.spec.set('.off'):'.off', error||'');
     OpSource.debug && this.log(hs_end, false, 'END');
     this.emit('end', hs_end, this);
 };

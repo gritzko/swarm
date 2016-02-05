@@ -72,7 +72,7 @@ module.exports = StreamOpSource;
 /** The most accurate way of debugging Swarm internals is to log all
   * ins and outs of every OpSource  */
 StreamOpSource.debug = false;
-StreamOpSource.SEND_DELAY_MS = 1;
+StreamOpSource.SEND_DELAY_MS = 5;
 StreamOpSource.SYNC_FLUSH = false;
 
 
@@ -170,7 +170,7 @@ StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
     try{
         this._parseIncomingBuf(new_read_buf);
     } catch (ex) {
-        console.warn('stream parse failed', ex.message, ex.stack);
+        console.warn('stream parse failed', ex.stack);
         this.onStreamFailure('error processing data');
     }
 };
@@ -225,7 +225,7 @@ StreamOpSource.prototype._parseIncomingBuf = function (new_read_buf) {
 StreamOpSource.prototype.eatLines = function (till) {
     for(var i=0; i<till; i++)  {
         var pline = this.lines[i], key = pline[2], value = pline[3];
-        if (!key) { continue; } // blank line
+        if (!key) { continue; } // blank line FIXME end patch
         var patch = [];
         for(var j=i+1; j<till && this.lines[j][1]; j++) {
             var pl = this.lines[j];
@@ -251,7 +251,7 @@ StreamOpSource.prototype.eatLines = function (till) {
     this.lines = this.lines.slice(till);
 };
 StreamOpSource.rough_line_re = new RegExp
-    ( '^(\\s*)(?:(' + Op.rsSpec + ')(?:\\s+(.*)))?$' );
+    ( '^(\\s*)(?:(' + Op.rsSpec + ')(?:\\s+(.*))?)?$' );
 StreamOpSource.off_re = /^\/(\w+\+)?Swarm#.*\.off$/;
 
 

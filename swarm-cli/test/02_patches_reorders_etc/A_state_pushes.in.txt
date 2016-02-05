@@ -1,0 +1,6 @@
+/Client+Swarm#bash2!0.on 
+
+/Model#00003+1.on
+    !00003+1.~state   {"a":1}
+/Model#00004+1.on
+    !00004+1.~state   {"a":2}
