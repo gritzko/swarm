@@ -51,6 +51,7 @@ function LevelOpSource (leveldown_db, options) {
     this.ending = false;
     this.upstream_source = null;
     this.done = setImmediate.bind(this.next.bind(this));
+    this.seen_cache = null;
     // TODO this.next = setImmediate()
     this.readDbHandshake();
 
@@ -133,7 +134,8 @@ LevelOpSource.prototype.next = function () {
     function do_save (error) {
         if (error) {
             // FIXME empty queues
-            self.queueEmit([op.spec.set('.error'), error]);
+            self.queueEmit([op.spec.set('.off'), error]);
+            do_next();
         } else {
             self.flushRecords(op, meta, do_send);
         }
@@ -141,6 +143,10 @@ LevelOpSource.prototype.next = function () {
 
     function do_send () {
         self.emitAll(op, meta);
+        do_next();
+    }
+
+    function do_next () {
         if (self.in_queue.length) {
             setImmediate(self.next.bind(self));
         } else {
@@ -298,8 +304,10 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
     }
 
 
-    function do_response () {
-
+    function do_response (err) {
+        if (err) {
+            return done(err);
+        }
         var re_patch = [];
         self.queueEmit([op.spec, ack_vv.toString(), re_patch]);
         // we still can modify re_patch
@@ -419,9 +427,10 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
     } else if (stamp===meta.tip) {// fast track: replay/echo
         done();
     } else {
+        var self = this;
         this.stampsSeen(op.typeId, stamp, function(vv){
             if (!vv.covers(stamp)) {
-                this.appendNewOp(op, meta);
+                self.appendNewOp(op, meta);
             }
             done();
         });
@@ -434,8 +443,9 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
  */
 LevelOpSource.prototype.processPatch = function (ops, meta, done) {
     LevelOpSource.debug && console.warn('PATCH OF', ops.length);
-    var i = 0, self = this;
-    if (ops.length && ops[0].name()==='~state') {
+    var i = 0, self = this, causal_vv = new Swarm.VVector();
+    if (ops.length && ops[i].name()==='~state') {
+        causal_vv.add(ops[i].stamp());
         this.processState(ops[i++], meta, next);
     } else {
         next();
@@ -443,7 +453,11 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
     function next () {
         if (i===ops.length) {
             done();
+        } else if (causal_vv.covers(ops[i].stamp())) {
+            LevelOpSource.debug && console.warn('CAUSAL FAIL', ops[i]);
+            done('causality violation');
         } else if (ops[i].name()!=='~state') {
+            causal_vv.add(ops[i].stamp());
             self.processOp(ops[i++], meta, next);
         } else {
             done('misplaced state snapshot');
@@ -555,41 +569,46 @@ LevelOpSource.prototype.readMeta = function (typeid, done) {
 
 
 LevelOpSource.prototype.stampsSeen = function (typeid, since, done) {
-    // TODO make a cache entry /type#id!since : vv
+    var cache = this.cache_cache;
+    if (cache) {
+        if (cache.typeid===typeid && cache<=since) {
+            return done(cache.seen);
+        }
+    }
     var seen = new Swarm.VVector();
-    this.readTail(typeid, '!'+since, function scan_for_overlaps(o) {
+    this.readTail(typeid, '!'+since, function (err, o) {
         if (o) {
             seen.add(o.stamp());
         } else {
+            this.seen_cache = {
+                typeid: typeid,
+                since: since,
+                seen: seen
+            };
             done(seen);
         }
     });
 };
 
 
-LevelOpSource.prototype.readTail = function (typeid, mark, callback) {
-    // first, wait for the write to finish?
-    if (this.batch.length) {
-        this.flushNewOps(start_read);
-    } else {
-        start_read();
-    }
-    var ops = [];
-    function start_read() {
-        iterator;
-        var more = iterator.next.bind(iterator, record_in);
-        function record_in (error, key, value) {
-            if (error) {
-                over (error);
-            } else if (key) {
-                setImmediate(more);
-            } else {
-                iterator.end();
-                over();
-            }
+LevelOpSource.prototype.readTail = function (typeid, mark, on_entry) {
+    var i = this.db.iterator({
+        gte : typeid + mark,
+        lt  : typeid + '!~'
+    });
+    i.next(read_loop);
+    var next_bound = i.next.bind(i, read_loop);
+
+    function read_loop (err, key, val) {
+        if (err) {
+            console.error(err);
+            on_entry(err, null);
+        } else if (key) {
+            on_entry(null, new Op(key, val, '(lvl)'));
+            //i.next(read_loop);
+            setImmediate(next_bound);
+        } else {
+            i.end(on_entry);
         }
-    }
-    function over( error ){
-        callback(error, ops);
     }
 };

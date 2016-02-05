@@ -27,14 +27,14 @@ for input in $SCRIPTS; do
     correct=$base.out.txt
     diff=$base.diff
 
-    if ! $SWARM $DB --std > $fact 2> $log < $input; then
+    if ! $SWARM $DB --std >$fact 2>$log < $input; then
         echo cli crashed
         exit 2
     fi
-    if diff -wU2 $correct $fact > $diff; then
-        echo $base OK
+    if diff -wBU2 $correct $fact > $diff; then
+        echo -e "\e[92mOK\e[39m" $base
     else
-        echo $base FAIL
+        echo -e "\e[91mFAIL\e[39m" $base
         cat $log
         echo ---
         cat $diff
@@ -42,7 +42,7 @@ for input in $SCRIPTS; do
     fi
 done
 
-rm -rf $DB
+#rm -rf $DB
 rm $SCRIPT_DIR/*.log.txt
 rm $SCRIPT_DIR/*.diff
 rm $SCRIPT_DIR/*.fact.txt

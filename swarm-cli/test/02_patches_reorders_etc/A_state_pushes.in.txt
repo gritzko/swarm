@@ -1,6 +1,10 @@
-/Client+Swarm#bash2!0.on 
+/Client+Swarm#bash2!0.on
 
 /Model#00003+1.on
     !00003+1.~state   {"a":1}
 /Model#00004+1.on
     !00004+1.~state   {"a":2}
+    !00005+1.set      {"b":3}
+/Model#00006+1.on
+    !00008+1.~state   {"a":4}
+    !00007+1.set      {"not accepted":5}

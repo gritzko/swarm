@@ -284,22 +284,31 @@ Replica.prototype.onDatabaseOp = function (op) {
     var typeid = op.typeid();
     if (op.spec.Type().origin()==='Swarm') {
         return this.onDatabaseHsAck(op);
-    } else if (op.name()==='on') { // re subscription / upscribe
+    } else if (op.name()==='on' || op.name()==='off') { // re/un/up scription
         var source = op.stamp(); // true for .ons and .offs
         var op_stream = this.streams[source];
         if (op_stream) {
             op_stream.writeOp(op);
             var sub = this.subscriptions[typeid];
-            if (!sub) {
-                sub = this.subscriptions[typeid] = [];
-            }
-            if (sub.indexOf(source)===-1) {
-                sub.push(source);
+            if (op.name()==='on') {
+                if (!sub) {
+                    sub = this.subscriptions[typeid] = [];
+                }
+                if (sub.indexOf(source)===-1) {
+                    sub.push(source);
+                }
+            } else {
+                if (sub) {
+                    var ind = sub.indexOf(source);
+                    ind!==-1 && sub.splice(ind,1);
+                    if (!sub.length) {
+                        delete this.subscriptions[typeid];
+                    }
+                }
             }
         } else {
             Replica.debug && console.warn('ON_NOWHERE', op.toString());
         }
-    } else if (op.name()==='off') { // unsubscription
     } else { // regular op
         sub = this.subscriptions[typeid];
         if (sub) {
