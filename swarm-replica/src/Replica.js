@@ -305,8 +305,8 @@ Replica.prototype.onDatabaseNewOp = function (op) {
     }
     for(var i=0; i<sub.length; i++) {
         if (sub[i].charAt(0)==='!') {
-            var can_id = op.typeid()+sub[i];
-            this.canned[can_id].push(op);
+            var can_key = op.typeid()+sub[i];
+            this.canned[can_key].push(op);
         } else {
             var op_stream = this.streams[sub[i]];
             if (op_stream) {
@@ -331,22 +331,22 @@ Replica.prototype.onDatabaseOnOff = function (op) {
         sub = this.subscriptions[typeid] = [];
     }
     if (op.name()==='on') {
-        var snap = false;
-        if (this.snapshot_slave && op.patch && op.patch.length>1 &&
-            op.patch[0].name()==='~state') {
-                snap = true;
-                this.snapshot_slave.writeOp(op);
-                var can_key = op.typeid()+'!'+op.stamp();
-                this.canned[can_key] = []; // FIXME two .ons?!
-                if (sub.indexOf('!'+source)===-1) {
-                    sub.push('!'+source);
-                }
-            } else {
-                op_stream.writeOp(op);
-                if (sub.indexOf(source)===-1) {
-                    sub.push(source);
-                }
+        var snapshot = this.snapshot_slave && op.patch &&
+            op.patch.length>1 && op.patch[0].name()==='~state';
+        if (snapshot) {
+            var can_key = op.typeid()+'!'+op.stamp();
+            Replica.debug && console.warn('CAN', can_key);
+            this.canned[can_key] = []; // FIXME two .ons?! kill one!
+            if (sub.indexOf('!'+source)===-1) {
+                sub.push('!'+source);
             }
+            this.snapshot_slave.writeOp(op);
+        } else {
+            if (sub.indexOf(source)===-1) {
+                sub.push(source);
+            }
+            op_stream.writeOp(op);
+        }
     } else {
         op_stream.writeOp(op);
         if (sub) {
@@ -494,18 +494,19 @@ Replica.prototype.send = function (op) {
 
 
 Replica.prototype.onSnaphotSlaveOp = function (op) {
-    Replica.trace && console.log('~>'+this.repl_id, op.toString());
     if (op.name()!=='on') {
         throw new Error('misrouted op');
     }
     var stamp = op.stamp();
     var source = this.streams[stamp];
+    Replica.debug && console.warn('SNAPSHOT', op.spec.toString());
     if (source) {
         source.writeOp(op);
     }
-    var can_id = op.typeid()+'!'+stamp;
-    var can = this.canned[can_id];
+    var can_key = op.typeid()+'!'+stamp;
+    var can = this.canned[can_key];
     if (can) {
+        Replica.debug && console.warn('UNCAN', can.length);
         if (source) {
             for (var i=0; i<can.length; i++) {
                 source.writeOp(can[i]);
@@ -513,8 +514,9 @@ Replica.prototype.onSnaphotSlaveOp = function (op) {
         }
         var subs = this.subscriptions[op.typeid()];
         var j = subs.indexOf('!'+op.stamp());
-        subs.splice(j,1);
-        delete this.canned[can_id];
+        subs[j] = op.stamp();
+        Replica.debug && console.warn('UNCAN', can.length, can_key, subs, j);
+        delete this.canned[can_key];
     }
 };
 

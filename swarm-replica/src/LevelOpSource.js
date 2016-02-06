@@ -108,7 +108,6 @@ LevelOpSource.prototype.next = function () {
     var self = this;
     self.idle = false;
     var op = self.in_queue.pop(); //self.queue.poll();
-    console.error('next', op.toString());
     var typeid = op.typeid();
 
     // load state if needed
@@ -124,6 +123,7 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_process (meta_str) {
+        LevelOpSource.debug && console.warn('NEXT', op.spec.toString(), 'META', meta_str);
         meta = new LogMeta(meta_str);
         self.process(op, meta, do_save);
     }
@@ -203,8 +203,10 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
         }
     });
     var meta_str = meta.toString();
+    LevelOpSource.debug && console.warn('SAVE',
+        save.map(function(e){return e.key;}).join(' '));
     if (meta_str!==this.meta[typeid]) {
-        LevelOpSource.debug && console.warn('META', meta_str);
+        LevelOpSource.debug && console.warn('SAVE_META', meta_str);
         save.push({
             type: 'put',
             key:   key_prefix + '!~.meta',
@@ -212,8 +214,6 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
         });
         this.meta[typeid] = meta_str;
     }
-    LevelOpSource.debug && console.warn('SAVE',
-        save.map(function(e){return e.key;}).join(' '));
     this.db.batch(save, done);
 };
 
@@ -282,8 +282,6 @@ LevelOpSource.prototype.processOuterHandshake = function (op, done) {
  */
 LevelOpSource.prototype.processOn = function (op, meta, done) {
     var self = this;
-    var stateful = '0'!==meta.tip; // FIXME the default must be 0
-    var typeid = op.typeid();
     var bookmark = op.value || '0';
     // check for obvious errors first
     if (!Lamp.is(bookmark)) {
@@ -562,12 +560,11 @@ LevelOpSource.prototype.readMeta = function (typeid, done) {
     var self = this;
     // for shortcut conns: /Type#id!~+peer.meta
     var key = this.prefix + typeid + '!~.meta';
-    this.db.get(key, function (err, value){
+    this.db.get(key, {asBuffer:false}, function (err, value){
         if (err && !LevelOpSource.isNFE(err)) {
             console.error('meta read failed', key, err);
             self.writeEnd(err);
         } else {
-            LevelOpSource.trace && console.log('META', key, value);
             done(value);
         }
     });

@@ -16,7 +16,7 @@ fi
 
 DB=.`basename $SCRIPT_DIR`.db
 rm -rf $DB
-$SWARM $DB --create bash2 --DClock LamportClock --DSnapshotSlave on -D -v || exit 1
+$SWARM $DB --create bash2 --DClock LamportClock --DSnapshotSlave on || exit 1
 
 SCRIPTS=`ls $SCRIPT_DIR/*.in.txt`
 
@@ -42,7 +42,9 @@ for input in $SCRIPTS; do
     fi
 done
 
-#rm -rf $DB
-rm $SCRIPT_DIR/*.log.txt
-rm $SCRIPT_DIR/*.diff
-rm $SCRIPT_DIR/*.fact.txt
+if [[ ! $NORM ]]; then
+    rm -rf $DB
+    rm $SCRIPT_DIR/*.log.txt
+    rm $SCRIPT_DIR/*.diff
+    rm $SCRIPT_DIR/*.fact.txt
+fi
