@@ -118,8 +118,6 @@ LevelOpSource.prototype.next = function () {
         var cached_meta = self.meta[typeid], meta;
         if (!cached_meta) {
             this.readMeta(typeid, do_process);
-            //self.queue.push_back(upscribe); upscribe is commanded by
-            //Replica
         } else {
             do_process(cached_meta);
         }
@@ -133,8 +131,10 @@ LevelOpSource.prototype.next = function () {
     // process() -> save() -> send() -> next()
     function do_save (error) {
         if (error) {
-            // FIXME empty queues
-            self.queueEmit([op.spec.set('.off'), error]);
+            console.warn('ERROR', error, op.spec.toString());
+            if (op.name()==='on') {
+                self.queueEmit([op.spec.set('.off'), error]);
+            }
             do_next();
         } else {
             self.flushRecords(op, meta, do_send);
@@ -295,7 +295,6 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
     }
     // make an acknowledgement for incoming ops
     var ack_vv = new Swarm.VVector();
-    console.warn('op', op.toString());
     if (op.patch && op.patch.length) {
         op.patch.forEach(function(o){
             ack_vv.add(o.stamp());
@@ -304,7 +303,6 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
     } else {
         do_response();
     }
-
 
     function do_response (err) {
         if (err) {
@@ -315,48 +313,48 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
         self.queueEmit([op.spec, ack, re_patch]);
         // we still can modify re_patch
 
-        if (!stateful) { // we have nothing
-
+        if (meta.tip==='0') { // we have nothing
             done();
-
         } else if (bookmark==='0') { // the client has nothing
-
-            meta.tip!=='0' &&
-            self.readTail(typeid, '!'+meta.base+'.~state', function (err, o) {
-                if (err) {
-                    done(err);
-                } else if (!o) {
-                    done(); // FIXME Correctness
-                } else if (o.name()!=='~state' || o.stamp()===meta.base) {
-                    re_patch.push([o.spec, o.value]); // FIXME conversions
-                }
-            });
-
+            self.createStatePatch(op, meta, re_patch, done);
         } else if (bookmark===meta.tip) { // no new ops yet
-
             done();
-
         } else { // OK, we likely have something to send
-            console.error('TAIL SCAN', typeid, '!'+bookmark);
-            var saw_bm = false;
-            self.readTail(typeid, '!'+bookmark, function (err, op) {
-                if (err) {
-                    done(err);
-                } else if (!op) {
-                    done(saw_bm ? null : 'bookmark not found');
-                } else if (!saw_bm) {
-                    if (op.stamp()===bookmark) {
-                        saw_bm = true;
-                    }
-                } else if (op.name()==='~state') {
-                    "skip it; state descend is not impl yet";
-                } else {
-                    re_patch.push([op.spec, op.value]);
-                }
-            });
-
+            self.createTailPatch(op, meta, re_patch, done);
         }
     }
+};
+
+LevelOpSource.prototype.createStatePatch = function (op, meta, re_patch, done) {
+    this.readTail(op.typeid(), '!'+meta.base+'.~state', function (err, o) {
+        if (err) {
+            done(err);
+        } else if (!o) {
+            done(); // FIXME Correctness
+        } else if (o.name()!=='~state' || o.stamp()===meta.base) {
+            re_patch.push([o.spec, o.value]); // FIXME conversions
+        }
+    });
+};
+
+LevelOpSource.prototype.createTailPatch = function (op, meta, re_patch, done) {
+    var saw_bm = false;
+    var bookmark = op.value;
+    this.readTail(op.typeid(), '!'+bookmark, function (err, op) {
+        if (err) {
+            done(err);
+        } else if (!op) {
+            done(saw_bm ? null : 'bookmark not found');
+        } else if (!saw_bm) {
+            if (op.stamp()===bookmark) {
+                saw_bm = true;
+            }
+        } else if (op.name()==='~state') {
+            "skip it; state descend is not impl yet";
+        } else {
+            re_patch.push([op.spec, op.value]);
+        }
+    });
 };
 
 /**
@@ -436,7 +434,7 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
         done();
     } else {
         var self = this;
-        this.stampsSeen(op.typeId, stamp, function(vv){
+        this.stampsSeen(op.typeid(), stamp, function(vv){
             if (!vv.covers(stamp)) {
                 self.appendNewOp(op, meta);
             }

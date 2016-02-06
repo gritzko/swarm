@@ -82,10 +82,9 @@ function Replica (database, options, callback) {
         Replica.OP_POLICIES
     );
     // snapshot slave
-
     this.snapshot_slave = null;
-    this.canned = Object.create(null);
-
+    this.canned = Object.create(null); // TODO proper test with an async slave
+    // misc
     this.su_handle = null; // ?
     this.close_cb = null;
     // home host
@@ -287,69 +286,79 @@ Replica.prototype.onDatabaseHsAck = function (ack) {
 
 Replica.prototype.onDatabaseOp = function (op) {
     Replica.debug && console.warn('DB_OP', op.toString());
-    var typeid = op.typeid();
     if (op.spec.Type().origin()==='Swarm') {
         return this.onDatabaseHsAck(op);
     } else if (op.name()==='on' || op.name()==='off') { // re/un/up scription
-        var source = op.stamp(); // true for .ons and .offs
-        var op_stream = this.streams[source];
-        if (!op_stream) {
-            return Replica.debug && console.warn('ON_NOWHERE', op.toString());
-        }
-        var sub = this.subscriptions[typeid];
-        if (!sub) {
-            sub = this.subscriptions[typeid] = [];
-        }
-        if (op.name()==='on') {
-            var snap = false;
-            if (this.snapshot_slave && op.patch && op.patch.length>1 &&
-                op.patch[0].name()==='~state') {
-                    snap = true;
-                    this.snapshot_slave.writeOp(op);
-                    var can_key = op.typeid()+'!'+op.stamp();
-                    this.canned[can_key] = []; // FIXME two .ons?!
-                    if (sub.indexOf('!'+source)===-1) {
-                        sub.push('!'+source);
-                    }
-                } else {
-                    op_stream.writeOp(op);
-                    if (sub.indexOf(source)===-1) {
-                        sub.push(source);
-                    }
-                }
-        } else {
-            op_stream.writeOp(op);
-            if (sub) {
-                var ind = sub.indexOf(source);
-                ind!==-1 && sub.splice(ind,1);
-                if (!sub.length) {
-                    delete this.subscriptions[typeid];
-                }
-            }
-        }
+        this.onDatabaseOnOff(op);
     } else { // regular op
-console.error('SEE', op.stamp());
-        this.clock.seeStamp(op.stamp());
-        sub = this.subscriptions[typeid];
-        if (sub) {
-            for(var i=0; i<sub.length; i++) {
-                if (sub[i].charAt(0)==='!') {
-                    var can_id = op.typeid()+sub[i];
-                    this.canned[can_id].push(op);
-                } else {
-                    op_stream = this.streams[sub[i]];
-                    if (op_stream) {
-                        op_stream.writeOp(op);
-                    } else {
-                        // maintain
-                    }
-                }
-            }
+        this.onDatabaseNewOp(op);
+    }
+};
+
+
+Replica.prototype.onDatabaseNewOp = function (op) {
+    this.clock.seeStamp(op.stamp());
+    var sub = this.subscriptions[op.typeid()];
+    if (!sub) {
+        Replica.debug && console.warn('OP_NOWHERE', op.toString());
+        return;
+    }
+    for(var i=0; i<sub.length; i++) {
+        if (sub[i].charAt(0)==='!') {
+            var can_id = op.typeid()+sub[i];
+            this.canned[can_id].push(op);
         } else {
-            Replica.debug && console.warn('OP_NOWHERE', op.toString());
+            var op_stream = this.streams[sub[i]];
+            if (op_stream) {
+                op_stream.writeOp(op);
+            } else {
+                sub.splice(i--,1);
+            }
         }
     }
 };
+
+
+Replica.prototype.onDatabaseOnOff = function (op) {
+    var typeid = op.typeid();
+    var source = op.stamp(); // true for .ons and .offs
+    var op_stream = this.streams[source];
+    if (!op_stream) {
+        return Replica.debug && console.warn('ON_NOWHERE', op.toString());
+    }
+    var sub = this.subscriptions[typeid];
+    if (!sub) {
+        sub = this.subscriptions[typeid] = [];
+    }
+    if (op.name()==='on') {
+        var snap = false;
+        if (this.snapshot_slave && op.patch && op.patch.length>1 &&
+            op.patch[0].name()==='~state') {
+                snap = true;
+                this.snapshot_slave.writeOp(op);
+                var can_key = op.typeid()+'!'+op.stamp();
+                this.canned[can_key] = []; // FIXME two .ons?!
+                if (sub.indexOf('!'+source)===-1) {
+                    sub.push('!'+source);
+                }
+            } else {
+                op_stream.writeOp(op);
+                if (sub.indexOf(source)===-1) {
+                    sub.push(source);
+                }
+            }
+    } else {
+        op_stream.writeOp(op);
+        if (sub) {
+            var ind = sub.indexOf(source);
+            ind!==-1 && sub.splice(ind,1);
+            if (!sub.length) {
+                delete this.subscriptions[typeid];
+            }
+        }
+    }
+};
+
 
 Replica.prototype.onDatabaseEnd = function (off) {
     if (this.close_cb) {
