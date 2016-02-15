@@ -46,10 +46,11 @@ A new shard may be bootstrapped with all the parent's data or it may incremental
 Those shards must reside behind a *switch* replica that forwards all the incoming object subscriptions to proper shards.
 Its handshake is `/Switch+Swarm#data!mytime+swarm.on`.
 Switches are stateless and transparent, so there can be any number of them.
-Switches maintain subscription tables and multiplex ops, but they have no own storage and no own op order.
+Switches maintain subscription tables and multiplex ops, but they have no own storage.
 Differently from all other roles, a switch has many upstream replicas, namely an array of Shards covering the entire key space.
 On the other hand, we already agreed that shards are parts of the same replica, so logically there is one upstream.
 Once a shard forks off a new child shard, it notifies its downstream switches, so reconfiguration is fully dynamic.
+As a side effect, switches can scale reads as they aggregate subscriptions and multiplex ops.
 
 ## Ring
 
@@ -68,11 +69,12 @@ Rings have different local operation orders. Hence, a client that was forked fro
 
 ## Slave
 
-Sometimes we need to scale reads in our local cluster.
+The sync algorithm depends on the upstream's stable operation order.
+Thus, loss of a server may lead to loss of the de-facto order, so clients will not be able to synchronize cheaply.
 We want any client to be able to sync with any of our local copies, so we need identical operation orders.
-Hence, we resort to the classic master-slave architecture: we attach several *slaves* to a master, quite likely in a chain formation.
-All reads are done locally at a slave, while all the writes are forwarded to the master first.
-Slaves have the master as their upstream replica, so they save and relay new ops in exactly the same order as the master.
+Hence, we resort to the classic master-slave architecture: we attach several *slaves* to a master, in a chain formation.
+All reads are done at the tail slave, while all the writes are forwarded to the master.
+As long as one fork (either master or slave) stays alive, a reconfigured chain can continue to function with no interruptions.
 
 Slave handshakes look exactly like their master’s except for a different role, e.g.
 * `/Slave+Swarm#data!mytime+swarm.on` (slave of the root replica) or
@@ -95,3 +97,25 @@ They use a replica's clocks or use none.
 By convention, local component roles are lowercase, like `host` or `level`.
 In some case, components need to use their own clocks (like a host connected by the network).
 Then, they get an uppercase role, their own replica id and clocks.
+
+## Resync
+
+Swarm's unifying abstraction is a replica tree.
+Namely, a replica may re-sync to an arbitrary other replica.
+A tree is a fragile topology and permanent removal of a replica may disconnect a subtree from the root.
+In any configuration, the measure of last resort is replica resync.
+Resync performance is suboptimal and the correctness is guaranteed for *idempotent* types only.
+So, there are better techniques to compensate for replica removal, e.g. hot-spare slaves.
+Resync also allows for shortcut syncing between different branches of a tree, in case such a necessity arises.
+
+The most correct way to resync is to merge the full log from the beginning of times.
+Unfortunately, that may be impractical.
+Swarm is based on an assumption that a change log is *potentially infinite*.
+Similarly, Swarm avoids using full version vectors, as their size is potentially infinite too.
+
+Resync is made by a hack: if all object states are made linearly ordered.
+Given two states and two log tails, a replica may apply the merged log to the younger state thus producing the resulting state.
+(Again, an important requirement is that data types must be idempotent.)
+
+That requires a distinction between *local snapshots* (made by any replica for its own use) and *descending states* that only get produced by their root replica.
+If the root replica is temporarily unable to generate states, then op logs grow, which may be a performance issue, but the system stays functional.

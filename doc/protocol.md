@@ -162,9 +162,18 @@ That is equal to echoing new ops back, but more efficient.
 
 ## Dialects
 
-The described protocol is the "canonical" one spoken between remote replicas. Some Swarm subsystems may speak *dialects*. For example, a replica talks to its storage subsystem(s) mostly by the same protocol. The storage is neither upstream, nor downstream as it is a part of the same replica. Similarly, a replica may speak a dialect of the same protocol to its snapshot slave. That is a subsystem that produces state snapshots and inserts them into the log. While the "vanilla" core replica is type agnostic, a snapshot slave actually has all the CRDT type logic inside and it may run in a different process, for example.
+The described protocol is the "canonical" one spoken between remote replicas.
+Some Swarm subsystems may speak *dialects*.
+For example, a replica talks to its storage subsystem(s) mostly by the same protocol.
+The storage is neither upstream, nor downstream as it is a part of the same replica.
+Similarly, a replica may speak a dialect of the same protocol to its snapshot slave.
+That is a subsystem that produces state snapshots and inserts them into the log.
+While the "vanilla" core replica is type agnostic, a snapshot slave actually has all the CRDT type logic inside and it may run in a different process, for example.
 
 
 ## Conclusion
 
-The op-based protocol allows for efficient storage and transmission of Swarm synchronization data. It enables unlimited client-side caching of the data, real-time update propagation, and offline work. The protocol guarantees correct and efficient op propagation. Namely, that all the ops reach all the object's replicas in a causally consistent order and no op needs to be sent twice.
+The op-based protocol allows for efficient storage and transmission of Swarm synchronization data.
+It enables unlimited client-side caching of the data, real-time update propagation, and offline work.
+The protocol guarantees correct and efficient op propagation.
+Namely, that all the ops reach all the object's replicas in a causally consistent order and no op needs to be sent twice.
