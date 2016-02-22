@@ -7,7 +7,7 @@ var chars64 = lamp64.base64.base64;
 
 tape ('stamp.03.A calendarness', function(tap) {
     var date = new Date();
-    var clock = new AdaptableClock('replica');
+    var clock = new AdaptableClock('03A');
     clock.ms = function () { return date.getTime(); }
     var stamp = clock.issueTimestamp({precise: true});
     var parsed = AdaptableClock.parseTimestamp(stamp);
@@ -19,7 +19,7 @@ tape ('stamp.03.A calendarness', function(tap) {
 
 
 tape ('stamp.03.B offsets', function(tap) {
-    var clock = new AdaptableClock('replica');
+    var clock = new AdaptableClock('03B');
     var _23feb10 = '01'+chars64[23]+'00+origin';
     clock.seeTimestamp(_23feb10, 3); // 23 Feb 2010
     var stamp = clock.issueTimestamp().toString();
@@ -34,22 +34,28 @@ tape ('stamp.03.B offsets', function(tap) {
 
 
 tape ('stamp.03.C stuck-ahead', function(tap) {
-    var clock = new AdaptableClock('replica');
+    var clock = new AdaptableClock('03C');
     var stamp = clock.issueTimestamp();
     clock.seeTimestamp('01'+chars64[23]+'00+origin', 3); // 23 Feb 2010
     // now, the clock is stuck in the future
     setTimeout(function(){
         var stamp2 = clock.issueTimestamp();
-        console.log(stamp, stamp2);
         tap.equal(stamp.time().substr(0,5), stamp2.time().substr(0,5))
-        tap.equal(stamp2.time().length, 12); // must use seq
+        tap.equal(stamp2.time().length, 11); // must use seq
         tap.end();
     }, 1000);
 });
 
+tape ('stamp.03.E precise', function(tap) {
+    var clock = new AdaptableClock('03E');
+    var stamp = clock.issueTimestamp({precise: true});
+    tap.equal(stamp.time().length, 8);
+    tap.end();
+});
+
 /*
 
-IT LOOKS LIKE THE CODE CAN NOT GENERATE MANY STAMPS A SECOND
+IT LOOKS LIKE THE CODE CAN NOT GENERATE TWO STAMPS IN A MILLISECOND
 SLOW!
 
 tape ('stamp.03.D adaptable length', function(tap) {
