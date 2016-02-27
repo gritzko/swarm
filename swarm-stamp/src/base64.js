@@ -8,7 +8,7 @@ var re64l =  new RegExp('[0-9A-Za-z_~]', 'g');
 
 function int2base (i, padlen) {
     if (i < 0 || i >= (1 << 30)) {
-        throw new Error('out of range');
+        throw new Error('out of range: '+i);
     }
     var ret = '', togo = padlen || 5;
     for (; i || (togo > 0); i >>= 6, togo--) {

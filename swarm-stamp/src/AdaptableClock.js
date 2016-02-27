@@ -66,7 +66,7 @@ function AdaptableClock (now, options) {
     }
 }
 module.exports = AdaptableClock;
-AdaptableClock.UPSTREAM = 1;
+AdaptableClock.UPSTREAM = 1; // FIXME move to LamportClock
 AdaptableClock.EXACT = 2;
 AdaptableClock.UPSTREAM_EXACT = 1|2;
 
@@ -129,7 +129,9 @@ AdaptableClock.parseTimestamp = function (ts) {
         return { time: '0', origin: lamp.origin(), date:null, seq:0 };
     }
     var time = lamp.time();
-    while (time.length<11) time = time + '0';
+    while (time.length<11) {
+        time = time + '0';
+    }
     var month =  base64.base2int(time.substr(0,2)),
         day =    base64.base2int(time[2]),
         hour =   base64.base2int(time[3]),

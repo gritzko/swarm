@@ -25,7 +25,6 @@ tape ('stamp.03.B offsets', function(tap) {
     var stamp = clock.issueTimestamp().toString();
     tap.equal(stamp.substr(0,5), _23feb10.substr(0,5));
     var parsed = AdaptableClock.parseTimestamp(stamp);
-    console.error(parsed.date.toUTCString());
     tap.equal(parsed.date.getUTCMonth(), 1);
     tap.equal(parsed.date.getUTCFullYear(), 2010);
     tap.equal(parsed.date.getUTCDate(), 23);
@@ -73,3 +72,4 @@ tape ('stamp.03.D adaptable length', function(tap) {
     tap.end();
 });
 */
+

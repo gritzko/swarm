@@ -9,9 +9,11 @@ var Swarm = {
     LamportClock: require('./src/LamportClock'),
     TestClock: require('./src/LamportClock'),
     SecondPreciseClock: require('./src/SecondPreciseClock'),
-    Clock: require('./src/SecondPreciseClock'),
+    Clock: null,
     MinutePreciseClock: require('./src/MinutePreciseClock'),
     AdaptableClock: require('./src/AdaptableClock')
 };
+
+Swarm.Clock = Swarm.AdaptableClock; // the default
 
 module.exports = Swarm;
