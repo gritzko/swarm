@@ -111,11 +111,11 @@ OpSource.isHandshake = function (spec) {
  *  backing replica).
  */
 OpSource.prototype.emitHandshake = function (sp, value, patch) {
-    if (this.hs) {
+    if (this.hs && !this.is_upstream) {
         throw new Error('handshake repeat');
     }
     var spec = new Spec(sp);
-    var hs = new Op(spec, value, spec.stamp(), patch);
+    var hs = Op.create([spec, value, patch], spec.stamp());
     this.hs = hs;
     this.source_id = hs.stamp();
     this.default = this.default.set(this.source_id, '!');

@@ -22,16 +22,10 @@ var LevelOpSource = require('./LevelOpSource');
  *  with an OpSource interface {@link LevelOpSource}. There happens all the
  *  patch-related logic.
  *
+ *  Handshake   such as role   see protocol  can not be set at will
+ *
+ *  Option conventions: stored are UpperCase, transient are lower_case
  *  Options:
- *  * repl_id
- *  * user_id
- *  * db_id
- *  * connect
- *  * listen
- *  * callback
- *  * snapshot_slave
- *  * prefix
- *  * clock
  *
  *  @class
  */
@@ -44,7 +38,6 @@ function Replica (database, options, callback) {
     }
     this.options = options = options || {};
     // these two are set once we have de-facto access to the session's cache db
-    this.options = Object.create(null);
     this.role = null;
     this.repl_id = null;
     this.db_id = options.db_id;
@@ -59,9 +52,6 @@ function Replica (database, options, callback) {
     options.onReady && this.on('ready', options.onReady);
     options.onWritable && this.on('writable', options.onWritable);
     options.onFail && this.on('fail', options.onFail);
-    // upstream
-    this.upstream_url = options.upstream || null; // url
-    this.upstream_source_id = null;
     // listen
     this.servers = Object.create(null);
     // connections
@@ -72,7 +62,7 @@ function Replica (database, options, callback) {
     this.hs_policies = [];
     Replica.pushPolicies(
         this.hs_policies,
-        options.HandshakePolicies || 'SeqReplicaIdPolicy',
+        options.HandshakePolicies || 'NewDownstreamPolicy,SeqReplicaIdPolicy',
         Replica.HS_POLICIES
     );
     this.op_policies = [];
@@ -106,6 +96,7 @@ Replica.debug = false;
 Replica.HS_POLICIES = Object.create(null);
 /** a library of known per-op policies */
 Replica.OP_POLICIES = Object.create(null);
+Replica.ROLES = {Shard:1,Ring:1,Slave:1,Switch:1,Client:1};
 
 Replica.pushPolicies = function (to, which, from) {
     if (!which)  { return; }
@@ -150,11 +141,10 @@ Replica.prototype.saveHandshake = function () {
     var opts = this.options;
     var bare = this.bareHandshake();
     var ok = Object.keys(opts);
-    var patch = ok.map(function(k){
-        return new Op('!0.'+k, opts[k]);
-    });
-    var hs_op = new Op(bare[0], bare[1], null, patch);
-    console.error('SAVE HS', hs_op.toString());
+    bare.push(ok.map(function(k){
+        return ['!0.'+k, opts[k]]; // TODO timestamp 'em
+    }));
+    var hs_op = Op.create(bare);
     // handshake refresh is an op
     this.dbos.writeHandshake(hs_op);
 };
@@ -171,6 +161,12 @@ Replica.prototype.saveHandshake = function () {
 Replica.prototype.createClock = function (stamp) {
     Replica.debug && console.warn('CREATE_CLOCK', stamp);
     var lamp = new Lamp(stamp);
+    if (this.clock) {
+        throw new Error('clock is created already');
+    }
+    if (lamp.toString()==='0') {
+        throw new Error('can not init clock with a zero');
+    }
     this.repl_id = lamp.origin();
     this.user_id = lamp.author(); // FIXME deprecated; move to a policy
     // options...
@@ -200,8 +196,9 @@ Replica.prototype.createClock = function (stamp) {
     if (this.options.SnapshotSlave) {
         this.createSnapshotSlave();
     }
-    Replica.debug && console.error('WRITABLE');
-    this.emit('writable');
+    Replica.debug && console.error('WRITABLE', stamp.toString());
+    this.emit('writable'); // ?
+    this.emit('ready', stamp);
 };
 
 /** failed to initialize */
@@ -234,32 +231,34 @@ Replica.prototype.createHomeHost = function () {
  *  That way we read in all the settings.
  */
 Replica.prototype.onDatabaseHandshake = function (hs) {
+    Replica.debug && console.warn('ON_DB_HS', hs.stamp());
     var opts = this.options;
     this.database_hs = hs;
     // read in the spec
     var type = Lamp.tuple(hs.spec.type());
     if (type[2]!=='Swarm') {
-        throw new Error('invalid handshake');
+        return this.noClock('invalid db handshake');
     }
-    this.role = type[1] || 'Root';
+    this.role = type[1] || '';
     var id = Lamp.tuple(hs.spec.id());
     this.db_id = id[2];
     this.shard_id = id[1] || null;
     // TODO Role
     // read in the options
-    hs.patch.forEach(function(o){
+    hs.patch && hs.patch.forEach(function(o){
         if (!opts[o.name()]) {
             opts[o.name()] = o.value;
         }
     });
-    this.emit('ready', hs);
     // create clock
-    this.createClock(hs.stamp());
-    // connect to the upstream
-    if (opts.Connect) {
+    if (hs.stamp()!=='0') {
+        this.createClock(hs.stamp());
+    } else if (opts.Connect) { // connect to the upstream
         this.connect();
-    } else if (!this.clock) {
-        this.noClock('can not get repl_id');
+    } else if (opts.upstream) { // ready-made upstream opsource
+        this.setUpstreamSource(opts.upstream);
+    } else {
+        return this.noClock('can not get repl_id');
     }
     // listen for downstream conns
     if (opts.listen) {
@@ -380,7 +379,7 @@ Replica. debug : logical replica events, not in out
 
 Replica.prototype.connect = function (url) {
     if (this.su_handle) {
-        throw new Error('uplink connection is already on');
+        throw new Error('upstream connection is already on');
     }
     url = url || this.options.connect;
     this.su_handle = stream_url.connect(this.options.connect, {
@@ -515,7 +514,6 @@ Replica.prototype.onSnaphotSlaveOp = function (op) {
         var subs = this.subscriptions[op.typeid()];
         var j = subs.indexOf('!'+op.stamp());
         subs[j] = op.stamp();
-        Replica.debug && console.warn('UNCAN', can.length, can_key, subs, j);
         delete this.canned[can_key];
     }
 };
@@ -573,6 +571,10 @@ Replica.prototype.done = function (request) {
 
 // replay all subscriptions to a newly connected upstream
 Replica.prototype.upscribe = function () {
+    return;
+
+    // FIXME
+
     var typeids = Object.keys(this.entries);
     for(var i=0; i<typeids.length; i++){
         var typeid = typeids[i];
@@ -600,9 +602,9 @@ Replica.prototype.close = function (err, callback) {
     });
 
     Object.keys(this.streams).forEach(function(src_id){
-        var src = this.streams[src_id];
+        var src = self.streams[src_id];
         src.removeAllListeners();
-        self.dbos.writeOp(new Op(src.hs.set('.off'), 'exiting'));
+        self.dbos.writeOp(new Op(src.hs.spec.set('.off'), 'exiting'));
     });
 
     this.saveHandshake();
@@ -674,31 +676,23 @@ Replica.prototype.addStreamUp = function (err, stream) {
 
 Replica.prototype.setUpstreamSource = function (op_source) {
     op_source.once('handshake', this.onUpstreamHandshake.bind(this));
-    op_source.writeHandshake(this.handshake());
+    op_source.writeHandshake(Op.create(this.bareHandshake()));
 };
 
 Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
+    Replica.debug && console.log('UP_HS', hs_op.toString());
     var self = this;
-    if (this.db_id && this.db_id!==hs_op.id()) {
+    if (this.db_id==='0') {
+        this.db_id = hs_op.id();
+    } else if (this.db_id && this.db_id!==hs_op.id()) {
         return op_stream.end('wrong db id');
     }
     this.db_id = hs_op.id();
-    if (this.repl_id) {
+    if (this.clock) {
         if (this.repl_id!==hs_op.origin()) {
             return op_stream.end('wrong replica id?!');
         }
-        if (stamp<this.last_stamp && this.clock.isTooIncorrect(hs_op.stamp())) {
-            // we've got a problem; let clock decide
-            console.warn('dangerous clock de-sync');
-            this.createClock(hs_op.stamp());
-            this.clock.seeTimestamp(this.last_stamp);
-        }
-        if (mytime.ms>utime.ms+1000 || mytime.ms<utime.ms-5000) {
-            // kill yourself loser
-            // actually, re-create the clock and prey we
-            // don't have timestamps in the future
-            this.last_stamp; // use this
-        }
+        this.clock.seeTimestamp(hs_op.stamp(), 1|2); // FIXME flags
     } else {
         this.repl_id = hs_op.origin();
         this.createClock(hs_op.stamp());
@@ -711,11 +705,10 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.upstream_ssn = hs_op_ssn;
     this.upstream_stamp = hs_op_stamp;
 
-    op_stream.on('op', this.write.bind(this));
-    op_stream.on('end', function () {
-        self.removeStream(hs_op_stamp);
+    op_stream.on('op', this.onStreamOp.bind(this));
+    op_stream.on('end', function (off) {
+        self.dbos.writeOp(off);
     });
-    Replica.debug && console.log('U>>'+this.repl_id+'\t'+hs_op);
     // TODO (need a testcase for reconnections)
     this.upscribe();
 
@@ -726,6 +719,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         stamp:  hs_op_stamp,
     });
 };
+
 
 // Add a connection to other replica, either upstream or downstream.
 Replica.prototype.addStreamDown = function (stream) {
@@ -753,7 +747,7 @@ Replica.prototype.addDownstreamSource = function (op_stream) {
     op_stream.once('handshake', on_hs);
 
     setTimeout(function kill(){
-        if (!op_stream.peer_hs) {
+        if (!op_stream.hs) {
             op_stream.writeEnd('no handshake');
             op_stream.removeAllListeners();
         }
@@ -814,41 +808,6 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
     }
 };
 
-
-/**
- *  A simple default replica id assignment policy.
- *  Assumes the user id is provided in the incoming handshake.
- *  Otherwise, uses 'anon'. Employs simple sequential numbering
- *  for all the sessions, but also adds the user id (gritzko~1k2).
- */
-Replica.prototype.replica_id_policy =  function (hs, opts, op_stream, callback) {
-    var seq = ++this.last_ds_ssn;
-    var lamp = new LamportTimestamp(hs.stamp());
-    'anon';
-    var parent = this.user_id==='swarm' ? lamp.author() : this.repl_id;
-    var new_ssn = parent + '~' + Swarm.base64.int2base(seq, 1);
-    callback(null, new_ssn);
-};
-
-
-// the default agree-to-everything cumulative-numbering ssn assignment policy
-// Replica.seq_ssn_policy =  function (op, op_stream, callback) {
-//     var replica = this;
-//     var lamp = new Swarm.LamportTimestamp(op.stamp());
-//     if (replica.user_id!=='swarm' && lamp.author() && lamp.author()!==replica.user_id) {
-//         callback('wrong user');
-//         return;
-//     }
-//     //var ds_user_id = lamp.author();
-//     var seq = ++replica.last_ds_ssn;
-//     var parent = replica.user_id==='swarm' ? lamp.author() : replica.repl_id;
-//     var new_ssn = parent + '~' + Swarm.base64.int2base(seq, 1);
-//     // FIXME recursive
-//     replica.saveDatabaseHandshake(); // FIXME callback (prevent double-grant on restart)
-//     callback(null, new_ssn);
-//     // FIXME op_stream.xxx = new_ssn;
-//     // once we assign the ssn, stream stamp is still 0, but ssn id changes
-// };
 
 /**
  * We expect that we always receive 'end' and that we receive it once.

@@ -1,5 +1,4 @@
 "use strict";
-var fs = require('fs');
 var leveldown = require('leveldown');
 var Swarm = require('swarm-replica');
 

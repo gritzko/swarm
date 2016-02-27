@@ -65,9 +65,13 @@ LevelOpSource.debug = false;
 
 LevelOpSource.prototype._writeOp = function (op) {
     //this.queue.offer(op);
-    this.in_queue.unshift(op);
-    if (this.idle) {
-        this.next();
+    if (this.db) {
+        this.in_queue.unshift(op);
+        if (this.idle) {
+            this.next();
+        }
+    } else {
+        console.warn('dropping', op.toString());
     }
 };
 
@@ -95,7 +99,12 @@ LevelOpSource.prototype._writeEnd = function (off) {
 
 LevelOpSource.prototype.closeDatabase = function () {
     var self = this;
-    this.db.close(function(err){
+    if (!this.db) {
+        throw new Error('repeated close');
+    }
+    var db = this.db;
+    this.db = null;
+    db.close(function(err){
         self.emitEnd(err);
     });
 };

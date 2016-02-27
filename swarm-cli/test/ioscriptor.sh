@@ -18,16 +18,18 @@ DB=.`basename $SCRIPT_DIR`.db
 rm -rf $DB
 $SWARM $DB --create bash2 --DClock LamportClock --DSnapshotSlave on || exit 1
 
-SCRIPTS=`ls $SCRIPT_DIR/*.in.txt`
+SCRIPTS=`ls $SCRIPT_DIR/*.{in,up}.txt`
 
 for input in $SCRIPTS; do
-    base=$SCRIPT_DIR/`basename $input .in.txt`
+    base_ext=`basename $input .txt`
+    base=$SCRIPT_DIR/${base_ext%.*}
+    updn=${base_ext##*.}
     fact=$base.fact.txt
     log=$base.log.txt
     correct=$base.out.txt
     diff=$base.diff
 
-    if ! $SWARM $DB --std -D >$fact 2>$log < $input; then
+    if ! $SWARM $DB --std $updn -D >$fact 2>$log < $input; then
         echo cli crashed
         exit 2
     fi

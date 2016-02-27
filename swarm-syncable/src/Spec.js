@@ -131,14 +131,14 @@ Spec.prototype.toAbbrevString = function (defaults) {
 
 
 Spec.prototype.type = function () { return this._type; };
-Spec.prototype.Type = function () {
-    return new Lamp(this._type);
-};
 Spec.prototype.id = function () { return this._id; };
 Spec.prototype.stamp = function () { return this._stamp; };
 Spec.prototype.version = function () { return '!'+this._stamp; };
 Spec.prototype.op = function () { return this._op; };
 Spec.prototype.name = Spec.prototype.op;
+Spec.prototype.Type = function () { return new Lamp(this._type); };
+Spec.prototype.Stamp = function () { return new Lamp(this._stamp); };
+Spec.prototype.Id = function () { return new Lamp(this._id); };
 Spec.prototype.typeid = function () {
     return '/'+this._type+'#'+this._id;
 };

@@ -1,9 +1,13 @@
 "use strict";
 var leveldown = require('leveldown');
+var fs = require('fs');
 var i, on_end, next;
 
 function dump (args, done) {
     on_end = done;
+    if (!fs.existsSync(args.home) || !fs.statSync(args.home).isDirectory()) {
+        return done('not a db dir');
+    }
     var db = leveldown(args.home);
     args.access = args.access || args.a || '';
     args.put = args.put || args.P;

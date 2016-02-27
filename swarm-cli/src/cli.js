@@ -41,7 +41,7 @@ if (args.help) {
     '  --put -P     write to the db (e.g. -a key -P value)',
     '  --erase -E   erase key/prefix (e.g. -a /Model#3uHRl -R)',
     '--fork -f      fork the db, create a replica (-f new_dir.db)',
-    '  --downstream default, create a downstream replica',
+    '  --client     default, create a client downstream replica',
     '  --ring -o    create a ring replica',
     '  --slave -1   create a slave replica',
     '  --shard -2   separate a shard, one half or some share (e.g. 0.3)',

@@ -11,6 +11,7 @@ var Swarm = {
     OpQueue: require('./src/OpQueue'),
     Model: require('./src/Model'),
     Set: require('./src/Set'),
+    LocalOpSource: require('./src/LocalOpSource'),
     get: get_fn
 };
 
