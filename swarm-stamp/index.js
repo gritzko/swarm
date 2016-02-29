@@ -15,5 +15,6 @@ var Swarm = {
 };
 
 Swarm.Clock = Swarm.AdaptableClock; // the default
+Swarm.LamportStamp = Swarm.LamportTimestamp;
 
 module.exports = Swarm;

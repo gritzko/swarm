@@ -198,3 +198,16 @@ tape ('syncable.01.i spanning tree', function (tap) {
     tap.notOk(Spec.inSubtree('alicebuttheotherone', 'alice'));
     tap.end();
 });
+
+tape('syncable.01.j immutability', function (t) {
+    var LamportStamp = sync.LamportStamp;
+    var spec = new Spec('/Type#id.on');
+    var spec1 = spec.setStamp('time');
+    t.equal(spec.toString(), '/Type#id.on');
+    t.equal(spec1.toString(), '/Type#id!time.on');
+    var spec2 = spec.setStamp(new LamportStamp('time1+origin'));
+    var spec3 = spec2.setStamp(new LamportStamp('time2+origin'));
+    t.equal(spec2.toString(), '/Type#id!time1+origin.on');
+    t.equal(spec3.toString(), '/Type#id!time2+origin.on');
+    t.end();
+});
