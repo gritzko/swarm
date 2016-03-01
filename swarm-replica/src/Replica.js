@@ -231,7 +231,7 @@ Replica.prototype.createHomeHost = function () {
  *  That way we read in all the settings.
  */
 Replica.prototype.onDatabaseHandshake = function (hs) {
-    Replica.debug && console.warn('ON_DB_HS', hs.stamp());
+    Replica.debug && console.warn('ON_DB_HS', hs.toString());
     var opts = this.options;
     this.database_hs = hs;
     // read in the spec

@@ -83,7 +83,7 @@ LevelOpSource.prototype._writeHandshake = function (hs) {
     this.repl_id = hs.origin();
     this.source_id = hs.origin()+'~lvl';
     this.db.put('.on', hs.toString(), function () {
-        LevelOpSource.debug && console.warn('DB_HS_SAVE', hs.toString());
+        LevelOpSource.debug && console.warn('DB_HS_SAVED', hs.toString());
     });
 };
 
@@ -132,7 +132,8 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_process (meta_str) {
-        LevelOpSource.debug && console.warn('DB_NEXT', op.spec.toString(), 'META', meta_str);
+        LevelOpSource.debug && console.warn('DB_NEXT',
+            op.spec.toString(), 'META', meta_str);
         meta = new LogMeta(meta_str);
         self.process(op, meta, do_save);
     }
@@ -275,6 +276,9 @@ LevelOpSource.prototype.processEnd = function (op, state, done) {
 };
 
 LevelOpSource.prototype.processOuterHandshake = function (op, done) {
+
+    // FIXME home host too
+
     if (op.origin()===this.hs.origin()) { // upstream hs
         LevelOpSource.debug && console.warn('DB_UPSTREAM_HS', op.toString());
         this.upstream_source = op.stamp();
@@ -455,19 +459,21 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
  *  save and emit if not.
  */
 LevelOpSource.prototype.processPatch = function (ops, meta, done) {
-    LevelOpSource.debug && console.warn('DB_PATCH OF', ops.length);
+    LevelOpSource.debug && console.warn('DB_PATCH', ops.length);
     var i = 0, self = this, causal_vv = new Swarm.VVector();
-    if (ops.length && ops[i].name()==='~state') {
-        causal_vv.add(ops[i].stamp());
-        this.processState(ops[i++], meta, next);
+    if (ops.length && ops[0].name()==='~state') {
+        i=1;
+        causal_vv.add(ops[0].stamp());
+        this.processState(ops[0], meta, next);
     } else {
         next();
     }
     function next () {
+        if (i>=ops.length) {
+            return done();
+        }
         var op = ops[i++];
-        if (i===ops.length) {
-            done();
-        } else if (op.name() in {on:1,off:1,error:1}) {
+        if (op.spec.name() in {on:1,off:1,error:1}) {
             LevelOpSource.debug && console.warn('DB_PSEUDO_FAIL', op.toString());
             done('pseudo-op in a patch');
         } else if (causal_vv.covers(op.stamp())) {

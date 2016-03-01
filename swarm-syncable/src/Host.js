@@ -351,7 +351,7 @@ Host.prototype.consumeOp = function (op) {
 // from the storage/uplink. Till the state is received, the object
 // is stateless (`syncable.version()===undefined && !syncable.hasState()`)
 Host.prototype.adoptSyncable = function (syncable, init_op) {
-    var type = syncable._type;
+    var type = syncable._type, typeid;
     var type_fn = Syncable.types[type];
     if (!type_fn || type_fn!==syncable.constructor) {
         throw new Error('not a registered syncable type');
@@ -361,16 +361,17 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
     }
 
     if (!syncable._id) { // it is a new object; let's add it to the system
-
         if (!this.clock) {
             throw new Error('Host has no clocks, hence not writable');
         }
-        var stamp = this.time();
+        var stamp = this.time().toString();
         syncable._id = stamp;
-        var typeid = syncable.typeId();
+        var typeId = syncable.typeId(); typeid = typeId.toString();
+        Host.debug && console.warn('HOST_CREATE', typeid);
+
         var crdt = new syncable.constructor.Inner(null, syncable); // 0 state
         if (init_op) {
-            var stamped_spec = typeid.add(stamp,'!').add(init_op.op(),'.');
+            var stamped_spec = typeId.add(stamp,'!').add(init_op.op(),'.');
             var stamped_op = new Op(stamped_spec, init_op.value, this.source());
             crdt.write(stamped_op);
         }
@@ -381,22 +382,23 @@ Host.prototype.adoptSyncable = function (syncable, init_op) {
 
         // the state is sent up in the handshake as the uplink has nothing
         var on_spec = syncable.spec().add(this.source_id, '!').add('.on'); //.add(stamp,'!')
-        this.emitOp(on_spec, '', [{
-            key:    typeid+'!'+stamp+'.~state',
-            value:  crdt.toString()
-        }]);
+        this.emitOp(on_spec, '', [[
+            typeid+'!'+stamp+'.~state',
+            crdt.toString()
+        ]]);
 
     } else {
-        var spec = syncable.spec().toString();
-        if (spec in this.syncables) {
-            return this.syncables[spec]; // there is such an object already
+        typeid = syncable.typeid();
+        if (typeid in this.syncables) {
+            return this.syncables[typeid]; // there is such an object already
         }
-        this.crdts[syncable.spec().typeid()] = null; // wait for the state
+        this.crdts[typeid] = null; // wait for the state
+        Host.debug && console.warn('HOST_SUB', typeid);
         // 0 up
         this.emitOp(syncable.spec().add(this.source_id, '!').add('.on'), '');
     }
 
-    this.syncables[syncable.spec().typeid()] = syncable;  // OK, remember it
+    this.syncables[typeid] = syncable;  // OK, remember it
     if (Host.multihost) {
         syncable._ssn = this.getSsnMark() || null;
     }

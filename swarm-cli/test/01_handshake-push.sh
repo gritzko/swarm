@@ -23,6 +23,7 @@ echo +++ print db stats +++
 $swarm server.db --stats   || exit 7
 echo +++ do some REPL +++
 ( $swarm server.db -r -D -v > typeid.txt ) <<EOF
+    console.warn('REPL started');
     Swarm.Host.localhost.on('echo', function(ev){
         console.log('echo', ev.version);
     });
@@ -37,9 +38,9 @@ echo +++ our object is $TYPEID +++
 grep echo typeid.txt || exit 10
 ( $swarm -a -- server.db | grep LamportClock ) || exit 11
 cat > correct.txt <<EOF
-/Model#00003+swarm!00003+swarm.~state	{"00003+swarm":{"a":1}}
-/Model#00003+swarm!00004+swarm.set	{"b":2}
-/Model#00003+swarm.~meta	l:00004+swarm b:00003+swarm
+/Model#00004+swarm!00004+swarm.~state	{"00004+swarm":{"a":1}}
+/Model#00004+swarm!00005+swarm.set	{"b":2}
+/Model#00004+swarm!~.meta	b:00004+swarm t:00005+swarm
 EOF
 echo +++ all records +++
 $swarm server.db -a "$TYPEID" > fact.txt

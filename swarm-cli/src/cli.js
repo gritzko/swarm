@@ -60,6 +60,7 @@ if (args.debug || args.D) {
     Swarm.Replica.debug = true;
     Swarm.LevelOpSource.debug = true;
     Swarm.StreamOpSource.debug = true;
+    Swarm.Host.debug = true;
 }
 
 if (!args._.length) {
