@@ -156,11 +156,11 @@ OpSource.prototype.write = OpSource.prototype.writeOp;
 
 /** Send a handshake to the backing replica. */
 OpSource.prototype.writeHandshake = function (hs) {
-    if (this.peer_hs) {
-        throw new Error('handshake repeat by the peer');
-    }
     if (!this.hs) {
         this.is_upstream = true;
+    } else if (this.is_upstream) {
+        // FIXME refresh handshakes
+        throw new Error('handshake repeat by the downstream');
     }
     this.hs = hs;
     this.source_id = hs.stamp();

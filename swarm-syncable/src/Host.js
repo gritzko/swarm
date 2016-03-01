@@ -36,18 +36,25 @@ function Host (options) {
         replica e.g. `user~repl => user~repl~host`. */
     this.ssn_id = null;
     /** id of the owner (user). */
-    this.user_id = options.user_id || null;
+    //this.user_id = options.user_id || null;
     /** database id */
     this.db_id = null;
-    /** CLock used to stamp all events originated at this Host.
+    /** Clock used to stamp all events originated at this Host.
         Produces Lamport timestamps (`timestamp+user~session`) */
     this.clock = null;
     /** syncables, API objects, the outer state */
-    this.syncables = options.api===false ? null : Object.create(null);
+    this.syncables = Object.create(null);
     /** CRDTs, the inner state */
     this.crdts = Object.create(null);
-    if (options.db_id && options.ssn_id) {
-        this.createClock();
+    if (options.db_id) {
+        this.db_id = options.db_id;
+        if (options.clock) {
+            this.clock = options.clock;
+            this.ssn_id = this.clock.origin; // FIXME
+        } else if (options.ssn_id) {
+            this.ssn_id = options.ssn_id;
+            this.createClock(this.db_id, this.ssn_id);
+        }
     }
     if (!Host.multihost) {
         if (Host.localhost) {
@@ -66,18 +73,25 @@ Host.localhost = null;
 Host.hosts = Object.create(null);
 
 Host.prototype.go = function () {
-    var hs = this.upstreamHandshake();
+    var hs = new Spec('/Host+Swarm').add(this.db_id||'0', '#');
+    if (this.clock) {
+        hs = hs.add(this.clock.issueTimestamp(), '!');
+    } else if (this.ssn_id) {
+        hs = hs.add(this.ssn_id, '!');
+    } else {
+        hs = hs.add('!0');
+    }
+    hs = hs.add('.on');
+
     this.emitHandshake(hs, '');
-    // TODO these ifs are really annoying; snapshot slave may be its own class
-    if (this.syncables) {
-        var pre = Object.keys(this.syncables);
-        for(var i=0; i<pre.length; i++) {
-            var obj = this.syncables [pre[i]];
 
-            // FIXME wait for re_hs, no !0
+    var pre = Object.keys(this.syncables);
+    for(var i=0; i<pre.length; i++) {
+        var obj = this.syncables [pre[i]];
 
-            this.emitOp(obj.typeid()+'!0.on', obj._version||'');
-        }
+        // FIXME wait for re_hs, no !0
+
+        this.emitOp(obj.typeid()+'!0.on', obj._version||'');
     }
 };
 
@@ -119,13 +133,6 @@ Host.prototype.gc = function (criteria) {
 };
 
 
-Host.prototype.upstreamHandshake = function () {
-    var stamp = this.ssn_id ? this.ssn_id : '0';
-    var key = new Spec('/Host+Swarm').add(this.db_id||'0', '#')
-        .add(stamp,'!').add('.on');
-    return key;
-};
-
 // Returns a new timestamp from the host's clock.
 Host.prototype.time = function () {
     return this.clock ? this.clock.issueTimestamp() : null;
@@ -160,12 +167,8 @@ Host.prototype.createClock = function (db_id, ssn_id) {
     }
     var lamp = new Lamp(ssn_id);
     this.ssn_id = lamp.origin();
-    this.user_id = lamp.author();
+    //this.user_id = lamp.author();
     this.db_id = db_id;
-    if (this.hs) {
-        this.hs.spec = // :(
-            this.hs.spec.setStamp(ssn_id);
-    }
     if (this.syncables && Host.multihost) {
         var ids = Object.keys(this.syncables);
         var mark = this.getSsnMark();
