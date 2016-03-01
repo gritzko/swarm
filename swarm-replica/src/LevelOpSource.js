@@ -71,7 +71,7 @@ LevelOpSource.prototype._writeOp = function (op) {
             this.next();
         }
     } else {
-        console.warn('dropping', op.toString());
+        console.warn('DB_DROP', op.toString());
     }
 };
 
@@ -83,7 +83,7 @@ LevelOpSource.prototype._writeHandshake = function (hs) {
     this.repl_id = hs.origin();
     this.source_id = hs.origin()+'~lvl';
     this.db.put('.on', hs.toString(), function () {
-        LevelOpSource.debug && console.warn('HS_SAVE', hs.toString());
+        LevelOpSource.debug && console.warn('DB_HS_SAVE', hs.toString());
     });
 };
 
@@ -132,7 +132,7 @@ LevelOpSource.prototype.next = function () {
     }
 
     function do_process (meta_str) {
-        LevelOpSource.debug && console.warn('NEXT', op.spec.toString(), 'META', meta_str);
+        LevelOpSource.debug && console.warn('DB_NEXT', op.spec.toString(), 'META', meta_str);
         meta = new LogMeta(meta_str);
         self.process(op, meta, do_save);
     }
@@ -140,7 +140,7 @@ LevelOpSource.prototype.next = function () {
     // process() -> save() -> send() -> next()
     function do_save (error) {
         if (error) {
-            console.warn('ERROR', error, op.spec.toString());
+            console.warn('DB_ERROR', error, op.spec.toString());
             if (op.name()==='on') {
                 self.queueEmit([op.spec.set('.off'), error]);
             }
@@ -212,10 +212,10 @@ LevelOpSource.prototype.flushRecords = function (op, meta, done) {
         }
     });
     var meta_str = meta.toString();
-    LevelOpSource.debug && console.warn('SAVE',
+    LevelOpSource.debug && console.warn('DB_SAVE',
         save.map(function(e){return e.key;}).join(' '));
     if (meta_str!==this.meta[typeid]) {
-        LevelOpSource.debug && console.warn('SAVE_META', meta_str);
+        LevelOpSource.debug && console.warn('DB_SAVE_META', meta_str);
         save.push({
             type: 'put',
             key:   key_prefix + '!~.meta',
@@ -276,10 +276,10 @@ LevelOpSource.prototype.processEnd = function (op, state, done) {
 
 LevelOpSource.prototype.processOuterHandshake = function (op, done) {
     if (op.origin()===this.hs.origin()) { // upstream hs
-        LevelOpSource.debug && console.warn('UPSTREAM HS', op.toString());
+        LevelOpSource.debug && console.warn('DB_UPSTREAM_HS', op.toString());
         this.upstream_source = op.stamp();
     } else {
-        LevelOpSource.debug && console.warn('OUTER HS', op.toString());
+        LevelOpSource.debug && console.warn('DB_OUTER_HS', op.toString());
         this.queueEmit(op.triplet());
     }
     done();
@@ -297,7 +297,7 @@ LevelOpSource.prototype.processOn = function (op, meta, done) {
         return done('malformed bookmark');
     }
     if (bookmark>meta.tip) {
-        LevelOpSource.debug && console.warn('bookmark is ahead:',bookmark,meta.tip);
+        LevelOpSource.debug && console.warn('DB_bookmark is ahead:',bookmark,meta.tip);
         return done('bookmark is ahead!');
     }
     // make an acknowledgement for incoming ops
@@ -455,7 +455,7 @@ LevelOpSource.prototype.processOp = function (op, meta, done) {
  *  save and emit if not.
  */
 LevelOpSource.prototype.processPatch = function (ops, meta, done) {
-    LevelOpSource.debug && console.warn('PATCH OF', ops.length);
+    LevelOpSource.debug && console.warn('DB_PATCH OF', ops.length);
     var i = 0, self = this, causal_vv = new Swarm.VVector();
     if (ops.length && ops[i].name()==='~state') {
         causal_vv.add(ops[i].stamp());
@@ -464,14 +464,18 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
         next();
     }
     function next () {
+        var op = ops[i++];
         if (i===ops.length) {
             done();
-        } else if (causal_vv.covers(ops[i].stamp())) {
-            LevelOpSource.debug && console.warn('CAUSAL FAIL', ops[i].toString());
+        } else if (op.name() in {on:1,off:1,error:1}) {
+            LevelOpSource.debug && console.warn('DB_PSEUDO_FAIL', op.toString());
+            done('pseudo-op in a patch');
+        } else if (causal_vv.covers(op.stamp())) {
+            LevelOpSource.debug && console.warn('DB_CAUSAL_FAIL', op.toString());
             done('causality violation');
-        } else if (ops[i].name()!=='~state') {
-            causal_vv.add(ops[i].stamp());
-            self.processOp(ops[i++], meta, next);
+        } else if (op.name()!=='~state') {
+            causal_vv.add(op.stamp());
+            self.processOp(op, meta, next);
         } else {
             done('misplaced state snapshot');
         }
@@ -486,7 +490,7 @@ LevelOpSource.prototype.processPatch = function (ops, meta, done) {
  *  * (local) state snapshot for local use - same as desc state.
  */
 LevelOpSource.prototype.processState = function (op, meta, done) {
-    LevelOpSource.debug && console.warn('STATE', op.spec.toString());
+    LevelOpSource.debug && console.warn('DB_STATE', op.spec.toString());
     var stamp = op.stamp();
     if ( meta.tip==='0' ) {
         this.appendNewOp(op, meta);
