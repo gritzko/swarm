@@ -101,6 +101,6 @@ Replica.OP_POLICIES.SubtreeOriginAccessPolicy = function SOAP (op, op_stream, do
     if (origin.isInSubtree(source)) {
         done();
     } else {
-        done('invalid op origin '+origin);
+        done('invalid op origin '+origin+' is not in '+source);
     }
 };

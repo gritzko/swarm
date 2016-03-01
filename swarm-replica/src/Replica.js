@@ -140,10 +140,11 @@ Replica.prototype.bareHandshake = function () {
 Replica.prototype.saveHandshake = function () {
     var opts = this.options;
     var bare = this.bareHandshake();
-    var ok = Object.keys(opts);
-    bare.push(ok.map(function(k){
+    bare[2] = Object.keys(opts).filter(function(k){
+        return k.match(/^[A-Z]\w+$/);
+    }).map(function(k){
         return ['!0.'+k, opts[k]]; // TODO timestamp 'em
-    }));
+    });
     var hs_op = Op.create(bare);
     // handshake refresh is an op
     this.dbos.writeHandshake(hs_op);
@@ -217,7 +218,6 @@ Replica.prototype.createHomeHost = function () {
     Replica.debug && console.error('CREATE_HOST');
     this.home_host = new Swarm.Host({
         repl_id: this.repl_id,
-        user_id:this.user_id,
         db_id:  this.db_id,
         clock:  this.clock,
         onceHandshake: this.onDownstreamHandshake.bind(this)
@@ -270,7 +270,7 @@ Replica.prototype.onDatabaseHandshake = function (hs) {
 };
 
 Replica.prototype.onDatabaseHsAck = function (ack) {
-    Replica.debug && console.warn('HS_ACK', ack.toString());
+    Replica.debug && console.warn('ON_DB_HS_ACK', ack.toString());
     if (ack.name()==='on') {
 
     } else if (ack.name()==='off') {
@@ -284,7 +284,7 @@ Replica.prototype.onDatabaseHsAck = function (ack) {
 };
 
 Replica.prototype.onDatabaseOp = function (op) {
-    Replica.debug && console.warn('DB_OP', op.toString());
+    Replica.debug && console.warn('ON_DB_OP', op.toString());
     if (op.spec.Type().origin()==='Swarm') {
         return this.onDatabaseHsAck(op);
     } else if (op.name()==='on' || op.name()==='off') { // re/un/up scription
@@ -415,6 +415,11 @@ Replica.prototype.onStreamOp = function (op, op_stream) {
     }
     if (!this.streams[op.source]) {
         console.warn('op origin unknown', op.source, Object.keys(this.streams));
+        return;
+    }
+    if (op.name()==='error') {
+        Replica.debug && console.warn('PEER_ERROR', op.toString());
+        return;
     }
     var plc = this.op_policies, pi = 0;
     var self = this;
@@ -448,13 +453,6 @@ Replica.prototype.onStreamOp = function (op, op_stream) {
     }
 };
 
-/*   TODO per-op access checks
-    if (op.source!==upstream && !Spec.inSubtree(origin, src_lamp.source())) {
-        this.send(op.error('invalid op origin'));
-        this.next();  // FIXME quite ugly and error-prone
-        return;
-    }
-*/
 
 
 Replica.prototype.send = function (op) {
@@ -772,8 +770,11 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
         re_hs[0] = re_hs[0].set('.off');
         re_hs[1] = 'wrong database id';
         reject ();
-    } else {
+    } else try {
         next_policy();
+    } catch (ex) {
+        console.error(ex.stack);
+        reject(ex.message);
     }
     function next_policy () {
         if (pi<plc.length && re_hs[0].name()==='on')  {
@@ -790,11 +791,14 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
         re_hs[0].name()==='on' ? accept(re_hs_op) : reject(re_hs_op);
     }
     function accept (re) {
-        Replica.debug && console.warn('HS_ACCEPT',re.toString());
+        Replica.debug && console.warn('HS_ACCEPT', re.toString());
         op_stream.writeHandshake(re);
         self.dbos.writeOp(hs);
         op_stream.on('op', self.onStreamOp.bind(self));
         op_stream.on('end', self.onStreamEnd.bind(self));
+        if (re.stamp()===undefined) {
+            throw new Error('re hs is not stamped');
+        }
         self.streams[re.stamp()] = op_stream;
         self.emit('connection', {
             op_stream: op_stream,
@@ -817,7 +821,9 @@ Replica.prototype.onStreamEnd = function (off, op_stream) {
     Replica.debug && console.warn('DOWNSTREAM_END', op_stream.source());
     var source_id = op_stream.source_id;
     if (this.streams[source_id]!==op_stream) {
-        throw new Error('no such source to remove');
+        console.warn('no such source to remove');
+        op_stream.removeAllListeners(); // kill it for sure
+        return;
     }
     if (source_id === this.upstream_source_id) {
         this.upstream_source_id = null;
