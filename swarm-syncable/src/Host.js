@@ -243,28 +243,36 @@ Host.prototype._writeOp = function (op) {
 Host.prototype.consumeOpAndUpdate = function (op) {
 
     var typeid = op.spec.typeid();
-    var syncable = this.syncables && this.syncables[typeid];
 
-    var is_changed = this.consumeOp(op);
+    var crdt = this.crdts[typeid];
+    var old_version = crdt && crdt._version;
 
-    if (is_changed) {
-        var crdt = this.crdts[typeid];
+    this.consumeOp(op);
+
+    crdt = this.crdts[typeid];
+    var new_version = crdt._version;
+
+    if (new_version!==old_version) {
         // We bundle events (e.g. a sequence of ops we
         // received on handshake after spending some time offline).
-        if (syncable) {
-            crdt.updateSyncable(syncable, this.get.bind(this));
-            syncable.emit('change', {
+        // FIXME descending state!!! see the pacman note
+        var syncable = this.syncables[typeid];
+        crdt.updateSyncable(syncable, this.get.bind(this));
+        // FIXME get rid of 'init' which is only used by onInit()
+        if (!old_version) {
+            syncable.emit('init', {
                 version: crdt._version,
                 changes: null,
-                target:  syncable,
-                op:      op
+                target: syncable,
+                op: op
             });
         }
-
-        if (this.options.snapshot==='immediate') {
-            var spec = op.spec.set(crdt._version, '!').set('~state', '.');
-            this.emitOp(spec, crdt.toString());
-        }
+        syncable.emit('change', {
+            version: crdt._version,
+            changes: null,
+            target:  syncable,
+            op:      op
+        });
     }
 
 };
@@ -273,13 +281,14 @@ Host.prototype.consumeOpAndUpdate = function (op) {
 Host.prototype.consumeOp = function (op) {
     var typeid = op.typeid();
     var crdt = this.crdts[typeid];
-    var old_version = crdt && crdt._version;
+    Host.debug && console.warn('HOST_CONSUME', op.toString());
 
-    switch (op.op()) {
+    switch (op.name()) {
     case 'on':
-        var patch = op.patch;
-        for(var i=0; patch && i<patch.length; i++) {
-            this.consumeOp(patch[i]);
+        if (op.patch) {
+            for (var i=0; i < op.patch.length; i++) {
+                this.consumeOp(op.patch[i]);
+            }
         }
         crdt = this.crdts[typeid];
         break;
@@ -300,21 +309,8 @@ Host.prototype.consumeOp = function (op) {
         crdt = new type_fn.Inner(op.value);
         crdt._version = op.stamp();
         this.crdts[typeid] = crdt;
-        if (!have_or_wait_state) { // FIXME obey
+        if (!have_or_wait_state) { // FIXME obey  ??!!!
             this.emit ('op', new Op(typeid+'.on', op.spec.stamp(), this.source()));
-        }
-
-        // FIXME descending state!!! see the pacman note
-        if (this.syncables) {
-            var syncable = this.syncables[typeid];
-            crdt.updateSyncable(syncable, this.get.bind(this));
-            // FIXME get rid of 'init' which is only used by onInit()
-            syncable.emit('init', {
-                version: crdt._version,
-                changes: null,
-                target: syncable,
-                op: op
-            });
         }
         break;
     case 'error':
@@ -337,7 +333,6 @@ Host.prototype.consumeOp = function (op) {
 
     }
 
-    return (crdt && crdt._version) !== old_version;
     // NOTE: merged ops, like
     //      !time+src.in text
     // should have their *last* stamp in the spec

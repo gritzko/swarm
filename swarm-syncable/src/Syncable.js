@@ -182,6 +182,13 @@ Syncable.prototype.gc = function () {
 };
 
 
+Syncable.prototype.toString = function () {
+    return JSON.stringify(this, Object.keys(this).filter(function(key){
+        return key && key.charAt(0)!=='_';
+    }));
+};
+
+
 Syncable.prototype.onLoad = function (callback) {
     // FIXME .4 wait all Refs to load
     // FIXME no refs => same as .init
