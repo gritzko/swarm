@@ -182,12 +182,12 @@ LevelOpSource.prototype.appendNewOp = function (op, meta) {
     if (stamp>meta.tip) { // fast path
         meta.tip = stamp;
     } else { // prepend reordered op keys to ensure arrival order
-        var stack = meta.tip.split('!');
+        var stack = meta.tip.split('|');
         while (stack.length && stack[stack.length-1]<stamp) {
             stack.pop();
         }
         stack.push(stamp);
-        meta.tip = stack.join('!');
+        meta.tip = stack.join('|');
     }
     if (this.hs.spec.type()==='Root+Swarm') {
        meta.anchor = meta.last = stamp; // me is the upstream
@@ -616,7 +616,9 @@ LevelOpSource.prototype.stampsSeen = function (typeid, since, done) {
 LevelOpSource.prototype.readTail = function (typeid, mark, on_entry) {
     var i = this.db.iterator({
         gte : typeid + mark,
-        lt  : typeid + '!~'
+        lt  : typeid + '!~',
+        keyAsBuffer: false,
+        valueAsBuffer: false
     });
     i.next(read_loop);
     var next_bound = i.next.bind(i, read_loop);
@@ -629,6 +631,11 @@ LevelOpSource.prototype.readTail = function (typeid, mark, on_entry) {
                 on_entry(err, null);
             });
         } else if (key) {
+            var pipe_pos = key.lastIndexOf('|');
+            if (pipe_pos!==-1) { // TODO nicer
+                var stamp_pos = key.indexOf('!');
+                key = key.substr(0,stamp_pos+1) + key.substr(pipe_pos+1);
+            }
             on_entry(null, new Op(key, val, '(lvl)'));
             if (stack_depth++<50) {
                 i.next(read_loop);

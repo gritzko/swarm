@@ -3,7 +3,7 @@ var fs = require('fs');
 var leveldown = require('leveldown');
 var Swarm = require('swarm-replica');
 
-var replica, args;
+var replica, args, done_cb;
 
 process.on('SIGTERM', onExit);
 process.on('SIGINT', onExit);
@@ -19,6 +19,7 @@ function onExit (code) {
 
 function run (argv, done) {
     args = argv;
+    done_cb = done;
     var home = args.home;
     if (!fs.existsSync(home)) {
         fs.mkdirSync(home);
@@ -38,7 +39,7 @@ function run (argv, done) {
             argv.v && console.warn('db open', home);
             replica = new Swarm.Replica(db, options);
         }
-    })
+    });
 }
 module.exports = run;
 
@@ -55,6 +56,10 @@ function on_start () {
     }
     if (args.repl || args.r) {
         start_repl();
+    }
+    args.get = args.get || args.g;
+    if (args.get) {
+        get_object();
     }
 }
 
@@ -95,4 +100,17 @@ function start_repl () {
         useGlobal: true,
         replMode: repl.REPL_MODE_STRICT
     });
+}
+
+
+function get_object () {
+    args.v && console.warn('lets get it');
+    var Spec = Swarm.Spec;
+    var typeid = new Spec(args.get, null, new Spec('/Model'));
+    var host = replica.home_host;
+    host.get(typeid, function () {
+        console.log(this.toString());
+        done_cb();
+    });
+    // FIXME errors, exceptions  -- -done()
 }

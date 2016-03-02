@@ -29,6 +29,7 @@ if (args.help) {
     '--run          default, run a replica',
     '  --connect -c server URL to connect to (e.g. ws://localhost:8080)',
     '  --listen -l  URL to listen on (e.g. ws://localhost:8080)',
+    '  --get -g     retrieve an object, print it and quit',
 //    '  --setc -C    server URL, remember and make the default',
 //    '  --setl -L    URL to listen, remember and make the default',
     '  --repl -r    REPL interactive mode (e.g. swarm -r < script.js)',
@@ -47,6 +48,8 @@ if (args.help) {
     '  --shard -2   separate a shard, one half or some share (e.g. 0.3)',
     '  --rewrite -w rewrite metadata in the existing database (-h mycopy.db -w)',
     '  --connect -c make a handshake to the upstream at the URL (no -h then)',
+    '--sync         sync all the outstanding changes',
+    '--syncall      sync all the objects',
     '--stats -S     print out db statistics and metadata',
     ''
     ];
