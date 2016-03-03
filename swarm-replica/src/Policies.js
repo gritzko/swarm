@@ -1,30 +1,7 @@
 'use strict';
 var Replica = require('./Replica');
 var Swarm = require('swarm-syncable');
-var Lamp = Swarm.LamportTimestamp;
-
-Replica.HS_POLICIES.NewDownstreamPolicy = function NDS (in_hs, out_hs, opsrc, done) {
-    if (in_hs.stamp()!='0') {
-        return done();
-    }
-    // set db name
-    if (in_hs.id()!=='0' && in_hs.id()!==this.db_id) {
-        return done('wrong db id');
-    } else {
-        out_hs[0] = out_hs[0].set(this.db_id, '#');
-    }
-    // set role
-    var proposed_role = in_hs.spec.Type().time() || 'Client';
-    if (!Replica.ROLES.hasOwnProperty(proposed_role)) {
-        return done('invalid role');
-    }
-    var new_role = proposed_role!=='Client' ?
-        this.role + proposed_role :
-        proposed_role;
-    var role = new Lamp(new_role, 'Swarm');
-    out_hs[0] = out_hs[0].set(role, '/');
-    done();
-};
+var LamportStamp = Swarm.LamportStamp;
 
 /** new conn policy: assign new replica ids sequentially */
 Replica.HS_POLICIES.SeqReplicaIdPolicy = function SRIP (in_hs, out_hs, opsrc, done) {
@@ -35,12 +12,8 @@ Replica.HS_POLICIES.SeqReplicaIdPolicy = function SRIP (in_hs, out_hs, opsrc, do
     var count_int = Swarm.base64.base2int(count);
     var new_count = Swarm.base64.int2base(count_int+1, 1);
     this.options.ForkCount = new_count;
-    var stamp = this.clock.issueTimestamp();
+    var stamp = new LamportStamp(out_hs[0].stamp());
     out_hs[0]= out_hs[0].set(stamp.time()+'+'+new_count, '!');
-    if (this.options.Clock) {
-        out_hs[2].push(['!0.Clock', this.options.Clock]); // FIXME better place for this
-    }
-    // FIXME why !0 ???
     this.saveHandshake();
     done();
 };
@@ -96,7 +69,7 @@ Replica.OP_POLICIES.SubtreeOriginAccessPolicy = function SOAP (op, op_stream, do
     if (op_stream.is_upstream) {
         return done();
     }
-    var origin = new Lamp(op.origin());
+    var origin = new LamportStamp(op.origin());
     var source = op_stream.hs.origin();
     if (origin.isInSubtree(source)) {
         done();

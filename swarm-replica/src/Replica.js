@@ -62,7 +62,7 @@ function Replica (database, options, callback) {
     this.hs_policies = [];
     Replica.pushPolicies(
         this.hs_policies,
-        options.HandshakePolicies || 'NewDownstreamPolicy,SeqReplicaIdPolicy',
+        options.HandshakePolicies || 'SeqReplicaIdPolicy',
         Replica.HS_POLICIES
     );
     this.op_policies = [];
@@ -97,6 +97,7 @@ Replica.HS_POLICIES = Object.create(null);
 /** a library of known per-op policies */
 Replica.OP_POLICIES = Object.create(null);
 Replica.ROLES = {Shard:1,Ring:1,Slave:1,Switch:1,Client:1};
+Replica.RELAY_OPTIONS = {Clock:1};
 
 Replica.pushPolicies = function (to, which, from) {
     if (!which)  { return; }
@@ -693,6 +694,9 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
         this.clock.seeTimestamp(hs_op.stamp(), 1|2); // FIXME flags
     } else {
         this.repl_id = hs_op.origin();
+        hs_op.patch && hs_op.patch.forEach(function(pop){
+            self.options[pop.name()] = pop.value; // FIXME run time
+        });
         this.createClock(hs_op.stamp());
     }
     // TODO at some point, we'll do log replay based on the hs_op.value
@@ -766,11 +770,31 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
     Replica.debug && console.warn('DOWNSTREAM_HS', hs.toString());
     var re_hs = [hs.spec, '', []];
     var plc = this.hs_policies, pi = 0;
-    if (this.db_id!==hs.id() && hs.id()!=='0') {
-        re_hs[0] = re_hs[0].set('.off');
-        re_hs[1] = 'wrong database id';
-        reject ();
-    } else try {
+    if (this.db_id!==hs.id() && hs.id()!=='0') { // wrong db
+        return reject ('wrong database id');
+    }
+    if (hs.stamp()==='0') { // new replica, no repl_id, no clocks
+        var proposed_role = hs.spec.Type().time() || 'Client';
+        if (!Replica.ROLES.hasOwnProperty(proposed_role)) {
+            return reject('invalid role');
+        }
+        var new_role = proposed_role!=='Client' ?
+            this.role + proposed_role : proposed_role;
+        var role = new Lamp(new_role, 'Swarm');
+        var stamp = this.clock.issueTimestamp();
+        var strange_stamp = new LamportTimestamp(stamp.time(), '0');
+        re_hs[0] = hs.spec
+            .set(role, '/')
+            .set(this.db_id, '#')
+            .set(strange_stamp, '!');
+        var relay_opts = Object.keys(this.options).filter(function(k){
+            return k in Replica.RELAY_OPTIONS;
+        });
+        re_hs[2] = relay_opts.map(function(k){
+            return ['!0.'+k, self.options[k]];
+        });
+    }
+    try {
         next_policy();
     } catch (ex) {
         console.error(ex.stack);
@@ -806,9 +830,11 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
             repl_id: re.origin()
         });
     }
-    function reject (re) {
-        Replica.debug && console.warn('HS_REJECT',re.toString());
-        op_stream.writeEnd(re);
+    function reject (reason) {
+        Replica.debug && console.warn('HS_REJECT',reason);
+        re_hs[0] = re_hs[0].set('.off');
+        re_hs[1] = reason;
+        op_stream.writeEnd(Op.create(re_hs));
     }
 };
 
