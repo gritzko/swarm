@@ -181,3 +181,5 @@ AdaptableClock.prototype.seeTimestamp = function (stamp, trust) {
         return true;
     }
 };
+AdaptableClock.prototype.seeStamp =
+    AdaptableClock.prototype.seeTimestamp;

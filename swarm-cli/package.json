@@ -30,7 +30,8 @@
       "duplexer":       "0.1.1",
       "cpr":            "^1.0.0",
       "stream-url-ws":  "0.1.x",
-      "stream-url-node":"0.1.x"
+      "stream-url-node":"0.1.x",
+      "daemon":         "1.1.0"
   },
   "scripts": {
     "test": "true"

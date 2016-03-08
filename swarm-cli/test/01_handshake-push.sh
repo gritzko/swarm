@@ -12,7 +12,7 @@ OPS=$PWD/ops.txt
 rm -rf $DIR && mkdir $DIR && cd $DIR
 
 echo +++ create/write/dump +++
-$swarm server.db --create bash1 --DClock LamportClock --DHomeHost true  || exit 1
+$swarm server.db --create bash1 -O Clock=LamportClock -O HomeHost=true  || exit 1
 echo +++ direct access +++
 $swarm server.db -a || exit 2
 $swarm server.db -a .off -P xoxo   || exit 3

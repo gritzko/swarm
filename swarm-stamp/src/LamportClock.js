@@ -45,7 +45,7 @@ LamportClock.prototype.seeStamp = function see (ts) {
     }
 };
 LamportClock.prototype.adjustTime = LamportClock.prototype.seeStamp;
-
+LamportClock.prototype.seeTimestamp = LamportClock.prototype.seeStamp;
 
 LamportClock.prototype.time2date = function () {
     return undefined;

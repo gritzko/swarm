@@ -81,7 +81,7 @@ LevelOpSource.prototype._writeOp = function (op) {
  */
 LevelOpSource.prototype._writeHandshake = function (hs) {
     this.repl_id = hs.origin();
-    this.source_id = hs.origin()+'~lvl';
+    this.source_id = hs.origin()+'~db~';
     this.db.put('.on', hs.toString(), function () {
         LevelOpSource.debug && console.warn('DB_HS_SAVED', hs.toString());
     });
@@ -368,9 +368,7 @@ LevelOpSource.prototype.createTailPatch = function (op, meta, re_patch, done) {
     });
 };
 
-/**
- *      .on received fro the upstream
- * */
+/**  .on received from the upstream  */
 LevelOpSource.prototype.processReciprocalOn = function (op, state, done) {
     // remember everything the upstream sent or acknowledged to us
     var new_avv = new AnchoredVV(this.state.avv);
@@ -397,24 +395,37 @@ LevelOpSource.prototype.processUpscribeOn = function (op, meta, done) {
 
     this.upstream = op.stamp();
 
+    this.upscribe(op.typeid(), meta, done);
+};
+
+
+LevelOpSource.prototype.upscribe = function (typeid, meta, done) {
+
     var avv = new AnchoredVV(this.state.avv);
     var anchor = avv.anchor, add_state = false;
 
-    var patch_op = new Op(
+    var on = [
         // ?! .setStamp(this.replica.upstream_stamp)
         this.op.spec.typeId().setOp('on'),
         this.state.last,
-        '',
         patch
-    );
-    self.queueEmit(patch_op.triplet());
+    ];
+
 
     if (anchor==='0') {
         anchor = this.state.base;
         add_state = true;
     }
 
-    this.readTail( start, function (o) {
+    this.readTail( start, function (err, key, value) {
+        if (err) {
+
+        } else if (key) {
+            patch.push([key, value]);
+        } else {
+            self.emitOp(on);
+        }
+
         if (o.name()==='~state') {
 
         }
@@ -431,6 +442,7 @@ LevelOpSource.prototype.processUpscribeOn = function (op, meta, done) {
     }, done);
 
 };
+
 
 LevelOpSource.prototype.processOp = function (op, meta, done) {
     var stamp = op.stamp();
@@ -648,3 +660,24 @@ LevelOpSource.prototype.readTail = function (typeid, mark, on_entry) {
         }
     }
 };
+
+
+/**
+ *  Whole-db scan, may be impractical for a server.
+ *  @param callback invoked on every object, args: err, typeid, meta
+ *  TODO may keep meta records in a separate range (as an option)
+ */
+LevelOpSource.prototype.scanMeta = function (callback) {
+    var typeids = [], self = this;
+    this.readTail(null, null, function (err, op) {
+        if (err) {
+            callback(err, null, null);
+        } else if (!op) {
+            callback(null, null, null);
+        } else if (op.name()==='meta') {
+            var meta = new LogMeta(op.value);
+            callback(null, op.typeid(), meta);
+        }
+    });
+};
+

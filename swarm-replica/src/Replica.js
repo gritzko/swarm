@@ -54,9 +54,14 @@ function Replica (database, options, callback) {
     options.onFail && this.on('fail', options.onFail);
     // listen
     this.servers = Object.create(null);
-    // connections
+    // outer op sources
+    this.upstream = null;
     this.streams = Object.create(null);
+    this.pre_streams = Object.create(null);
     this.subscriptions = Object.create(null);
+    // objects that have to be synced to the upstream
+    this.unsynced = Object.create(null);
+    this.unsynced_count = 0;
     // policies
     //Replica.CONNECTION_POLICIES; TODO
     this.hs_policies = [];
@@ -192,7 +197,7 @@ Replica.prototype.createClock = function (stamp) {
         this.clock = new Swarm[clock_class](stamp, clock_opts);
     }
     this.saveHandshake();
-    if (this.options.HomeHost) {
+    if (this.options.HomeHost || this.options.home_host) {
         this.createHomeHost();
     }
     if (this.options.SnapshotSlave) {
@@ -289,7 +294,11 @@ Replica.prototype.onDatabaseOp = function (op) {
     if (op.spec.Type().origin()==='Swarm') {
         return this.onDatabaseHsAck(op);
     } else if (op.name()==='on' || op.name()==='off') { // re/un/up scription
-        this.onDatabaseOnOff(op);
+        if (op.stamp()==='0') {
+            this.onDatabaseUpscribe(op);
+        } else {
+            this.onDatabaseOnOff(op);
+        }
     } else { // regular op
         this.onDatabaseNewOp(op);
     }
@@ -297,7 +306,7 @@ Replica.prototype.onDatabaseOp = function (op) {
 
 
 Replica.prototype.onDatabaseNewOp = function (op) {
-    this.clock.seeStamp(op.stamp());
+    this.clock.seeTimestamp(op.stamp());
     var sub = this.subscriptions[op.typeid()];
     if (!sub) {
         Replica.debug && console.warn('OP_NOWHERE', op.toString());
@@ -315,6 +324,24 @@ Replica.prototype.onDatabaseNewOp = function (op) {
                 sub.splice(i--,1);
             }
         }
+    }
+};
+
+
+Replica.prototype.onDatabaseUpscribe = function (op) {
+    if (!this.upstream) {
+        console.warn('NO_UPSTREAM', op.spec.toString());
+        return;
+    }
+    var typeid = op.typeid();
+    var spec = typeid + '!' + this.upstream.source_id + '.on';
+    var stamped = Op.create(spec, op.value, op.patch);
+    this.upstream.writeOp(stamped);
+    if (this.unsynced[typeid]!==this.upstream.source_id) {
+        if (!this.unsynced[typeid]) {
+            this.unsynced_count++;
+        }
+        this.unsynced[typeid] = this.upstream.source_id;
     }
 };
 
@@ -408,18 +435,32 @@ Replica.prototype.issueDownstreamSessionId = function () {
 /******************** O P E R A T I O N S *************************/
 
 
-// process an incoming op
-Replica.prototype.onStreamOp = function (op, op_stream) {
-    Replica.debug && console.warn('OP', op.toString());
-    if (op.constructor!==Op) {
-        throw new Error('consumes swarm-syncable Op objects only');
+Replica.prototype.onUpstreamOp = function (op, op_stream) {
+    Replica.debug && console.warn('ON_UP_OP', op.toString());
+    if (op.name()==='error') {
+        Replica.debug && console.warn('UP_ERROR', op.toString());
+        return;
     }
+    this.dbos.writeOp(op);
+    if (op.name()==='on' && this.unsynced[op.typeid()]) { // re .on
+        delete this.unsynced[op.typeid()];
+        this.unsynced_count--;
+        if (!this.unsynced_count) {
+            this.emit('synced');
+        }
+    }
+};
+
+
+// process an incoming op
+Replica.prototype.onDownstreamOp = function (op, op_stream) {
+    Replica.debug && console.warn('ON_DS_OP', op.toString());
     if (!this.streams[op.source]) {
         console.warn('op origin unknown', op.source, Object.keys(this.streams));
         return;
     }
     if (op.name()==='error') {
-        Replica.debug && console.warn('PEER_ERROR', op.toString());
+        Replica.debug && console.warn('DS_ERROR', op.toString());
         return;
     }
     var plc = this.op_policies, pi = 0;
@@ -444,7 +485,7 @@ Replica.prototype.onStreamOp = function (op, op_stream) {
         }
     }
     function accept () {
-        Replica.debug && console.warn('ACCEPT');
+        Replica.debug && console.warn('ACCEPT', op.spec.toString());
         self.dbos.writeOp(op);
     }
     function reject (err) {
@@ -568,22 +609,46 @@ Replica.prototype.done = function (request) {
 
 };
 
-// replay all subscriptions to a newly connected upstream
+/**
+ * forward all active subscriptions to the newly connected upstream
+ */
 Replica.prototype.upscribe = function () {
-    return;
+    var typeids = Object.keys(this.subscriptions);
+    var dbos = this.dbos;
+    typeids.forEach(function(typeid){
+        dbos.writeOp(Op.create(typeid+'!0.on', ''));
+    });
+};
 
-    // FIXME
-
-    var typeids = Object.keys(this.entries);
-    for(var i=0; i<typeids.length; i++){
-        var typeid = typeids[i];
-        var entry = this.entries[typeid];
-        // FIXME WRONG -- need a real upscribe
-        entry.queueOps([new Op(typeid + '.on', null)]);
+/**
+ * upscribe either all the changed objects or all those locally cached
+ * @param mode, 'all' || 'changed'
+ */
+Replica.prototype.sync = function (mode, done) {
+    var typeids = [];
+    this.dbos.scanMeta(function(err, typeid, meta){
+        if (err) {
+            return done && done(err);
+        } else if (meta) {
+            if (mode==='all' || meta.isChanged()) {
+                typeids.push(typeid);
+            }
+        } else {
+            send_upscribes();
+        }
+    });
+    var subs = this.subscriptions;
+    var dbos = this.dbos;
+    function send_upscribes () {
+        typeids.forEach(function(typeid){
+            if (typeid in subs) {return;}
+            dbos.writeOp(Op.create(typeid+'!0.on', ''));
+        });
+        done && done();
     }
 };
 
-
+/** close: terminate connections, close the db, invoke the callback */
 Replica.prototype.close = function (err, callback) {
     if (err && err.constructor===Function) {
         callback = err;
@@ -662,7 +727,6 @@ Replica.prototype.loadTail = function (activeEntry, mark) {
 /********************** C O N N E C T I O N S *********************/
 
 
-// FIXME ensure our handshake gets into the 1st TCP packet
 Replica.prototype.addStreamUp = function (err, stream) {
     if (err) {
         console.warn('upsteram conn fail', err);
@@ -707,7 +771,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     this.upstream_ssn = hs_op_ssn;
     this.upstream_stamp = hs_op_stamp;
 
-    op_stream.on('op', this.onStreamOp.bind(this));
+    op_stream.on('op', this.onUpstreamOp.bind(this));
     op_stream.on('end', function (off) {
         self.dbos.writeOp(off);
     });
@@ -818,7 +882,7 @@ Replica.prototype.onDownstreamHandshake = function (hs, op_stream){
         Replica.debug && console.warn('HS_ACCEPT', re.toString());
         op_stream.writeHandshake(re);
         self.dbos.writeOp(hs);
-        op_stream.on('op', self.onStreamOp.bind(self));
+        op_stream.on('op', self.onDownstreamOp.bind(self));
         op_stream.on('end', self.onStreamEnd.bind(self));
         if (re.stamp()===undefined) {
             throw new Error('re hs is not stamped');
@@ -910,8 +974,12 @@ Replica.prototype.stats = function () {
         repl_id: this.repl_id,
         db_id:  this.db_id,
         time:   this.clock.issueTimestamp(),
-        activeStreamsDown: Object.keys(this.streams).length
+        activeSources: Object.keys(this.streams).length,
+        preHSSources: Object.keys(this.pre_streams).length,
+        pendingSync: Object.keys(this.pending_sync).length,
+        allSources: -1
     };
+    stats.allSources = stats.activeSources + stats.preHSSources;
     return stats;
 };
 

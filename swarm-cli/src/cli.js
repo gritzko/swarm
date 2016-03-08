@@ -17,39 +17,35 @@ if (args.help) {
     'Command-line Swarm client. Usage: ',
     '    swarm [options] database/home/dir/',
     '',
-    'Database options',
-    '--home -h      the home directory for the database',
-    '  --Dxxx       database options (e.g. --Daccess=UserPassword)',
-//    '  --repl_id    replica id (override)',
+    'General options',
     '  --debug -D   debug printing on',
-    '  -v           verbose',
+    '  --verbose -v verbose',
     '',
     'Actions and their options',
-    '--create -C    create a database (--create my_db_name)',
+    '--create -C    create an empty database (--create my_db_name)',
+    '  --option -O  database options (-O Listen=ws://0.0.0.0:8000)',
     '--run          default, run a replica',
     '  --connect -c server URL to connect to (e.g. ws://localhost:8080)',
-    '  --listen -l  URL to listen on (e.g. ws://localhost:8080)',
+    '  --listen -l  URL to listen on (same as above, simply -l for stdin)',
     '  --get -g     retrieve an object, print it and quit',
-//    '  --setc -C    server URL, remember and make the default',
-//    '  --setl -L    URL to listen, remember and make the default',
-    '  --repl -r    REPL interactive mode (e.g. swarm -r < script.js)',
-    '  --std -s     read stdin/out as a connection (upstream: --std up)',
-    '  --daemon -z  daemonize (e.g. by rampant propaganda)',
+    '  --sync -y    on upstream connected, sync all|changes (-y all)',
     '  --exec -e    execute script(s), e.g. --exec init.js -e run.js',
-    '  --quit -1    sync all data and quit',
+    '  --repl -r    REPL interactive mode (e.g. swarm -r < script.js)',
+    '  --daemon -z  daemonize (e.g. by rampant propaganda)',
+    '  --mute -m    ignore connect/listen options in the db',
+    '  --once -1    exit once done (-l will accept 1 connection only)',
     '--access -a    read/write the db directly at key/prefix',
     '  --read -R    default, read data (e.g. -a /Model#3uHRl -R)',
     '  --put -P     write to the db (e.g. -a key -P value)',
     '  --erase -E   erase key/prefix (e.g. -a /Model#3uHRl -R)',
-    '--fork -f      fork the db, create a replica (-f new_dir.db)',
+    '  --option -O  rewrite database options (-O Password=test123)',
+    '--fork -f      fork the db, create a replica (-f new_dir.db);',
+    '  --connect -c the original\'s URL (home dir will work too)',
     '  --client     default, create a client downstream replica',
-    '  --ring -o    create a ring replica',
-    '  --slave -1   create a slave replica',
-    '  --shard -2   separate a shard, one half or some share (e.g. 0.3)',
+    '  --ring       create a ring replica',
+    '  --slave      create a slave replica',
+    '  --shard      separate a shard, one half or some share (e.g. 0.3)',
     '  --rewrite -w rewrite metadata in the existing database (-h mycopy.db -w)',
-    '  --connect -c make a handshake to the upstream at the URL (no -h then)',
-    '--sync         sync all the outstanding changes',
-    '--syncall      sync all the objects',
     '--stats -S     print out db statistics and metadata',
     ''
     ];
@@ -73,21 +69,12 @@ if (!args._.length) {
 }
 
 // argument normalization
-args.home = args._[0];
-args.exec = args.exec || args.e;
-args.db = args.db || args.d;
-args.stats = args.stats || args.S;
-
-if (!args.home) {
-    if (!args.db) {
-        args.db = 'test';
-    }
-    args.home = args.db+'.db';
-}
+args.home = args._[0] || 'test.db';
+args.v = args.verbose || args.v;
 
 if (args.access || args.a) {
     require('./dump')(args, done);
-} else if (args.stats) {
+} else if (args.stats || args.S) {
     require('./stats')(args, done);
 } else if (args.fork || args.f) {
     require('./fork')(args, done);
