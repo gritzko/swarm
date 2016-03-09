@@ -128,6 +128,7 @@ StreamOpSource.prototype.flush = function (callback) {
 
 StreamOpSource.prototype._actually_send = function (parcel, callback) {
     try {
+        StreamOpSource.debug && console.warn('BUF_OUT', parcel);
         this.stream.write(parcel, "utf8", callback);
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
@@ -147,19 +148,15 @@ StreamOpSource.prototype._writeEnd = function (err_op) {
         console.warn(new Error('this op stream is not open').stack);
         return;
     }
+    if (!err_op || err_op.constructor===String) {
+        err_op = new Op(this.hs.spec.set('.off'), err_op||'');
+    }
+    this.pending_ops.push(err_op);
     this.flush();
     var stream = this.stream;
     this.stream = null;
-    var err = err_op ? err_op.toString() : '';
     try{
-        stream.end(err, "utf8", function () {
-            /*
-            self.removeStreamListeners();
-                if (stream.close) {
-                    stream.close();
-                } else if (stream.destroy) {  one-way or two-way close?
-                    stream.destroy();
-                }*/
+        stream.end(null, "utf8", function () {
         });
     } catch (ex) {
         console.error(ex.stack);
@@ -167,6 +164,7 @@ StreamOpSource.prototype._writeEnd = function (err_op) {
 };
 
 StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
+    StreamOpSource.debug && console.warn('BUF_IN', new_read_buf.toString());
     try{
         this._parseIncomingBuf(new_read_buf);
     } catch (ex) {
@@ -232,18 +230,16 @@ StreamOpSource.prototype.eatLines = function (till) {
             patch.push([pl[2], pl[3]]);
             i=j;
         }
+        var spec = new Spec(key);
         if (StreamOpSource.off_re.test(key)) { // the Victorian way,
             this.removeStreamListeners();      // may just close it
             this.emitEnd(value); // WARN if hs is relayed, check source_id
             break;
-        } else if (!this.hs) { // we expect a handshake
-            var spec = new Spec(key);
-            if (!OpSource.isHandshake(spec)) {
-                StreamOpSource.debug && console.warn('not a handshake: '+key);
-                throw new Error('not a handshake');
-            } else {
-                this.emitHandshake(spec, value, patch);
-            }
+        } else if (OpSource.isHandshake(spec)) { // we expect a handshake
+            this.emitHandshake(spec, value, patch);
+        } else if (!this.hs) {
+            StreamOpSource.debug && console.warn('not a handshake: '+key);
+            this.emitEnd('not a handshake');
         } else {
             this.emitOp(key, value, patch);
         }

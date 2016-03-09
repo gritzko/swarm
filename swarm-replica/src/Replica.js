@@ -335,7 +335,7 @@ Replica.prototype.onDatabaseUpscribe = function (op) {
     }
     var typeid = op.typeid();
     var spec = typeid + '!' + this.upstream.source_id + '.on';
-    var stamped = Op.create(spec, op.value, op.patch);
+    var stamped = Op.create([spec, op.value, op.patch]);
     this.upstream.writeOp(stamped);
     if (this.unsynced[typeid]!==this.upstream.source_id) {
         if (!this.unsynced[typeid]) {
@@ -413,6 +413,20 @@ Replica.prototype.connect = function (url) {
     this.su_handle = stream_url.connect(this.options.connect, {
         reconnect: true
     }, this.addStreamUp.bind(this));
+};
+
+
+Replica.prototype.disconnect = function (url) {
+    if (!url) {
+        if (this.upstream) {
+            this.upstream.writeEnd('');
+        } else {
+            Replica.debug && console.warn('no upstream anyway');
+console.warn(new Error('why so').stack);
+        }
+    } else {
+
+    }
 };
 
 
@@ -526,7 +540,7 @@ Replica.prototype.send = function (op) {
             this.snapshot_slave.write(op);
         }
     } else {
-        Replica.debug && console.log('<='+this.repl_id+'\t'+op.toString());
+        Replica.debug && console.warn('<='+this.repl_id+'\t'+op.toString());
         stream.write(op);
     }
 };
@@ -559,56 +573,6 @@ Replica.prototype.onSnaphotSlaveOp = function (op) {
 };
 
 
-Replica.prototype.done = function (request) {
-    var self = this;
-    var save_queue = request.save_queue;
-    var send_queue = request.send_queue;
-    request.save_queue = [];
-    request.send_queue = [];
-    // first, save to db
-    if (save_queue.length) {
-        var seen = {};
-        // remove rewrites (tip, avv, etc)
-        for(var i=save_queue.length-1; i>=0; i--) {
-            if (seen.hasOwnProperty(save_queue[i].key)) {
-                save_queue[i] = null;
-            } else {
-                seen[save_queue[i].key] = true;
-            }
-        }
-        save_queue = save_queue.filter(function(rec){return !!rec;});
-        var key_prefix = this.prefix + request.typeid;
-        save_queue.forEach(function(rec){
-            rec.key = key_prefix + rec.key;
-            if (!rec.value) {
-                rec.value = ' ';
-            }
-        });
-        Replica.trace && console.log('SAVE', save_queue);
-
-        this.db.batch(save_queue, send_ops);
-    } else {
-        send_ops();
-    }
-    // second, send responses
-    function send_ops (err) {
-        if (err) {
-            console.error('db write fail', err);
-            // must not send anything but an error
-            // an acknowledgement for a non-saved op will ruin sync
-            self.send(request.op.error('db write error'));
-            // TODO FIXME EXIT stop everything, terminate the process
-        } else {
-            for(var i=0; i<send_queue.length; i++) {
-                self.send(send_queue[i]);
-            }
-        }
-    }
-
-    // FIXME prevent concurrency
-
-};
-
 /**
  * forward all active subscriptions to the newly connected upstream
  */
@@ -616,7 +580,7 @@ Replica.prototype.upscribe = function () {
     var typeids = Object.keys(this.subscriptions);
     var dbos = this.dbos;
     typeids.forEach(function(typeid){
-        dbos.writeOp(Op.create(typeid+'!0.on', ''));
+        dbos.writeOp(new Op(typeid+'!0.on', ''));
     });
 };
 
@@ -625,8 +589,10 @@ Replica.prototype.upscribe = function () {
  * @param mode, 'all' || 'changed'
  */
 Replica.prototype.sync = function (mode, done) {
+    // TODO issues: upstream disappears while we make the list
     var typeids = [];
     this.dbos.scanMeta(function(err, typeid, meta){
+        console.error('META', typeid, meta);
         if (err) {
             return done && done(err);
         } else if (meta) {
@@ -637,15 +603,22 @@ Replica.prototype.sync = function (mode, done) {
             send_upscribes();
         }
     });
-    var subs = this.subscriptions;
-    var dbos = this.dbos;
+    var self = this;
     function send_upscribes () {
         typeids.forEach(function(typeid){
-            if (typeid in subs) {return;}
-            dbos.writeOp(Op.create(typeid+'!0.on', ''));
+            if (typeid in self.subscriptions) {return;}
+            self.markUnsynced(typeid);
+            self.dbos.writeOp(new Op(typeid+'!0.on', ''));
         });
         done && done();
     }
+};
+
+
+Replica.prototype.markUnsynced = function (typeid) {
+    if (this.unsynced[typeid]) { return; }
+    this.unsynced[typeid] = this.upstream.source_id || '0';
+    this.unsynced_count++;
 };
 
 /** close: terminate connections, close the db, invoke the callback */
@@ -656,13 +629,17 @@ Replica.prototype.close = function (err, callback) {
     }
     this.close_cb = callback;
 
-    Replica.trace && console.log('CLOSE', err);
+    Replica.debug && console.warn('CLOSE', err);
     // TODO FINISH processing all ops,
     // don't accept any further ops
     var self = this;
 
     Object.keys(this.servers).forEach(function(url){
-        self.servers[url].close();
+        try {
+            self.servers[url].close();
+        } catch (ex) {
+            console.warn('a server fails to close', url, ex.message);
+        }
     });
 
     Object.keys(this.streams).forEach(function(src_id){
@@ -677,51 +654,6 @@ Replica.prototype.close = function (err, callback) {
 
 };
 
-
-//        D A T A B A S E        //
-
-
-Replica.prototype.loadMeta = function (activeEntry) {
-    var self = this;
-    var key = this.prefix + activeEntry.typeid + '.meta'; // BAD
-    this.db.get(key, function (err, value){
-        if (err && !isNFE(err)) {
-            console.error('data load failed', key, err);
-            self.close();
-        } else {
-            Replica.trace && console.log('META', key, value);
-            activeEntry.setMeta(new Entry.State(value));
-        }
-    });
-};
-
-//   [mark, log_end) - we need to see the starting point
-Replica.prototype.loadTail = function (activeEntry, mark) {
-    var db_mark = '!' + (mark||'~');
-    var typeid = activeEntry.typeid;
-    var prefix = this.prefix, key_prefix = prefix + typeid;
-    var gte_key = key_prefix + db_mark;
-    var lt_key = key_prefix + '!' + activeEntry.mark;
-    var error = null;
-    var recs = [];
-    this.db.createReadStream({
-        gte: gte_key, // start at the mark (inclusive)
-        lt: lt_key // don't read the next object's ops
-    }).on('data', function (data){
-        data.key = data.key.substr(prefix.length);
-        if (data.value===' ') { data.value = ''; }
-        recs.push(data);
-    }).on('error', function(err){
-        console.error('data load failed', typeid, mark, error);
-        error = err;
-        // TODO EXIT stop all processing, exit
-    }).on('end', function () {
-        activeEntry.prependStoredRecords(recs);
-        activeEntry.mark = mark;
-        activeEntry.next();
-    });
-
-};
 
 
 /********************** C O N N E C T I O N S *********************/
@@ -738,12 +670,13 @@ Replica.prototype.addStreamUp = function (err, stream) {
 // FIXME  Muxer accepts connections to stream ids
 
 Replica.prototype.setUpstreamSource = function (op_source) {
+    Replica.debug && console.warn('UP_HS_OUT');
     op_source.once('handshake', this.onUpstreamHandshake.bind(this));
     op_source.writeHandshake(Op.create(this.bareHandshake()));
 };
 
 Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
-    Replica.debug && console.log('UP_HS', hs_op.toString());
+    Replica.debug && console.warn('UP_HS_IN', hs_op.toString());
     var self = this;
     if (this.db_id==='0') {
         this.db_id = hs_op.id();
@@ -768,6 +701,7 @@ Replica.prototype.onUpstreamHandshake = function (hs_op, op_stream) {
     var hs_op_stamp = hs_op.stamp();
 
     this.streams[hs_op_stamp] = op_stream;
+    this.upstream = op_stream;
     this.upstream_ssn = hs_op_ssn;
     this.upstream_stamp = hs_op_stamp;
 

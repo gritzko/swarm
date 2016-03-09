@@ -269,11 +269,16 @@ LevelOpSource.prototype.process = function (op, meta, done) {
 
 //    L O G I C S
 
+LevelOpSource.prototype.processOff = function (op, meta, done) {
+    done();
+};
+
 
 LevelOpSource.prototype.processEnd = function (op, state, done) {
     this.emitEnd();
     done();
 };
+
 
 LevelOpSource.prototype.processOuterHandshake = function (op, done) {
 
@@ -369,22 +374,25 @@ LevelOpSource.prototype.createTailPatch = function (op, meta, re_patch, done) {
 };
 
 /**  .on received from the upstream  */
-LevelOpSource.prototype.processReciprocalOn = function (op, state, done) {
-    // remember everything the upstream sent or acknowledged to us
-    var new_avv = new AnchoredVV(this.state.avv);
-    if (AnchoredVV.is(op.value)) {
-        new_avv.vv.addAll(op.value);
-    }
-    if (op.patch){
-        op.patch.forEach(function(o){
-            new_avv.vv.add(o.stamp());
-        });
-    }
-    this.state.avv = new_avv.toString();
+LevelOpSource.prototype.processReciprocalOn = function (op, meta, done) {
+
+    var normal = meta.anchor===meta.tip===meta.last;
 
     if (op.patch) {
-        self.processPatch(op.patch, meta, done);
+        this.processPatch(op.patch, meta, reflect_meta);
     } else {
+        done();
+    }
+
+    function reflect_meta () {
+        if (normal) {
+            meta.last = meta.anchor = meta.tiptop();
+        } else {
+            meta.vv = meta.vv.addAll(op.value);
+            op.patch.forEach(function(o){
+                meta.vv = meta.vv.add(o.stamp());
+            });
+        }
         done();
     }
 
@@ -619,7 +627,7 @@ LevelOpSource.prototype.stampsSeen = function (typeid, since, done) {
                 since: since,
                 seen: seen
             };
-            done(seen);
+            done(seen); // FIXME err
         }
     });
 };

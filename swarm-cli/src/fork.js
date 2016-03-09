@@ -96,11 +96,30 @@ function fork (args, done) {
         function load_fork () {
             orig.addDownstreamSource(lops.pair);
             fork = new Swarm.Replica(fork_db, {
-                onReady: finalize,
+                onReady: rewrite_meta,
                 onFail:  done,
                 upstream: lops
             });
         }
+    }
+
+    function rewrite_meta () {
+        var batch = [];
+        var meta_mod = client_meta_mod; // TODO
+        fork.dbos.scanMeta(function(err, typeid, meta){
+            if (err) {
+                done(err);
+            } else if (typeid) {
+                batch.push({
+                    type: 'put',
+                    key:  typeid+'!~.meta',
+                    value: meta_mod(meta)
+                });
+            } else {
+                console.error('META_RW', batch);
+                fork.dbos.db.batch(batch, finalize);
+            }
+        });
     }
 
     function finalize () {
@@ -115,6 +134,12 @@ function fork (args, done) {
         });
     }
 
+}
+
+function client_meta_mod (meta) {
+    meta.last = meta.anchor = meta.tiptop();;
+    meta.vv = new Swarm.VVector('');
+    return meta.toString();
 }
 
 module.exports = fork;

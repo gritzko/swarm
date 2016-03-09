@@ -8,7 +8,9 @@ var Replica = Swarm.Replica;
 module.exports = function run (args, done) {
 
     args.connect = args.connect || args.c;
+    if (args.connect===true) { args.connect='std:'; }
     args.listen = args.listen || args.l;
+    if (args.listen===true) { args.listen='std:'; }
     args.get = args.get || args.g;
     args.sync = args.sync || args.y;
     args.exec = args.exec || args.e;
@@ -27,8 +29,8 @@ module.exports = function run (args, done) {
         fs.mkdirSync(home);
     }
     var options = {};
-    options.connect = args.connect;
-    options.listen = args.listen;
+    //options.connect = args.connect || null;
+    //options.listen = args.listen || null;
     options.onWritable = execute;
     options.onFail = done;
     options.home_host = true;
@@ -82,25 +84,35 @@ module.exports = function run (args, done) {
 
     function connect (cb) {
         args.v && console.warn('* connect', args.connect);
-        if (args.connect) {
+        if (args.connect!='std:') {
             replica.connect(args.connect, {}, cb);
         } else { // FIXME std:
             var duplexer = require('duplexer');
             var stdio_stream = duplexer(process.stdout, process.stdin);
             Swarm.Replica.HS_WAIT_TIME = 24 * 60 * 60 * 1000; // have your time :)
+            replica.on('connection', function(ev){
+                if (ev.upstream) {
+                    cb();
+                }
+            });
             replica.addStreamUp(null, stdio_stream);
         }
     }
 
     function listen (cb) {
         args.v && console.warn('* listen', args.listen);
-        if (args.listen) {
+        if (args.listen!='std:') {
             replica.listen(args.listen, {once: args.once}, cb);
         } else {
             var duplexer = require('duplexer');
             var stdio_stream = duplexer(process.stdout, process.stdin);
             Swarm.Replica.HS_WAIT_TIME = 24 * 60 * 60 * 1000; // have your time :)
+            replica.servers[args.listen] = {close:function(){}};
+            stdio_stream.on('end', function(){
+                delete replica.servers[args.listen];
+            });
             replica.addStreamDown(stdio_stream);
+            cb();
         }
     }
 
@@ -152,19 +164,24 @@ module.exports = function run (args, done) {
 
     function once (cb) {
         args.v && console.warn('* once');
-        replica.on('disconnect', function () {
+        replica.on('disconnection', function () {
             var source_count = Object.keys(replica.streams).length;
-            var pending_count = replica.pending_sources.length;
-            if (!source_count && !pending_count) {
+            var pending_count = replica.pre_streams.length;
+            var server_count = Object.keys(replica.servers).length;
+            if (!source_count && !pending_count && !server_count) {
                 quit();
             }
         });
-        if (replica.sync_pending.length) {
+        if (replica.unsynced_count) {
             replica.on('synced', function () {
                 replica.disconnect();
             });
         } else {
-            replica.disconnect();
+            console.error('UNSYN', replica.unsynced);
+            var server_count = Object.keys(replica.servers).length;
+            if (!server_count) {
+                replica.disconnect();
+            }
         }
     }
 

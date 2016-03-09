@@ -81,3 +81,9 @@ LogMeta.prototype.toString = function () {
     }
     return str ? str.substr(1) : '';
 };
+
+
+LogMeta.prototype.tiptop = function () {
+    var i = this.tip.lastIndexOf('|');
+    return i===-1 ? this.tip : this.tip.substr(i+1);
+};

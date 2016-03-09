@@ -5,19 +5,19 @@ SCRIPT_DIR=$PWD
 cd -
 
 swarm="node $SCRIPT_DIR/../src/cli.js"
-xtalk=$SCRIPT_DIR/../../scripts/xtalk.sh
+xtalk=$SCRIPT_DIR/../../scripts/xtalk
 DIR=.cli-test-03
 
 rm -rf $DIR && mkdir $DIR && cd $DIR
 
 
 echo "+++ create db +++"
-$swarm orig.db --create bash3 --DClock LamportClock --DHomeHost true || exit 1
+$swarm orig.db --create bash3 -O Clock=LamportClock -O HomeHost=true || exit 1
 
 echo "+++ init +++"
 TYPEID="/Model#object"
-$swarm orig.db --access "$TYPEID!1.~state" --put '{"1":{"a":"one"}}'
-$swarm orig.db --access "$TYPEID!~.meta" --put 'l:1'
+$swarm orig.db --access "$TYPEID!00001+swarm.~state" --put '{"00001+swarm":{"a":"one"}}'
+$swarm orig.db --access "$TYPEID!~.meta" --put 'l:00001+swarm'
 $swarm orig.db --get $TYPEID > planted.txt
 cat > correct.txt <<EOF
 {"a":"one"}
@@ -33,11 +33,11 @@ $swarm orig.db --fork clone1.db --client clone || exit 5
 $swarm clone1.db --get $TYPEID | grep two || exit 6
 
 echo "+++ offline changes +++"
-echo "Swarm.get('$TYPEID').set({c:'three'})" | $swarm clone1.db --repl
-echo "Swarm.get('$TYPEID').set({a:'ONE'})" | $swarm orig.db --repl
+echo "Swarm.get('$TYPEID', function(){this.set({c:'three'})})" | $swarm clone1.db --repl
+echo "Swarm.get('$TYPEID', function(){this.set({a:'ONE'})})" | $swarm orig.db --repl
 
 echo +++ resync +++
-$xtalk "$swarm orig.db --std" "$swarm clone1.db --std up --syncall"
+$xtalk "$swarm -l -v -D -1 -- orig.db" "$swarm -c -v -D -1 --sync all clone1.db" || exit 7
 $swarm orig.db --get $TYPEID > syncd-orig.txt
 $swarm clone1.db --get $TYPEID > syncd-clone1.txt
 diff -U3 syncd-orig.txt syncd-clone1.txt || exit 8
