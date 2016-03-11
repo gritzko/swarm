@@ -29,6 +29,8 @@ Free-as-in-freedom (MIT).
 
 ### Install 
 
+__Vapourware warning: some of the examples below are obsolete, some never got implemented. Don't Try This at Home!__
+
 Install an example server:
 
     npm install swarm-react-node
