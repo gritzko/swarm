@@ -2,9 +2,13 @@
 
 var base64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_'+
              'abcdefghijklmnopqrstuvwxyz~';
+var codes  = new Array(128);
 var rT =     '[0-9A-Za-z_~]{1,80}'; // 60*8 bits is enough for everyone
 var reTok =  new RegExp('^'+rT+'$'); // plain no-extension token
 var re64l =  new RegExp('[0-9A-Za-z_~]', 'g');
+
+for(var i=0; i<128; i++) { codes[i] = 100; }
+for(i=0; i<base64.length; i++) { codes[base64.charCodeAt(i)] = i; }
 
 function int2base (i, padlen) {
     if (i < 0 || i >= (1 << 30)) {
@@ -17,10 +21,15 @@ function int2base (i, padlen) {
     return ret;
 }
 
-function base2int (base_str) {
-    var ret = 0, l = base_str.match(re64l);
-    for (var shift = 0; l.length; shift += 6) {
-        ret += base64.indexOf(l.pop()) << shift; // TODO performance
+function base2int (base) {
+    var ret = 0;
+    for(var i=0; i<base.length; i++) {
+        ret <<= 6;
+        var code = base.charCodeAt(i);
+        if (code>=128) { throw new Error('invalid char'); }
+        var de = codes[code];
+        if (de===100) { throw new Error('non-base64 char'); }
+        ret |= de;
     }
     return ret;
 }
