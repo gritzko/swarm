@@ -42,6 +42,7 @@ tape ('stamp.01.a SecondPreciseClock sequence test', function (tap) {
     }, 0);
 });
 
+
 tape ('stamp.01.b Version vector', function (tap){
     // the convention is: use "!version" for vectors and
     // simply "version" for scalars
@@ -88,20 +89,26 @@ tape ('stamp.01.c. Minute-precise clox', function(tap){
     // see it spills over (extended ts)
 });
 
+
 tape ('stamp.01.d. Timestamp-ahead', function(tap){
     var clock = new lamp64.SecondPreciseClock('normal');
     var ts = clock.issueTimestamp();
     var parsed = clock.parseTimestamp(ts);
     //var tenAhead = Spec.int2base(parsed.time+10, 5)+'+ahead';
     //var tenBehind = Spec.int2base(parsed.time-10, 5)+'+behind';
-    var clockAhead = new lamp64.SecondPreciseClock('ahead', 10000);
-    var clockBehind = new lamp64.SecondPreciseClock('behind', -10000);
+    var clockAhead = new lamp64.SecondPreciseClock('ahead', {
+        ClockOffset: 10000
+    });
+    var clockBehind = new lamp64.SecondPreciseClock('behind', {
+        ClockOffset: -10000
+    });
     var tsAhead = clockAhead.issueTimestamp();
     var tsBehind = clockBehind.issueTimestamp();
     tap.ok(tsAhead>ts);
     tap.ok(ts>tsBehind);
     tap.end();
 });
+
 
 tape ('stamp.01.e. Timestamp to date', function(tap){
     var clock = new lamp64.SecondPreciseClock('normal');
@@ -115,24 +122,24 @@ tape ('stamp.01.e. Timestamp to date', function(tap){
 tape ('stamp.01.f. Lamport clocks', function(tap){
     var clock = new lamp64.LamportClock('leslie');
     var ts1 = clock.issueTimestamp();
-    tap.equal(ts1,'00000+leslie');
+    tap.equal(ts1.time(), '00001');
+    tap.equal(ts1.origin(), 'leslie');
     var ts2 = clock.issueTimestamp();
-    tap.equal(ts2,'00001+leslie');
-    clock.checkTimestamp('00004+leslie');
-    tap.equal(clock.issueTimestamp(),'00005+leslie');
+    tap.equal(ts2.time(), '00002');
+    tap.equal(ts2.origin(), 'leslie');
+    clock.seeTimestamp('00004+leslie');
+    tap.equal(clock.issueTimestamp().toString(),'00005+leslie');
 
-    var prefixed = new lamp64.LamportClock('chimera', {
-        start: 4,
-        prefix: '0PRE_',
-        length: 3
+    var prefixed = new lamp64.LamportClock('003+chimera', {
+        ClockLength: 3
     });
-    var ch1 = prefixed.issueTimestamp();
-    tap.equal(ch1,'0PRE_004+chimera', 'heavily customized clocks');
+    var ch1 = prefixed.issueTimestamp().toString();
+    tap.equal(ch1,'004+chimera', 'heavily customized clocks');
 
-    var preset = new lamp64.LamportClock('src', { start: 'now00' });
-    tap.equal(preset.issueTimestamp(), 'now00+src', 'string preset OK');
-    tap.equal(preset.issueTimestamp(), 'now01+src', 'incs well');
-    tap.equal(preset.issueTimestamp(), 'now02+src');
+    var preset = new lamp64.LamportClock('now00+src');
+    tap.equal(preset.issueTimestamp().toString(), 'now01+src', 'string preset OK');
+    tap.equal(preset.issueTimestamp().toString(), 'now02+src', 'incs well');
+    tap.equal(preset.issueTimestamp().toString(), 'now03+src');
 
     tap.end();
 });

@@ -1,6 +1,7 @@
 "use strict";
 
 var base64 = require('./base64');
+var LamportTimestamp = require('./LamportTimestamp');
 
 /** Swarm is based on the Lamport model of time and events in a
   * distributed system, so Lamport timestamps are essential to
@@ -17,29 +18,31 @@ var base64 = require('./base64');
   *        to init our time offset; there is no guarantee about
   *        clock correctness on the client side
   */
-var SecondPreciseClock = function (processId, timeOffsetMs, seqWidth) {
-    if (!base64.reTok.test(processId)) {
-        throw new Error('invalid process id: '+processId);
-    }
-    this.id = processId;
-    // sometimes we assume our local clock has some offset
-    this.clockOffsetMs = 0;
-    this.lastTimestamp = '';
-    this.seqWidth = seqWidth || 2;
+function SecondPreciseClock (now, options) {
+    options = options || {};
+    var start = new LamportTimestamp(now);
+    this.id = start.origin();
+    this.lastStamp = start.time();
+    // sometimes, our local clock has some offset
+    this.clockOffsetMs = options.ClockOffset || 0;
+    this.seqWidth = options.ClockLength ? options.ClockLength-5 : 2;
     // although we try hard to use wall clock time, we must
     // obey Lamport logical clock rules, in particular our
     // timestamps must be greater than any other timestamps
     // previously seen
     this.lastTimeSeen = 0;
     this.lastSeqSeen = 0;
-    if (timeOffsetMs) {
-        this.clockOffsetMs = timeOffsetMs;
+    if (!start.isZero()) {
+        var parsed = this.parseTimestamp(now);
+        var ms = new Date().getTime();
+        this.clockOffsetMs = parsed.ms - ms;
     }
-};
+}
 
 var epochDate = new Date("Wed, 01 Jan 2014 00:00:00 GMT");
 SecondPreciseClock.EPOCH = epochDate.getTime();
-/** We allow clocks to be 1 minute off. */
+
+/** We allow clocks to be 1 minute off.
 SecondPreciseClock.BACK_TO_THE_FUTURE = 60;
 
 SecondPreciseClock.prototype.adjustTime = function (trueMs) {
@@ -55,7 +58,7 @@ SecondPreciseClock.prototype.adjustTime = function (trueMs) {
     if ( this.seconds()+1 < lastTS ) {
         console.error("risky clock reset",this.lastTimestamp);
     }
-};
+};*/
 
 SecondPreciseClock.prototype.ms = function () {
     var millis = new Date().getTime();
@@ -102,7 +105,7 @@ SecondPreciseClock.MAX_SEQ = base64.int2base(3999,2);
 SecondPreciseClock.parseTimestamp = function parse (ts) {
     var m = ts.match(SecondPreciseClock.rsQTokExt);
     if (!m) {throw new Error('malformed timestamp: '+ts);}
-    var time = base64.base2int(m[2]);
+    var time = base64.base2int(m[2]); // FIXME
     var seq = m[3] ? base64.base2int(m[3]) : 0;
     var source = m[4];
     if ( seq >= SecondPreciseClock.MAX_SEQ ) {
@@ -114,16 +117,9 @@ SecondPreciseClock.parseTimestamp = function parse (ts) {
         source: source
     };
 };
-SecondPreciseClock.prototype.parseTimestamp = SecondPreciseClock.parseTimestamp;
-
-SecondPreciseClock.unparseTimestamp = function unparse (parsed) {
-    var baseTimeSeq = base64.int2base(parsed.time, 5);
-    if (parsed.seq>0) {
-        baseTimeSeq+=base64.int2base(parsed.seq, 2);
-    }
-    return baseTimeSeq + '+' + parsed.source;
-};
-SecondPreciseClock.prototype.unparseTimestamp = SecondPreciseClock.unparseTimestamp;
+SecondPreciseClock.prototype.parseTimestamp =
+    SecondPreciseClock.prototype.parseStamp =
+        SecondPreciseClock.parseTimestamp;
 
 /**
     Newly issued timestamps must be greater than any timestamps previously seen.
@@ -143,7 +139,7 @@ SecondPreciseClock.prototype.seeTimestamp = function see (ts) {
     this.lastSeqSeen = parsed.seq;
     return true;
 };
- SecondPreciseClock.prototype.checkTimestamp =  SecondPreciseClock.prototype.seeTimestamp;
+ SecondPreciseClock.prototype.seeStamp =  SecondPreciseClock.prototype.seeTimestamp;
 
 SecondPreciseClock.prototype.timestamp2date = function (ts) {
     var parsed = this.parseTimestamp(ts);
