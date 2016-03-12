@@ -41,7 +41,8 @@ $xtalk "$swarm -l -v -D -1 -- orig.db" "$swarm -c -v -D -1 --sync all clone1.db"
 $swarm orig.db --get $TYPEID > syncd-orig.txt
 $swarm clone1.db --get $TYPEID > syncd-clone1.txt
 diff -U3 syncd-orig.txt syncd-clone1.txt || exit 8
-grep syncd-clone1.txt | grep ONE | grep three || exit 9
+grep ONE syncd-clone1.txt || exit 9
+grep three syncd-clone1.txt || exit 9
 
 echo "+++ fork 2 +++"
 $swarm orig.db --fork clone2.db --client clone || exit 10

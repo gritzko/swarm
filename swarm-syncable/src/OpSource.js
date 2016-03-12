@@ -59,6 +59,9 @@ OpSource.DEFAULT = new Spec('/Model!0.on');
 OpSource.prototype.log = function (op, inbound, event) {
     var upwards = (this.is_upstream && inbound) ||
                   (!this.is_upstream && !inbound);
+    if (/std/.test(op.value)) {
+        console.warn(new Error('bad end'+op).stack);
+    }
     console.warn(
         (upwards?'^ ':'v ') + this.source_id +
         (event ? '\t['+event+']' : '') +
@@ -177,7 +180,7 @@ OpSource.prototype.writeHandshake = function (hs) {
  */
 OpSource.prototype.writeEnd = function (op, callback) {
     if (!op || op.constructor===String) {
-        op = new Op('.off', op||'');
+        op = new Op(this.hs?this.hs.spec.set('.off'):'.off', op||'');
     }
     if (OpSource.debug) {
         this.log(op, true, 'END');

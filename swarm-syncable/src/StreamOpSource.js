@@ -82,6 +82,7 @@ StreamOpSource.prototype.removeStreamListeners = function () {
     this.stream.removeListener('data', this.dataListener);
     this.stream.removeListener('end', this.endListener);
     this.stream.removeListener('error', this.errorListener);
+    this.stream = null;
 };
 
 StreamOpSource.prototype._writeOp = function (op, callback) {
@@ -128,7 +129,7 @@ StreamOpSource.prototype.flush = function (callback) {
 
 StreamOpSource.prototype._actually_send = function (parcel, callback) {
     try {
-        StreamOpSource.debug && console.warn('BUF_OUT', parcel);
+        StreamOpSource.debug && console.warn('SOPS_SEND', parcel);
         this.stream.write(parcel, "utf8", callback);
         this.lastSendTime = new Date().getTime();
     } catch (ioex) {
@@ -145,9 +146,10 @@ StreamOpSource.prototype.isOpen = function () {
 
 StreamOpSource.prototype._writeEnd = function (err_op) {
     if (!this.stream) {
-        console.warn(new Error('this op stream is not open').stack);
+        StreamOpSource.debug && console.warn("SOPS_REPEAT_END");
         return;
     }
+    StreamOpSource.debug && console.warn("SOPS_END", err_op.toString());
     if (!err_op || err_op.constructor===String) {
         err_op = new Op(this.hs.spec.set('.off'), err_op||'');
     }
@@ -164,7 +166,7 @@ StreamOpSource.prototype._writeEnd = function (err_op) {
 };
 
 StreamOpSource.prototype.onStreamDataReceived = function (new_read_buf) {
-    StreamOpSource.debug && console.warn('BUF_IN', new_read_buf.toString());
+    StreamOpSource.debug && console.warn('SOPS_RECV', new_read_buf.toString());
     try{
         this._parseIncomingBuf(new_read_buf);
     } catch (ex) {
@@ -262,13 +264,14 @@ StreamOpSource.prototype.onStreamEnded = function () {
 
 StreamOpSource.prototype.onStreamFailure = function (err) {
     if (util.isError(err)) {
-        StreamOpSource.debug && console.warn(err.stack);
+        StreamOpSource.debug && console.warn("SOPS_ERR", err.stack);
         err = err.message;
+    } else {
+        StreamOpSource.debug && console.error('SOPS_ERR', err);
     }
-    StreamOpSource.debug && console.error('stream error', err);
+    var stream = this.stream;
     this.removeStreamListeners();
     this.emitEnd(err);
-    var stream = this.stream;
     this.stream = null;
     try {
         if (stream.close) {

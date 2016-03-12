@@ -285,6 +285,11 @@ Replica.prototype.onDatabaseHsAck = function (ack) {
         if (source) {
             delete this.streams[source_id];
             source.writeEnd(ack);
+            this.emit('disconnect', {
+                hs: ack,
+                source_id: source_id,
+                source: source
+            });
         }
     }
 };
@@ -592,7 +597,7 @@ Replica.prototype.sync = function (mode, done) {
     // TODO issues: upstream disappears while we make the list
     var typeids = [];
     this.dbos.scanMeta(function(err, typeid, meta){
-        console.error('META', typeid, meta);
+        Replica.debug && console.warn('META', typeid, meta&&meta.toString());
         if (err) {
             return done && done(err);
         } else if (meta) {
@@ -853,19 +858,18 @@ Replica.prototype.onStreamEnd = function (off, op_stream) {
         this.upstream_source_id = null;
     }
 
-    this.emit('disconnect', {
-        hs: off,
-        source_id: source_id,
-        source: op_stream
-    });
-
+    op_stream.removeAllListeners('handshake');
     op_stream.removeAllListeners('op'); // I'm the owner
     op_stream.removeAllListeners('end');
 
     if (off.value || !this.dbos) { // there is some error
         delete this.streams[source_id];
-        var my_off = op_stream.hs.spec.set('.off');
-        op_stream.writeEnd(new Op(my_off, 're:'+off.value));
+        op_stream.writeEnd('re:'+off.value);
+        this.emit('disconnect', {
+            hs: off,
+            source_id: source_id,
+            source: op_stream
+        });
     } else { // let's finish things
         // some incoming ops may still be queued, so let's
         // wait for the response and finalize politely

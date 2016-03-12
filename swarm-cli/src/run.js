@@ -89,6 +89,10 @@ module.exports = function run (args, done) {
         } else { // FIXME std:
             var duplexer = require('duplexer');
             var stdio_stream = duplexer(process.stdout, process.stdin);
+            stdio_stream.close = function () {};
+            stdio_stream.end = function (a,b,c) {
+                if (a) this.write(a,b,c);
+            };
             Swarm.Replica.HS_WAIT_TIME = 24 * 60 * 60 * 1000; // have your time :)
             replica.on('connection', function(ev){
                 if (ev.upstream) {
@@ -106,11 +110,16 @@ module.exports = function run (args, done) {
         } else {
             var duplexer = require('duplexer');
             var stdio_stream = duplexer(process.stdout, process.stdin);
+            stdio_stream.close = function () {
+            };
+            stdio_stream.end = function (a,b,c) {
+                if (a) this.write(a,b,c);
+            };
+            replica.on('disconnect', function (){
+                delete replica.servers[args.listen]; // once
+            });
             Swarm.Replica.HS_WAIT_TIME = 24 * 60 * 60 * 1000; // have your time :)
             replica.servers[args.listen] = {close:function(){}};
-            stdio_stream.on('end', function(){
-                delete replica.servers[args.listen];
-            });
             replica.addStreamDown(stdio_stream);
             cb();
         }
@@ -164,20 +173,25 @@ module.exports = function run (args, done) {
 
     function once (cb) {
         args.v && console.warn('* once');
-        replica.on('disconnection', function () {
+        replica.on('disconnect', function () {
+            args.v && console.warn('* disconnection');
             var source_count = Object.keys(replica.streams).length;
+            if (replica.home_host) source_count--;
             var pending_count = replica.pre_streams.length;
             var server_count = Object.keys(replica.servers).length;
             if (!source_count && !pending_count && !server_count) {
                 quit();
+            } else {
+                args.v && console.warn('* waiting', source_count, pending_count, server_count);
             }
         });
         if (replica.unsynced_count) {
             replica.on('synced', function () {
+                args.v && console.warn('* synced');
                 replica.disconnect();
             });
         } else {
-            console.error('UNSYN', replica.unsynced);
+            console.error('* synced already');
             var server_count = Object.keys(replica.servers).length;
             if (!server_count) {
                 replica.disconnect();
