@@ -416,7 +416,10 @@ Replica.prototype.connect = function (url) {
     }
     url = url || this.options.connect;
     this.su_handle = stream_url.connect(this.options.connect, {
-        reconnect: true
+        reconnect: {
+          minDelay: 1000,
+          maxDelay: 30000,
+        },
     }, this.addStreamUp.bind(this));
 };
 

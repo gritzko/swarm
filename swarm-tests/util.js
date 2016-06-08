@@ -1,4 +1,6 @@
 'use strict';
+var fs = require('fs');
+var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
 var Client = require('swarm-client').Client;
 var Server = Swarm.Server;
@@ -61,4 +63,12 @@ module.exports = {
     start_client: start_client,
     start_server: start_server,
     create_server_host: create_server_host,
+    prepare: function (db_path) {
+        fs.existsSync(db_path) && rimraf.sync(db_path);
+        return db_path;
+    },
+    cleanup: function (db_path) {
+        fs.existsSync(db_path) && rimraf.sync(db_path);
+        return db_path;
+    },
 };

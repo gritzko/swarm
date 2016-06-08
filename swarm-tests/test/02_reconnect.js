@@ -2,8 +2,6 @@
 require('stream-url-node');
 require('stream-url-ws');
 
-var fs = require('fs');
-var rimraf = require('rimraf');
 var Swarm = require('swarm-server');
 var util = require('../util');
 
@@ -14,7 +12,7 @@ Swarm.Host.multihost = true;
 function basic_reconnect_test(t, db_path, url) {
     t.plan(5);
 
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    util.prepare(db_path);
 
     var server = util.start_server(url, db_path);
     var client = util.start_client(url, null, null, function () {
@@ -42,7 +40,7 @@ function basic_reconnect_test(t, db_path, url) {
     function end() {
         client.close(function () {
             server.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
                 t.end();
             });
         });
@@ -66,8 +64,7 @@ tape ('2.B Client reconnects (using websockets)', function (t) {
 });
 
 tape ('2.C Object updated after reconnect', function (t) {
-    var db_path = '.test_db.2C_' + (new Date().getTime());
-    fs.existsSync(db_path) && rimraf.sync(db_path);
+    var db_path = util.prepare('.test_db.2C_' + (new Date().getTime()));
 
     var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
     var url = 'tcp://localhost:' + port;
@@ -127,7 +124,78 @@ tape ('2.C Object updated after reconnect', function (t) {
     function end() {
         client.close(function () {
             server.close(function () {
-                fs.existsSync(db_path) && rimraf.sync(db_path);
+                util.cleanup(db_path);
+                t.end();
+            });
+        });
+    }
+});
+
+tape ('2.D Object updated after reconnect', function (t) {
+    var db_path = util.prepare('.test_db.2D_' + (new Date().getTime()));
+
+    var port = 40000 + ((process.pid^new Date().getTime()) % 10000);
+    var url = 'tcp://localhost:' + port;
+
+    var clientModel, serverModel, serverHost, connectionStamp;
+    var clientChanges = 0;
+
+    var server = util.start_server(url, db_path, function () {
+        serverHost = util.create_server_host(server);
+    });
+    var client = util.start_client(url, null, null, function (op_stream_details) {
+        t.pass('Client is connected');
+        connectionStamp = op_stream_details.stamp;
+        create_model();
+    });
+
+    function create_model() {
+        serverModel = new Swarm.Model({key: 'initial'}, serverHost);
+        t.pass('Model created: ' + serverModel.typeid() + ' ' + serverModel.version());
+        fetch_model();
+    }
+
+    function fetch_model() {
+        t.pass('Create an instance ' + serverModel.typeid() + ' on the client...');
+        clientModel = client.get(serverModel.typeid());
+        t.pass('Client model created ' + clientModel.typeid() + ' ' + clientModel.version());
+        clientModel.on('init', function () {
+            t.pass('Client model is initialized');
+        });
+        clientModel.on('change', function () {
+            clientChanges++;
+            t.pass('Client model is changed ' + clientModel.version() + ' ' + clientModel.key);
+            t.equal(clientModel.version(), serverModel.version(), 'Versions should match');
+            t.equal(clientModel.key, serverModel.key, 'Property value should match');
+            setTimeout(reconnect, 100);
+        });
+    }
+
+    function reconnect() {
+        util.on_upstream_connection(client, update);
+        // Drop the connection forcing the client to reconnect
+        client.replica.removeStream(connectionStamp);
+    }
+
+    function update() {
+        t.pass('Client is re-connected, do an update from server side...');
+        serverModel.set({key: 'updated'});
+        t.equal(serverModel.key, 'updated', 'Expect the property to be updated');
+        setTimeout(verify, 1000);
+    }
+
+    function verify() {
+        t.pass('Verify an object ' + serverModel.typeid() + ' is updated on the client...');
+        t.equal(clientModel.version(), serverModel.version(), 'Versions should match');
+        t.equal(clientModel.key, 'updated', 'Expect the "key" property to be updated on the server');
+
+        end();
+    }
+
+    function end() {
+        client.close(function () {
+            server.close(function () {
+                util.cleanup(db_path);
                 t.end();
             });
         });
