@@ -1,6 +1,24 @@
 "use strict";
 
-/**  Parsed a BATT script into JSON and vice-versa.
+/** BatScript parses a BATT script into JSON and vice-versa.
+ *
+ *  script:
+ *
+ *      ; simple default-stream exchange
+ *      > input to feed
+ *      < expected output
+ *      ; a new stream, multiline exchange
+ *      stream2> one line of input
+ *      stream2< expected output 1
+ *      stream2< expected output 2
+ *      ; concurrent multistream i/o
+ *      > input to the default stream
+ *      stream2> input to another stream
+ *      response line 1
+ *      response line 2
+ *      stream2< single-line response
+ *
+ *  nice JSON:
  *
  *      [  {
  *              comment: "simple default-stream exchange",
@@ -31,15 +49,74 @@
  *         }
  *      ]
  *
- * */
-module.exports = class BATT {
+ *  normalized rounds:
+ *
+ *      [  {
+ *              comment:  "simple default-stream exchange",
+ *              input:   {"default": "input to feed\n"},
+ *              output:  {"default": "expected output\n"}
+ *         },
+ *         {
+ *              comment: "a new stream, multiline exchange",
+ *              input: {"stream2": "one line of input\n"},
+ *              output: {"stream2":
+ *                          "expected output 1\n"+
+ *                          "expected output 2\n"
+ *                      }
+ *         },
+ *         {
+ *              comment: "concurrent multistream i/o",
+ *              input: {
+ *                          default: "input to the default stream\n",
+ *                          stream2: "input to another stream\n"
+ *                     },
+ *              output: {
+ *                          default:
+ *                              "response line 1\n" +
+ *                              "response line 2\n",
+ *                          stream2: "single-line response\n"
+ *                      }
+ *         }
+ *      ]
+ *
+ */
+class BatScript {
 
-    constructor (script_text) {
-        this.exchanges = [];
-        this.addExchange();
+    constructor (value, options) {
+        this._rounds = Object.create(null);
+        this.options = options || Object.create(null);
+        if (value.constructor===String) {
+            this.parseScript(value);
+        } else if (value.constructor===Array) {
+            this.parseJSON(value);
+        } else {
+            throw new Error("unrecognized script format");
+        }
+    }
+
+    parseScript (script_text) {
+        var rounds = this._rounds = [];
+        var round = null;
+        function addRound () {
+            round = {
+                comment: "",
+                input:   Object.create(null),
+                output:  Object.create(null)
+            };
+            rounds.push(round);
+        }
+        function addLine (map, stream, body) {
+            if (undefined===map[stream]) {
+                map[stream] = "";
+            }
+            // TODO trim
+            map[stream] += body+'\n';
+        }
+        addRound();
         var lines = script_text.split('\n').reverse();
         var stage = 0;
-        var re_mark = /^(([<>;])|(\w+)([<>])|)(.*)/;
+        var re_mark = /^(([<>;])|(\w+)([<>])|)\s?(.*)/;
+        var comment = "";
         while (lines.length>0) {
             var line = lines.pop();
             var m = line.match(re_mark);
@@ -48,135 +125,144 @@ module.exports = class BATT {
             var body = m[5];
             switch (type) {
                 case ';':
-                    this.addCommentLine(body);
+                    comment += trim(body);
                     break;
                 case '>':
                     if (stage===1) {
-                        this.addExchange();
+                        addRound();
                         stage = 0;
                     }
-                    this.addInputLine(body, stream);
+                    addLine(round.input, stream, body);
                     break;
                 case '<':
                     if (stage===0) {
                         stage=1;
                     }
-                    this.addOutputLine(body, stream);
+                    if (comment) {
+                        round.comment += comment;
+                        comment = "";
+                    }
+                    addLine(round.output, stream, body);
                     break;
             }
         }
     }
 
-    addExchange (next) {
-        if (next === undefined) {
-            next = {
-                comment: null,
-                input: null,
-                output: null
-            };
-        }
-        return this.exchanges.push(next);
-    }
-
-    addLine (action_name, line, stream, x) {
-        if (x===undefined) {
-            x = this.exchanges.length-1;
-        }
-        if (stream===undefined) {
-            stream = 'default';
-        }
-        var exchange = this.exchanges[x];
-        var action_value = exchange[action_name];
-        var form = action_value && action_value.constructor;
-        if (form===null) {
-            if (stream==='default') {
-                action_value = exchange[action_name] = line;
-            } else {
-                var new_value = Object.create(null);
-                new_value[stream] = line;
-                exchange[action_name] = new_value;
-            }
-        } else if (form===String) {
-            if (stream==='default') {
-                exchange[action_name] = [ action_value, line ];
-            } else {
-                new_value = Object.create(null);
-                new_value["default"] = action_value;
-                new_value[stream] = line;
-                exchange[action_name] = new_value;
-            }
-        } else if (form===Object) {
-            var stream_value = action_value[stream];
-            if (stream_value===undefined) {
-                action_value[stream] = line;
-            } else if (stream_value.constructor===String) {
-                action_value[stream] = [stream_value, line];
-            } else {
-                stream_value.push(line);
-            }
-        }
-    }
-
-    addInputLine (line, stream, x) {
-        this.addLine("input", line, stream, x);
-    }
-
-    addOutputLine (line, stream, x) {
-        this.addLine("output", line, stream, x);
-    }
-
-    addCommentLine (line, stream, x) {
-        this.addLine("comment", line, stream, x);
-    }
-
-    // returns exchange action lines
-    listLines (x, action_name) {
-        var action_value = this.exchanges[x][action_name];
-        if (action_value===null || action_value===undefined) {
-            return [];
-        } else if (action_value.constructor===String) {
-            return [["default", action_value]];
-        } else if (action_value.constructor===Array) {
-            return action_value.map(line => ["default", line]);
-        } else if (action_value.constructor===Object) {
-            var ret = [];
-            for( var stream of Object.keys(action_value) ) {
-                var list = action_value[stream];
-                if (list.constructor===String) {
-                    ret.push([stream, list]);
-                } else {
-                    ret = ret.concat(list.map(
-                        line => [stream, line]
-                    ));
-                }
-            }
+    static normalize (value) {
+        var ret = Object.create(null);
+        if (value===undefined || value===null) {
             return ret;
-        }
-    }
-
-    get size () {
-        return this.exchanges.length;
-    }
-
-    toString () {
-        var ret = "";
-        for(let i=0; i<this.size; i++) {
-            var comments = this.listLines(i, "comment");
-            ret += comments.map(pair => ';'+pair[1]+'\n').join();
-            var inputs = this.listLines(i, "input");
-            ret += inputs.map( pair =>
-                (pair[0]=="default"?'':pair[0]) + '>' + pair[1] + '\n'
-            );
-            var outputs = this.listLines(i, "output");
-            ret += outputs.map( pair =>
-                (pair[0]=="default"?'':pair[0]+'<') + pair[1] + '\n'
-            );
-        }
+        } else if (value.constructor===String) {
+            ret.default = nl(value);
+        } else if (value.constructor===Array) {
+            ret.default = nl(value.join('\n'));
+        } else if (value.constructor===Object) {
+            Object.keys(value).forEach(stream_id => {
+                let val = value[stream_id];
+                if (val.constructor===String) {
+                    ret[stream_id] = nl(val);
+                } else if (val.constructor===Array) {
+                    ret[stream_id] = nl(val.join('\n'));
+                } else {
+                    throw new Error("invalid JSON at key "+stream_id);
+                }
+            });
+        }/* else if (value.constructor===Map) {
+            value.keys().forEach(stream_id => {
+                let val = value[stream_id];
+                if (val.constructor===Array) {
+                    ret[stream_id] = val.join('\n')+'\n';
+                } else if (val.constructor===String) {
+                    if (val.lastIndexOf('\n')!=val.length-1) {
+                        val = val + '\n';
+                    }
+                    ret[stream_id] = val;
+                }
+            });
+        }*/
         return ret;
     }
 
-    toJSON () {
-        return this.exchanges;
+    parseJSON (exchanges) {
+        this._rounds = exchanges.map( val => {
+            return {
+                comment: val.comment ? nl(val.comment) : "",
+                input: BatScript.normalize(val.input),
+                output: BatScript.normalize(val.output)
+            };
+        });
+    }
+
+    get rounds () {
+        return this._rounds;
+    }
+
+    get size () {
+        return this._rounds.length;
+    }
+
+    static input2script (input) {
+        var script = "";
+        Object.keys(input).sort().forEach(stream => {
+            let label = (stream!=="default" ? stream : '') + '> ';
+            let text = input[stream];
+            script += text.replace(/.*\n/mg, label+"$&");
+        });
+        return script;
+    }
+
+    static output2script (output, options) {
+        var script = "";
+        Object.keys(output).sort().forEach(stream => {
+            let text = output[stream];
+            let label = '';
+            if (stream!=="default") {
+                label = stream +'< ';
+            } else if (text.match(/^[<>]/)) {
+                label = '< ';
+            }
+            if (options && options.ignoreCase) {
+                text = text.toUpperCase();
+            }
+            if (options && options.collapseWhitespace) {
+                text = text.replace(/^\s+/mg, '');
+                text = text.replace(/\s+$/mg, '');
+                text = text.replace(/[ \t]+/mg, ' ');
+            }
+            if (options && options.anyOrder) {
+                text = text.split('\n').sort().join('\n');
+            }
+            script += text.replace(/.*\n/mg, label+"$&");
+        });
+        return script;
+    }
+
+    static round2script (round) {
+        var script = "";
+        if (round.comment) {
+            script += nl('; ' + round.comment);
+        }
+        script += BatScript.input2script(round.input);
+        script += BatScript.output2script(round.output);
+        return script;
+    }
+
+    toString () {
+        var script = "";
+        this._rounds.forEach( round => {
+            script += BatScript.round2script(round);
+        });
+        return script;
     }
 
 }
+
+function nl (line) {
+    return line.lastIndexOf('\n')==line.length-1 ? line : line+'\n';
+}
+
+function trim (line) {
+    return line.replace(/^\s+/mg,'').replace(/\s+$/mg,'');
+}
+
+module.exports = BatScript;

@@ -4,10 +4,7 @@ var stream_url = require('stream-url');
 var bat = exports;
 bat.BatScript = bat.Script = require("./src/BatScript");
 
-bat.BatStream = require("./src/BatStream");
-bat.BatServer = require("./src/BatServer");
-bat.BatMux = require("./src/BatMux");
-bat.LearnedComparator = require("./src/LearnedComparator");
+bat.LoopbackStream = require("./src/LoopbackStream");
 bat.StreamTest = require("./src/StreamTest");
 bat.servers = {};
 

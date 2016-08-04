@@ -20,6 +20,8 @@ to plain text file as possible:
 * in case of multiple input/output streams, marks are extended to
     * `stream_id>` for input and
     * `stream_id<` for output (base64 ids).
+* the first mention of a stream can not be interpreted as an empty line
+* connection close: `stream>>`, `stream<<`
 
 The test runner reads a `.batt` file line by line, so
 

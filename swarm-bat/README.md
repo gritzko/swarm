@@ -30,12 +30,12 @@ see test/ for more examples.
     -r record de-facto output to a new test script
     -x don't stop on errors, just log them
     -v comment on every step
-    -W ignore whitespace
+    -W collapse whitespace
     -L ignore empty lines
     -C ignore case
     -d mandatory delay (let'em think); default 10ms
     -D mismatch delay (wait, they're still thinking); default 100ms
-    -O output may go in any order
+    -O output lines may go in any order
 
 ## Codes
 
