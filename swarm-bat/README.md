@@ -1,6 +1,10 @@
 # BAT - batter the bugs out of your apps
 
-Simplistic line-based [blackbox testing][bbt] tool.
+BAT is a simplistic [blackbox testing][bbt] tool. BAT is:
+
+* stream-based (TCP, WebSocket or local pipes, no HTTP),
+* line-based (like classic internet/Unix protocols, no JSON, no XML),
+* implementation-agnostic (just i/o, no API calls).
 
 BAT feeds the prescribed input into a stream, then listens to the
 output and compares it to the expected value.
@@ -10,15 +14,29 @@ The [test script format](batt.md) is extremely simple:
     >input
     <expected output
 
+BAT's predecessors have been extremely useful in testing network servers
+in concurrent input/output scenarios  when the testing tool pretends to
+be several clients:
+
+    ; client 1 says hi, server responds
+    client1> Hello
+    client1< Hi Joe
+    ; client 2 joins
+    client2> Hello
+    client2< Hi Mike
+
+Blackbox testing is particularly handy when you test protocol compliance
+of several implementations: their APIs differ, but tests are the same.
+
 [bbt]: https://en.wikipedia.org/wiki/Black-box_testing
 
 ## Usage
 
-    bat -e command simple_script.batt
-    bat -c host:port multistream_script.batt
-    bat -l 127.0.0.1:12345 server_script.batt
-    bat -e new_version -r new_script.batt old_script.batt
-    command | bat expected_output.batt -W
+- [x]     bat -e command simple_script.batt
+- [ ]     bat -c host:port multistream_script.batt
+- [ ]     bat -l 127.0.0.1:12345 server_script.batt
+- [ ]     bat -e new_version -r new_script.batt old_script.batt
+- [ ]     command | bat expected_output.batt -W
 
 see test/ for examples of [API](test/00_parse_format.js) and
 [CLI](test/cli-test.sh) usage, [.batt](test/bash.batt) scripts.

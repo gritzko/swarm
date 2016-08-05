@@ -183,7 +183,7 @@ tap ('1.E JSON and script format normalization', function (t) {
         "; simple default-stream exchange"    + '\n' +
         // unnecessary stream id, no separator space
         "default>input to feed"               + '\n' +
-        // no mark, separator space, <> in the body
+        // no separator space, <> in the body
         "<<>expected output"                  + '\n' +
         // no separator space
         ";a new stream, multiline exchange"   + '\n' +
@@ -195,7 +195,7 @@ tap ('1.E JSON and script format normalization', function (t) {
         // no separator space
         "stream2<expected output 2"           + '\n' +
         // untrimmed comment
-        "; concurrent multistream i/o "      + '\n' +
+        "; concurrent multistream i/o "       + '\n' +
         "> input to the default stream"       + '\n' +
         "stream2> input to another stream"    + '\n' +
         // default mark
