@@ -20,7 +20,8 @@ The [test script format](batt.md) is extremely simple:
     bat -e new_version -r new_script.batt old_script.batt
     command | bat expected_output.batt -W
 
-see test/ for examples of API and CLI usage.
+see test/ for examples of [API](test/00_parse_format.js) and
+[CLI](test/cli-test.sh) usage, [.batt](test/bash.batt) scripts.
 
 ## Options
 
