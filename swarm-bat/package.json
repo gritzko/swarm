@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.0.4",
+    "version": "2.0.0",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
@@ -16,10 +16,15 @@
     "license": "MIT",
     "main": "bat.js",
     "dependencies": {
-        "stream-url": "0.1.x",
-        "eventemitter3": "^1.1.1"
+        "eventemitter3": "^1.1.1",
+        "minimist": "^1.2.0",
+        "diff-match-patch": "1.0.0",
+        "chalk": "^1.1.2"
     },
     "scripts": {
         "test": "make test"
+    },
+    "bin": {
+        "bat": "./bat-cli.js"
     }
 }

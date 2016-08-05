@@ -20,22 +20,22 @@ The [test script format](batt.md) is extremely simple:
     bat -e new_version -r new_script.batt old_script.batt
     command | bat expected_output.batt -W
 
-see test/ for more examples.
+see test/ for examples of API and CLI usage.
 
 ## Options
 
-    -e test an executable (stdin/stdout)
-    -c connect by tcp to a host/port
-    -w connect by WebSocket to a host/port
-    -r record de-facto output to a new test script
-    -x don't stop on errors, just log them
-    -v comment on every step
-    -W collapse whitespace
-    -L ignore empty lines
-    -C ignore case
-    -d mandatory delay (let'em think); default 10ms
-    -D mismatch delay (wait, they're still thinking); default 100ms
-    -O output lines may go in any order
+- [x] -e test an executable (stdin/stdout)
+- [ ] -c connect by tcp to a host/port
+- [ ] -w connect by WebSocket to a host/port
+- [ ] -r record de-facto output to a new test script
+- [x] -x don't stop on errors, just log them
+- [ ] -v comment on every step
+- [x] -W collapse whitespace
+- [ ] -L ignore empty lines
+- [x] -C ignore case
+- [ ] -d mandatory delay (let'em think); default 10ms
+- [ ] -D mismatch delay (wait, they're still thinking); default 100ms
+- [x] -O output lines may go in any order
 
 ## Codes
 

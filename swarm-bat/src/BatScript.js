@@ -113,13 +113,13 @@ class BatScript {
             map[stream] += body+'\n';
         }
         addRound();
-        var lines = script_text.split('\n').reverse();
+        //var lines = script_text.match('\n').reverse();
+        var m = null;
         var stage = 0;
-        var re_mark = /^(([<>;])|(\w+)([<>])|)\s?(.*)/;
+        var re_mark = /^(([<>;])|(\w+)([<>])|)\s?(.*)\n?/mg;
         var comment = "";
-        while (lines.length>0) {
-            var line = lines.pop();
-            var m = line.match(re_mark);
+        while ( null != (m = re_mark.exec(script_text)) ) {
+            if (m[0].length===0) { break; }
             var type = m[2]||m[4]||'<';
             var stream = m[3] || 'default';
             var body = m[5];

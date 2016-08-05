@@ -1,7 +1,7 @@
 "use strict";
 //var LearnedComparator = require('./LearnedComparator');
-var DiffMatchPatch = require('diff-match-patch');
 var BatScript = require('./BatScript');
+var BatResult = require('./BatResult');
 
 class StreamTest {
 
@@ -12,8 +12,6 @@ class StreamTest {
         this.streams = new Map();
         this.openStream("default", stream);
         this.factory = stream_factory;
-        this.dmp = new DiffMatchPatch();
-        this.diff = null;
         this.output = null;
         this.current_round = 0;
         this.callback = null;
@@ -87,7 +85,10 @@ class StreamTest {
     }
 
     checkOutput () {
-        var ok = this.compare().ok;
+        var result = new BatResult (
+            this.script.rounds[this.current_round],
+            this.output, this.script.options);
+        var ok = result.ok;
         if (!ok && this.roundElapsed()<StreamTest.LONG_DELAY) {
             setTimeout(this.checkOutput.bind(this), StreamTest.LONG_DELAY);
         } else {
@@ -95,37 +96,22 @@ class StreamTest {
         }
     }
 
-    compare () {
-        var round = this.script.rounds[this.current_round];
-        var result = {
-            ok: true,
-            diff: this.diff,
-            input: round.input,
-            expected: round.output,
-            output: this.output
-        };
-        var expected_norm = BatScript.output2script
-            (round.output, this.script.options);
-        var output_norm = BatScript.output2script
-            (this.output, this.script.options);
-        var diff = this.dmp.diff_main(output_norm, expected_norm);
-        result.ok = diff && diff.length===1 && diff[0][0]===0;
-        result.diff = diff;
-        result.comment = round.comment;
-        return result;
-    }
-
     nextRound () {
-        var result = this.compare();
+        var result = new BatResult (
+            this.script.rounds[this.current_round],
+            this.output, this.script.options);
         this.results.push(result);
         this.current_round++;
         var rounds_left = this.script.rounds.length-this.current_round;
-        if (rounds_left>0 && result.ok) {
+        if (rounds_left>0 && (result.ok || this.script.options.runAll)) {
             this.runRound();
         } else {
             clearInterval(this.check_interval);
             this.callback(this.results, this);
             this.callback = null;
+            Object.keys(this.streams).forEach(id => {
+                this.streams[id].end();
+            });
         }
     }
 
