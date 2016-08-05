@@ -15,7 +15,7 @@ The [test script format](batt.md) is extremely simple:
     <expected output
 
 BAT's predecessors have been extremely useful in testing network servers
-in concurrent input/output scenarios  when the testing tool pretends to
+in concurrent input/output scenarios. Then, the testing tool pretends to
 be several clients:
 
     ; client 1 says hi, server responds
@@ -58,11 +58,11 @@ see test/ for examples of [API](test/00_parse_format.js) and
 
 ## Codes
 
-    0 OK
-    1 no match
-    2 script error
-    3 argument error
-    4 io error
+- [ ]     0 OK
+- [ ]     1 no match
+- [ ]     2 script error
+- [ ]     3 argument error
+- [ ]     4 io error
 
 
 ## TODO
