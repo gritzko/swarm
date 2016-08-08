@@ -1,6 +1,6 @@
 "use strict";
 var base64 = require('./base64');
-var LamportTimestamp = require('./LamportTimestamp');
+var LamportTimestamp = require('./Stamp');
 VV.reCheck = new RegExp('^(\\!=\\+=)*$'.replace(/=/g, base64.rT));
 VV.reTokG = new RegExp('\\!((=)\\+(=))'.replace(/=/g, base64.rT), 'g');
 VV.reBareTok = new RegExp('^(=)\\+(=)$'.replace(/=/g, base64.rT));

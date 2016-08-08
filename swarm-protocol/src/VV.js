@@ -1,5 +1,5 @@
 "use strict";
-var LT = require('./LamportTimestamp');
+var LT = require('./Stamp');
 
 // Version vector represented as a {origin: time} map.
 function VVector(vec) {

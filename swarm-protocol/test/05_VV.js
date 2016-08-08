@@ -42,6 +42,32 @@ tape ('stamp.02.B basic anchored syntax', function (tap) {
     tap.end();
 });
 
+
+tape ('stamp.01.b Version vector', function (tap){
+    // the convention is: use "!version" for vectors and
+    // simply "version" for scalars
+    var vec = '!7AM0f+gritzko!0longago+krdkv!7AMTc+aleksisha!0ld!00ld#some+garbage';
+    var map = new lamp64.VVector(vec, '!');
+    tap.ok(map.covers('7AM0f+gritzko'), 'covers');
+    tap.ok(map.covers('0ld'));
+    tap.ok(!map.covers('7AMTd+aleksisha'), '!covers');
+    tap.ok(!map.covers('6AMTd+maxmaxmax'));
+    tap.ok(!map.covers('1+0ld'));
+    tap.ok('garbage' in map.map);
+    tap.equal(map.toString(),
+        '!some+garbage!7AMTc+aleksisha!7AM0f+gritzko!0longago+krdkv');
+
+    var map2 = new lamp64.VVector("!1QDpv03+anon000qO!1P7AE05+anon000Bu");
+    tap.equal(map2.covers('1P7AE05+anon000Bu'), true, 'covers the border');
+
+    // funny constructors TODO
+    tap.ok(map.coversAll('source'));
+    tap.ok(map.coversAll('0'));
+    tap.ok(map.coversAll('!0!source'));
+
+    tap.end();
+});
+
 tape ('stamp.02.C zero vector', function (tap) {
     var empty = new VV();
     tap.equal(empty.toString(), '!0', 'empty vector is !0');
