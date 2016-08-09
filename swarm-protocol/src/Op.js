@@ -1,162 +1,126 @@
 "use strict";
+var base64 = require('./Base64x64');
+var Stamp = require('./Stamp');
 var Spec = require('./Spec');
 
-// *immutable* op: specifier, value and a patch (nested ops).
-// empty value is '', not null, not undefined
-function Op (spec, value, source, patch) {
-    if (value===undefined) { // FIXME kill this, throw
-        if (spec && spec.constructor===String) {
-            var parsed = Op.parse(spec);
-            if (parsed.ops.length!==1) {
-                throw new Error('not a serialized op');
+/**
+ *  Immutable Swarm op, see the specification at
+ *  https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
+ * */
+class Op {
+
+    constructor (spec, value, source) {
+        if (spec===undefined) {
+            return Op.NON_SPECIFIC_NOOP;
+        } else if (spec.constructor===Op) {
+            this._spec = spec._spec;
+            this._value = spec._value;
+            this._source = spec._source;
+        } else if (spec.constructor===Spec) {
+            this._spec = spec;
+            this._value = value.toString();
+            this._source = source || Stamp.ZERO;
+        } else if (spec.constructor===String) {
+            this._spec = new Spec(spec);
+            this._value = value.toString();
+            this._source = source || Stamp.ZERO;
+        } else {
+            throw new Error("unrecognized parameter");
+        }
+    }
+
+    get spec () {
+        return this._spec;
+    }
+
+    get specifier () {
+        return this._spec;
+    }
+
+    get value () {
+        return this._value;
+    }
+
+    /** an immediate connection id this op was received from, where
+     *  op.source.value is a connection id per se, while
+     *  op.source.origin is the id of the connected replica
+     *  (op.spec.origin is the id of a replica that created the op) */
+    get source () {
+        return this._source;
+    }
+
+    get origin () {
+        return this._spec.origin;
+    }
+
+    toString () {
+        let ret = this._spec.toString();
+        if (!this._value) {
+        } else if (this._value.indexOf('\n')===-1) {
+            ret += '\t' + this._value;
+        } else {
+            ret += '=\n' + this._value.replace(/^(.*)$/mg, "\t$1");
+        }
+        return ret;
+    }
+
+    /** whether this is not a state-mutating op */
+    isPseudo () {
+        return Op.PSEUDO_OP_NAMES.indexOf(this._spec.name.value)!==-1;
+    }
+
+    /** parse a frame of several serialized concatenated newline-
+     * terminated ops. Does not parse buffers (because partial ops,
+     * partial Unicode chars). */
+    static parseFrame (text, source) {
+        var ret = [];
+        var m = null;
+        Op.reOp.lastIndex = 0;
+        while ( m = Op.reOp.exec(text) ) {
+            let spec = m[1],
+                empty = m[2],
+                line = m[3],
+                lines = m[4],
+                length = m[5],
+                value;
+            if (empty!==undefined) {
+                value = '';
+            } else if (line!==undefined) {
+                value = line;
+            } else if (lines!==undefined) {
+                value = lines.replace(/\n[ \t]/mg, '\n').substr(1);
+            } else { // explicit length
+                var char_length = base64.classic.parse(length);
+                var start = Op.reOp.lastIndex;
+                value = text.substr(start, char_length);
+                if (text.charAt(start+char_length)!=='\n') {
+                    throw new Error('unterminated op body');
+                }                Op.reOp.lastIndex = start+char_length;
             }
-            spec = parsed.ops[0];
+            ret.push(new Op(spec, value, source));
         }
-        if (spec && spec.constructor===Op) {
-            var orig = spec;
-            spec = orig.spec;
-            value = orig.value;
-            source = orig.source;
-            patch = orig.patch;
+        if (Op.reOp.lastIndex!==0) {
+            throw new Error("mismatched content");
         }
+        return ret;
     }
-    this.spec = spec && spec.constructor===Spec ?
-        spec : new Spec(spec);
 
-    // if (value && value.constructor===Object) {
-    //     value = JSON.stringify(value);
-    // }
+    get type () { return this._spec.type; }
+    get id () { return this._spec.id; }
+    get stamp () { return this._spec.stamp; }
+    get name () { return this._spec.name; }
 
-    this.value = value ? value.toString() : '';
-    this.source = source ? source.toString() : '';
-    this.patch = patch || null;
-    if (patch && patch.constructor!==Array) {
-        throw new Error('need a patch as an array of Ops');
-    }
 }
+
+Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
+Op.PSEUDO_OP_NAMES = ["on", "off", "error", "0"];
+Op.SERIALIZATION_MODES = {
+    LINE_BASED: 1,
+    EXPLICIT: 2,
+    EXPLICIT_ONLY: 3
+};
+Op.rsOp = '\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/g, '(?:') + ')' +
+    '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+base64.rs64x64+')\\n)';
+Op.reOp = new RegExp(Op.rsOp, "mg");
+
 module.exports = Op;
-Op.handshake_ops = {on:1, off:1};
-
-Op.create = function (triplet, source, scope, defaults) {
-    var spec = new Spec(triplet[0], scope, defaults);
-    var patch = ! triplet[2] ? null :
-        triplet[2].map(function(o){
-            if (o.constructor===Op) {return o;} // FIXME demand triplets
-            var sp = new Spec(o[0], scope, defaults);
-            return new Op(sp, o[1], source, null);
-        });
-    return new Op(spec, (triplet[1]||'').toString(), source, patch);
-};
-Op.prototype.triplet = function () {
-    return [this.spec, this.value, this.patch];
-};
-
-// Epically monumental op-parsing regexes.
-Op.rsSpec = '(?:'+Spec.rsQuant+'=(?:\\+=)?)+'.replace(/=/g, Spec.rT);
-Op.rsPatchOp =  '\\n[ \\t]+' + Op.rsSpec + '[ \\t]+.*';
-Op.rsPatchOpB = '\\n[ \\t]+(' + Op.rsSpec + ')[ \\t]+(.*)';
-Op.rsOp = '(' + Op.rsSpec+')[ \\t]+(.*)((?:' + Op.rsPatchOp + ')*)';
-Op.reOp = new RegExp(Op.rsOp, 'mg');
-Op.rePatchOp = new RegExp(Op.rsPatchOpB, 'mg');
-
-//
-Op.parse = function (str, source, context) {
-    Op.reOp.lastIndex = 0;
-    var rem = str, m, mm, ops = [], d=0;
-    while (m = Op.reOp.exec(rem)) {
-        var spec = new Spec(m[1], null, context);
-        var value = m[2], patch_str = m[3];
-        var patch = null;
-        if (patch_str) {
-            var typeId = spec.typeId();
-            patch = [];
-            Op.rePatchOp.lastIndex = 0;
-            while (mm = Op.rePatchOp.exec(patch_str)) {
-                var op_spec = new Spec(mm[1], typeId);
-                patch.push(new Op(op_spec, mm[2], source));
-            }
-        }
-        ops.push(new Op(spec, value, source, patch));
-        d = m.index + m[0].length;
-    }
-    rem = rem.substr(d);
-    // comments and empty lines
-    var next_nl = /\n+/g.exec(rem);
-    if ( next_nl && next_nl.index===0 ) {
-        rem = rem.substr(next_nl[0].length);
-        // TODO detect unparseable strings
-    }
-    if (rem.indexOf('\n')!==-1 && !Op.reOp.exec(rem)) {
-        console.error('unparseable input', rem);
-        throw new Error('unparseable input');
-    }
-    if (rem.length>(1<<23)) { // 8MB op size limit? TODO
-        throw new Error("large unparseable input");
-    }
-
-    return {ops: ops, remainder: rem};
-};
-
-
-Op.prototype.origin = function () {
-    return this.spec.origin();
-};
-Op.prototype.stamp = function () {
-    return this.spec.stamp();
-};
-Op.prototype.author = function () {
-    return this.spec.author();
-};
-Op.prototype.typeid = function () {
-    return this.spec.typeid();
-};
-Op.prototype.id = function () {
-    return this.spec.id();
-};
-Op.prototype.name = function () {
-    return this.spec.op();
-};
-Op.prototype.op = Op.prototype.name;
-
-Op.prototype.version = function () {
-    return this.spec.version();
-};
-
-Op.prototype.unbundle = function () {
-    return this.patch;
-};
-
-// FIXME make efficient
-Op.prototype.bundleLength = function () {
-    return this.unbundle().length;
-};
-
-Op.prototype.toString = function (context) {
-    var spec_str = context ?
-        this.spec.toAbbrevString(context) : this.spec.toString();
-    var line = spec_str + '\t' + this.value;// + '\n';
-    if (this.name()==='on' && this.patch) {
-        this.patch.forEach(function(o){
-            line += '\n\t' + o.toShortString();
-        });
-    }
-    return line;
-};
-
-Op.prototype.toShortString = function () {
-    return this.spec.stampop() + '\t' + this.value;// + '\n';
-};
-
-Op.prototype.error = function (msg, src) {
-    var msg50 = msg.toString().replace(/\n/g, ' ').substr(0,50);
-    return new Op(this.spec.set('.error'), msg50, src||this.source);
-};
-
-/** handshake ops */
-Op.prototype.reply = function (opname, value) {
-    return new Op( this.spec.set('.'+opname), value||'', this.source, this.patch );
-};
-
-Op.prototype.relay = function (to_pipe) {
-    return new Op(this.spec, this.value, to_pipe, this.patch );
-};

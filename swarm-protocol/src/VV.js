@@ -1,9 +1,9 @@
 "use strict";
-var LT = require('./Stamp');
+var Stamp = require('./Stamp');
 
 // Version vector represented as a {origin: time} map.
 function VVector(vec) {
-    this.map = {};
+    this.map = new Map();
     if (vec) {
         this.addAll(vec);
     }
@@ -27,19 +27,23 @@ VVector.prototype.toString = function () {
 //
 VVector.prototype.add = function (stamp) {
     if (!stamp) {return;}
-    if (stamp.constructor!==LT) {
-        stamp = new LT(stamp.toString());
+    if (stamp.constructor!==Stamp) {
+        stamp = new Stamp(stamp.toString());
     }
-    var existing = this.map[stamp.origin()] || '';
-    if (stamp.time()>existing && stamp.time()!=='0') {
-        this.map[stamp.origin()] = stamp.time();
-    }
+    this.addPair(stamp.value, stamp.origin);
     return this;
+};
+
+VVector.prototype.addPair = function (value, origin) {
+    var existing = this.map[origin] || '';
+    if (value>existing && value!=='0') {
+        this.map[origin] = value;
+    }
 };
 
 VVector.norm_src = function (origin) {
     if (origin.constructor===String && origin.indexOf('+')!==-1) {
-        return new LT(origin).origin();
+        return new Stamp(origin).origin;
     } else {
         return origin;
     }
@@ -58,10 +62,14 @@ VVector.prototype.isEmpty = function () {
 };
 
 
+VVector.rsVVTok = '!'+Stamp.rsTokExt;
+VVector.reVVTok = new RegExp(VVector.rsVVTok, 'g');
+
 VVector.prototype.addAll = function (new_ts) {
-    var stamps = LT.parse(new_ts);
-    for(var i=0; i<stamps.length; i++) {
-        this.add(stamps[i]);
+    VVector.reVVTok.lastIndex = 0;
+    var m = null;
+    while (m=VVector.reVVTok.exec(new_ts)) {
+        this.addPair (m[1], m[2]);
     }
     return this;
 };
@@ -78,10 +86,10 @@ VVector.prototype.has = function (origin) {
 };
 
 VVector.prototype.covers = function (version) {
-    if (version.constructor!==LT) {
-        version = new LT(version);
+    if (version.constructor!==Stamp) {
+        version = new Stamp(version);
     }
-    return version.time() <= (this.map[version.origin()] || '0');
+    return version.value <= (this.map[version.origin] || '0');
 };
 
 VVector.prototype.coversAll = function (vv) {

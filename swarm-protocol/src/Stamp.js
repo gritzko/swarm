@@ -29,6 +29,7 @@ class Stamp {
      */
     constructor (stamp, origin) {
         this._parsed = null;
+        this._string = null;
         if (origin) {
             if (stamp.constructor===String) {
                 this._value = Base64x64.toString(stamp);
@@ -48,12 +49,14 @@ class Stamp {
             if (stamp.constructor===Stamp) {
                 this._value = stamp._value;
                 this._origin = stamp._origin;
+                this._string = stamp._string;
             } else {
                 Stamp.reTokExt.lastIndex = 0;
                 var m = Stamp.reTokExt.exec(stamp);
                 if (!m) {
                     throw new Error('malformed Lamport timestamp');
                 }
+                this._string = m[0];
                 this._value = Base64x64.toString(m[1]);
                 this._origin = m[2] ? Base64x64.toString(m[2]) : '0';
             }
@@ -90,7 +93,14 @@ class Stamp {
     }
 
     toString () {
-        return this._value + (this._origin==='0' ? '' : '+' + this._origin);
+        return this.string;
+    }
+
+    get string () {
+        if (this._string===null) {
+            this._string = this._value + (this._origin==='0' ? '' : '+' + this._origin);
+        }
+        return this._string;
     }
 
     static is (str) {
@@ -171,6 +181,7 @@ class Stamp {
 
 }
 
+Stamp.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
 Stamp.rsTokExt = '(=)(?:\\+(=))?'.replace(/=/g, Base64x64.rs64x64);
 Stamp.reTokExt = new RegExp('^'+Stamp.rsTokExt+'$');
 

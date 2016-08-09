@@ -2,7 +2,7 @@
 var tap = require('tap').test;
 var Base64x64 = require("../src/Base64x64");
 
-tap('protocol.01.A basic API', function (t) {
+tap('protocol.00.A basic API', function (t) {
 
     // date constructor
     var epoch = new Date("January 1, 2010 00:00:00 UTC");
@@ -42,16 +42,19 @@ tap('protocol.01.A basic API', function (t) {
     t.equals(c.toString(), f.toString());
 
     // Base64.now() current timestamp
-    var now = Base64x64.now(3);
-    t.equals(now.seq, 3);
+    var now = Base64x64.now();
+    t.equals(now.seq, 0);
     var ms1 = now.toDate().getTime();
     var ms2 = Date.now();
     t.ok( ms2>=ms1 && ms2-ms1<1000 );
 
+    var inc = now.inc();
+    t.equals(inc.seq, 1);
+
     t.end();
 });
 
-tap ('protocol.01.B base64 conversions perf', function(tap){
+tap ('protocol.00.B base64 conversions perf', function(tap){
     var ms1 = new Date().getTime();
     var count = 1000000;
     for(var i=0; i<count; i++) {
@@ -66,7 +69,7 @@ tap ('protocol.01.B base64 conversions perf', function(tap){
 });
 
 
-tap ('protocol.01.C timestamping perf', function(tap){
+tap ('protocol.00.C timestamping perf', function(tap){
     var ms1 = new Date().getTime();
     var count = 1000000;
     var year = Base64x64.now().toString().substr(0,2);
