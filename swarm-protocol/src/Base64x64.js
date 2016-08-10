@@ -16,6 +16,21 @@ var rs64x64 = rs64+'{1,10}'; // 60 bits is enough for everyone
 var reTok =  new RegExp('^'+rs64x64+'$'); // plain no-extension token
 var reNorm64x64 = /^([0-9A-Za-z_~][0-9A-Za-z_~]*?)0*$/;
 
+/**
+ * Base64x64 timestamps are 64-bit timestamps in Base64.
+ * Base64x64 stamps has consistent alphanumeric order, so they can be
+ * compared as strings. Base64x64 employs its own variety of base64,
+ * because common [base64 variants][base64] lack that feature.
+ * Swarm base64 symbols are:
+ * `0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~`
+ * Also, Base64x64 stamps have their *right* zeroes trimmed
+ * (i.e. `1` means `1000000000`, not `0000000001`) to stay consistent
+ * with the alphanumeric order.
+ * See the [specification][spec] for the details.
+ *
+ * [base64]: https://en.wikipedia.org/wiki/Base64#Variants_summary_table
+ * [spec]: https://www.gitbook.com/book/gritzko/swarm-the-protocol/welcome
+*/
 class Base64x64 {
 
     constructor (value, seq) {

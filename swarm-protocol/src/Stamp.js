@@ -2,19 +2,42 @@
 var Base64x64 = require('./Base64x64');
 
 /**
- * This class defines the general timestamp format all the *clock* classes
- * must generate: `timestamp+replica`. It is based on the
- * idea of [Logical timestamp][lamport]: time value followed by a process
- * id. Both timestamp and process id are Base64x64, `+` is a separator.
- * In our case, a "process" is a Swarm db replica.
  *
- * The precise meaning of the time part is clock-specific (see Clock).
- * It may be a pure logical timestamp (incremental) or it may convey
- * the actual wall clock time. The only general requirement is the
- * lexicographic order: a newly issued timestamp must be greater than
- * anything previously seen.
+ * ![events](https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Vector_Clock.svg/750px-Vector_Clock.svg.png)
  *
- * [lamport]: http://research.microsoft.com/en-us/um/people/lamport/pubs/time-clocks.pdf
+ * Stamp implements Base64 string Lamport timestamps. First described in
+ * ["Time, clocks, and the ordering of events in a distributed system"][paper]
+ * by Leslie Lamport these timestamps are designed to track events in
+ * a distributed system.
+ * It describes a model of time based on sequential processes that
+ * communicate asynchronously. Each process has its local clocks only,
+ * no "newtonian" global universal clocks.
+ * Notably, the paper's primary inspiration was the special theory of
+ * relativity.
+ * These days, Lamport timestamps are used everywhere, starting from
+ * multicore CPUs all the way to world-scale distributed systems.
+ *
+ * Every Lamport timestamp has two components:
+ *
+ * * monotonically increasing time value and
+ * * a globally unique process/clock identifier.
+ *
+ * This implementation deals with Base64x64 string based timestamps.
+ * Base64 can be used inside URLs (path/fragment parts), logs, arbitrary
+ * databases, etc.
+ *
+ * This class defines the timestamp serialization format other classes
+ * reuse: `timestamp+replicaId`.
+ * Base64x64 time value followed by a separator (the plus sign) and
+ * a Base64x64 process id. In our case, a "process" is a Swarm
+ * db replica (one process runs one replica, owns one clock).
+ *
+ * Strategies for timestamp generation may differ (see Clock).
+ * The only general requirement is the monotonous lexicographic order:
+ * a newly issued timestamp must be greater than any past timestamp
+ * seen by that replica.
+ *
+ * [paper]: http://amturing.acm.org/p558-lamport.pdf
  * @class
  */
 class Stamp {
