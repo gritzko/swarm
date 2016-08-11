@@ -1,7 +1,7 @@
 # Swarm protocol primitives #
 
 This package implements the Swarm protocol primitives according to the
-specification http://gitbook.com/book/gritzko/swarm-the-protocol
+specification https://gritzko.gitbooks.io/swarm-the-protocol/content/
 
 * Base64x64 - 64-bit numbers in Base64
 * Stamp - hybrid logical time stamps ([timeStamp, replicaId] pairs)

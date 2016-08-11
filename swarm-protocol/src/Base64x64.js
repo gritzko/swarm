@@ -214,7 +214,7 @@ class Base64x64 {
     }
 
     isAbnormal () {
-        return this._base.charAt(0)==='~';
+        return this._base.charAt(0)==='~' && this._base.length>1;
     }
 
     get ms () {

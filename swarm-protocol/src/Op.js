@@ -110,6 +110,22 @@ class Op {
     get stamp () { return this._spec.stamp; }
     get name () { return this._spec.name; }
 
+    isOn () { return this.spec.Name.eq(Op.ON); }
+
+    isOff () { return this.spec.Name.eq(Op.OFF); }
+
+    isOnOff () { return this.isOn() || this.isOff(); }
+
+    isMutation () {
+        return !this.isOnOff() && !this.isError() && !this.isState();
+    }
+
+    isState () { this.spec.Name.eq(Op.STATE); }
+
+    isNoop () { this.spec.Name.eq(Op.NOOP); }
+
+    isError () { this.spec.Name.eq(Op.ERROR); }
+
 }
 
 Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
@@ -122,5 +138,10 @@ Op.SERIALIZATION_MODES = {
 Op.rsOp = '\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/g, '(?:') + ')' +
     '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+base64.rs64x64+')\\n)';
 Op.reOp = new RegExp(Op.rsOp, "mg");
+Op.ON = new Stamp("on");
+Op.OFF = new Stamp("off");
+Op.STATE = new Stamp("~");
+Op.NOOP = new Stamp();
+Op.ERROR = new Stamp("error");
 
 module.exports = Op;

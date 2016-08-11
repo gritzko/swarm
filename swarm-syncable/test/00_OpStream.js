@@ -20,13 +20,27 @@ tape ('syncable.00.A echo op stream - event filtering', function (t) {
     let unsub = false;
 
     // OK, let's play with filters and listeners
+    // the syntax for the filters is the same as for Specs,
+    // except each token may have many accepted values (OR)
+    // Different tokens are AND'ed.
+
     stream.on(".on", op => ons++);
+
     // may use stream.onHandshake(op => onoffs++)
+    // means: ".on OR .off"
     stream.on(".on.off", op => onoffs++);
-    stream.on(".~", op => states++);
+
+    // may use stream.on(".~", op => states++)
+    stream.onState(op => states++);
+
     // may use stream.onMutation(op=> mutations++)
+    // the leading ^ is a negation, i.e "NOT (.on OR .off OR ...)"
     stream.on("^.on.off.error.~", op=> mutations++);
+
+    // filters database close event, ".off AND /Swarm"
     stream.on("/Swarm.off", op=> unsub=true);
+
+    // this catches a fresh subscription to #7AM0f+gritzko
     stream.on("/Object#7AM0f+gritzko!0", on => {
         myobj++;
         t.ok(on.isOn());
