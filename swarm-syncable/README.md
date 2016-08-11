@@ -1,97 +1,50 @@
-Swarm: syncable objects (CmRDTs)
-================================
+Swarm: replicated data types (syncables)
+========================================
 
-![specifier][spec-pic]
+This package contains Swarm replicated data types (RDTs) defined over
+a partially ordered log of operations (POLO, also hyperlog).
+In Swarm, everything is an OpStream:
 
-This package contains Swarm commutative replicated data types (CmRDTs) defined over a partially ordered log of operations (POLO). Throughout the code, such objects are named *syncables*.
+* a database is a partially ordered stream of ops (p.o. log, hyperlog)
+* a Peer is an instance the database, it only has its local linear
+        *arrival* order,
+* a Host is a subset of the full log, as a client only subscribes
+        to some objects,
+* an object is a partially ordered stream of ops too
+        (a database has many objects), and finally
+* a Syncable is an instance of an object, having its own local
+        linear arrival order.
 
-General state machine-like rules are:
-* every syncable starts at the zero (default) state of its respective type;
-* every mutation to a syncable is serialized as an immutable atomic operation;
-* every such op is eventually delivered to every replica of that object;
-* the order of delivery may vary, but it never violates causality.
+Hence, Peer, Host and Syncable implement the
+[OpStream](test/00_OpStream.js) interface.
+As OpStream is asynchronous, any network transport or storage implements
+that interface too. 
 
-Syncables assume those conditions to be true, but they are completely oblivious of the ways of operation delivery.
-Op delivery and storage as well as subscription management is performed by Router (forward ops) and Storage (keeps op logs, generates diffs), see the swarm-node package.
+A Syncable object is split into two parts: 
+* RDT, the inner state machine that implements all the math,
+* a Syncable: the outer OpStream-based API, including all the write 
+    and query methods.
 
-An op is serialized as a key-value pair where the key specifies all the generic features of an op, while everything type-specific is isolated into the value.
+General RDT state-machine-like rules are:
+* every RDT starts at the zero (default) state of its respective type;
+* every mutation to an RDT is serialized as an immutable atomic operation (op);
+* every such op is eventually delivered to every replica of the object;
+* the order of delivery may vary, but it never violates causality;
+* once all the ops reach all the replicas, their states converge.
 
-The key (also named a *specifier*) is a compound op identifier that contains *tokens* for:
+Each Syncable is synchronously connected to its Swarm Host.
+A changed Syncable submits an op requests to its host, so
+the host creates an immutable op and feeds it back to the Syncable and its RDT.
+A hostless Syncable is read-only, although you can feeds it ops manually. 
 
-* data type name (like "Model" or "Set"),
-* object's id,
-* Lamport timestamp (time + process id), and
-* operation name.
+Syncable's id is typically a [Lamport timestamp][stamp] of the object
+creation event. Global objects may have transcendent (zero origin)
+Base64x64 ids.
 
-Object's id is typically a Lamport timestamp of the object creation event, although arbitrary [Base64 ids][base64] are possible.
+*Syncable.Ref* is a small class used as a wrapper for a reference
+(i.e. one syncable referring to another).
 
-A value is an arbitrary string, the actual format depends on the data type.
-
-See the pic above for a typical serialized specifier-value pair.
-
-## API
-
-Key classes and methods of the package are listed below. Please rely on comments for additional information.
-
-### Spec
-
-The class is a thin wrapper around a serialized specifier. API is based on *quants* (/#!.) and base64 tokens.
-Quants are separators for parts of a specifier:
-
-* / precedes type name
-* # precedes object id
-* ! precedes Lamport timestamp
-* . precedes operation name
-* + separates parts of a token (i.e. time and process id)
-
-See *Spec.Parsed* for a parsed specifier.
-
-### Op
-
-Op is a clas for a single operation, containing the spec -- value pair and a reference to the source the op was received from.
-It also contains routines to serialize/deserialize an op into/from a line-based format:
-
-* op.toString() - convert the op into the line based format string
-* Op.parse() - parse a string, create an array of Ops
-
-### Syncable
-
-Syncable is an "abstract" base class for all syncables.
-It contains all the necessary metadata fields ("underscoreds": `_id`, `_version`, `_listeners`, also `_host` for multi-host setups).
-It also implements all the API-side listen/emit methods.
-
-Syncable is the outer API side of a CRDT object that mimicks a "plain" JavaScript object (POJO).
-The actual CRDT state and all the CRDT metadata is hidden in the inner state object (Syncable.Inner).
-Essentially, the inner object is a state machine that consumes ops and produces the outer state.
-
-The primary Syncable object workflow is to
-
-1. call its API methods (like `Model.set`) that
-2. prepare CRDT ops and submit them to the Host that
-3. feeds ops to the object's inner state that
-4. regenerates the outer state based on those changes.
-5. (later on, the Host relays new ops to other replicas)
-
-An alternative workflow is to
-
-1. change the object's fields directly and
-2. invoke the save() method that makes a diff of the original and the existing state to
-3. prepare ops and submit them to the Host that
-4. feeds them to the inner state machine that
-5. changes its state and
-6. regenerates the outer state.
-
-The inner-outer state duo has some advantages often associated with immutability.
-In particular, it is trivial to check whether a syncable has changed by looking at its `_version` field.
-
-*Syncable.Ref* is a small class used as a wrapper for a reference (i.e. one syncable referring to another).
-
-### Host
-
-Host, acts as a registry of all the sessions' syncables and a keeper of the clock.
-In the Lamport's model terms, it is a "process".
-Normally, there is one host per environment. Primarily in testing environments, multiple hosts can be active at the same time, see `Host.multihost` and `Host.localhost`.
-
-
-[base64]: https://github.com/gritzko/swarm/tree/master/stamp
+[base64]: https://gritzko.gitbooks.io/swarm-the-protocol/content/64x64.html
 [spec-pic]: http://swarmjs.github.io/images/spec.png
+[op]: https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
+[stamp]: https://gritzko.gitbooks.io/swarm-the-protocol/content/stamp.html
