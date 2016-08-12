@@ -106,6 +106,16 @@ class Spec {
         return this.Stamp.origin;
     }
 
+    get typeid () {
+        let tispec = this.blank('/#');
+        return tispec.toString(Spec.ZERO);
+    }
+
+    get stampop () {
+        let sospec = this.blank('!.');
+        return sospec.toString(Spec.ZERO);
+    }
+
     toString (defaults) {
         var ret = '';
         if (defaults===undefined) {

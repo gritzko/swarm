@@ -3,6 +3,7 @@ var Swarm = {
     Host: require('./src/Host'),
     Syncable: require('./src/Syncable'),
     OpStream: require('./src/OpStream'),
+    LWWObject: require('./src/LWWObject'),
     get: get_fn
 };
 
