@@ -23,6 +23,12 @@ class OpStream {
         this._listeners.push(new Filter(event, callback));
     }
 
+    once (event, callback) {
+        this.on(event, callback);
+        let filter = this._listeners[this._listeners.length-1];
+        filter.once = true;
+    }
+
     /** remove listener(s) */
     off (event, callback) {
         if (event===undefined && callback===undefined) {
@@ -36,9 +42,23 @@ class OpStream {
 
     /** emit a new op to all the interested listeners */
     _emit (op) {
-        if (this._listeners) {
-            this._listeners.forEach(filter => filter.consider(op));
+        let lstn = this._listeners, clear = false;
+        if (!lstn) { return; }
+        for(let i=0; i<lstn.length; i++){
+            if (!lstn[i].covers(op)) continue;
+
+            let ret = lstn[i].callback(op, this);
+
+            if (ret && ret.constructor===Function) {
+                lstn[i].callback = ret;
+            } else if (ret===null || lstn[i].once) {
+                lstn[i] = null;
+                clear = true;
+            }
+
         }
+        if (clear)
+            this._listeners = lstn.filter( f => f!==null );
     }
 
     /** by default, an echo stream */
@@ -70,6 +90,13 @@ class OpStream {
         this.on(OpStream.STATES, callback);
     }
 
+    _listFilters () {
+        if (!this._listeners) return '';
+        return this._listeners.map( f =>
+            f.toString()+'\t'+f.callback.toString()
+        ).join('\n');
+    }
+
 }
 
 OpStream.MUTATIONS = "^.on.off.error.~";
@@ -84,6 +111,7 @@ class Filter {
         this.callback = callback;
         this.negative = string && string.charAt(0)==='^';
         this._patterns = [null, null, null, null];
+        this.once = false;
         if (string===null) { //eof
             this._patterns = null;
             return;
@@ -114,17 +142,19 @@ class Filter {
         return !this.negative;
     }
 
-    consider (op) {
-        if (this.covers(op)) {
-            this.callback(op);
-        }
-    }
-
     toString () {
-
+        let ptrn = this._patterns;
+        if (ptrn===null) return null; // take that (TODO)
+        let ret = this.negative ? '^' : '';
+        for(let q=0; q<4; q++)
+            if (ptrn[q]!==null) {
+                ptrn[q].forEach(stamp => ret+=Spec.quants[q]+stamp);
+            }
+        return ret;
     }
 
 }
 
 Filter.rsTok = '([/#!\\.])(' + swarm.Stamp.rsTok + ')';
 Filter.reTok = new RegExp(Filter.rsTok, 'g');
+OpStream.Filter = Filter;
