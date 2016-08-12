@@ -156,6 +156,13 @@ class Spec {
         return Spec.reSpec.test(str.toString());
     }
 
+    isSameObject (spec) {
+        if (spec.constructor!==Spec) {
+            spec = new Spec(spec);
+        }
+        return this.Type.eq(spec.Type) && this.Id.eq(spec.Id);
+    }
+
 }
 
 Spec.quants = ['/', '#', '!', '.'];

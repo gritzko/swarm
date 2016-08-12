@@ -11,13 +11,17 @@ tape ('protocol.04.A parse ops', function (tap) {
         '\tKey1: value1\n' +
         ' Key2: value2\n' +
         '/Model#id!stamp.set\t{"x":"y"}\n' +
-        '/Model#other!stamp.on\n'
+        '/Model#other!stamp.on\n'+
+        '/Model#other!stamp.~\n' +
+        '/Model#other!stamp.0\n'
     );
 
-    tap.equal(parsed.length, 3);
+    tap.equal(parsed.length, 5);
     var multi = parsed[0];
     var set = parsed[1];
     var short_on = parsed[2];
+    var state = parsed[3];
+    var noop = parsed[4];
 
     tap.equal(set.name, 'set');
     tap.equal(set.value, '{"x":"y"}');
@@ -28,6 +32,13 @@ tape ('protocol.04.A parse ops', function (tap) {
     tap.equal(multi.spec.name, 'on', 'name');
     tap.equal(''+multi.spec.Stamp, 'timeX+author~ssn', 'version');
     tap.equals( multi.value.replace(/[^\n]/mg,'').length, 1 );
+
+    tap.ok ( state.isState() );
+    tap.ok ( state.isSameObject(short_on) );
+    tap.ok ( noop.isNoop() );
+    tap.notOk ( state.isNoop() );
+    tap.notOk ( noop.isState() );
+    tap.notOk ( noop.isSameObject(set) );
 
     tap.equal(multi.toString(),
         '/Swarm#test!timeX+author~ssn.on=\n'+

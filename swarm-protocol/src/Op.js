@@ -120,11 +120,26 @@ class Op {
         return !this.isOnOff() && !this.isError() && !this.isState();
     }
 
-    isState () { this.spec.Name.eq(Op.STATE); }
+    isState () {
+        return this.spec.Name.eq(Op.STATE);
+    }
 
-    isNoop () { this.spec.Name.eq(Op.NOOP); }
+    isNoop () {
+        return this.spec.Name.eq(Op.NOOP);
+    }
 
-    isError () { this.spec.Name.eq(Op.ERROR); }
+    isError () {
+        return this.spec.Name.eq(Op.ERROR);
+    }
+
+    isSameObject (spec) {
+        if (spec.constructor===Op) {
+            spec = spec.spec;
+        } else if (spec.constructor!==Spec) {
+            spec = new Spec(spec);
+        }
+        return this.spec.isSameObject(spec);
+    }
 
 }
 
