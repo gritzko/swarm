@@ -6,7 +6,7 @@ let Spec = swarm.Spec;
 class OpStream {
 
     constructor () {
-        this._listeners = null;
+        this._filters = null;
     }
 
     /** add a new listener */
@@ -17,22 +17,22 @@ class OpStream {
             callback = event;
             event = '';
         }
-        if (this._listeners===null) {
-            this._listeners=[];
+        if (this._filters===null) {
+            this._filters=[];
         }
-        this._listeners.push(new Filter(event, callback));
+        this._filters.push(new Filter(event, callback));
     }
 
     once (event, callback) {
         this.on(event, callback);
-        let filter = this._listeners[this._listeners.length-1];
+        let filter = this._filters[this._filters.length-1];
         filter.once = true;
     }
 
     /** remove listener(s) */
     off (event, callback) {
         if (event===undefined && callback===undefined) {
-            this._listeners = null;
+            this._filters = null;
         } else if (event.constructor===Function) {
             callback = event;
             event = '';
@@ -42,23 +42,23 @@ class OpStream {
 
     /** emit a new op to all the interested listeners */
     _emit (op) {
-        let lstn = this._listeners, clear = false;
-        if (!lstn) { return; }
-        for(let i=0; i<lstn.length; i++){
-            if (!lstn[i].covers(op)) continue;
+        let f = this._filters, clear = false;
+        if (!f) { return; }
+        for(let i=0; i<f.length; i++){
+            if (!f[i].covers(op)) continue;
 
-            let ret = lstn[i].callback(op, this);
+            let ret = f[i].callback(op, this);
 
             if (ret && ret.constructor===Function) {
-                lstn[i].callback = ret;
-            } else if (ret===null || lstn[i].once) {
-                lstn[i] = null;
+                f[i].callback = ret;
+            } else if (ret===null || f[i].once) {
+                f[i] = null;
                 clear = true;
             }
 
         }
         if (clear)
-            this._listeners = lstn.filter( f => f!==null );
+            this._filters = f.filter(f => f!==null );
     }
 
     /** by default, an echo stream */
@@ -91,8 +91,8 @@ class OpStream {
     }
 
     _listFilters () {
-        if (!this._listeners) return '';
-        return this._listeners.map( f =>
+        if (!this._filters) return '';
+        return this._filters.map(f =>
             f.toString()+'\t'+f.callback.toString()
         ).join('\n');
     }
@@ -143,12 +143,12 @@ class Filter {
     }
 
     toString () {
-        let ptrn = this._patterns;
-        if (ptrn===null) return null; // take that (TODO)
+        let p = this._patterns;
+        if (p===null) return null; // take that (TODO)
         let ret = this.negative ? '^' : '';
         for(let q=0; q<4; q++)
-            if (ptrn[q]!==null) {
-                ptrn[q].forEach(stamp => ret+=Spec.quants[q]+stamp);
+            if (p[q]!==null) {
+                p[q].forEach(stamp => ret+=Spec.quants[q]+stamp);
             }
         return ret;
     }
