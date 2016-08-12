@@ -31,34 +31,39 @@ class OpStream {
 
     /** remove listener(s) */
     off (event, callback) {
-        if (event===undefined && callback===undefined) {
+        if (event===undefined) {
             this._filters = null;
-        } else if (event.constructor===Function) {
-            callback = event;
-            event = '';
+            return;
         }
-
+        if (event.constructor===Function) {
+            this._filters = this._filters.filter( f =>
+                f.callback !== event
+            );
+        } else {
+            this._filters = this._filters.filter( f =>
+                f.toString()!=event ||
+                (callback && f.callback!==callback)
+            );
+        }
     }
 
     /** emit a new op to all the interested listeners */
     _emit (op) {
-        let f = this._filters, clear = false;
-        if (!f) { return; }
-        for(let i=0; i<f.length; i++){
-            if (!f[i].covers(op)) continue;
+        let filters = this._filters;
+        if (!filters) { return; }
+        for(let i=0; i<filters.length; i++){
+            let f = filters[i];
+            if (!f.covers(op)) continue;
 
-            let ret = f[i].callback(op, this);
+            let ret = f.callback(op, this);
 
             if (ret && ret.constructor===Function) {
-                f[i].callback = ret;
-            } else if (ret===null || f[i].once) {
-                f[i] = null;
-                clear = true;
+                f.callback = ret;
+            } else if (ret===OpStream.ENOUGH || f.once) {
+                this._filters = this._filters.filter(a => a!==f);
             }
 
         }
-        if (clear)
-            this._filters = f.filter(f => f!==null );
     }
 
     /** by default, an echo stream */
@@ -102,6 +107,7 @@ class OpStream {
 OpStream.MUTATIONS = "^.on.off.error.~";
 OpStream.HANDSHAKES = ".on.off";
 OpStream.STATES = ".~";
+OpStream.ENOUGH = Symbol('enough');
 
 module.exports = OpStream;
 

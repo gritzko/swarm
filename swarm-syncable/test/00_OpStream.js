@@ -94,12 +94,12 @@ tape ('syncable.00.A echo op stream - event filtering', function (t) {
 
 tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
 
-    let ops = Op.parseFrame (".on\n.off\n.on\tvalue\n.off\n");
+    let ops = Op.parseFrame (".on\n.off\n/Swarm.on\tvalue\n.off\n");
 
     let stream = new OpStream();
 
     let once = 0, ons = 0, first_on = false, second_on = false;
-    let total = 0, before_value = 0;
+    let total = 0, before_value = 0, three=0;
 
     stream.on(op => total++);
     stream.once('.on', () => once++);
@@ -109,8 +109,13 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
         return op => second_on=true;
     });
     stream.on( op => {
-        if (op.value) return null;
+        if (op.value) return OpStream.ENOUGH;
         before_value++;
+    });
+    stream.on(function removable (op) {
+        three++;
+        if (op.type=='Swarm')
+            stream.off(removable);
     });
 
     stream.offerAll(ops);
@@ -120,6 +125,7 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
     t.equals(ons, 2);
     t.equals(total, 4);
     t.equals(before_value, 2);
+    t.equals(three, 3);
     t.ok(first_on);
     t.ok(second_on);
 
