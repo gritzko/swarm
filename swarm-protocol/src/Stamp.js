@@ -208,7 +208,9 @@ Stamp.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
 Stamp.rsTokExt = '(=)(?:\\+(=))?'.replace(/=/g, Base64x64.rs64x64);
 Stamp.reTokExt = new RegExp('^'+Stamp.rsTokExt+'$');
 
-Stamp.ZERO = new Stamp('0');
-Stamp.NEVER = new Stamp('~');
+Stamp.zero = '0';
+Stamp.ZERO = new Stamp(Stamp.zero);
+Stamp.never = '~';
+Stamp.NEVER = new Stamp(Stamp.never);
 
 module.exports = Stamp;

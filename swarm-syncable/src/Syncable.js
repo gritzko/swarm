@@ -1,98 +1,219 @@
 "use strict";
-var Spec = require('./Spec');
-//var Op = require('./Op');
-var Host = require('./Host');
-var EventEmitter = require('eventemitter3'); // TODO  '*' wildcard maybe
-var util = require('util');
+var swarm = require('swarm-protocol');
+var Stamp = swarm.Stamp;
+var Spec = swarm.Spec;
+var Op = swarm.Op;
+//var Host = require('./Host');
+let OpStream = require('./OpStream');
 
 /**
  * Swarm objects are split into two orthogonal parts, kind of Jekyll and Hyde.
- * The inner state (CRDT) is a cleanroom math-only CRDT implementation.
+ * The inner state is a cleanroom math-only RDT implementation.
  * It is entirely passive and perfectly serializable.
- * CRDT travels on the wire, gets saved into the DB, etc.
- * The outer state (Syncable) is a "regular" JavaScript object which is exposed
- * in the API. A Syncable is a mere projection of its CRDT. Still, all mutations
- * originate at a Syncable. This architecture is very similar to MVC, where
- * Syncable is a "View", CRDT is a "Model" and the Host is a "Controller".
- * All syncables are expected to inherit from Syncable.
+ * RDT travels on the wire, gets saved into the DB, etc.
+ * The outer state (Syncable) is a "regular" JavaScript object which
+ * is exposed in the API. A Syncable is a mere projection of its RDT.
+ * Still, all mutations originate at a Syncable. This architecture is
+ * very similar to MVC, where Syncable is a "View", RDT is a "Model"
+ * and the Host is a "Controller".
  * @constructor
+ * @param {Op|Stamp|String} op_id_nothing - init data, id or state
+ * @param {Host} host - the host to attach to (default Host.defaultHost)
  */
-function Syncable(init_op, host) {
+class Syncable extends OpStream {
 
-    EventEmitter.call(this);
-    /** The id of an object is typically the timestamp of the first
-        operation. Still, it can be any Base64 string (see swarm-stamp). */
-    this._id = null;
-    /** Timestamp of the last change op. */
-    this._version = '';
-    // EventEmitter stuff
-    this._events = {change: null};
+    constructor (op_id_nothing, host) {
+        super();
+        /** The id of an object is typically the timestamp of the first
+         operation. Still, it can be any Base64 string (see swarm-stamp). */
+        this._id = Stamp.ZERO;
+        this._rdt = null;
+        this._host = null;
+        /** Timestamp of the last change op. */
+        this._version = Stamp.ZERO;
+        this._typeid = null;
 
-    if (host===undefined) { // null means "no host"
-        host = Host.defaultHost();
+        if (!op_id_nothing) {
+        } else if (op_id_nothing.addSyncable) { // Host
+            host = op_id_nothing;
+            this._submit("~", "");
+        } else if (op_id_nothing.constructor===Op) {
+            let op = op_id_nothing;
+            if (!op.isState())
+                throw new Error("not a state");
+            if ( op.spec.Type.value !== this.type )
+                throw new Error("wrong type");
+            this.offer(op);
+        } else if (op_id_nothing.constructor===Spec) {
+            let spec = op_id_nothing;
+            if (!spec.Type.eq(this.type))
+                throw new Error("wrong type");
+            this._id = spec.Id;
+        } else if (op_id_nothing.constructor===Stamp) {
+            this._id = op_id_nothing;
+        } else if (op_id_nothing.constructor===String) {
+            this._id = new Stamp(op_id_nothing);
+        }
+
+        if (host===undefined && !Syncable.multiHost) {
+            host = Syncable.defaultHost;
+        }
+        if (host) {
+            // refuse to create a duplicate object
+            return host.addSyncable(this);
+        }
     }
 
-    var copy = host && host.adoptSyncable(this, init_op);
-    return copy; // JavaScript-specific trick: prevent object copies
+    noop () {
+        this._submit("0", "", this);
+    }
+
+    _submit (op_name, op_value) {
+        if (this._rdt===null) {
+            throw new Error("can not write to a stateless object");
+        }
+        if (this._host===null) {
+            throw new Error("can not write to an orphan object");
+        }
+        this._host.submit(op_name, op_value, this);
+    }
+
+    offer (op) {
+        if (op.name==='~') {
+            this._rdt = new this._type_rdt_class(op);
+            this._id = op.spec.Id;
+            this._typeid = null;
+        } else {
+            this._rdt.apply(op);
+        }
+        this._version = op.spec.Stamp;
+        this._emit(op);
+    }
+
+    get id () {
+        return this._id.toString();
+    }
+
+    /**
+     *  The most correct way to specify a version in a distibuted system
+     *  with partial order is a *version vector*. Unfortunately in some
+     *  cases, a VVector may consume more space than the data itself.
+     *  So, `version()` is not a version vector, but the last applied
+     *  operation's timestamp (Lamport-like, i.e. "time+origin").
+     *  It changes every time the object changes, but *not* monotonously.
+     *  For a stateless object (e.g. the state did not arrive from the
+     *  server yet), `o.version()==='0'`. Deleted objects (no further
+     *  writes possible) have `o.version()==='~'`. For a normal stateful
+     *  object, version is the timestamp of the last op applied, according
+     *  to the local order (in other replicas, the order may differ).
+     */
+    get version () {
+        return this._version.toString();
+    }
+
+    get Version () {
+        return this._version;
+    }
+
+    get author () {
+        return this._id.origin;
+    }
+
+    /** Syncable type name
+     *  @returns {String} */
+    get type () {
+        return this.constructor.id;
+    }
+
+    get _type_rdt_class () {
+        return this.constructor._rdt;
+    }
+
+    get host () {
+        return this._host;
+    }
+    /** Objects created by supplying an id need  to query the upstream
+     *  for their state first. Until the state arrives, they are
+     *  stateless. Use `obj.once(callback)` to get notified of state arrival.
+     */
+    hasState () {
+        return this._rdt !== null;
+    }
+
+    get spec () {
+        return new Spec([
+            this.type(), this._id, this._version, Op.STATE
+        ]);
+    }
+
+    close () {
+        this._host && this._host.removeSyncable(this);
+    }
+
+    get typeid () {
+        if (null===this._typeid) {
+            let spec = new Spec([this.type, this.id, Stamp.ZERO, Stamp.ZERO]);
+            this._typeid = spec.toString(Spec.ZERO);
+        }
+        return this._typeid;
+    }
+
+    /** Invoke a listener after applying an op of this name
+     *  @param {String} op_name - name of the op
+     *  @param {Function} callback - listener */
+    onOp (op_name, callback) {
+        this.on('.'+op_name, callback);
+    }
+
 }
-util.inherits(Syncable, EventEmitter);
+
+Syncable._classes = Object.create(null);
+Syncable._classes.Syncable = Syncable;
+Syncable.id = "Syncable";
+
+Syncable.multiHost = false;
+Syncable.defaultHost = null;
+
 module.exports = Syncable;
-Syncable.DEFAULT_TYPE = new Spec('/Model');
 
-/** The Host this syncable is registered with (the db name, the user
- *  name and the session id). */
-Syncable.prototype.ownerHost = function () {
-    return Host.getOwnerHost(this);
-};
+/** Abstract base class for all replicated data types; not an OpStream */
+class RDT {
 
+    constructor (state_op) {
+    }
 
-Syncable.prototype._crdt = function () {
-    return this.ownerHost().getCRDT(this);
-};
+    apply (op) {
+        switch (op.name) {
+            case "noop": this.noop(); break;
+            default:     break;
+        }
+    }
 
-//
+    noop () {
+        // nothing :)
+    }
+
+    toString () {
+        return "";
+    }
+
+}
+Syncable._rdt = RDT;
+
+// ----8<----------------------------
+
+/*
 Syncable.prototype.save = function () {
     var host = this.ownerHost();
     var clean_state = host.getCRDT().updateSyncable({});
     var diff = this.diff(clean_state);
     while (diff && diff.length) {
         host.submitOp(this, diff.unshift());
-    }
+    } TODO
 };
+*/
 
-//
-Syncable.prototype.diff = function (base_state) {
-    return [];
-};
-
-
-Syncable.prototype.submit = function (op_name, op_value) {
-    this.ownerHost().submit(this, op_name, op_value);
-};
-
-//
-Syncable.registerType = function (name, type) {
-    if (!type || type.constructor!==Function) {
-        throw new Error("please provide a constructor");
-    }
-    if (!type.Inner || type.Inner.constructor!==Function) {
-        throw new Error("please provide an inner state constructor");
-    }
-    if (!name || name.constructor!==String || !/[A-Z]\w+/.test(name)) {
-        throw new Error('invalid class name');
-    }
-    Syncable.types[name] = type;
-    type.prototype._type = name; // TODO multiple-reg
-    type.Inner.prototype._type = name; // TODO multiple-reg
-};
-Syncable.types = {};
-Syncable.reMethodName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
-
-Syncable.Inner = require('./CRDT');
-Syncable.registerType('Syncable', Syncable);
-
-
-// A *reaction* is a hybrid of a listener and a method. It "reacts" on a
+/* A *reaction* is a hybrid of a listener and a method. It "reacts" on a
 // certain event for all objects of that type. The callback gets invoked
 // as a method, i.e. this===syncableObj. In an event-oriented architecture
 // reactions are rather handy, e.g. for creating mixins.
@@ -100,119 +221,7 @@ Syncable.registerType('Syncable', Syncable);
 // @param {function} fn callback
 // @returns {{op:string, fn:function}}
 Syncable.addReaction = function (op, fn) {
-    var reactions = this.prototype._reactions;
-    var list = reactions[op];
-    list || (list = reactions[op] = []);
-    list.push(fn);
-    return {op: op, fn: fn};
+...
 };
-
-
-Syncable.removeReaction = function (handle) {
-    var op = handle.op,
-        fn = handle.fn,
-        list = this.prototype._reactions[op],
-        i = list.indexOf(fn);
-    if (i === -1) {
-        throw new Error('reaction unknown');
-    }
-    list[i] = undefined; // such a peculiar pattern not to mess up out-of-callback removal
-    while (list.length && !list[list.length - 1]) {
-        list.pop();
-    }
-};
-
-
-Syncable.prototype.spec = function () {
-    return new Spec('/' + this._type + '#' + this._id);
-};
-
-
-Syncable.prototype.typeid = function () {
-    return '/' + this._type + '#' + this._id;
-};
-
-Syncable.prototype.typeId = function () {
-    return Spec.create(this._type, this._id, null, null);
-};
-
-// Returns current object state specifier
-Syncable.prototype.stateSpec = function () {
-    return this.spec() + (this._version || '!0');
-};
-
-/**
- *  The most correct way to specify a version in a distibuted system
- *  with partial order is a *version vector*. Unfortunately, a vvector
- *  may consume more space than the data itself in some cases.
- *  So, `version()` is not a version vector, but the last applied
- *  operation's timestamp (Lamport-like, i.e. "time+origin").
- *  It changes every time the object changes, but not monotonously.
- *  For a stateless object (e.g. the state did not arrive from the server
- *  yet), `o.version()===''`. For objects with the default state (no ops
- *  applied yet), `o.version()==='0'`. Deleted objects (no further
- *  writes possible) have `o.version()==='~'`. For a normal stateful
- *  object, version is the timestamp of the last op applied, according
- *  to the local order (in other replicas, the order may differ).
- */
-Syncable.prototype.version = function () {
-    return this._version;
-};
-
-/* External objects (those you create by supplying an id) need first to query
- * the upstream for their state. Until the state arrives, they are stateless.
- */
-Syncable.prototype.hasState = function () {
-    return !!this._version;
-};
-Syncable.prototype.isStateful = Syncable.prototype.hasState;
-
-
-// Deallocate everything, free all resources.
-Syncable.prototype.close = function () {
-    this.ownerHost().abandonSyncable(this);
-};
-
-// Once an object is not listened by anyone it is perfectly safe
-// to garbage collect it.
-Syncable.prototype.gc = function () {
-    if (!this.listenerCount('change')) { // FIXME
-        this.close();
-    }
-};
-
-
-Syncable.prototype.toString = function () {
-    return JSON.stringify(this, Object.keys(this).filter(function(key){
-        return key && key.charAt(0)!=='_';
-    }));
-};
-
-
-Syncable.prototype.onLoad = function (callback) {
-    // FIXME .4 wait all Refs to load
-    // FIXME no refs => same as .init
-    this.once('load', callback);
-};
-
-/** Syntactic sugar: if the object has the state already then invokes the
-  * callback immediately; otherwise, waits for state arrival. */
-Syncable.prototype.onInit = function (callback) {
-    if (this.isStateful()) {
-        // if a callback flaps between sync and async execution
-        // that causes much of confusion, so let's force it to async
-        setTimeout(callback.bind(this), 0);
-    } else {
-        this.once('init', callback);
-    }
-};
-
-Syncable.reFieldName = /^[a-z][a-z0-9]*([A-Z][a-z0-9]*)*$/;
-
-Syncable.getType = function (type_id) {
-    if (Spec.is(type_id)) {
-        return Syncable.types[new Spec(type_id).type()] || undefined;
-    } else {
-        return Syncable.types[type_id] || undefined;
-    }
-};
+TODO this needs further refinement; in the current arch, useless as it is
+*/

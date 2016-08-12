@@ -47,7 +47,8 @@ class OpStream {
         }
     }
 
-    /** emit a new op to all the interested listeners */
+    /** emit a new op to all the interested listeners
+     *  @param {Op} op - the op to emit */
     _emit (op) {
         let filters = this._filters;
         if (!filters) { return; }

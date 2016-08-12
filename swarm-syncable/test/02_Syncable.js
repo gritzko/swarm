@@ -1,55 +1,52 @@
 "use strict";
-var stamp = require('swarm-stamp');
-var Lamp = stamp.LamportTimestamp;
-var sync = require('..');
-var Syncable = sync.Syncable;
-var Host = sync.Host;
-var Model = sync.Model;
-var Spec = sync.Spec;
-var Op = sync.Op;
-var tape = require('tap').test;
+var tap = require('tap').test;
+
+var swarm = require('swarm-protocol');
+var Spec = swarm.Spec;
+var Op = swarm.Op;
+var Syncable = require('../src/Syncable');
+var Stamp = swarm.Stamp;
 
 
-Host.multihost = true;
-
-
-tape ('syncable.02.A empty cycle', function (t) {
-    var host = new Host({
+tap ('syncable.02.A empty cycle', function (t) {
+    /*var host = new Host({
         ssn_id: 'anon',
         db_id: 'db',
         clock: new stamp.LamportClock('anon')
     });
-    host.go();
-    var empty = new Syncable(null, host);
-    t.equal(empty._version, empty._id, 'version id OK');
-    t.ok(empty._id, 'id is assigned');
+    host.go();*/
+    var ops = Op.parseFrame(
+        '/Syncable#time+author!time+author.~\n' +
+        '/Syncable#time+author!update+author.0\n'
+    );
+    t.equals(ops.length, 2);
 
-    var typeId = empty.typeId();
-    t.equal(typeId.type(), 'Syncable', 'typeId()');
-    t.equal(typeId.id(), empty._version, 'typeId()');
-    var typeid = empty.typeid();
-    t.equal(typeid, '/Syncable#'+empty._id, 'typeid()');
+    var empty = new Syncable(ops[0]);
+    
+    t.equal(empty.version, 'time+author', 'version id OK');
+    t.equal(empty.id, 'time+author', 'id OK');
+    t.equal(empty.author, 'author');
+    t.equal(empty.typeid, '/Syncable#time+author');
+    t.ok(empty.hasState());
 
-    var zero = host.getCRDT(empty);
-    t.equal(zero._version, empty._id, 'default state version !0');
-    t.equal(empty._version, empty._id, 'syncable rebuilt');
-    host.close();
+    let check = 0;
+    empty.onOp('0', ()=>check++ );
+
+    empty.offer(ops[1]);
+
+    t.equal(empty.version, 'update+author', 'version id OK');
+    t.ok(empty.Version.eq( new Stamp('update+author') ));
+    t.equal(empty.id, 'time+author', 'id OK');
+    t.equal(empty.author, 'author');
+    t.equal(empty.typeid, '/Syncable#time+author');
+    t.equal(check, 1);
 
     t.end();
 });
 
-tape ('syncable.02.B listeners', function (t) {
-    var empty = new Syncable(null, null);
-    empty.on('none', function(ev){
-        t.equals(ev.name, "none", 'event is OK');
-        t.end();
-    });
-    var event = {name: "none"};
-    empty.emit('none', event);
-});
-
-
-tape('syncable.02.C batch events', function (t) {
+//--8<--------------------------
+/*
+tap('syncable.02.C batch events', function (t) {
     var host = new Host({
         ssn_id: 'anon~02~C',
         db_id:  'db',
@@ -83,7 +80,7 @@ tape('syncable.02.C batch events', function (t) {
 });
 
 
-tape('syncable.02.D Host.get / Swarm.get', function (t) {
+tap('syncable.02.D Host.get / Swarm.get', function (t) {
     var host = new Host({
         ssn_id: 'anon~02~D',
         db_id:  'db',
@@ -132,66 +129,4 @@ tape('syncable.02.D Host.get / Swarm.get', function (t) {
     t.end();
 });
 
-
-// tape.skip ('syncable.02.D submit API', function (t) { FIXME revitalize
-//     var host = new Host({
-//         ssn_id: 'anon~02~D',
-//         db_id: 'db',
-//         clock: stamp.LamportClock
-//     });
-//     var last_op;
-//     host.on('data', function (op) {
-//         last_op = op;
-//     });
-//
-//     var obj = new Model({c:1}, host);
-//     obj.a = 2;
-//     obj.save();
-//     t.equal(obj.a, 2, 'save()');
-//     t.equal(obj.c, 1, 'old field is intact');
-//     t.equal(last_op.name(), 'set', 'op is .set');
-//     t.equal(last_op.value, '{"a":2}', 'op value');
-//
-//     obj.submit('set', '{"a":3}');
-//     t.equal(obj.a, 3, 'name-value syntax');
-//
-//     host.submitOp(new Op(obj.typeid().add('.set'), '{"b":4}'));
-//     t.equal(obj.a, 3, 'submitOp - merge');
-//     t.equal(obj.b, 4, 'submitOp - new value');
-//     t.equal(obj.c, 1, 'old field is intact');
-//
-//     host.close();
-//     t.end();
-// });
-
-/*
-tape ('syncable.02.a basic listener func', function (t) {
-    t.plan(6); // ...7
-    var huey = new Model({}, null);
-    var huey_ti = huey.spec();
-    huey.onFieldChange('age',function lsfn2a (ev){
-        t.equal(ev.value.age,1); // 1
-        t.equal(ev.spec.op(),'set'); // 2
-        t.equal(ev.spec.toString(),
-            huey_ti+'!'+ev.spec.version()+'.set'); // 3
-        var version = ev.spec.token('!');
-        t.equal(version.ext,'gritzko'); // 4
-        huey.off('set:age',lsfn2a);
-        //equal(huey._lstn.length,2); // only the uplink remains (and the comma)
-    });
-    huey.on('set', function (ev) {
-        t.deepEqual(ev.value, {age: 1}); // 5
-        //deepEqual(ev.old_value, {age: 0}); // 6
-    });
-    huey.onFieldChange('age', function (ev) {
-        t.equal(ev.value.age, 1); // 7
-        t.end();
-    });
-    huey.onFieldChange('height', function (ev) {
-        t.ok(false);
-    });
-    huey.onInit(function init2a () {
-        huey.set({age:1});
-    });
-});
 */
