@@ -3,6 +3,18 @@ Swarm: replicated data types (syncables)
 
 This package contains Swarm replicated data types (RDTs) defined over
 a partially ordered log of operations (POLO, also hyperlog).
+Practically, this is Swarm client core (see test/ for APi use examples).
+
+- [x]   OpStream - a stream of operations, our most fundamental abstraction
+- [x]   Syncable (+RDT) - the abstract base class for all syncables 
+- [ ]   Host - a container for Syncables, handles all the server/peer sync
+- Basic syncable types
+    - [ ]   LWWObject - a last-write-wins JSON object, field names up to 10 chars
+    - [ ]   Properties - a restrictive LWW {string:string} map (no newlines)
+    - [ ]   Counter - an integer that is modified by increments/decrements
+    - [ ]   Set - a set of JSON objects (JSON deep equality based)
+    - [ ]   Map - {string:JSON} map, arbitrary keys
+
 In Swarm, everything is an OpStream:
 
 * a database is a partially ordered stream of ops (p.o. log, hyperlog)
@@ -22,8 +34,8 @@ that interface too.
 
 A Syncable object is split into two parts: 
 * RDT, the inner state machine that implements all the math,
-* a Syncable: the outer OpStream-based API, including all the write 
-    and query methods.
+* a Syncable: the outer JavaScript API, including all the write, 
+    query and listen methods.
 
 General RDT state-machine-like rules are:
 * every RDT starts at the zero (default) state of its respective type;
