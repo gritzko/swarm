@@ -2,7 +2,10 @@
 let swarm = require('swarm-protocol');
 let Spec = swarm.Spec;
 
-
+/**
+ *
+ * @interface OpStream
+ * */
 class OpStream {
 
     constructor () {
@@ -165,3 +168,5 @@ class Filter {
 Filter.rsTok = '([/#!\\.])(' + swarm.Stamp.rsTok + ')';
 Filter.reTok = new RegExp(Filter.rsTok, 'g');
 OpStream.Filter = Filter;
+
+OpStream.TRACE = op => console.log(op.toString());

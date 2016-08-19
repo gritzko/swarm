@@ -1,7 +1,7 @@
 "use strict";
 var stamp = require('swarm-stamp');
 var LamportTimestamp = stamp.LamportTimestamp;
-var Spec = require('./Spec');
+var Spec = require('./../../swarm-protocol/src/Spec');
 var Op = require('./Op');
 var Syncable = require('./Syncable');
 

@@ -9,11 +9,20 @@ Practically, this is Swarm client core (see test/ for APi use examples).
 - [x]   Syncable (+RDT) - the abstract base class for all syncables 
 - [ ]   Host - a container for Syncables, handles all the server/peer sync
 - Basic syncable types
-    - [ ]   LWWObject - a last-write-wins JSON object, field names up to 10 chars
-    - [ ]   Properties - a restrictive LWW {string:string} map (no newlines)
-    - [ ]   Counter - an integer that is modified by increments/decrements
-    - [ ]   Set - a set of JSON objects (JSON deep equality based)
-    - [ ]   Map - {string:JSON} map, arbitrary keys
+    - [ ]   LWWObject - a last-write-wins object
+        * merge is per-field, the bigger timestamp wins
+        * can only have primitive fields (strings, numbers,
+          references to other syncables)
+        * stream-friendly (field name is mentioned in the specifier)
+        * the metadata object (type /Swarm) is actually an LWWObject
+    - [ ]   LWWArray - last-write-wins array/matrix
+        * can't add/remove rows/columns
+        * primitive fields
+    - [ ]   LWWJSON - a deep JSON object
+        * deep merge
+    - [ ]   Counter - (CRDT) an integer that is modified by increments/decrements
+    - [ ]   ORSet - (CRDT) a set of JSON objects
+        * arbitrary on-demand client-side sorting
 
 In Swarm, everything is an OpStream:
 

@@ -111,9 +111,16 @@ class Spec {
         return tispec.toString(Spec.ZERO);
     }
 
+    get scope () {
+        return this.name.origin;
+    }
+
+    static stampop (stamp, name) {
+        return Spec.quants[2] + stamp + Spec.quants[3] + name;
+    }
+
     get stampop () {
-        let sospec = this.blank('!.');
-        return sospec.toString(Spec.ZERO);
+        return Spec.stampop(this._toks[2], this._toks[3]);
     }
 
     toString (defaults) {
@@ -171,6 +178,16 @@ class Spec {
             spec = new Spec(spec);
         }
         return this.Type.eq(spec.Type) && this.Id.eq(spec.Id);
+    }
+
+    restamp (stamp, origin) {
+        if (origin) stamp = new Stamp(stamp, origin);
+        return new Spec([this.Type, this.Id, stamp, this.Name]);
+    }
+
+    rename (stamp, origin) {
+        if (origin) stamp = new Stamp(stamp, origin);
+        return new Spec([this.Type, this.Id, this.Stamp, stamp]);
     }
 
 }

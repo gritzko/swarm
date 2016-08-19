@@ -1,6 +1,6 @@
 'use strict';
 var Op = require('./Op');
-var Spec = require('./Spec');
+var Spec = require('./../../swarm-protocol/src/Spec');
 var EventEmitter = require("eventemitter3");
 var util = require("util");
 

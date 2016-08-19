@@ -42,27 +42,31 @@ var Stamp = require('./Stamp');
  */
 class Clock {
 
-    constructor (now, options) {
-        if (typeof(now)==="string") {
-            now = new Stamp(now);
-        }
-        this._last = now;
-        this._origin = now.origin;
+    constructor (origin, meta_options) {
+        this._last = Stamp.ZERO;
+        this._origin = origin;
         this._offset = 0;
         this._minlen = 6;
-        if (options) {
-            if (options.minLength) {
-                this._minlen = options.minLength;
-            }
-            if (options.learnOffset) {
-                let my_now = Base64x64.now();
-                this._offset = now.Value.ms - my_now.ms;
-            } else if (options.offset) {
-                this._offset = options.offset|0;
-            }
+        let options = this._options = meta_options || Object.create(null);
+        if (options.ClockLen) {
+            this._minlen = options.ClockLen;
+        }
+        if (options.ClockOffst) {
+            this._offset = parseInt(options.ClockOffst);
+        }
+        if (options.ClockLast) {
+            this._last = new Stamp(options.ClockLast);
+        }
+        if (options.ClockNow) {
+            let now = parseInt(options.ClockNow);
+            let mynow = Date.now();
+            this._offset = now - mynow;
         }
     }
 
+    get origin () {
+        return this._origin;
+    }
 
     issueTimestamp () {
         var next = Stamp.now(this._origin, this._offset);

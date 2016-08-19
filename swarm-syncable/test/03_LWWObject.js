@@ -1,30 +1,67 @@
 "use strict";
-let tape = require('tap').test;
+let tap = require('tap').test;
 let swarm = require('swarm-protocol');
 let Op = swarm.Op;
 let LWWObject = require('../src/LWWObject');
 
-tape ('syncable.03.A LWW object - getters', function (t) {
+let simple_state_op_str =
+    '/LWWObject#createdBy+author!longago+changed.~' + '\t' +
+    '{"!longago+changed.field": "string",' +
+    '"!createdBy+author.value": {"number":31415}}\n';
+let simple_state_op = Op.parseFrame(simple_state_op_str)[0];
 
-    let ops = Op.parseFrame(
-        '/LWWObject#createdBy+author!longago+changed.~' + '\t' +
-            '{"!longago+changed.field": "string",' +
-             '"!createdBy+author.value": {"number":31415}}\n'
-    );
+tap ('syncable.03.A LWW object RDT parse/serialize', function (t) {
 
-    t.equals(ops.length, 1);
-
-    let rdt = new LWWObject._rdt(ops[0]);
+    let rdt = new LWWObject._rdt(simple_state_op);
 
     t.equals(rdt.get("field"), "string");
     t.deepEqual(rdt.get("value"), {number:31415});
+
+    let json = rdt.toString();
+    t.deepEqual(JSON.parse(ops[0].value), JSON.parse(json));
 
     t.end();
 
 });
 
 
-// tape.skip ('syncable.02.D submit API', function (t) { FIXME revitalize
+tap ('syncable.03.B LWW object API', function (t) {
+
+    let lww = new LWWObject(simple_state_op);
+
+    t.ok( lww.get('field'), 'string' );
+    // Object.defineProperty
+    t.ok( lww.field, 'string' );
+
+    let state = lww.toOp();
+
+    t.ok(state.spec.eq(simple_state_op.spec));
+    t.deepEqual(JSON.parse(state.value), JSON.parse(simple_state_op.value));
+
+    // array indices   2 syncable
+    let nothing = lww.at(4);
+    t.equals(nothing, undefined);
+    lww.setAt(4, 'value');
+    t.equals(lww.at(4), 'value');
+    lww.setAt(4, 0, '[4,0]');
+    t.equals(lww.at(4,0), '[4,0]');
+    t.equals(lww.at(4), 'value');
+
+    concurrent;
+
+    t.end();
+
+});
+
+tap ('syncable.03.C LWW object concurrent modification', function (t) {
+
+    let ops = Op.parseFrame(
+
+    );
+
+});
+
+// tap.skip ('syncable.02.D submit API', function (t) { FIXME revitalize
 //     var host = new Host({
 //         ssn_id: 'anon~02~D',
 //         db_id: 'db',
@@ -56,7 +93,7 @@ tape ('syncable.03.A LWW object - getters', function (t) {
 // });
 
 /*
- tape ('syncable.02.a basic listener func', function (t) {
+ tap ('syncable.02.a basic listener func', function (t) {
  t.plan(6); // ...7
  var huey = new Model({}, null);
  var huey_ti = huey.spec();

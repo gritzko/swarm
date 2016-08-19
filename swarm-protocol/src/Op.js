@@ -53,6 +53,10 @@ class Op {
         return this._spec.origin;
     }
 
+    get scope () {
+        return this._spec.scope;
+    }
+
     toString () {
         let ret = this._spec.toString();
         if (!this._value) {
@@ -109,6 +113,7 @@ class Op {
     get id () { return this._spec.id; }
     get stamp () { return this._spec.stamp; }
     get name () { return this._spec.name; }
+    get typeid () { return this._spec.typeid; }
 
     isOn () { return this.spec.Name.eq(Op.ON); }
 
@@ -155,7 +160,8 @@ Op.rsOp = '\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/g, '(?:') + ')' +
 Op.reOp = new RegExp(Op.rsOp, "mg");
 Op.ON = new Stamp("on");
 Op.OFF = new Stamp("off");
-Op.STATE = new Stamp("~");
+Op.state = "~";
+Op.STATE = new Stamp(Op.state);
 Op.NOOP = new Stamp();
 Op.ERROR = new Stamp("error");
 
