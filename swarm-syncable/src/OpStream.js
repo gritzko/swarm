@@ -11,6 +11,7 @@ class OpStream {
     constructor () {
         this._filters = null;
         this._up = null;
+        this._queued = undefined;
     }
 
     /** add a new listener
@@ -30,6 +31,10 @@ class OpStream {
                 this._filters = [];
             }
             this._filters.push(new Filter(event, callback));
+        }
+        if (this._queued) {
+            let q = this.spill();
+            q.forEach( op => this._emit(op) );
         }
     }
 
@@ -62,11 +67,17 @@ class OpStream {
         }
     }
 
-    /** emit a new op to all the interested listeners
+    /** Emit a new op to all the interested listeners.
+     *  If nobody listens yet, the op is queued to be delivered to the first
+     *  listener. Call opstream.spill() to stop queueing.
      *  @param {Op} op - the op to emit */
     _emit (op) {
-        if (this._up!==null)
+        if (this._up!==null) {
             this._up(op);
+        } else if (this._filters===null) { // no listeners
+            this._enqueue(op);
+            return;
+        }
         let filters = this._filters;
         for(let i=0; filters && i<filters.length; i++){
             let f = filters[i];
@@ -81,6 +92,20 @@ class OpStream {
             }
 
         }
+    }
+
+    _enqueue (op) {
+        if (this._queued===null)
+            return;
+        if (this._queued===undefined)
+            this._queued = [];
+        this._queued.push(op);
+    }
+
+    spill () {
+        let ret = this._queued;
+        this._queued = null;
+        return ret;
     }
 
     /** by default, an echo stream */

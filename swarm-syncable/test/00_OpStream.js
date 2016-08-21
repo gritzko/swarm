@@ -135,7 +135,7 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
 
 });
 
-tape ('syncable.00.A op stream - filter', function (t) {
+tape ('syncable.00.B op stream - filter', function (t) {
 
     let filter = '^/Swarm.off';
 
@@ -146,4 +146,17 @@ tape ('syncable.00.A op stream - filter', function (t) {
     t.end();
     //let ops = Op.parseFrame ("/Swarm.off\n/Swarm.on\n");
 
+});
+
+tape ('syncable.00.C op stream - queue', function (t) {
+    let stream = new OpStream();
+    let count = 0, tail = 0;
+    stream.offer(Op.NOTHING);
+    stream.offer(Op.NOTHING);
+    stream.on(op => count++);
+    stream.on(op => tail++);
+    stream.offer(Op.NOTHING);
+    t.equals(count, 3);
+    t.equals(tail, 1);
+    t.end();
 });
