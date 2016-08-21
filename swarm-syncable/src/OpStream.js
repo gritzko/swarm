@@ -10,9 +10,12 @@ class OpStream {
 
     constructor () {
         this._filters = null;
+        this._up = null;
     }
 
-    /** add a new listener */
+    /** add a new listener
+     *  @param {String} event - a specifier filter, e.g. ".on.off"
+     *  @param callback - a callback function */
     on (event, callback) {
         if (event===undefined) {
             return;
@@ -20,10 +23,14 @@ class OpStream {
             callback = event;
             event = '';
         }
-        if (this._filters===null) {
-            this._filters=[];
+        if (event==='' && this._up===null) {
+            this._up = callback;
+        } else {
+            if (this._filters === null) {
+                this._filters = [];
+            }
+            this._filters.push(new Filter(event, callback));
         }
-        this._filters.push(new Filter(event, callback));
     }
 
     once (event, callback) {
@@ -36,13 +43,18 @@ class OpStream {
     off (event, callback) {
         if (event===undefined) {
             this._filters = null;
+            this._up = null;
             return;
         }
         if (event.constructor===Function) {
+            if (this._up===event)
+                this._up = null;
             this._filters = this._filters.filter( f =>
                 f.callback !== event
             );
         } else {
+            if (event==='' && this._up===callback)
+                this._up = null;
             this._filters = this._filters.filter( f =>
                 f.toString()!=event ||
                 (callback && f.callback!==callback)
@@ -53,9 +65,10 @@ class OpStream {
     /** emit a new op to all the interested listeners
      *  @param {Op} op - the op to emit */
     _emit (op) {
+        if (this._up!==null)
+            this._up(op);
         let filters = this._filters;
-        if (!filters) { return; }
-        for(let i=0; i<filters.length; i++){
+        for(let i=0; filters && i<filters.length; i++){
             let f = filters[i];
             if (!f.covers(op)) continue;
 
@@ -101,9 +114,11 @@ class OpStream {
 
     _listFilters () {
         if (!this._filters) return '';
-        return this._filters.map(f =>
+        let list = this._up ? '*\t' + this._up.toString() : '';
+        list += this._filters.map(f =>
             f.toString()+'\t'+f.callback.toString()
         ).join('\n');
+        return list;
     }
 
 }
@@ -138,12 +153,13 @@ class Filter {
     }
 
     covers (op) {
-        if (op===null || this._patterns===null) {
-            return op===null && this._patterns===null;
+        let pns = this._patterns;
+        if (op===null || pns===null) {
+            return op===null && (pns===null || pns.every(p=>p===null));
         }
         let spec = op.spec;
         for(let t=0; t<4; t++) {
-            let mine = this._patterns[t];
+            let mine = pns[t];
             if (mine===null) continue;
             let its = spec._toks[t];
             let bad = mine.every(stamp => !stamp.eq(its));

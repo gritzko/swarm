@@ -99,9 +99,10 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
     let stream = new OpStream();
 
     let once = 0, ons = 0, first_on = false, second_on = false;
-    let total = 0, before_value = 0, three=0;
+    let total = 0, total2 = 0, before_value = 0, three=0;
 
     stream.on(op => total++);
+    stream.on(op => total2++);
     stream.once('.on', () => once++);
     stream.on('.on', () => ons++ );
     stream.on('.on', op => {
@@ -123,7 +124,8 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
 
     t.equals(once, 1);
     t.equals(ons, 2);
-    t.equals(total, 4);
+    t.equals(total, 5);
+    t.equals(total2, 5);
     t.equals(before_value, 2);
     t.equals(three, 3);
     t.ok(first_on);
