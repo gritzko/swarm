@@ -21,7 +21,17 @@ tap ('syncable.02.A empty cycle', function (t) {
     );
     t.equals(ops.length, 2);
 
-    var empty = new Syncable(ops[0]);
+    var empty = new Syncable();
+
+    t.equal(empty.version, '0', 'version comes from an op');
+    t.equal(empty.id, '0', 'id comes from an op');
+
+    empty.noop();
+
+    t.equal(empty.version, '0000000001', 'detached versions');
+    t.equal(empty.id, '0', 'still no id');
+
+    empty.offer(ops[0]);
     
     t.equal(empty.version, 'time+author', 'version id OK');
     t.equal(empty.id, 'time+author', 'id OK');
@@ -39,46 +49,14 @@ tap ('syncable.02.A empty cycle', function (t) {
     t.equal(empty.id, 'time+author', 'id OK');
     t.equal(empty.author, 'author');
     t.equal(empty.typeid, '/Syncable#time+author');
-    t.equal(check, 1);
+
+    t.equal(check, 2); // queueing :)
 
     t.end();
 });
 
 //--8<--------------------------
 /*
-tap('syncable.02.C batch events', function (t) {
-    var host = new Host({
-        ssn_id: 'anon~02~C',
-        db_id:  'db',
-        clock: stamp.LamportClock
-    });
-    host.go();
-    var empty = new Model({}, host);
-
-    var spec = new Spec(empty.typeid()+'.set');
-    var op1 = new Op(spec.add(host.clock.issueTimestamp(), '!'), '{"a":1}');
-    var op2 = new Op(spec.add(host.clock.issueTimestamp(), '!'), '{"b":2}');
-    var op3 = new Op(spec.add(host.clock.issueTimestamp(), '!'), '{"c":3}');
-
-    var count = 0;
-
-    empty.on('change', function () {
-        count++;
-    });
-
-    host.write(new Op(empty.typeid()+'.on', '', null, [op1, op2, op3]));
-
-    setTimeout(function(){
-        t.equal(count, 1, 'change event bundling');
-        t.equal(empty.a, 1, 'a');
-        t.equal(empty.b, 2, 'b');
-        t.equal(empty.c, 3, 'c');
-        t.equal(empty._version, op3.stamp());
-        t.end();
-    }, 1);
-
-});
-
 
 tap('syncable.02.D Host.get / Swarm.get', function (t) {
     var host = new Host({
