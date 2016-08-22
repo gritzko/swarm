@@ -110,7 +110,8 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
         return op => second_on=true;
     });
     stream.on( op => {
-        if (op.value) return OpStream.ENOUGH;
+        if (op.value)
+            return OpStream.ENOUGH;
         before_value++;
     });
     stream.on(function removable (op) {

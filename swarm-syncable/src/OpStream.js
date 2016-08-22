@@ -1,6 +1,7 @@
 "use strict";
 let swarm = require('swarm-protocol');
 let Spec = swarm.Spec;
+let Op = swarm.Op;
 
 /**
  *
@@ -9,61 +10,69 @@ let Spec = swarm.Spec;
 class OpStream {
 
     constructor () {
-        this._filters = null;
-        this._up = null;
-        this._queued = undefined;
+        this._lstn = null;
     }
+
 
     /** add a new listener
      *  @param {String} event - a specifier filter, e.g. ".on.off"
-     *  @param callback - a callback function */
-    on (event, callback) {
-        if (event===undefined) {
-            return;
-        } else if (event && event.constructor===Function) {
+     *  @param callback - a callback function
+     *  @param {Boolean} once */
+    on (event, callback, once) {
+        if (event && event.constructor===Function) { // normalize
             callback = event;
             event = '';
         }
-        if (event==='' && this._up===null) {
-            this._up = callback;
-        } else {
-            if (this._filters === null) {
-                this._filters = [];
+        let filter = new Filter(event, callback, once);
+        if (this._lstn===null) {
+            this._lstn = filter;
+        } else if (this._lstn.constructor===Op) {
+            let op = this._lstn;
+            this._lstn = filter;
+            this._emit(op);
+        } else if (this._lstn.constructor===Filter) {
+            this._lstn = [this._lstn, filter];
+        } else if (this._lstn.constructor===Array) {
+            if (this._lstn[0].constructor===Op) {
+                let ops = this._lstn;
+                this._lstn = filter;
+                this._emitAll(ops);
+            } else {
+                this._lstn.push(filter);
             }
-            this._filters.push(new Filter(event, callback));
-        }
-        if (this._queued) {
-            let q = this.spill();
-            q.forEach( op => this._emit(op) );
+        } else {
+            throw new Error('invalid listeners list');
         }
     }
 
     once (event, callback) {
-        this.on(event, callback);
-        let filter = this._filters[this._filters.length-1];
-        filter.once = true;
+        if (event.constructor===Function) {
+            callback = event;
+            event = '';
+        }
+        this.on(event, callback, true);
     }
 
     /** remove listener(s) */
     off (event, callback) {
-        if (event===undefined) {
-            this._filters = null;
-            this._up = null;
-            return;
+        if (event && event.constructor===Function) {
+            callback = event;
+            event = undefined;
         }
-        if (event.constructor===Function) {
-            if (this._up===event)
-                this._up = null;
-            this._filters = this._filters.filter( f =>
-                f.callback !== event
+
+        if (this._lstn===null) {
+            return;
+        } else if (this._lstn.constructor===Filter) {
+            if (this._lstn.callback===callback)
+                this._lstn = null;
+        } else if (this._lstn.constructor===Array) {
+            this._lstn = this._lstn.filter( f =>
+                f.constructor!==Filter ||
+                (callback && f.callback !== callback) ||
+                (event!==undefined && f.toString()!==event)
             );
-        } else {
-            if (event==='' && this._up===callback)
-                this._up = null;
-            this._filters = this._filters.filter( f =>
-                f.toString()!=event ||
-                (callback && f.callback!==callback)
-            );
+            if (this._lstn.length===0)
+                this._lstn = null;
         }
     }
 
@@ -72,40 +81,41 @@ class OpStream {
      *  listener. Call opstream.spill() to stop queueing.
      *  @param {Op} op - the op to emit */
     _emit (op) {
-        if (this._up!==null) {
-            this._up(op);
-        } else if (this._filters===null) { // no listeners
-            this._enqueue(op);
-            return;
-        }
-        let filters = this._filters;
-        for(let i=0; filters && i<filters.length; i++){
-            let f = filters[i];
-            if (!f.covers(op)) continue;
-
-            let ret = f.callback(op, this);
-
-            if (ret && ret.constructor===Function) {
-                f.callback = ret;
-            } else if (ret===OpStream.ENOUGH || f.once) {
-                this._filters = this._filters.filter(a => a!==f);
+        if (this._lstn===null) {
+            this._lstn = op;
+        } else if (this._lstn.constructor===Filter) {
+            if (!this._lstn.offer(op, this))
+                this._lstn = null;
+        } else if (this._lstn.constructor===Array) {
+            if (this._lstn[0].constructor===Op) {
+                this._lstn.push(op);
+            } else {
+                let ejects = [];
+                this._lstn.forEach( f => f.offer(op, this) || ejects.push(f) );
+                if (ejects.length) {
+                    this._lstn = this._lstn.filter(f=>ejects.indexOf(f)===-1);
+                    if (this._lstn.length===0)
+                        this._lstn = null;
+                }
             }
-
+        } else if (this._lstn.constructor===Op) {
+            this._lstn = [this._lstn, op];
         }
+
     }
 
-    _enqueue (op) {
-        if (this._queued===null)
-            return;
-        if (this._queued===undefined)
-            this._queued = [];
-        this._queued.push(op);
+    _emitAll (ops) {
+        ops.forEach(op => this._emit(op));
     }
 
     spill () {
-        let ret = this._queued;
-        this._queued = null;
-        return ret;
+        if (this._lstn &&
+            this._lstn.constructor===Array &&
+            this._lstn[0].constructor===Op) {
+            let ret = this._lstn;
+            this._lstn = null;
+            return ret;
+        }
     }
 
     /** by default, an echo stream */
@@ -157,11 +167,11 @@ module.exports = OpStream;
 
 class Filter {
 
-    constructor (string, callback) {
+    constructor (string, callback, once) {
         this.callback = callback;
         this.negative = string && string.charAt(0)==='^';
         this._patterns = [null, null, null, null];
-        this.once = false;
+        this.once = once;
         if (string===null) { //eof
             this._patterns = null;
             return;
@@ -193,6 +203,17 @@ class Filter {
         return !this.negative;
     }
 
+    offer (op, context) {
+        if (this.callback && this.covers(op)) {
+            let ret = this.callback.call(context, op);
+            if (this.once || ret === OpStream.ENOUGH)
+                return false;
+            if (ret && ret.constructor === Function)
+                this.callback = ret;
+        }
+        return true;
+    }
+
     toString () {
         let p = this._patterns;
         if (p===null) return null; // take that (TODO)
@@ -211,3 +232,5 @@ Filter.reTok = new RegExp(Filter.rsTok, 'g');
 OpStream.Filter = Filter;
 
 OpStream.TRACE = op => console.log(op.toString());
+
+// NOTE. batched events are not supported, asynchronize/batch listeners instead
