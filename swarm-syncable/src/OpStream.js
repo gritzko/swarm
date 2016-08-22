@@ -205,7 +205,7 @@ class Filter {
 
     offer (op, context) {
         if (this.callback && this.covers(op)) {
-            let ret = this.callback.call(context, op);
+            let ret = this.callback.call(context, op, context);
             if (this.once || ret === OpStream.ENOUGH)
                 return false;
             if (ret && ret.constructor === Function)

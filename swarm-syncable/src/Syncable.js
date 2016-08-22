@@ -60,10 +60,17 @@ class Syncable extends OpStream {
      * @param {String} op_name - the operation name (Base64x64, transcendent) 
      * @param {String} op_value - the op value */
     _submit (op_name, op_value) {
+        if (!this._clock && this.id!=='0')
+            throw new Error('stateful obj, no clock');
+        let stamp = this._clock ? this._clock.issueTimestamp() : Base64x64.inc(this._version);
+        if (!op_name) {
+            op_name = '~';
+            op_value = this.state;
+        }
         let spec = new Spec([
             this.type,
-            this._id,
-            this._clock ? this._clock.time() : Base64x64.inc(this._version),
+            this._id==='0' && this._clock ? stamp : this._id,
+            stamp,
             op_name
         ]);
         let op = new Op(spec, op_value);
@@ -80,7 +87,7 @@ class Syncable extends OpStream {
             throw new Error('not my op');
         }
         if (op.name===Op.state) {
-            this._state = new this.constructor.RDT(op);
+            this._state = new this.constructor.RDT(op.value);
         } else {
             if (!this._state) {
                 let default_state = new Op(op.spec.rename('~'), '');
@@ -91,7 +98,8 @@ class Syncable extends OpStream {
         this._rebuild(op);
         if (!op.isOnOff())
             this._version = op.spec.stamp; // after the rebuild!
-        this._emit(op);
+        if (!op.spec.Stamp.isTranscendent()) // dry run ops are not emitted
+            this._emit(op);
     }
 
     _rebuild (op) {}
@@ -152,6 +160,10 @@ class Syncable extends OpStream {
         return this._state !== null;
     }
 
+    get state () {
+        return this._state===null ? null : this._state.toString();
+    }
+
     get spec () {
         return new Spec([
             this.type, this._id, this._version, Op.STATE
@@ -159,7 +171,7 @@ class Syncable extends OpStream {
     }
 
     close () {
-        this._host && this._host.removeSyncable(this);
+        this._emit(null);
     }
 
     get typeid () {
@@ -180,9 +192,9 @@ class Syncable extends OpStream {
         this.on('.'+op_name, callback);
     }
 
-    /** fires once the upstream returns a handshake */
+    /** fires once the object gets some state */
     onceReady (callback) {
-        if (!this._version.isZero())
+        if (!this._version==='0')
             callback();
         else
             super.once(callback);
@@ -193,8 +205,9 @@ class Syncable extends OpStream {
     }
 
     /** Returns a subscription op for this object */
-    get subscription () {
-        let spec = new Spec([this.type, this._id, this._version, Op.ON]);
+    toOnOff (is_on) {
+        let name = is_on ? Op.ON : Op.OFF;
+        let spec = new Spec([this.type, this._id, this._version, name]);
         return new Op(spec, '');
     }
 

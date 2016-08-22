@@ -180,6 +180,10 @@ class Spec {
         return this.Type.eq(spec.Type) && this.Id.eq(spec.Id);
     }
 
+    isEmpty () {
+        return this._toks.every(t => t.isEmpty());
+    }
+
     restamp (stamp, origin) {
         if (origin) stamp = new Stamp(stamp, origin);
         return new Spec([this.Type, this.Id, stamp, this.Name]);

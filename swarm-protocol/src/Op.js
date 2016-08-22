@@ -164,5 +164,6 @@ Op.state = "~";
 Op.STATE = new Stamp(Op.state);
 Op.NOOP = new Stamp();
 Op.ERROR = new Stamp("error");
+Op.NOTHING = new Op(new Spec, '');
 
 module.exports = Op;

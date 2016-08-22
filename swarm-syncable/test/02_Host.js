@@ -6,6 +6,7 @@ let SwarmMeta = require('../src/SwarmMeta');
 let Host = require('../src/Host');
 //let FakeHost = require('./FakeHost');
 let OpStream = require('../src/OpStream');
+let LWWObject = require('../src/LWWObject');
 
 
 tap ('syncable.02.A SwarmMeta API', function (t) {
@@ -33,32 +34,37 @@ tap ('syncable.02.A SwarmMeta API', function (t) {
 tap ( 'syncable.02.B Host add/removeSyncable API', function (t) {
 
     // by default, a Host has a {map} as a backing storage and no upstream
-    let host = new Host('/Swarm#test!0+replica', {Clock: 'Logical'});
+    let host = new Host('/Swarm#test!0+replica');
+    // FIXME
+    host._clock = new swarm.Clock('replica', {Clock: 'Logical'});
 
     // by-value constructor
-    let props = new Properties({key: "value"}, host);
+    let props = new LWWObject({key: "value"});
+    host.addNewSyncable(props);
     // write stamping
     t.equals(props.get('key'), 'value');
-    let stamp = props.stampOf('key');
+
+    let stamp = props.StampOf('key');
     t.equals(stamp.origin, 'replica');
+
     // the op gets some logical timestamp not far from zero
     t.ok(stamp.value < '000000000A');
     props.set('key', 'value2');
     t.equals(props.get('key'), 'value2');
-    t.ok(stamp.lt(props.stampOf('key')));
+    t.ok(stamp.lt(props.StampOf('key')));
     props.set({'key': 'value3'});
     t.equals(props.get('key'), 'value3');
     // by-id constructor, duplicate prevention
-    let porps = new Properties(props.id, host);
+    let porps = host.getBySpec(props.spec);
     t.ok(porps===props);
     props.close();
     t.throws(function () { // the object is closed
         props.set('key', 'fails');
     });
 
-    let props2 = new Properties(props.id, host);
+    let props2 = host.getBySpec(props.spec);
     t.ok(props!==props2);
-    t.equals(props2.get('key'), 'value3'); // synchronous state load
+    t.ok(props2.get('key')===undefined); // NO STORAGE synchronous state load
     host.close();
     t.throws(function () { // the host and the object are closed
         props2.set('key', 'fails');

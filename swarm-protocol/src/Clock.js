@@ -47,7 +47,11 @@ class Clock {
         this._origin = origin;
         this._offset = 0;
         this._minlen = 6;
+        this._logical = false;
         let options = this._options = meta_options || Object.create(null);
+        if (options.Clock) {
+            this._logical = options.Clock==='Logical';
+        }
         if (options.ClockLen) {
             this._minlen = options.ClockLen;
         }
@@ -69,7 +73,7 @@ class Clock {
     }
 
     issueTimestamp () {
-        var next = Stamp.now(this._origin, this._offset);
+        var next = this._logical ? Stamp.ZERO : Stamp.now(this._origin, this._offset);
         var last = this._last;
         if (!next.gt(last)) {// either seq++ or stuck-ahead :(
             next = last.next(this._origin);
@@ -81,6 +85,10 @@ class Clock {
         }
         this._last = next;
         return next;
+    }
+
+    get lastStamp () {
+        return this._last;
     }
 
     seeTimestamp (stamp) {

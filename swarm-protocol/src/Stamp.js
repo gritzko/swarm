@@ -138,6 +138,12 @@ class Stamp {
             (this._value===s._value && this._origin>s._origin);
     }
 
+    lt (stamp) {
+        var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
+        return this._value < s._value ||
+            (this._value===s._value && this._origin<s._origin);
+    }
+
     eq (stamp) {
         var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
         return this._value===s._value && this._origin===s._origin;
@@ -161,6 +167,10 @@ class Stamp {
 
     isError () {
         return this._value===Base64x64.INCORRECT;
+    }
+
+    isEmpty () {
+        return this._value===Base64x64.ZERO && this._origin===Base64x64.ZERO;
     }
 
     static to (value) {

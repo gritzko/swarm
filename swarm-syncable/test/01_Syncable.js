@@ -50,7 +50,7 @@ tap ('syncable.02.A empty cycle', function (t) {
     t.equal(empty.author, 'author');
     t.equal(empty.typeid, '/Syncable#time+author');
 
-    t.equal(check, 2); // queueing :)
+    t.equal(check, 1);
 
     t.end();
 });

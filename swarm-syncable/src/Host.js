@@ -44,18 +44,9 @@ class Host extends OpStream {
         /** we can only init the clock once we have a meta object */
         this._clock = null;
 
-        this._upstream = upstream;
+        this._last_acked = Stamp.ZERO;
 
-        upstream.on(op => {
-            let obj = this._syncables[op.typeid];
-            if (!obj) {
-                if (op.name!=="off")
-                    upstream.offer(new Op(op.spec.rename('off'), ''));
-            } else if (op.origin===this._id) {
-            } else {
-                obj.offer(op);
-            }
-        });
+        this._op_cb = this.onSyncableOp.bind(this);
 
         if (!Syncable.multiHost && !Syncable.defaultHost) {
             Syncable.defaultHost = this;
@@ -71,11 +62,24 @@ class Host extends OpStream {
         this.addSyncable(this._meta, spec.Id);
     }
 
+    /** Inject an op. */
+    offer(op) {
+        let obj = this._syncables[op.typeid];
+        if (op.origin === this._id) {
+            this._last_acked = op.spec.Stamp;
+        } else if (!obj) { // not intereted
+            if (op.name !== "off")
+                this.emit(new Op(op.spec.rename('off'), ''));
+        } else {
+            obj.offer(op);
+        }
+    }
+
     close () {
         // let's be explicit
-        Object.values(this._syncables).forEach(s => this.removeSyncable(s));
-        this._upstream.offer(new Op(this.typeid.rename('off'), ''));
-        this._upstream.off();
+        Object.keys(this._syncables).forEach(typeid => this.removeSyncable(this._syncables[typeid]));
+        this._emit(new Op(this.typeid.rename('off'), ''));
+        this._emit(null);
         if (Syncable.defaultHost===this) {
             Syncable.defaultHost = null;
         }
@@ -86,57 +90,36 @@ class Host extends OpStream {
     }
 
 
-    /** @returns {OpStream} */
-    get upstream () {
-        return this._upstream;
+    /**
+     * Open a syncable and attach it to this replica. The state is queried from
+     * the upstream. Till the state is received, the object is stateless.
+     * @param {Spec} spec - the object's /type#id
+     */
+    addSyncable (spec) {
+        let fn = Syncable._classes[spec.type];
+        if (!fn)
+            throw new Error('unknown syncable type '+spec.type);
+        let obj = new fn(null);
+        obj.on(this._op_cb);
+        obj._clock = this._clock;
+        obj._id = spec.id;
+        this._syncables[obj.typeid] = obj;
+        this._emit(obj.toOnOff(true));
+        return obj;
     }
-
-
-    /** Submit a new op, invoked by syncables. */
-    _submit (op_name, op_value, syncable) {
-        var op_id = op_name.constructor===Base64x64 ?
-            op_name : new Base64x64(op_name);
-        var spec = new Spec([
-            syncable.type,
-            syncable._id,
-            this._clock.issueTimestamp(),
-            op_id
-        ]);
-        var op = new Op(spec, op_value.toString());
-        syncable.offer(op);
-        this._upstream.offer(op);
-    }
-
 
     /**
-     * Attach a syncable to this replica.
-     * In case the object is newly created (like `new LWWObject()`), Host
-     * assigns it an id and saves it. For a known-id objects
-     * (like `new LWWObject('2THjz01+gritzko~cA4')`) the state is queried
-     * from the storage, then from the upstream. Till the state is received,
-     * the object is stateless
+     * Create a syncable and attach it to this replica. Tthe existing object's
+     * state it taken as the initial state, timestamped and broadcast. The
+     * object gets an id (the stamp of that very op).
      * @param {Syncable} obj - the syncable object
-     * @param {Stamp} id - the object's #id
-     * @param {String} state - the new object's serialized state (id===Stamp.ZERO)
      */
-    addSyncable (obj, id, state) {
-        let up = this._upstream;
-        if (id.isZero()) {
-            id = this.time();
-            let spec = new Spec([obj.type, id, id, Op.STATE]);
-            let init_op = new Op(spec, state||'');
-            obj.offer(init_op);
-            up.offer(init_op);
-        } else {
-            obj._id = id;
-            let prev = this._syncables[obj.typeid];
-            if (prev)
-                return prev;
-        }
+    addNewSyncable (obj) {
+        obj.on(this._op_cb);
+        obj._clock = this._clock;
+        obj._submit();
+        this._emit(obj.toOnOff(true));
         this._syncables[obj.typeid] = obj;
-        obj._id = id;
-        obj._host = this;
-        up.offer(obj.subscription);
     }
 
     removeSyncable (obj) {
@@ -145,8 +128,16 @@ class Host extends OpStream {
             return;
         }
         delete this._syncables[obj.typeid];
-        obj._host = null;
-        this._upstream.offer(new Op(obj.spec.rename('off'), ''));
+        obj._clock = null;
+        this._emit(obj.toOnOff(false));
+    }
+
+    onSyncableOp (op, obj) {
+        if (op===null) {
+            this.removeSyncable(obj);
+        } else if (this._clock && op.origin===this._clock.origin) {
+            this._emit(op);
+        }
     }
 
 
@@ -183,7 +174,11 @@ class Host extends OpStream {
     getBySpec (spec) {
         if (spec.constructor!==Spec)
             spec = new Spec(spec);
-        return this._syncables[spec.typeid];
+        let have = this._syncables[spec.typeid];
+        if (!have) {
+            have = this.addSyncable(spec);
+        }
+        return have;
     }
 
     create (type) {

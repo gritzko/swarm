@@ -9,51 +9,55 @@ let Op = swarm.Op;
 class LWWObject extends Syncable {
 
     /**
-     * @param {Spec|Stamp|String|Object} id_or_state - either the object's 
-     *      spec/id, as a Spec, Stamp or String, or a state for a new object 
-     *      (as a {key:value} Object)
-     * @param {Host} host - the host to attach the object to
-     *      (default: Syncable.defaultHost)
+     * @param {Object} state - a {key: value} state for a new object
      */
-    constructor (id_or_state, host) {
-        let ios = id_or_state;
-        if (ios && ios.constructor.name==='Host') {
-            host = ios;
-            ios = null;
-        }
-        let type = (ios && ios.constructor) || null;
-        if (!type) {
-            super('', host);
-        } else if (type===swarm.Stamp || type===swarm.Spec) {
-            super(ios, host);
-        } else if (type===Object) {
-            super(LWWObject.obj2state(ios), host);
-        } else if (type===String) {
-            super(Spec.is(ios) ? new Spec(ios) : new Stamp(ios), host);
-        } else {
-            throw new Error('parameters not understood');
-        }
+    constructor (state) {
+        let str;
+        if (state===null)
+            str = null;
+        else if (state)
+            str = LWWObject.obj2state(state);
+        else
+            str = '';
+        super(str);
         this._values = this._values || Object.create(null);
     }
 
     set (name, value) {
-        if (!LWWObject.reFieldName.test(name))
-            throw new Error('invalid field name format');
-        this._submit(name, LWWObject.val2str(value));
+        if (name.constructor===Object) {
+            Object.keys(name).forEach(n => this.set(n, name[n]));
+        } else {
+            if (!LWWObject.reFieldName.test(name))
+                throw new Error('invalid field name format');
+            this._submit(name, LWWObject.val2str(value));
+        }
     }
 
     get (name) {
         return this._values[name];
     }
 
+    StampOf (key) {
+        let vals = this._state.entries.filter(e => e.name===key);
+        if (!vals.length) return null;
+        let stamp = new Stamp(vals[0].stamp);
+        if (stamp.isTranscendent() && !stamp.isZero() && !stamp.isAbnormal())
+            return new Stamp(this._id);
+        return stamp;
+    }
+
+    stampOf (key) {
+        return this.StampOf(key).toString();
+    }
+
     _rebuild (op) {
-        if (op.name===Op.state || this._version.gt(op.spec.Stamp)) { // rebuild
+        if (op.name===Op.state || this._version>op.spec.stamp) { // rebuild
             this._values = Object.create(null);
             this._state.entries.forEach(e=>{
                 this._values[e.name] = LWWObject.str2val(e.value);
             });
         } else { // adjust
-            this._values[op.name] = LWWObject.str2val(op.value);
+            this._values[op.name] = LWWObject.str2val(op.value); // FIXME wrong :(((((
         }
     }
 
@@ -101,7 +105,7 @@ class LWWObject extends Syncable {
         let fields = Object.keys(vals)
             .filter(key=>LWWObject.reFieldName.test(key))
             .map(key => {
-                return '!0.'+key+'\t'+ LWWObjectRDT.val2str(vals[key]);
+                return '!0000000001.'+key+'\t'+ LWWObject.val2str(vals[key]);
             });
         return fields.join('\n');
     }
@@ -109,6 +113,9 @@ class LWWObject extends Syncable {
 }
 module.exports = LWWObject;
 LWWObject.reFieldName = /^[a-zA-Z][A-Za-z_0-9]{0,9}$/;
+
+LWWObject.id = 'LWWObject';
+Syncable._classes[LWWObject.id] = LWWObject;
 
 
 class LWWEntry {
@@ -136,10 +143,9 @@ class LWWEntry {
 /**  !stamp.field  JSON|/Type#ref|''  */
 class LWWObjectRDT extends Syncable.RDT {
 
-    constructor (state_op) {
+    constructor (state) {
         super();
-        let state = state_op.value;
-        this.entries = !state ? [] : state_op.value.split('\n').map(
+        this.entries = !state ? [] : state.split('\n').map(
             str => LWWEntry.fromString(str)
         ).filter(
             e => LWWObject.reFieldName.test(e.name)
@@ -154,6 +160,7 @@ class LWWObjectRDT extends Syncable.RDT {
         if (competes.every( e => e.stamp < stamp )) {
             entries = entries.filter( e=> e.name!==name );
             entries.push(new LWWEntry(stamp, name, op.value));
+            this.entries = entries;
         }
     }
 

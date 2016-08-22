@@ -243,6 +243,10 @@ class Base64x64 {
         }
     }
 
+    static inc (str) {
+        return new Base64x64(str).inc().toString();
+    }
+
     get highInt () {
         if (this._high===-1) {
             this._base2pair();
