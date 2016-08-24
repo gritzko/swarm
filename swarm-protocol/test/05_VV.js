@@ -22,6 +22,9 @@ tape ('protocol.05.A VV basics', function (tap) {
     var add = one.addAll(two).addAll(three);
     tap.equal(add.toString(), '!3+three!2+two!1+one');
 
+    tap.equals(one.max, '3');
+    tap.equals(vv.max, 'some');
+
     tap.end();
 
 });
@@ -39,6 +42,7 @@ tape ('protocol.05.C zero vector', function (tap) {
     var empty3 = new VV('!a+b!c+d');
     empty3 = empty3.remove('b').remove('c+d');
     tap.equal(empty3.toString(), '!0');
+    tap.equals(empty3.max, '0');
     tap.end();
 });
 

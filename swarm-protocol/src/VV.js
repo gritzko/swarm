@@ -14,10 +14,8 @@ class VV {
     // simple string serialization of the vector
     toString () {
         var stamps = [];
-        var origins = Object.keys(this.map);
-        for(var i=0; i<origins.length; i++) {
-            var origin = origins[i], time = this.map[origin];
-            stamps.push(origin ? time+'+'+origin : time);
+        for(var [origin,time] of this.map) {
+            stamps.push(Stamp.toString(time, origin));
         }
         stamps.sort().reverse();
         stamps.unshift(stamps.length?'':'!0');
@@ -35,21 +33,20 @@ class VV {
     }
 
     addPair (value, origin) {
-        var existing = this.map[origin] || '';
+        var existing = this.map.get(origin) || '0';
         if (value>existing && value!=='0') {
-            this.map[origin] = value;
+            this.map.set(origin, value);
         }
     }
 
     remove (origin) {
         origin = VV.norm_src(origin);
-        delete this.map[origin];
+        delete this.map.delete(origin);
         return this;
     }
 
     isEmpty () {
-        var keys = Object.keys(this.map);
-        return !keys.length;
+        return this.map.size===0;
     }
 
 
@@ -64,7 +61,7 @@ class VV {
 
     get (origin) {
         origin = VV.norm_src(origin);
-        var time = this.map[origin];
+        var time = this.map.get(origin);
         return time ? time + '+' + origin : '0';
     }
 
@@ -77,7 +74,7 @@ class VV {
         if (version.constructor!==Stamp) {
             version = new Stamp(version);
         }
-        return version.value <= (this.map[version.origin] || '0');
+        return version.value <= (this.map.get(version.origin) || '0');
     }
 
     coversAll (vv) {
@@ -85,21 +82,20 @@ class VV {
         if (vv.constructor!==VV) {
             vv = new VV(vv);
         }
-        var keys = Object.keys(vv.map), map=this.map;
-        return keys.every(function(key){
-            return map.hasOwnProperty(key) && map[key] > vv.map[key];
-        });
+        for(var [origin, time] of vv.map) {
+            if (time>this.get(origin))
+                return false;
+        }
+        return true;
     }
 
-    maxTs () {
-        var ts = null,
-            map = this.map;
-        for (var src in map) {
-            if (!ts || ts < map[src]) {
-                ts = map[src];
-            }
+    get max () {
+        var max = '0';
+        for (var ts of this.map.values()) {
+            if (ts>max)
+                max = ts;
         }
-        return ts;
+        return max;
     }
 
     static norm_src (origin) {

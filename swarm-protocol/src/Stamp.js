@@ -119,9 +119,13 @@ class Stamp {
         return this.string;
     }
 
+    static toString (time, origin) {
+        return time + (origin==='0' ? '' : '+' + origin);
+    }
+
     get string () {
         if (this._string===null) {
-            this._string = this._value + (this._origin==='0' ? '' : '+' + this._origin);
+            this._string = Stamp.toString(this._value, this._origin);
         }
         return this._string;
     }
