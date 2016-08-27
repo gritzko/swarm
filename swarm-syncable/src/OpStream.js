@@ -101,7 +101,8 @@ class OpStream {
         } else if (this._lstn.constructor===Op) {
             this._lstn = [this._lstn, op];
         }
-
+        // FIXME null is delivered to all listeners, _lstn:=null
+        // test: emit op, end(), then on()
     }
 
     _emitAll (ops) {
@@ -127,8 +128,14 @@ class OpStream {
         ops.forEach(op => this.offer(op));
     }
 
-    end () {
-        this.offer(null);
+    /** @param {OpStream} sink */
+    pipe (sink) {
+        this.on('', sink.offer.bind(sink));
+        // TODO test
+    }
+
+    _end () {
+        this._emit(null);
     }
 
     onEnd (callback) {
@@ -162,6 +169,7 @@ OpStream.MUTATIONS = "^.on.off.error.~";
 OpStream.HANDSHAKES = ".on.off";
 OpStream.STATES = ".~";
 OpStream.ENOUGH = Symbol('enough');
+OpStream.SLOW_DOWN = Symbol('slow'); // TODO relay backpressure
 
 module.exports = OpStream;
 

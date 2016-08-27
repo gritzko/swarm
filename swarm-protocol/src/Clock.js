@@ -44,7 +44,9 @@ class Clock {
 
     constructor (origin, meta_options) {
         this._last = Stamp.ZERO;
-        this._origin = origin;
+        if (!Base64x64.is(origin))
+            throw new Error('invalid origin');
+        this._origin = origin.toString();
         this._offset = 0;
         this._minlen = 6;
         this._logical = false;

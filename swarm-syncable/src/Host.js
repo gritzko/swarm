@@ -4,7 +4,7 @@ let Base64x64 = swarm.Base64x64;
 let Stamp = swarm.Stamp;
 let Spec = swarm.Spec;
 let Op = swarm.Op;
-let SwarmMeta = require('./SwarmMeta');
+let SwarmMeta = require('./Swarm');
 let OpStream = require('./OpStream');
 let Syncable = require('./Syncable');
 

@@ -24,12 +24,18 @@ class LWWObject extends Syncable {
     }
 
     set (name, value) {
-        if (name.constructor===Object) {
-            Object.keys(name).forEach(n => this.set(n, name[n]));
-        } else {
+        console.warn(name, value)
+        if (value===undefined) {
+            Object.keys(name).
+                filter(name=>LWWObject.reFieldName.test(name)).
+                forEach(n => this.set(n, name[n]));
+        } else if (name.constructor===String) {
             if (!LWWObject.reFieldName.test(name))
                 throw new Error('invalid field name format');
+            console.warn(name, value)
             this._submit(name, LWWObject.val2str(value));
+        } else {
+            throw new Error('neither key-value nor map');
         }
     }
 

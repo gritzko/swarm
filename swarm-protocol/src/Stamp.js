@@ -65,7 +65,9 @@ class Stamp {
                 this._value = stamp.toString();
                 this._parsed = stamp;
             } else {
-                throw new Error("unrecognized value");
+                //throw new Error("unrecognized value");
+                this._value = Base64x64.INCORRECT;
+                origin = '0';
             }
             this._origin = Base64x64.toString(origin);
         } else if (stamp) {
@@ -76,12 +78,14 @@ class Stamp {
             } else {
                 Stamp.reTokExt.lastIndex = 0;
                 var m = Stamp.reTokExt.exec(stamp);
-                if (!m) {
-                    throw new Error('malformed Lamport timestamp');
+                if (m) {
+                    this._string = m[0];
+                    this._value = Base64x64.toString(m[1]);
+                    this._origin = m[2] ? Base64x64.toString(m[2]) : '0';
+                } else {
+                    this._value = Base64x64.INCORRECT;
+                    this._origin = '0';
                 }
-                this._string = m[0];
-                this._value = Base64x64.toString(m[1]);
-                this._origin = m[2] ? Base64x64.toString(m[2]) : '0';
             }
         } else {
             this._value = this._origin = '0';
@@ -219,12 +223,13 @@ class Stamp {
 }
 
 Stamp.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
-Stamp.rsTokExt = '(=)(?:\\+(=))?'.replace(/=/g, Base64x64.rs64x64);
+Stamp.rsTokExt = '(=)(?:[+-](=))?'.replace(/=/g, Base64x64.rs64x64);
 Stamp.reTokExt = new RegExp('^'+Stamp.rsTokExt+'$');
 
 Stamp.zero = '0';
 Stamp.ZERO = new Stamp(Stamp.zero);
 Stamp.never = '~';
 Stamp.NEVER = new Stamp(Stamp.never);
+Stamp.ERROR = new Stamp(Base64x64.INCORRECT, '0');
 
 module.exports = Stamp;

@@ -4,7 +4,7 @@ var Swarm = {
     Syncable: require('./src/Syncable'),
     OpStream: require('./src/OpStream'),
     LWWObject: require('./src/LWWObject'),
-    Swarm: require('./src/SwarmMeta'),
+    Swarm: require('./src/Swarm'),
     get: get_fn
 };
 

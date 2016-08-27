@@ -8,7 +8,7 @@ var Clock = swarm.Clock;
 tap ('protocol.02.A Logical clocks API', function(tap) {
 
     // set clock to around epoch (1 Jan 2010)
-    var clock = new Clock('0+leslie', {learnOffset: true});
+    var clock = new Clock('leslie', {Clock: 'Logical'});
 
     var ts1 = clock.issueTimestamp();
     tap.equal(ts1.value.substr(0,6), '000000');
@@ -24,13 +24,13 @@ tap ('protocol.02.A Logical clocks API', function(tap) {
     tap.ok(clock.issueTimestamp().toString()>'00004+leslie');
 
     // shorten a timestamp to 5 chars if possible
-    var len5 = new Clock('0+chimera', {
+    var len5 = new Clock('chimera', {
         minLength: 5
     });
     var st5 = len5.issueTimestamp();
     tap.equal(st5.value.length, 5, 'length5');
 
-    var fullLength = new Clock('0+long', {minLength: 8});
+    var fullLength = new Clock('long', {ClockLen: 8});
     var stamp = fullLength.issueTimestamp();
     tap.equal(stamp.value.length, 8);
 
@@ -40,7 +40,7 @@ tap ('protocol.02.A Logical clocks API', function(tap) {
 
 
 tap ('protocol.02.B SecondPreciseClock sequence test', function (tap) {
-    var clock = new Clock('0+gritzko');
+    var clock = new Clock('gritzko');
     tap.plan(100);
     var ts1 = clock.issueTimestamp(), ts2, i=0;
     var iv = setInterval(function(){
@@ -57,9 +57,9 @@ tap ('protocol.02.B SecondPreciseClock sequence test', function (tap) {
 
 
 tap ('stamp.01.C stuck-ahead', function(tap){
-    var clock = new Clock('0+lagging', {
-        offset: -100,
-        minLength: 8
+    var clock = new Clock('lagging', {
+        ClockOffst: -100,
+        ClockLen: 8
     });
     clock.seeTimestamp(new Stamp(new Date(), "correct"));
     // the lagging clock is now stuck-ahead

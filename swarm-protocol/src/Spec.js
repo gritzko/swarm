@@ -61,9 +61,8 @@ class Spec {
             this._toks = spec._toks;
         } else if (spec.constructor===Array && spec.length===4) {
             for(let i=0; i<4; i++) {
-                var tok = spec[i];
-                this._toks[i] = tok && tok.constructor===Stamp ?
-                    tok : new Stamp(tok);
+                var t = spec[i] || Stamp.ZERO;
+                this._toks[i] = t.constructor===Stamp ? t : new Stamp(t);
             }
         } else {
             throw new Error("unrecognized parameter");
@@ -125,15 +124,15 @@ class Spec {
 
     toString (defaults) {
         var ret = '';
-        if (defaults===undefined) {
-            defaults = Spec.NON_SPECIFIC_NOOP;
-        }
+        // if (defaults===undefined) {
+        //     defaults = Spec.NON_SPECIFIC_NOOP;
+        // }
         for(var i=0; i<4; i++) {
-            if (this._toks[i]!==defaults._toks[i] || (i===3 && !ret) ) {
-                ret += Spec.quants[i] + this._toks[i].toString();
-            }
+            if (defaults && this._toks[i]===defaults._toks[i] && (ret||i<3))
+                continue;
+            ret += Spec.quants[i] + this._toks[i].toString();
         }
-        return ret || '.0';
+        return ret;
     }
 
     /** replaces 0 tokens with values from the provided Spec */
@@ -200,5 +199,6 @@ Spec.quants = ['/', '#', '!', '.'];
 Spec.rsSpec = '/#!.'.replace(/./g, '(?:\\$&('+Stamp.rsTok+'))?');
 Spec.reSpec = new RegExp('^'+Spec.rsSpec+'$', 'g');
 Spec.NON_SPECIFIC_NOOP = new Spec();
+Spec.ZERO = new Spec();
 
 module.exports = Spec;

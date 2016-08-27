@@ -10,20 +10,22 @@ var Spec = require('./Spec');
 class Op {
 
     constructor (spec, value, source) {
+        this._spec = this._value = null;
+        this._flags = 0;
         if (spec===undefined) {
             return Op.NON_SPECIFIC_NOOP;
         } else if (spec.constructor===Op) {
             this._spec = spec._spec;
             this._value = spec._value;
-            this._source = spec._source;
+            //this._source = spec._source;
         } else if (spec.constructor===Spec) {
             this._spec = spec;
             this._value = value.toString();
-            this._source = source || Stamp.ZERO;
+            //this._source = source || Stamp.ZERO;
         } else if (spec.constructor===String) {
             this._spec = new Spec(spec);
             this._value = value.toString();
-            this._source = source || Stamp.ZERO;
+            //this._source = source || Stamp.ZERO;
         } else {
             throw new Error("unrecognized parameter");
         }
@@ -146,6 +148,14 @@ class Op {
         return this.spec.isSameObject(spec);
     }
 
+    overstamped () {
+
+    }
+
+    unoverstamped () {
+
+    }
+
 }
 
 Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
@@ -165,5 +175,6 @@ Op.STATE = new Stamp(Op.state);
 Op.NOOP = new Stamp();
 Op.ERROR = new Stamp("error");
 Op.NOTHING = new Op(new Spec, '');
+Op.MAX_OP_FLAG = 1;
 
 module.exports = Op;

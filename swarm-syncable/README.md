@@ -7,9 +7,9 @@ Practically, this is Swarm client core (see test/ for APi use examples).
 
 - [x]   OpStream - a stream of operations, our most fundamental abstraction
 - [x]   Syncable (+RDT) - the abstract base class for all syncables 
-- [ ]   Host - a container for Syncables, handles all the server/peer sync
+- [x]   Host - a container for Syncables, handles all the server/peer sync
 - Basic syncable types
-    - [ ]   LWWObject - a last-write-wins object
+    - [x]   LWWObject - a last-write-wins object
         * merge is per-field, the bigger timestamp wins
         * can only have primitive fields (strings, numbers,
           references to other syncables)

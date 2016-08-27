@@ -14,9 +14,7 @@ class VV {
     // simple string serialization of the vector
     toString () {
         var stamps = [];
-        for(var [origin,time] of this.map) {
-            stamps.push(Stamp.toString(time, origin));
-        }
+        this.map.forEach((t, o) => stamps.push(Stamp.toString(t, o)));
         stamps.sort().reverse();
         stamps.unshift(stamps.length?'':'!0');
         return stamps.join('!');
@@ -82,8 +80,8 @@ class VV {
         if (vv.constructor!==VV) {
             vv = new VV(vv);
         }
-        for(var [origin, time] of vv.map) {
-            if (time>this.get(origin))
+        for(var origin of vv.map.keys()) {
+            if ( this.get(origin) > this.get(origin) )
                 return false;
         }
         return true;

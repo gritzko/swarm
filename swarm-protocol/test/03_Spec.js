@@ -27,7 +27,7 @@ tape ('protocol.03.A basic specifier syntax', function (tap) {
     tap.equal(spec.toString(), spec2.toString());
     // fill/blank/skip
     var typeid = spec.blank("/#");
-    tap.equal(typeid.toString(), "/Class#ID");
+    tap.equal(typeid.toString(), "/Class#ID!0.0");
     tap.equal(spec.toString(typeid), "!7Umum+gritzkoSsn.event");
     var spec3 = typeid.fill(spec.blank('!.'));
     tap.equals(spec3.toString(), spec_str);
@@ -58,7 +58,7 @@ tape ('protocol.03.B corner cases', function (tap) {
 
     var empty = new Spec('');
     tap.ok(empty.type===empty.id && empty.name===empty.stamp);
-    tap.equal(empty.toString(),'.0');
+    tap.equal(empty.toString(Spec.ZERO), '.0');
 
     var action = new Spec('.on+re');
     tap.equal(action.name,'on+re');
