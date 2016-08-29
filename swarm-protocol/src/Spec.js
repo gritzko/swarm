@@ -200,5 +200,6 @@ Spec.rsSpec = '/#!.'.replace(/./g, '(?:\\$&('+Stamp.rsTok+'))?');
 Spec.reSpec = new RegExp('^'+Spec.rsSpec+'$', 'g');
 Spec.NON_SPECIFIC_NOOP = new Spec();
 Spec.ZERO = new Spec();
+Spec.ERROR = new Spec([Stamp.ERROR, Stamp.ERROR, Stamp.ERROR, Stamp.ERROR]);
 
 module.exports = Spec;

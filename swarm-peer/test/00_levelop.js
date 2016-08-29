@@ -1,0 +1,70 @@
+"use strict";
+let swarm = require('swarm-protocol');
+let tap = require('tap').test;
+let peer = require('..');
+let LevelDOWN = require('leveldown');
+let rimraf = require('rimraf');
+const Spec = swarm.Spec;
+const Op = swarm.Op;
+
+tap ('peer.01.A leveldb read-write test', function(t){
+
+    let ops = swarm.Op.parseFrame( [
+        '/LWWObject#test+replica!now01+replica.op',
+        '/LWWObject#test+replica!now02+replica.op',
+        '/LWWObject#test1+replica!now03+replica.op',
+        ''
+        ].join('\n') );
+
+    let found = [], found1 = [];
+    let db;
+    let total = 0;
+    rimraf.sync('.peer.01.A');
+
+    const next = err => {
+        if (err) {
+            t.fail(err);
+            t.end();
+        } else if (steps.length>0) {
+            (steps.shift())();
+        } else {
+            rimraf.sync('.peer.01.A');
+            t.end();
+        }
+    };
+
+    let steps = [
+        () => db = new peer.LevelOp(new LevelDOWN('.peer.00.A'), next),
+        () => db.putAll(ops, next),
+        () => db.put (new Op('/LWWObject#test1+replica!now04+replica.op', ''), next),
+        () => {
+            let from = new swarm.Spec('/LWWObject#test+replica!now02+replica.op');
+            // 2 parallel scans
+            let count = 0;
+            var join = () => ++count===2 && next();
+            db.scan(from, null, op=> found.push(op), join);
+            db.scan(Spec.ZERO, Spec.ERROR, op=> total++, join);
+        },
+        () => {
+            t.equals(total, 4);
+            t.equals(found.length, 1);
+            t.equals(found[0].spec.toString(), '/LWWObject#test+replica!now02+replica.op');
+            next();
+        },
+        () => db.get(Spec.ZERO, nothing => {
+            t.equals(nothing, null);
+            next();
+        }),
+        () => db.scan(new Spec('/LWWObject#test1+replica!now03+replica.op'), null, op => {
+            t.equals(op.id, 'test1+replica');
+            found1.push(op);
+        }, next),
+        () => {
+            t.equals(found1.length, 2);
+            next();
+        }
+    ];
+
+    next();
+
+});
