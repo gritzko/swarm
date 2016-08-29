@@ -1,5 +1,5 @@
 "use strict";
-var base64 = require('./Base64x64');
+var Base64x64 = require('./Base64x64');
 var Stamp = require('./Stamp');
 
 //  S P E C I F I E R
@@ -111,7 +111,35 @@ class Spec {
     }
 
     get scope () {
-        return this.name.origin;
+        return this.Name.origin;
+    }
+
+    get method () {
+        return this.Name.value;
+    }
+
+    get author () {
+        return this.Id.origin;
+    }
+
+    get birth () {
+        return this.Id.value;
+    }
+
+    get time () {
+        return this.Stamp.value;
+    }
+
+    get type_params () {
+        return this.Type.origin;
+    }
+
+    get type_name () { // TODO rename
+        return this.Type.value;
+    }
+    
+    isScoped () {
+        return this.scope !== Base64x64.ZERO;
     }
 
     static stampop (stamp, name) {

@@ -1,13 +1,13 @@
 "use strict";
 let swarm = require('swarm-protocol');
 let tap = require('tap').test;
-let peer = require('..');
+let LevelOp = require('../src/LevelOp');
 let LevelDOWN = require('leveldown');
 let rimraf = require('rimraf');
 const Spec = swarm.Spec;
 const Op = swarm.Op;
 
-tap ('peer.01.A leveldb read-write test', function(t){
+tap ('peer.00.A leveldb read-write test', function(t){
 
     let ops = swarm.Op.parseFrame( [
         '/LWWObject#test+replica!now01+replica.op',
@@ -19,7 +19,7 @@ tap ('peer.01.A leveldb read-write test', function(t){
     let found = [], found1 = [];
     let db;
     let total = 0;
-    rimraf.sync('.peer.01.A');
+    rimraf.sync('.peer.00.A');
 
     const next = err => {
         if (err) {
@@ -28,13 +28,13 @@ tap ('peer.01.A leveldb read-write test', function(t){
         } else if (steps.length>0) {
             (steps.shift())();
         } else {
-            rimraf.sync('.peer.01.A');
+            rimraf.sync('.peer.00.A');
             t.end();
         }
     };
 
     let steps = [
-        () => db = new peer.LevelOp(new LevelDOWN('.peer.00.A'), next),
+        () => db = new LevelOp(new LevelDOWN('.peer.00.A'), next),
         () => db.putAll(ops, next),
         () => db.put (new Op('/LWWObject#test1+replica!now04+replica.op', ''), next),
         () => {

@@ -1,5 +1,5 @@
 "use strict";
-var base64 = require('./Base64x64');
+var Base64x64 = require('./Base64x64');
 var Stamp = require('./Stamp');
 var Spec = require('./Spec');
 
@@ -96,7 +96,7 @@ class Op {
             } else if (lines!==undefined) {
                 value = lines.replace(/\n[ \t]/mg, '\n').substr(1);
             } else { // explicit length
-                var char_length = base64.classic.parse(length);
+                var char_length = Base64x64.classic.parse(length);
                 var start = Op.reOp.lastIndex;
                 value = text.substr(start, char_length);
                 if (text.charAt(start+char_length)!=='\n') {
@@ -117,26 +117,28 @@ class Op {
     get name () { return this._spec.name; }
     get typeid () { return this._spec.typeid; }
 
-    isOn () { return this.spec.Name.eq(Op.ON); }
+    isOn () { return this.spec.method === Op.METHOD_ON; }
 
-    isOff () { return this.spec.Name.eq(Op.OFF); }
+    isOff () { return this.spec.method === Op.METHOD_OFF; }
 
-    isOnOff () { return this.isOn() || this.isOff(); }
+    isOnOff () {
+        return this.isOn() || this.isOff();
+    }
 
     isMutation () {
         return !this.isOnOff() && !this.isError() && !this.isState();
     }
 
     isState () {
-        return this.spec.Name.eq(Op.STATE);
+        return this.spec.method === Op.METHOD_STATE;
     }
 
     isNoop () {
-        return this.spec.Name.eq(Op.NOOP);
+        return this.spec.method === Op.METHOD_NOOP;
     }
 
     isError () {
-        return this.spec.Name.eq(Op.ERROR);
+        return this.spec.method === Op.METHOD_ERROR;
     }
 
     isSameObject (spec) {
@@ -146,6 +148,13 @@ class Op {
             spec = new Spec(spec);
         }
         return this.spec.isSameObject(spec);
+    }
+
+    /**
+     * @param {String} message
+     * @returns {Op} error op */
+    error (message) {
+        return new Op(this.spec.rename(Stamp.ERROR), message);
     }
 
     overstamped () {
@@ -159,22 +168,26 @@ class Op {
 }
 
 Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
-Op.PSEUDO_OP_NAMES = ["on", "off", "error", "0"];
 Op.SERIALIZATION_MODES = {
     LINE_BASED: 1,
     EXPLICIT: 2,
     EXPLICIT_ONLY: 3
 };
 Op.rsOp = '\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/g, '(?:') + ')' +
-    '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+base64.rs64x64+')\\n)';
+    '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+Base64x64.rs64x64+')\\n)';
 Op.reOp = new RegExp(Op.rsOp, "mg");
-Op.ON = new Stamp("on");
-Op.OFF = new Stamp("off");
-Op.state = "~";
-Op.STATE = new Stamp(Op.state);
-Op.NOOP = new Stamp();
-Op.ERROR = new Stamp("error");
-Op.NOTHING = new Op(new Spec, '');
+Op.METHOD_ON = "on";
+Op.METHOD_OFF = "off";
+Op.METHOD_STATE = Base64x64.INFINITY;
+Op.METHOD_NOOP = Base64x64.ZERO;
+Op.METHOD_ERROR = Base64x64.INCORRECT;
+Op.PSEUDO_OP_NAMES = [Op.METHOD_ON, Op.METHOD_OFF, Op.METHOD_ERROR, Op.METHOD_NOOP];
+Op.STAMP_ON = new Stamp(Op.METHOD_ON);
+Op.STAMP_OFF = new Stamp(Op.METHOD_OFF);
+Op.STAMP_STATE = new Stamp(Op.METHOD_STATE);
+Op.STAMP_NOOP = new Stamp(Op.METHOD_NOOP);
+Op.STAMP_ERROR = new Stamp(Op.METHOD_ERROR);
+Op.NOTHING = new Op(new Spec(), '');
 Op.MAX_OP_FLAG = 1;
 
 module.exports = Op;

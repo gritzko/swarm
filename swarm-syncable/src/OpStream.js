@@ -16,7 +16,7 @@ class OpStream {
 
     /** add a new listener
      *  @param {String} event - a specifier filter, e.g. ".on.off"
-     *  @param callback - a callback function
+     *  @param {Function} callback - a callback function
      *  @param {Boolean} once */
     on (event, callback, once) {
         if (event && event.constructor===Function) { // normalize
@@ -84,14 +84,16 @@ class OpStream {
         if (this._lstn===null) {
             this._lstn = op;
         } else if (this._lstn.constructor===Filter) {
-            if (!this._lstn.offer(op, this))
+            if (this._lstn.offer(op, this)===OpStream.ENOUGH)
                 this._lstn = null;
         } else if (this._lstn.constructor===Array) {
             if (this._lstn[0].constructor===Op) {
                 this._lstn.push(op);
             } else {
                 let ejects = [];
-                this._lstn.forEach( f => f.offer(op, this) || ejects.push(f) );
+                this._lstn.forEach( f =>
+                    f.offer(op, this)===OpStream.ENOUGH && ejects.push(f)
+                );
                 if (ejects.length) {
                     this._lstn = this._lstn.filter(f=>ejects.indexOf(f)===-1);
                     if (this._lstn.length===0)
@@ -121,6 +123,7 @@ class OpStream {
 
     /** by default, an echo stream */
     offer (op) {
+        console.log(': '+op.toString());
         this._emit(op);
     }
 
