@@ -1,5 +1,6 @@
 "use strict";
-let swarm = require('swarm-protocol');
+const swarm = require('swarm-protocol');
+const Spec = swarm.Spec;
 
 /** just a nice thin wrapper for leveldown API */
 class LevelOp {

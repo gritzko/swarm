@@ -11,7 +11,6 @@ class Op {
 
     constructor (spec, value, source) {
         this._spec = this._value = null;
-        this._flags = 0;
         if (spec===undefined) {
             return Op.NON_SPECIFIC_NOOP;
         } else if (spec.constructor===Op) {
@@ -157,8 +156,17 @@ class Op {
         return new Op(this.spec.rename(Stamp.ERROR), message);
     }
 
-    overstamped () {
-
+    /** @param {Base64x64|String} stamp */
+    overstamped (stamp) {
+        if (this.spec.isScoped())
+            throw new Error('can not overstamp a scoped op');
+        let spec = new Spec([
+            this.spec.Type,
+            this.spec.Id,
+            new Stamp(stamp, this.spec.origin),
+            new Stamp(this.spec.method, this.spec.time)
+        ]);
+        return new Op(spec, this.value);
     }
 
     unoverstamped () {
@@ -188,6 +196,5 @@ Op.STAMP_STATE = new Stamp(Op.METHOD_STATE);
 Op.STAMP_NOOP = new Stamp(Op.METHOD_NOOP);
 Op.STAMP_ERROR = new Stamp(Op.METHOD_ERROR);
 Op.NOTHING = new Op(new Spec(), '');
-Op.MAX_OP_FLAG = 1;
 
 module.exports = Op;

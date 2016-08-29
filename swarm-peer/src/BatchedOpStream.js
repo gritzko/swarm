@@ -43,17 +43,18 @@ class BatchedOpStream extends OpStream {
         this._egress_batch.push(op);
     }
 
+    /** totally synchronous */
     _forward_batch (ops) {
         super._emitAll(ops); // emit the batch synchronously
-    } 
+    }
 
     _process_next_batch () {
         if (this._processed_batch) {
             if (this._processed_batch.length)
                 throw new Error('state machine fuckup');
-            this._processed_batch = null;
             if (this._egress_batch.length)
                 this._forward_batch(this._egress_batch);
+            this._processed_batch = null;
             this._egress_batch = null;
         }
         if (this._ingress_batch.length!==0) {

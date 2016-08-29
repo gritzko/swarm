@@ -1,9 +1,9 @@
 "use strict";
-let swarm = require('swarm-protocol');
-let tap = require('tap').test;
-let LevelOp = require('../src/LevelOp');
-let LevelDOWN = require('leveldown');
-let rimraf = require('rimraf');
+const swarm = require('swarm-protocol');
+const tap = require('tap').test;
+const LevelOp = require('../src/LevelOp');
+const LevelDOWN = require('leveldown');
+const rimraf = require('rimraf');
 const Spec = swarm.Spec;
 const Op = swarm.Op;
 
