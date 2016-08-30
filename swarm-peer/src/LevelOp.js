@@ -21,10 +21,10 @@ class LevelOp {
      *  @param {Spec} till - if null, scan the object's range
      *  @param {Function} on_op - a callback for every op found
      *  @param {Function} on_end - a final callback
-     *  @param {Object} options
+     *  @param {Object} options (skipOp, reverse)
      */
     scan ( from, till, on_op, on_end, options ) {
-        let skip_op = options && options.skipOpCreation;
+        const skip_op = !!(options && options.skipOp);
         if (till===null) {
             till = from.restamp(swarm.Stamp.ERROR);
         }
@@ -32,21 +32,20 @@ class LevelOp {
             gte: from.toString(),
             lt: till.toString(),
             keyAsBuffer: false,
-            valueAsBuffer: false
+            valueAsBuffer: false,
+            reverse: !!(options && options.reverse)
         });
         let levelop_read_op = (err, key, value) => {
-            if (err) {
+            let ret;
+            if (key && !err) {
+                let op = skip_op ? null : new swarm.Op(key, value);
+                ret = on_op(op, key, value);
+            }
+            if ( !key || err || ret===LevelOp.ENOUGH ) {
                 i.end(()=>{});
                 on_end(err);
-            } else if (key) {
-                let op = null;
-                if (!skip_op)
-                    op = new swarm.Op(key, value);
-                on_op(op, key, value);
-                i.next(levelop_read_op);
             } else {
-                i.end(()=>{});
-                on_end();
+                i.next(levelop_read_op);
             }
         };
         i.next(levelop_read_op);
@@ -83,6 +82,8 @@ class LevelOp {
     }
 
 }
+
+LevelOp.ENOUGH = Symbol('Enough!');
 
 class LevelOpPut {
     constructor(op) {

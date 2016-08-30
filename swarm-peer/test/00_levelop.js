@@ -16,7 +16,7 @@ tap ('peer.00.A leveldb read-write test', function(t){
         ''
         ].join('\n') );
 
-    let found = [], found1 = [];
+    let found = [], found1 = [], reverse = [];
     let db;
     let total = 0;
     rimraf.sync('.peer.00.A');
@@ -37,8 +37,16 @@ tap ('peer.00.A leveldb read-write test', function(t){
         () => db = new LevelOp(new LevelDOWN('.peer.00.A'), next),
         () => db.putAll(ops, next),
         () => db.put (new Op('/LWWObject#test1+replica!now04+replica.op', ''), next),
+        () => db.scan(new Spec('/LWWObject#test1+replica'), null,
+                        op => reverse.push(op), next, {reverse: true}),
         () => {
-            let from = new swarm.Spec('/LWWObject#test+replica!now02+replica.op');
+            t.equal(reverse.length, 2);
+            t.equal(reverse[0].spec.time, 'now04');
+            t.equal(reverse[1].spec.time, 'now03');
+            next();
+        },
+        () => {
+            let from = new Spec('/LWWObject#test+replica!now02+replica.op');
             // 2 parallel scans
             let count = 0;
             var join = () => ++count===2 && next();
