@@ -169,8 +169,20 @@ class Op {
         return new Op(spec, this.value);
     }
 
-    unoverstamped () {
+    clearstamped (new_scope) {
+        if (!this.spec.isScoped())
+            return this;
+        let spec = new Spec([
+            this.spec.Type,
+            this.spec.Id,
+            new Stamp(this.spec.scope, this.spec.origin),
+            new Stamp(this.spec.method, new_scope||'0')
+        ]);
+        return new Op(spec, this.value);
+    }
 
+    scoped (scope) {
+        return new Op(this._spec.scoped(scope), this._value);
     }
 
 }

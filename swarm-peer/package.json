@@ -28,7 +28,8 @@
     "devDependencies": {
         "swarm-bat": "^1.2.0",
         "leveldown": "^1.4.6",
-        "rimraf": "^2.5.4"
+        "rimraf": "^2.5.4",
+        "async": "^2.0.1"
     },
     "scripts": {
         "test": "make test"

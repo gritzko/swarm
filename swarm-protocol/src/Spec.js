@@ -221,6 +221,11 @@ class Spec {
         return new Spec([this.Type, this.Id, this.Stamp, stamp]);
     }
 
+    /** @param {String|Base64x64} scope */
+    scoped (scope) {
+        return new Spec([this.Type, this.Id, this.Stamp, new Stamp(this.method, scope)]);
+    }
+
 }
 
 Spec.quants = ['/', '#', '!', '.'];
