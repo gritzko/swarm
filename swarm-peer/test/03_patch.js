@@ -15,13 +15,14 @@ tap ('peer.03.A patches', function(t) {
     let ops = swarm.Op.parseFrame([
         '/LWWObject#test+replica!now01+A.key 1',
         '/LWWObject#test+replica!now0100001+B.key+now 2',
-        '/LWWObject#test+replica!now0100001+B.~+now "key": 2',
+        '/LWWObject#test+replica!now0100001+B.~+now !now+B.key 2',
         '/LWWObject#test+replica!now02+A.key 3',
         ''
     ].join('\n'));
 
     let ons = swarm.Op.parseFrame([
         '/LWWObject#test+replica!now+B.on+C',
+        '/LWWObject#test+replica!0.on+D',
         ''
     ].join('\n'));
 
@@ -35,12 +36,20 @@ tap ('peer.03.A patches', function(t) {
             next => { patch.offerAll(ons); setTimeout(next, 400); }, // FIXME
             next => {
                 let emitted = patch.spill();
-                //emitted.forEach(o=>console.log(''+o));
-                t.equal(emitted.length, 2);
+                emitted.forEach(o=>console.log(''+o));
+
+                t.equal(emitted.length, 4);
+
                 t.equal(emitted[0].spec.stamp, 'now02+A');
-                t.equal(emitted[0].spec.name, 'key');
+                t.equal(emitted[0].spec.name, 'key+C');
                 t.equal(emitted[1].spec.stamp, 'now02+A');
                 t.equal(emitted[1].spec.name, 'on+C');
+
+                t.equal(emitted[2].spec.stamp, 'now02+A');
+                t.equal(emitted[2].spec.name, '~+D');
+                t.equal(emitted[3].spec.stamp, 'now02+A');
+                t.equal(emitted[3].spec.name, 'on+D');
+
                 next();
             } // TODO snapshot
         ],

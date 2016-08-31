@@ -42,8 +42,8 @@ class Spec {
      * * new Spec("/Object#1CQKn+0r1g1n!0.on")
      * * new Spec(["Object", "1CQKn+0r1g1n", "0", "on"])
      * */
-    constructor (spec) {
-        this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
+    constructor (spec, s2, s3, s4) {
+        let t = this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
         if (!spec) {
             'nothing';
         } else if (spec.constructor===String) {
@@ -54,16 +54,21 @@ class Spec {
             }
             for(let i=1; i<=4; i++) {
                 if (m[i]!==null) {
-                    this._toks[i-1] = new Stamp(m[i]);
+                    t[i-1] = new Stamp(m[i]);
                 }
             }
         } else if (spec.constructor===Spec) {
             this._toks = spec._toks;
         } else if (spec.constructor===Array && spec.length===4) {
-            for(let i=0; i<4; i++) {
-                var t = spec[i] || Stamp.ZERO;
-                this._toks[i] = t.constructor===Stamp ? t : new Stamp(t);
+            for (let i = 0; i < 4; i++) {
+                var s = spec[i] || Stamp.ZERO;
+                t[i] = s.constructor === Stamp ? s : new Stamp(s);
             }
+        } else if (spec.constructor===Stamp) {
+            t[0] = spec.constructor === Stamp ? spec : new Stamp(spec);
+            t[1] = s2.constructor === Stamp ? s2 : new Stamp(s2);
+            t[2] = s3.constructor === Stamp ? s3 : new Stamp(s3);
+            t[3] = s4.constructor === Stamp ? s4 : new Stamp(s4);
         } else {
             throw new Error("unrecognized parameter");
         }
@@ -219,6 +224,11 @@ class Spec {
     rename (stamp, origin) {
         if (origin) stamp = new Stamp(stamp, origin);
         return new Spec([this.Type, this.Id, this.Stamp, stamp]);
+    }
+
+    /** @param {String|Base64x64} method */
+    remethod (method) {
+        return new Spec([this.Type, this.Id, this.Stamp, new Stamp(method, this.scope)]);
     }
 
     /** @param {String|Base64x64} scope */

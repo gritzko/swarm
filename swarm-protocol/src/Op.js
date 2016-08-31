@@ -171,7 +171,7 @@ class Op {
 
     clearstamped (new_scope) {
         if (!this.spec.isScoped())
-            return this;
+            return !new_scope ? this : this.scoped(new_scope);
         let spec = new Spec([
             this.spec.Type,
             this.spec.Id,
@@ -179,6 +179,10 @@ class Op {
             new Stamp(this.spec.method, new_scope||'0')
         ]);
         return new Op(spec, this.value);
+    }
+
+    restamped (stamp) {
+        return new Op(this._spec.restamp(stamp), this._value);
     }
 
     scoped (scope) {
