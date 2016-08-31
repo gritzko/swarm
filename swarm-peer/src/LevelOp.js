@@ -62,6 +62,11 @@ class LevelOp {
         this._db.put(op.spec.toString(), op.value, {sync: true}, callback);
     }
 
+    replace (delop, addop, callback) {
+        let batch = [new LevelOpDel(delop.spec), new LevelOpPut(addop)];
+        this._db.batch(batch, {sync: true}, callback);
+    }
+
     /** @param {Spec} spec - the key */
     get (spec, callback) {
         this._db.get(spec.toString(), {asBuffer:false},

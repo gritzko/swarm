@@ -109,10 +109,12 @@ class PatchOpStream extends BatchedOpStream {
         const last = tail[tail.length-1].clearstamped().spec;
         const state = o.toString();
         let new_snapshot = new Op(new Spec([last.Type, last.Id, last.Stamp, new Stamp(Op.METHOD_STATE, on.scope)]), state);
-        this.db.replace(snapshot, new_snapshot, ()=>{});
         this._batch(new_snapshot);
         this._batch(on.restamped(new_snapshot.spec.Stamp));
-        done();
+        if (!snapshot.spec.Stamp.eq(snapshot.spec.Id))
+            this.db.replace(snapshot, new_snapshot, done);
+        else
+            this.db.put(new_snapshot, done);
     }
 
 
