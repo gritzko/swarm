@@ -25,18 +25,18 @@ tap ('peer.00.A leveldb read-write test', function(t){
 
 
     async.waterfall([
-        (next) =>db = new LevelOp(new LevelDOWN('.peer.00.A'), next),
-        (next) =>db.putAll(ops, next),
-        (next) =>db.put (new Op('/LWWObject#test1+replica!now04+replica.op', ''), next),
-        (next) =>db.scan(new Spec('/LWWObject#test1+replica'), null,
+        next =>db = new LevelOp(new LevelDOWN('.peer.00.A'), next),
+        next =>db.putAll(ops, next),
+        next =>db.put (new Op('/LWWObject#test1+replica!now04+replica.op', ''), next),
+        next =>db.scan(new Spec('/LWWObject#test1+replica'), null,
                         op => reverse.push(op), next, {reverse: true}),
-        (next) =>{
+        next =>{
             t.equal(reverse.length, 2);
             t.equal(reverse[0].spec.time, 'now04');
             t.equal(reverse[1].spec.time, 'now03');
             next();
         },
-        (next) =>{
+        next =>{
             let from = new Spec('/LWWObject#test+replica!now02+replica.op');
             // 2 parallel scans
             let count = 0;
@@ -44,21 +44,21 @@ tap ('peer.00.A leveldb read-write test', function(t){
             db.scan(from, null, op=> found.push(op), join);
             db.scan(Spec.ZERO, Spec.ERROR, op=> total++, join);
         },
-        (next) =>{
+        next =>{
             t.equals(total, 4);
             t.equals(found.length, 1);
             t.equals(found[0].spec.toString(), '/LWWObject#test+replica!now02+replica.op');
             next();
         },
-        (next) =>db.get(Spec.ZERO, nothing => {
+        next =>db.get(Spec.ZERO, nothing => {
             t.equals(nothing, null);
             next();
         }),
-        (next) =>db.scan(new Spec('/LWWObject#test1+replica!now03+replica.op'), null, op => {
+        next =>db.scan(new Spec('/LWWObject#test1+replica!now03+replica.op'), null, op => {
             t.equals(op.id, 'test1+replica');
             found1.push(op);
         }, next),
-        (next) =>{
+        next =>{
             t.equals(found1.length, 2);
             next();
         }

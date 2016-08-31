@@ -36,7 +36,7 @@ tap ('peer.03.A patches', function(t) {
             next => { patch.offerAll(ons); setTimeout(next, 400); }, // FIXME
             next => {
                 let emitted = patch.spill();
-                emitted.forEach(o=>console.log(''+o));
+                //emitted.forEach(o=>console.log(''+o));
 
                 t.equal(emitted.length, 4);
 
@@ -51,7 +51,8 @@ tap ('peer.03.A patches', function(t) {
                 t.equal(emitted[3].spec.name, 'on+D');
 
                 next();
-            } // TODO snapshot
+            }
+            //next => db.scan(Spec.ZERO, Spec.ERROR, op=>console.log(':'+op), next)
         ],
         err => {
             rimraf.sync('.peer.03.A');

@@ -93,6 +93,7 @@ class LogOpStream extends BatchedOpStream {
 
         let tip = this.tips.get(op.id) || this.tip_bottom;
 
+        // we guarantee unique monotonous time values by overstamping ops
         let save_op = spec.Stamp.value > tip ?
             op : op.overstamped(swarm.Base64x64.inc(tip));
 
