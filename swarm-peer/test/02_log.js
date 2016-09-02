@@ -55,7 +55,7 @@ tap ('peer.02.A op log append basics', function(t) {
 
         let emitted = tray.stash;
 
-        emitted.forEach(op=>console.log('emit: '+ op.toString()));
+        //emitted.forEach(op=>console.log('emit: '+ op.toString()));
 
         t.equals(emitted.length, 5);
         t.ok(emitted[2].isError());
@@ -66,11 +66,12 @@ tap ('peer.02.A op log append basics', function(t) {
 
     function checkDB () {
 
-        list.forEach(op=>console.log('DB: '+ op.toString()));
+        //list.forEach(op=>console.log('DB: '+ op.toString()));
 
         t.equals(list.length, 3);
 
         t.end();
+        rimraf.sync('.peer.02.A');
 
     }
 

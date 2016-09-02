@@ -5,7 +5,6 @@ let Op = swarm.Op;
 
 /**
  *
- * @interface OpStream
  * */
 class OpStream {
 
@@ -26,6 +25,7 @@ class OpStream {
         let filter = new Filter(event, callback, once);
         if (this._lstn===null) {
             this._lstn = filter;
+            this._start();
         } else if (this._lstn.constructor===Op) {
             let op = this._lstn;
             this._lstn = filter;
@@ -44,6 +44,10 @@ class OpStream {
             throw new Error('invalid listeners list');
         }
     }
+
+    /** internal callback; triggered on a first listener added iff nothing
+     *  has been emitted yet. */
+    _start () {}
 
     once (event, callback) {
         if (event.constructor===Function) {
@@ -129,6 +133,10 @@ class OpStream {
 
     offerAll (ops) {
         ops.forEach(op => this.offer(op));
+    }
+
+    end () {
+        this.offer(null);
     }
 
     /** @param {OpStream} sink */

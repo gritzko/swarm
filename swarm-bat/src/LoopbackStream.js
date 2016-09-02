@@ -1,5 +1,4 @@
 "use strict";
-var util = require('util');
 var stream = require('stream');
 
 /**

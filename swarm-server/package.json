@@ -24,12 +24,12 @@
         "swarm-server": "./cli.js"
     },
     "dependencies": {
-        "swarm-protocol": "^1.2.0",
-        "swarm-syncable": "^1.2.0",
-        "swarm-peer": "^1.2.0",
-        "leveldown": "^1.4.6",
-        "duplexer":      "^0.1.1",
-        "minimist":       "^1.2.0"
+        "swarm-protocol":   "^1.2.0",
+        "swarm-syncable":   "^1.2.0",
+        "swarm-peer":       "^1.2.0",
+        "leveldown":        "^1.4.6",
+        "daemon":           "^1.1.0",
+        "minimist":         "^1.2.0"
     },
     "devDependencies": {
         "swarm-bat": "1.0.x",

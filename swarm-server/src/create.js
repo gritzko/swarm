@@ -60,7 +60,7 @@ function create (home, args, done) {
         forEach(
             key => options.set(key.substr(1), args[key])
         );
-    console.log(options, args);
+    //console.log(options, args);
     options._id = new swarm.Stamp(dbname, '0'); //options._clock.issueTimestamp()
 
     // OK, let's create things
@@ -75,7 +75,7 @@ function create (home, args, done) {
         if (err)
             return done(err);
 
-        db.save ([options.toOp()], err => {
+        db.putAll ([options.toOp()], err => {
             if (err)
                 done(err);
             else

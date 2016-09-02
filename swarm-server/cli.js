@@ -25,12 +25,11 @@ var help = [
     '    --OXxx, --0Xxx     edit database options (as above)',
     '-R --run               run a database (the default)',
     '    -l --listen scheme:url listen for client conns on URL',
-    '        (stdin -, WebSocket ws://host:port, TCP tcp:...)',
+    '        (WebSocket ws://host:port, TCP tcp:...)',
     '    -c --connect scheme:url connect to a peer',
-    '    -e --exec script.js execute a script once connected',
-    '    -r --repl          start REPL',
+    '    -e --exec script.js execute a script once connected (default: REPL)',
     '    -d --daemon        daemonize',
-    '    -x                 exit when done',
+    '    -i --ingest file.op ingest ops from a file (default: stdin/out)',
     '    -f --filter        grep log events (e.g. -f /Swarm.on.off)',
     ''
 ].join('\n');

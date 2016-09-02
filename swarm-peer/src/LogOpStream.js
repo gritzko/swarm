@@ -53,7 +53,6 @@ class LogOpStream extends BatchedOpStream {
 
         this._processed_batch = [];
 
-        save.forEach(o=>console.log('SAVE: '+ o.toString()));
         this.db.putAll(save, done);
 
     }

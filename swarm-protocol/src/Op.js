@@ -88,6 +88,8 @@ class Op {
                 lines = m[4],
                 length = m[5],
                 value;
+            if (!spec)
+                continue; // empty line
             if (empty!==undefined) {
                 value = '';
             } else if (line!==undefined) {

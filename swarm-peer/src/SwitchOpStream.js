@@ -14,11 +14,12 @@ const Stamp = swarm.Stamp;
 class Switch extends BatchedOpStream {
 
     /** @param {LevelOp} db */
-    constructor (db) {
+    constructor (db, callback) {
         super();
         this.db = db;
         this.streams = new Map();
         this._on_op_cb = this._on_op.bind(this);
+        callback && callback();
     }
 
     /***
@@ -33,7 +34,6 @@ class Switch extends BatchedOpStream {
     }
 
     _process_op (op, done) {
-console.log('> '+op.toString());
         if (op.isOnOff()) {
             this._process_on_off(op, done);
         } else if (op.spec.isScoped()) {
