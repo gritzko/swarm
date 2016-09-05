@@ -14,9 +14,9 @@ class BatResult {
             (this.expected, options);
         var output_norm = BatScript.output2script
             (this.output, options);
-        this.dmp = new DiffMatchPatch();
-        var diff = this.dmp.diff_main(output_norm, expected_norm);
-        this.ok = diff && diff.length===1 && diff[0][0]===0;
+        const dmp = new DiffMatchPatch();
+        var diff = dmp.diff_main(output_norm, expected_norm);
+        this.ok = diff && (diff.length===0 || (diff.length===1 && diff[0][0]===0));
         this.diff = diff;
         this.comment = round.comment;
     }

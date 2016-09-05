@@ -5,6 +5,7 @@ var api = require('./bat-api');
 var fs = require('fs');
 
 var scripts = argv._;
+const json = !!(argv.j || argv.json);
 if (scripts==null || scripts.length===0) {
     console.error("no script specified", argv);
     process.exit(3);
@@ -34,6 +35,11 @@ if (argv.e) {
 var stream_test = new api.StreamTest(script, stream);
 
 stream_test.run ( results => {
-    results.forEach(result => process.stdout.write(result.toColorString()));
+    if (json)
+        console.log(JSON.stringify(results, null, 4));
+    else
+        results.forEach(result =>
+            process.stdout.write(result.toColorString())
+        );
 } );
 

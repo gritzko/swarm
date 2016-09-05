@@ -103,6 +103,7 @@ class BatScript {
                 input:   Object.create(null),
                 output:  Object.create(null)
             };
+            round.output.default = '';
             rounds.push(round);
         }
         function addLine (map, stream, body) {
@@ -116,7 +117,7 @@ class BatScript {
         //var lines = script_text.match('\n').reverse();
         var m = null;
         var stage = 0;
-        var re_mark = /^(([<>;])|(\w+)([<>])|)\s?(.*)\n?/mg;
+        var re_mark = /^(([<>;])|(\w+)([<>])|)[\t ]?(.*)\n?/mg;
         var comment = "";
         while ( null != (m = re_mark.exec(script_text)) ) {
             if (m[0].length===0) { break; }
