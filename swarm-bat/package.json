@@ -1,14 +1,17 @@
 {
     "name": "swarm-bat",
-    "version": "1.2.1",
+    "version": "1.2.3",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
     },
     "files": [
         "src/*.js",
-        "bat.js",
+        "bat-cli.js",
+        "bat-api.js",
         "test/*.js",
+        "test/bash.batt",
+        "test/cli-test.sh",
         "README.md",
         "LICENSE"
     ],
@@ -19,7 +22,8 @@
         "eventemitter3": "^1.1.1",
         "minimist": "^1.2.0",
         "diff-match-patch": "1.0.0",
-        "chalk": "^1.1.2"
+        "chalk": "^1.1.2",
+        "duplexer": "^0.1.1"
     },
     "scripts": {
         "test": "make test"
