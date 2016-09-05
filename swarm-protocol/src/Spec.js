@@ -115,6 +115,10 @@ class Spec {
         return tispec.toString(Spec.ZERO);
     }
 
+    get class () {
+        return this.Type.value;
+    }
+
     get scope () {
         return this.Name.origin;
     }

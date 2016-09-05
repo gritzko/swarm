@@ -1,7 +1,7 @@
 "use strict";
-let swarm = require('swarm-protocol');
-let sync = require('swarm-syncable');
-let OpStream = sync.OpStream;
+const swarm = require('swarm-protocol');
+const sync = require('swarm-syncable');
+const OpStream = sync.OpStream;
 
 /**
  * BatchOpStream extends OpStream by adding some server-side processing features:
@@ -12,6 +12,8 @@ let OpStream = sync.OpStream;
  *      ricochet all around the place
  * 3. backpressure: once BOS receives OpStream.SLOW_DOWN, it increases pauses
  *      between batches, relays SLOW_DOWN further TODO
+ *
+ * BOP is not a node.js stream.
  * */
 class BatchedOpStream extends OpStream {
 
@@ -27,6 +29,9 @@ class BatchedOpStream extends OpStream {
 
     /** @override */
     offer (op) {
+
+        if (this._debug)
+            console.log('}'+this._debug+'\t'+op.toString());
 
         if (this._ingress_batch===null)
             return OpStream.ENOUGH;

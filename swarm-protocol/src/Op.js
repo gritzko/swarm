@@ -142,6 +142,10 @@ class Op {
         return this.spec.method === Op.METHOD_ERROR;
     }
 
+    isNormal () {
+        return !this._spec.Name.isAbnormal() && !this.isOnOff(); // TODO ~on?
+    }
+
     isSameObject (spec) {
         if (spec.constructor===Op) {
             spec = spec.spec;
@@ -214,5 +218,6 @@ Op.STAMP_STATE = new Stamp(Op.METHOD_STATE);
 Op.STAMP_NOOP = new Stamp(Op.METHOD_NOOP);
 Op.STAMP_ERROR = new Stamp(Op.METHOD_ERROR);
 Op.NOTHING = new Op(new Spec(), '');
+Op.CLASS_HANDSHAKE = "Swarm";
 
 module.exports = Op;

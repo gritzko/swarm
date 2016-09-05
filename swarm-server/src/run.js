@@ -8,15 +8,25 @@ const peer = require('swarm-peer');
 const Swarm = sync.Swarm;
 const async = require('async');
 const NodeOpStream = require('./NodeOpStream');
+const AuthOpStream = require('./AuthOpStream');
 
 module.exports = function open (home, args, done) {
 
+    if (!fs.existsSync(home))
+        return done('no such dir');
+    if (!fs.statSync(home).isDirectory())
+        return done('not a dir');
+
+    let sub_home = path.join(home, '.subs');
     const level = leveldown(home);
+    const sub_level = leveldown(sub_home);
+
     let db, sub_db;
-    let switch_stream, log_stream, patch_stream;
+    let switch_stream, log_stream, patch_stream, auth_stream;
 
     const stages = [
         next => db = new peer.LevelOp (level, {createIfMissing: false}, next),
+        next => sub_db = new peer.LevelOp (sub_level, {createIfMissing: true}, next),
         next => switch_stream = new peer.SwitchOpStream(sub_db, next),
         next => log_stream = new peer.LogOpStream(db, next),
         next => patch_stream = new peer.PatchOpStream(db, next),
@@ -24,12 +34,21 @@ module.exports = function open (home, args, done) {
             patch_stream.pipe(switch_stream);
             log_stream.pipe(patch_stream);
             switch_stream.pipe(log_stream);
+            let trace = args.T || args.trace;
+            if (trace===true) trace = 'PLS';
+            if (trace) {
+                patch_stream._debug = trace.indexOf('P')===-1 ? null : 'P';
+                log_stream._debug = trace.indexOf('L')===-1 ? null : 'L';
+                switch_stream._debug = trace.indexOf('S')===-1 ? null : 'S';
+            }
+            auth_stream = new AuthOpStream(switch_stream);
             next();
         },
+        next => load_auth(args, auth_stream, next),
         next => filter(args, log_stream, next),
         next => execute(args, next),
         next => connect(args, next),
-        next => listen(args, switch_stream, next),
+        next => listen(args, auth_stream, next),
         next => {
             if (args.d||args.daemon)
                 require('daemon')();
@@ -74,15 +93,12 @@ function execute (args, callback) {
     }
 }
 
-function listen (args, switch_stream, callback) {
+function listen (args, auth_stream, done) {
     const listen = args.l || args.listen;
     if (!listen) {
-        callback();
+        done();
     } else if (listen===true) {
-        let stdio_stream = new Duplexer(process.stdin, process.stdout);
-        let opstream = new NodeOpStream(stdio_stream);
-        console.log('listn')
-        switch_stream.addClient(opstream, "test"); // FIXME replica id ??!!
+        listen_stdio(args, auth_stream, done);
     } else if (listen.constructor===String) {
 
     } else if (listen.constructor===Array) {
@@ -91,6 +107,36 @@ function listen (args, switch_stream, callback) {
 
     }
 
+}
+
+function listen_stdio (args, auth_stream, done) {
+    let stdio_stream = new Duplexer(process.stdin, process.stdout);
+    let opstream = new NodeOpStream(stdio_stream);
+    auth_stream.addClient(opstream, "test"); // FIXME replica id ??!!
+}
+
+function listen_tcp (args, auth_stream, done) {
+
+}
+
+function listen_ws (args, auth_stream, done) {
+
+}
+
+function load_auth (args, auth_stream, done) {
+    const req = args.a || args.auth;
+    let auth_ext;
+    if (!req) {
+        auth_ext = new sync.OpStream();
+        auth_stream.connect(auth_ext);
+        done();
+    } else if (req.constructor!==String) {
+        done('auth extension must be an OpStream');
+    } else {
+        let fn = require(req);
+        auth_ext = new fn(args, done);
+        auth_ext.connect(auth_stream);
+    }
 }
 
 function connect (args, callback) {
@@ -129,6 +175,10 @@ class Duplexer extends Duplex {
     }
 
     _read(size) {
+    }
+
+    end () {
+        setTimeout(process.exit.bind(process), 100); // FIXME proper close
     }
 
 }

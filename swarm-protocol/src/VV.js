@@ -43,6 +43,10 @@ class VV {
         return this;
     }
 
+    delete (origin) {
+        this.remove(origin);
+    }
+
     isEmpty () {
         return this.map.size===0;
     }

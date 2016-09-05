@@ -25,14 +25,13 @@ class LogOpStream extends BatchedOpStream {
         this.db.scan(
             LogOpStream.VV_SPEC,
             null,
-            (nothing, key, value) => {
-                let origin = key.substr(LogOpStream.VV_PREFIX_LEN);
-                this.vv.addPair(value, origin);
+            (op, key, value) => {
+                this.vv.addPair(op.value, op.spec.Stamp.value);
                 if (value>this.tip_bottom)
                     this.tip_bottom = value;
             },
             err => callback && callback(err),
-            { skipOpCreation: true }
+            { /*skipOpCreation: true*/ }
         );
 
     }
@@ -44,11 +43,14 @@ class LogOpStream extends BatchedOpStream {
 
         this._processed_batch.reverse().forEach( op => { // FIXME reverse
 
-            if (op.isOnOff())
-                this._processOnOff(op, save, emit);
-            else
+            if (op.isNormal())
                 this._processMutation(op, save, emit);
-
+            else if (op.isOnOff()) // FIXME ALL CASES (error, etc)
+                this._processOnOff(op, save, emit);
+            else if (op.isError())
+                emit.push(op);
+            else if (op.isState())
+                this._processState(op, save, emit);
         });
 
         this._processed_batch = [];
@@ -66,10 +68,10 @@ class LogOpStream extends BatchedOpStream {
 
         if (spec.Stamp.isZero())
             emit.push(op);
-        else if (tip && spec.stamp>tip)
-            emit.push(op.error('UNKNOWN BASE'));
+        else if (tip>'0' && spec.Stamp.value>tip)
+            emit.push(op.error('UNKNOWN BASE > '+tip));
         else if (!top || top<spec.time)
-            emit.push(op.error('UNKNOWN BASE')); // leaks max stamp
+            emit.push(op.error('BASE AHEAD > '+top)); // leaks max stamp
         else
             emit.push(op);
 
@@ -99,6 +101,14 @@ class LogOpStream extends BatchedOpStream {
         this.tips.set(op.id, save_op.spec.Stamp.value);
         save.push(save_op);
 
+    }
+
+    _processState (state_op, save, emit) {
+        if (!state_op.spec.Stamp.eq(state_op.spec.Id)) {
+            emit.push(state_op.error('INIT STATE ONLY'));
+        } else {
+            this._processMutation(state_op, save, emit);
+        }
     }
 
 

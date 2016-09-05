@@ -19,11 +19,12 @@ class NodeOpStream extends OpStream {
         this._on_data_cb = this._on_data.bind(this);
         this._on_end_cb = this._on_end.bind(this);
         this._send_cb = this._send.bind(this);
+
+        this._stream.on('data', this._on_data_cb);
+        this._stream.on('end', this._on_end_cb);
     }
 
     _start () {
-        this._stream.on('data', this._on_data_cb);
-        this._stream.on('end', this._on_end_cb);
     }
 
     _on_data (chunk) {
@@ -44,17 +45,20 @@ class NodeOpStream extends OpStream {
     }
 
     _on_batch () {
-        let ops = swarm.Op.parseFrame(this._chunks.join(''));
-        if (ops===null) {
-            this.offer();
+        const frame = this._chunks.join('');
+        this._chunks = [];
+        let ops = swarm.Op.parseFrame(frame);
+        if (!ops.length || ops===null) {
             this._close();
         } else {
             this._emitAll(ops);
         }
-        this._chunks.length = 0;
     }
 
     offer (op) {
+        if (op===null) {
+            return this.close(); // TODO half-close
+        }
         this._ops.push(op.toString());
         if (this._send_to===null)
             this._send_to = setTimeout(this._send_cb, 1);
@@ -64,7 +68,7 @@ class NodeOpStream extends OpStream {
         if (this._stream===null)
             return; // closed concurrently
         this._send_to = null;
-        this._ops.push(''); // batch terminator
+        this._ops.push('\n'); // batch terminator
         this._stream.write(this._ops.join('\n'));
         this._ops.length = 0;
     }
@@ -77,8 +81,11 @@ class NodeOpStream extends OpStream {
     }
 
     close () {
+        if (this._stream===null)
+            return;
         this._stream.removeListener('data', this._on_data_cb);
         this._stream.removeListener('end', this._on_end_cb);
+        this._send();
         this._stream.end();
         this._stream = null;
         super._end();

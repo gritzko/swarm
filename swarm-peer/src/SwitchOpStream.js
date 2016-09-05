@@ -18,19 +18,44 @@ class Switch extends BatchedOpStream {
         super();
         this.db = db;
         this.streams = new Map();
+        this.ssn_ids = new swarm.VV();
         this._on_op_cb = this._on_op.bind(this);
         callback && callback();
     }
 
     /***
      * @param {OpStream} client - the client op stream
-     * @param {Stamp} stream_id - unique stream identifier, including replica id
+     * @param {Stamp} stream_id
      */
     addClient (client, stream_id) {
-        let repl_id = new Stamp(stream_id).origin;
-        this.streams.set(repl_id, client);
+        this.ssn_ids.add(stream_id);
+        this.streams.set(stream_id.origin, client);
         // stamp, add
+        client._id = stream_id;
         client.on(this._on_op_cb);
+    }
+
+    /** @param {OpStream|Stamp} id_or_stream */
+    removeClient (id_or_stream) {
+        let id;
+        if (id_or_stream.constructor===Stamp) {
+            id = id_or_stream;
+        } else if (id_or_stream.constructor===String) {
+            id = new Stamp(id_or_stream); // TODO repl_id
+        } else {
+            id = id_or_stream._id;
+            if (!id)
+                throw new Error('not a stream');
+            if (this.streams.get(id.origin)!==id_or_stream)
+                throw new Error('stream unknown');
+        }
+        let stream = this.streams.get(id.origin);
+        if (!stream)
+            throw new Error('no such stream');
+        stream.off(this._on_op_cb);
+        this.streams.delete(stream._id.origin);
+        this.ssn_ids.remove(stream._id.origin);
+        stream.end();
     }
 
     _process_op (op, done) {
@@ -94,7 +119,12 @@ class Switch extends BatchedOpStream {
     }
 
     _on_op (op, stream) {
+        //console.log(new Error().stack);
         // sanity checks - stamps, scopes
+        if (op===null) {
+            this.removeClient(stream);
+            return;
+        }
         if (op.isOnOff()) {
             let check = this.streams.get(op.spec.scope);
             if (check!==stream)

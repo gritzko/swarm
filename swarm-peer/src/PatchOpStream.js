@@ -35,10 +35,11 @@ class PatchOpStream extends BatchedOpStream {
     _make_tail (on, done) {
         let met = false, last_stamp = Stamp.ZERO;
         this.db.scan(
-            on.spec.rename(Op.STAMP_ERROR),
+            on.spec.rename(Stamp.ZERO),
             null,
             o => {
-                if (o.isState()) return;
+                if (o.isState() && !o.spec.Id.eq(o.spec.Stamp)) // FIXME ?!
+                    return;
                 let op = o.clearstamped(on.spec.scope);
                 if (met) {
                     this._batch(op);
@@ -79,10 +80,12 @@ class PatchOpStream extends BatchedOpStream {
             err => {
                 if (err)
                     return done(err);
-                if (snapshot)
-                    this._batch_snapshot (on, snapshot, tail.reverse(), done);
-                else
+                if (snapshot) {
+                    this._batch_snapshot(on, snapshot, tail.reverse(), done);
+                } else {
                     this._batch(on); // unknown object
+                    done();
+                }
             },
             {reverse: true}
         );
@@ -94,7 +97,7 @@ class PatchOpStream extends BatchedOpStream {
         const scope = spec.scope;
         if (!tail.length) {
             this._batch(snapshot.clearstamped(scope));
-            this._batch(on.restamped(snapshot.Stamp));
+            this._batch(on.restamped(snapshot.spec.Stamp));
             return done();
         }
         let syncable = sync.Syncable._classes[on.spec.Type.value];
@@ -108,8 +111,8 @@ class PatchOpStream extends BatchedOpStream {
         tail.forEach(op => o.apply(op));
         const last = tail[tail.length-1].clearstamped().spec;
         const state = o.toString();
-        let new_snapshot = new Op(new Spec([last.Type, last.Id, last.Stamp, new Stamp(Op.METHOD_STATE, on.scope)]), state);
-        this._batch(new_snapshot);
+        let new_snapshot = new Op(new Spec([last.Type, last.Id, last.Stamp, new Stamp(Op.METHOD_STATE, '0')]), state);
+        this._batch(new_snapshot.scoped(on.scope));
         this._batch(on.restamped(new_snapshot.spec.Stamp));
         if (!snapshot.spec.Stamp.eq(snapshot.spec.Id))
             this.db.replace(snapshot, new_snapshot, done);

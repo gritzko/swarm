@@ -10,6 +10,8 @@ class OpStream {
 
     constructor () {
         this._lstn = null;
+        this._id = null;
+        this._debug = null;
     }
 
 
@@ -85,6 +87,8 @@ class OpStream {
      *  listener. Call opstream.spill() to stop queueing.
      *  @param {Op} op - the op to emit */
     _emit (op) {
+        if (this._debug)
+            console.log('{'+this._debug+'\t'+op.toString());
         if (this._lstn===null) {
             this._lstn = op;
         } else if (this._lstn.constructor===Filter) {
@@ -127,7 +131,8 @@ class OpStream {
 
     /** by default, an echo stream */
     offer (op) {
-        console.log(': '+op.toString());
+        if (this._debug)
+            console.log('}'+this._debug+'\t'+op.toString());
         this._emit(op);
     }
 
@@ -143,6 +148,11 @@ class OpStream {
     pipe (sink) {
         this.on('', sink.offer.bind(sink));
         // TODO test
+    }
+
+    connect (opstream) {
+        this.pipe(opstream);
+        opstream.pipe(this);
     }
 
     _end () {

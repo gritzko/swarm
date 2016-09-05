@@ -31,6 +31,9 @@ var help = [
     '    -d --daemon        daemonize',
     '    -i --ingest file.op ingest ops from a file (default: stdin/out)',
     '    -f --filter        grep log events (e.g. -f /Swarm.on.off)',
+    '    -a --auth          auth OpStream implementation (default: trusty)',
+    '',
+    '-T --trace             trace op processing pipeline',
     ''
 ].join('\n');
 
