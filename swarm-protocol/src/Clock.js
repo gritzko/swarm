@@ -75,7 +75,9 @@ class Clock {
     }
 
     issueTimestamp () {
-        var next = this._logical ? Stamp.ZERO : Stamp.now(this._origin, this._offset);
+        var next = this._logical ?
+            new Stamp(this._last.Value.next(this._minlen), this._origin) :
+            Stamp.now(this._origin, this._offset);
         var last = this._last;
         if (!next.gt(last)) {// either seq++ or stuck-ahead :(
             next = last.next(this._origin);

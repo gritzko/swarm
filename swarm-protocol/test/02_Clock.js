@@ -8,15 +8,15 @@ var Clock = swarm.Clock;
 tap ('protocol.02.A Logical clocks API', function(tap) {
 
     // set clock to around epoch (1 Jan 2010)
-    var clock = new Clock('leslie', {Clock: 'Logical'});
+    var clock = new Clock('leslie', {Clock: 'Logical', ClockLen: 6});
 
     var ts1 = clock.issueTimestamp();
-    tap.equal(ts1.value.substr(0,6), '000000');
+    tap.equal(ts1.value.substr(0,6), '000001');
     tap.equal(ts1.origin, 'leslie');
 
     var ts2 = clock.issueTimestamp();
     tap.ok(ts2.value>ts1.value)
-    tap.equal(ts2.value.substr(0,6), '000000');
+    tap.equal(ts2.value.substr(0,6), '000002');
     tap.equal(ts2.origin, 'leslie');
 
     // ensure a new timestamp is greater than any past stamps

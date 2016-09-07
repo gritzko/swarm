@@ -51,6 +51,12 @@ tap('protocol.00.A basic API', function (t) {
     var inc = now.inc();
     t.equals(inc.seq, 1);
 
+    let num = new Base64x64('0abc~~');
+    t.equals(num.next(5).toString(), '0abd');
+    t.equals(num.next(6).toString(), '0abd');
+    t.equals(num.next(2).toString(), '0b');
+    t.equals(new Base64x64('0').next(3).toString(), '001');
+
     t.end();
 });
 

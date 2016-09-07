@@ -247,6 +247,22 @@ class Base64x64 {
         return new Base64x64(str).inc().toString();
     }
 
+    next (length) {
+        if (!length || length>10)
+            throw new Error('invalid base64 number length');
+        let at = length-1;
+        let base = this._base;
+        while (base.length<length)
+            base = base + '0';
+        while (at>=0 && base[at]==='~')
+            at--;
+        if (at<0)
+            return Base64x64.INCORRECT;
+        let i = codes[base.charCodeAt(at)];
+        let p = base64[i+1];
+        return new Base64x64(base.substr(0,at) + p);
+    }
+
     get highInt () {
         if (this._high===-1) {
             this._base2pair();
@@ -291,7 +307,7 @@ class Base64x64 {
 Base64x64.INFINITY = "~";
 Base64x64.INCORRECT = "~~~~~~~~~~";
 Base64x64.MAX32 = (1<<30)-1;
-Base64x64.ZERO = "0";
+Base64x64.ZERO = "0"; // FIXME object or string?!!!
 Base64x64.rs64x64 = rs64x64;
 
 

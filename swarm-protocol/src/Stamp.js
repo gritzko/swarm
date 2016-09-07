@@ -205,7 +205,7 @@ class Stamp {
 
     next (origin) {
         let val = this.Value;
-        return new Stamp(val.inc(), origin||this._origin);
+        return new Stamp(val.inc().toString(), origin||this._origin);
     }
 
     static as (val) {
