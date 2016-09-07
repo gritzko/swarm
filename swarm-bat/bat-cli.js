@@ -26,8 +26,12 @@ var script = new api.BatScript(script_body, options);
 
 var stream;
 
-if (argv.e) {
-    var proc = require('child_process').exec(argv.e);
+const exec = argv.exec || argv.e;
+if (exec) {
+    let args = exec.split(/\s+/);
+    var proc = require('child_process').spawn(args.shift(), args, {
+        stdio: ['pipe', 'pipe', process.stderr]
+    });
     var duplex = require('duplexer');
     stream = duplex(proc.stdin, proc.stdout);
 }
