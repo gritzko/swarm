@@ -31,7 +31,7 @@ class BatchedOpStream extends OpStream {
     offer (op) {
 
         if (this._debug)
-            console.log('}'+this._debug+'\t'+op.toString());
+            console.warn('}'+this._debug+'\t'+op.toString());
 
         if (this._ingress_batch===null)
             return OpStream.ENOUGH;
@@ -39,7 +39,8 @@ class BatchedOpStream extends OpStream {
         this._ingress_batch.push(op);
 
         if (this._processed_batch===null) {
-            this._process_next_batch();
+            process.nextTick(()=>this._process_next_batch());
+            this._processed_batch = []; //FIXME just a flag
         }
 
     }
@@ -50,10 +51,16 @@ class BatchedOpStream extends OpStream {
 
     /** totally synchronous */
     _forward_batch (ops) {
+        if (this._debug)
+            console.warn('{'+this._debug+'\t['+ops.length+']');
         super._emitAll(ops); // emit the batch synchronously
     }
 
     _process_next_batch () {
+        // console.warn('<>',
+        //     this._ingress_batch&&this._ingress_batch.length,
+        //     this._processed_batch&&this._processed_batch.length,
+        //     this._egress_batch&&this._egress_batch.length);
         if (this._processed_batch) {
             if (this._processed_batch.length)
                 throw new Error('state machine fuckup');
@@ -71,7 +78,7 @@ class BatchedOpStream extends OpStream {
     }
 
     _process (done) {
-        this._process_op(this._processed_batch.pop(), done);
+        this._process_op(this._processed_batch.pop(), done); // breaks the batch
     }
 
     _done (err) {
@@ -85,6 +92,12 @@ class BatchedOpStream extends OpStream {
             process.nextTick(this._process_cb);
         } else {
             this._process_next_batch();
+            /*process.nextTick(()=>{
+                if (this._processed_batch.length)
+                    this._process_cb();
+                else
+                    this._process_next_batch();
+            });*/
         }
     }
 

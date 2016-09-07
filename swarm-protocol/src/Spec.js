@@ -161,11 +161,8 @@ class Spec {
 
     toString (defaults) {
         var ret = '';
-        // if (defaults===undefined) {
-        //     defaults = Spec.NON_SPECIFIC_NOOP;
-        // }
         for(var i=0; i<4; i++) {
-            if (defaults && this._toks[i]===defaults._toks[i] && (ret||i<3))
+            if (defaults && this._toks[i].eq(defaults._toks[i]) && (ret||i<3))
                 continue;
             ret += Spec.quants[i] + this._toks[i].toString();
         }

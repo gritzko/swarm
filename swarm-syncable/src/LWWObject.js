@@ -24,7 +24,6 @@ class LWWObject extends Syncable {
     }
 
     set (name, value) {
-        console.warn(name, value)
         if (value===undefined) {
             Object.keys(name).
                 filter(name=>LWWObject.reFieldName.test(name)).
@@ -32,7 +31,6 @@ class LWWObject extends Syncable {
         } else if (name.constructor===String) {
             if (!LWWObject.reFieldName.test(name))
                 throw new Error('invalid field name format');
-            console.warn(name, value)
             this._submit(name, LWWObject.val2str(value));
         } else {
             throw new Error('neither key-value nor map');
@@ -41,6 +39,10 @@ class LWWObject extends Syncable {
 
     get (name) {
         return this._values[name];
+    }
+
+    has (name) {
+        return this._values.hasOwnProperty(name);
     }
 
     StampOf (key) {

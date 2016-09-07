@@ -58,8 +58,8 @@ class Op {
         return this._spec.scope;
     }
 
-    toString () {
-        let ret = this._spec.toString();
+    toString (defaults) {
+        let ret = this._spec.toString(defaults);
         if (!this._value) {
         } else if (this._value.indexOf('\n')===-1) {
             ret += '\t' + this._value;

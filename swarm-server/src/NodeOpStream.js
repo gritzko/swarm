@@ -56,10 +56,12 @@ class NodeOpStream extends OpStream {
     }
 
     offer (op) {
+        if (this._debug)
+            console.warn('}'+this._debug+'\t'+(op?op.toString():'[EOF]'));
         if (op===null) {
             return this.close(); // TODO half-close
         }
-        this._ops.push(op.toString());
+        this._ops.push(op);
         if (this._send_to===null)
             this._send_to = setTimeout(this._send_cb, 1);
     }
@@ -68,8 +70,17 @@ class NodeOpStream extends OpStream {
         if (this._stream===null)
             return; // closed concurrently
         this._send_to = null;
-        this._ops.push('\n'); // batch terminator
-        this._stream.write(this._ops.join('\n'));
+        const ops = this._ops;
+        if (!ops.length)
+            return;
+        if (this._debug)
+            console.warn('['+this._debug+'\t['+ops.length+']');
+        let chunk = ops[0].toString()+'\n';
+        for(let i=1; i<ops.length; i++) {
+            chunk += ops[i].toString(ops[i-1]._spec) + '\n';
+        }
+        chunk += '\n'; // batch terminator
+        this._stream.write(chunk);
         this._ops.length = 0;
     }
 

@@ -13,10 +13,9 @@ var help = [
     '    -i --id XY         replica id (default: take from the path)',
     '    --oXxx="Yyy"       set a global database option Xxx to "Yyy"',
     '    --OXxx="Yyy"       set a scoped database option',
-    '    --0Xxx="Yyy"       set a local database option override',
     '-F --fork              fork a database',
     '    -t --to /path/dbname-YZ  a path for the new replica',
-    '    -i --id YZ         as above',
+    '    -i --id YZ         new replica id',
     '-A --access            access a database',
     '    -s --scan /Type#id!prefix  list all records under a prefix',
     '    -e --erase /Type#id!prefix  erase records',
@@ -33,7 +32,7 @@ var help = [
     '    -f --filter        grep log events (e.g. -f /Swarm.on.off)',
     '    -a --auth          auth OpStream implementation (default: trusty)',
     '',
-    '-T --trace             trace op processing pipeline',
+    '-T --trace [SLP]       trace op processing pipeline (switch/log/patch)',
     ''
 ].join('\n');
 

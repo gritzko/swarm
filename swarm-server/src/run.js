@@ -5,7 +5,6 @@ const leveldown = require('leveldown');
 const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 const peer = require('swarm-peer');
-const Swarm = sync.Swarm;
 const async = require('async');
 const NodeOpStream = require('./NodeOpStream');
 const AuthOpStream = require('./AuthOpStream');
@@ -37,6 +36,7 @@ module.exports = function open (home, args, done) {
             let trace = args.T || args.trace;
             if (trace===true) trace = 'PLS';
             if (trace) {
+                args.trace = trace;
                 patch_stream._debug = trace.indexOf('P')===-1 ? null : 'P';
                 log_stream._debug = trace.indexOf('L')===-1 ? null : 'L';
                 switch_stream._debug = trace.indexOf('S')===-1 ? null : 'S';
@@ -112,6 +112,8 @@ function listen (args, auth_stream, done) {
 function listen_stdio (args, auth_stream, done) {
     let stdio_stream = new Duplexer(process.stdin, process.stdout);
     let opstream = new NodeOpStream(stdio_stream);
+    if (args.trace && args.trace.indexOf('I')!==-1)
+        opstream._debug = 'I';
     auth_stream.addClient(opstream, "test"); // FIXME replica id ??!!
 }
 

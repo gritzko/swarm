@@ -111,6 +111,8 @@ class Switch extends BatchedOpStream {
     }
 
     _forward_batch (sends) {
+        if (this._debug)
+            console.warn('{'+this._debug+'\t['+sends.length+']');
         sends.forEach( send => {
             send.streams.forEach(
                 stream => stream.offer(send.op)
@@ -119,7 +121,6 @@ class Switch extends BatchedOpStream {
     }
 
     _on_op (op, stream) {
-        //console.log(new Error().stack);
         // sanity checks - stamps, scopes
         if (op===null) {
             this.removeClient(stream);

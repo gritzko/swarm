@@ -88,7 +88,7 @@ class OpStream {
      *  @param {Op} op - the op to emit */
     _emit (op) {
         if (this._debug)
-            console.log('{'+this._debug+'\t'+op.toString());
+            console.warn('{'+this._debug+'\t'+(op?op.toString():'[EOF]'));
         if (this._lstn===null) {
             this._lstn = op;
         } else if (this._lstn.constructor===Filter) {
@@ -132,7 +132,7 @@ class OpStream {
     /** by default, an echo stream */
     offer (op) {
         if (this._debug)
-            console.log('}'+this._debug+'\t'+op.toString());
+            console.warn('}'+this._debug+'\t'+op.toString());
         this._emit(op);
     }
 
@@ -262,4 +262,4 @@ OpStream.Filter = Filter;
 
 OpStream.TRACE = op => console.log(op.toString());
 
-// NOTE. batched events are not supported, asynchronize/batch listeners instead
+// TODO ENLIGHT FilterOpStream :)

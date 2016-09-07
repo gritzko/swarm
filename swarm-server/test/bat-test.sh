@@ -3,13 +3,20 @@
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 TEST_DIR=../../protocol-docs/test
 SWARM=../cli.js
-BAT=bat
-if ! which bat; then
-    BAT=../../swarm-bat/bat-cli.js
-fi
+#BAT=bat
+BAT=../../swarm-bat/bat-cli.js
+#if ! which bat; then
+#    BAT=../../swarm-bat/bat-cli.js
+#fi
+DB=test-R
 
-rm -rf test-XY
-
-$SWARM -C test-XY
-
-$BAT -e "$SWARM -R test-XY -l" $TEST_DIR/peer-basic.batt
+rm -rf $DB
+echo CREATE DB
+$SWARM -C $DB \
+    --oDBIdScheme 172 \
+    --oStrmAbbrev "Stream" \
+    --oClock "Logical" \
+    --oClockLen 5
+$SWARM -A $DB -s
+echo BASIC PEER TESTS
+$BAT -e "$SWARM -R $DB -l" $TEST_DIR/peer-basic.batt
