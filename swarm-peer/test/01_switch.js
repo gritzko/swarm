@@ -38,7 +38,8 @@ tap ('peer.01.A switch basic test', function(t) {
     let ld = new LevelDOWN('.peer.01.A');
     let db = new LevelOp(ld, {}, () => {
         x = new SwitchOpStream(db);
-        x.addClient(client, "0+client");
+        //x._debug = 'S';
+        x.addClient(client, new swarm.Stamp("0+client"));
         let fake_log = new sync.OpStream();
         x.pipe(fake_log);
         fake_log.pipe(x);

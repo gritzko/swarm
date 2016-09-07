@@ -19,9 +19,9 @@ class BatchedOpStream extends OpStream {
 
     constructor () {
         super();
-        this._ingress_batch = [];
+        this._ingress_batch = null;
         this._processed_batch = null;
-        this._egress_batch = [];
+        this._egress_batch = null;
         this._process_next_batch_cb = this._process_next_batch.bind(this);
         this._done_cb = this._done.bind(this);
         this._process_cb = this._process.bind(this, this._done_cb);
@@ -33,15 +33,13 @@ class BatchedOpStream extends OpStream {
         if (this._debug)
             console.warn('}'+this._debug+'\t'+op.toString());
 
-        if (this._ingress_batch===null)
-            return OpStream.ENOUGH;
+        if (this._ingress_batch===null) {
+            if (this._processed_batch===null)
+                process.nextTick(()=>this._process_next_batch());
+            this._ingress_batch = [];
+        }
 
         this._ingress_batch.push(op);
-
-        if (this._processed_batch===null) {
-            process.nextTick(()=>this._process_next_batch());
-            this._processed_batch = []; //FIXME just a flag
-        }
 
     }
 
@@ -57,21 +55,17 @@ class BatchedOpStream extends OpStream {
     }
 
     _process_next_batch () {
-        // console.warn('<>',
-        //     this._ingress_batch&&this._ingress_batch.length,
-        //     this._processed_batch&&this._processed_batch.length,
-        //     this._egress_batch&&this._egress_batch.length);
         if (this._processed_batch) {
             if (this._processed_batch.length)
-                throw new Error('state machine fuckup');
+                throw new Error('state machine XXXXX');
             if (this._egress_batch.length)
                 this._forward_batch(this._egress_batch);
             this._processed_batch = null;
             this._egress_batch = null;
         }
-        if (this._ingress_batch.length!==0) {
+        if (this._ingress_batch) {
             this._processed_batch = this._ingress_batch.reverse();
-            this._ingress_batch = [];
+            this._ingress_batch = null;
             this._egress_batch = [];
             this._process_cb();
         }
@@ -86,7 +80,7 @@ class BatchedOpStream extends OpStream {
             console.error(err);
             this._stop();
         } else if (this._processed_batch===null) {
-            console.warn('callback fuckup');
+            console.warn(new Error('invalid callback').stack);
         } else if (this._processed_batch.length) {
             // TODO e.g. stack depth 100
             process.nextTick(this._process_cb);
