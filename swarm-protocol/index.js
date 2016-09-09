@@ -6,7 +6,9 @@ var Swarm = {
     Clock: require('./src/Clock'),
     Spec: require('./src/Spec'),
     Op: require('./src/Op'),
-    VV: require('./src/VV')
+    VV: require('./src/VV'),
+    ReplicaId: require('./src/ReplicaId'),
+    ReplicaIdScheme: require('./src/ReplicaIdScheme')
 };
 
 module.exports = Swarm;
