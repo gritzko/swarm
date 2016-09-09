@@ -22,6 +22,7 @@ class ReplicaIdScheme {
     get clients () {return this._parts[2];}
     get sessions () {return this._parts[3];}
 
+    /** @param {Number} i */
     partLength(i) {
         return this._parts[i];
     }
@@ -39,7 +40,25 @@ class ReplicaIdScheme {
         return this._formula;
     }
 
+    /** Next value withing a specific replica id part (e.g. next session number)
+     * @param {Base64x64|String} id
+     * @param {Number} p
+     * @return {String} next value, `0` on overflow */
+    nextPartValue (id, p) {
+        let from=0, i=0;
+        while (i<p)
+            from += this._parts[i++];
+        let till = from + this._parts[i];
+        let next = new Base64x64(id).next(till);
+        return next.round(from).isZero() ? next.toString() : '0';
+    }
+
 }
+
+ReplicaIdScheme.PRIMUS = 0;
+ReplicaIdScheme.PEER = 1;
+ReplicaIdScheme.CLIENT = 2;
+ReplicaIdScheme.SESSION = 3;
 
 ReplicaIdScheme.FORMAT_RE = /^(\d)(\d)(\d)(\d)$/;
 

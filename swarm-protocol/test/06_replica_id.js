@@ -44,3 +44,14 @@ tape ('protocol.06.B replica id', function (tap) {
 
     tap.end();
 });
+
+tape ('protocol.06.C next', function (tap) {
+    const scheme = new ReplicaIdScheme(1261);
+    const next = scheme.nextPartValue('000abcdef', ReplicaIdScheme.CLIENT);
+    tap.equals(next.toString(), '000abcdeg');
+    const next2 = scheme.nextPartValue('000abcde', ReplicaIdScheme.CLIENT);
+    tap.equals(next2.toString(), '000abcde1');
+    const next3 = scheme.nextPartValue('000~~~~~~', ReplicaIdScheme.CLIENT);
+    tap.equals(next3.toString(), '0');
+    tap.end();
+});
