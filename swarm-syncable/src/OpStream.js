@@ -120,13 +120,16 @@ class OpStream {
     }
 
     spill () {
-        if (this._lstn &&
-            this._lstn.constructor===Array &&
+        let ret = [];
+        if (!this._lstn) {
+        } else if (this._lstn.constructor===Array &&
             this._lstn[0].constructor===Op) {
-            let ret = this._lstn;
-            this._lstn = null;
-            return ret;
+            ret = this._lstn;
+        } else if (this._lstn.constructor===Op) {
+            ret = [this._lstn];
         }
+        this._lstn = null;
+        return ret;
     }
 
     /** by default, an echo stream */

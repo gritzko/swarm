@@ -212,7 +212,7 @@ class Syncable extends OpStream {
     }
 
     toOp () {
-        let spec = new Spec([this.type, this._id, this._version, Op.STATE]);
+        let spec = new Spec([this.type, this._id, this._version, Op.METHOD_STATE]);
         return new Op(spec, this._state.toString());
     }
 

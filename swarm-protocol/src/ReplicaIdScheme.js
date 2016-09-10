@@ -7,6 +7,8 @@ class ReplicaIdScheme {
 
     /** @param {Number|String} formula - scheme formula, e.g. `"0262"`, `181`... */
     constructor (formula) {
+        if (formula===undefined)
+            formula = ReplicaIdScheme.DEFAULT_SCHEME;
         if ((formula).constructor===Number)
             formula = '' + formula;
         if (formula.length===3)
@@ -15,6 +17,8 @@ class ReplicaIdScheme {
             throw new Error('invalid replica id scheme formula');
         this._formula = formula;
         this._parts = formula.match(/\d/g).map(d=>parseInt(d));
+        if (!this.isCorrect())
+            throw new Error('inconsistent replica id scheme formula');
     }
 
     get primuses () {return this._parts[0];}
@@ -25,6 +29,13 @@ class ReplicaIdScheme {
     /** @param {Number} i */
     partLength(i) {
         return this._parts[i];
+    }
+
+    partOffset (i) {
+        let ret = 0;
+        for(let p=0; p<i && p<4; p++)
+            ret += this._parts[p];
+        return ret;
     }
 
     isPrimusless () {
@@ -59,7 +70,9 @@ ReplicaIdScheme.PRIMUS = 0;
 ReplicaIdScheme.PEER = 1;
 ReplicaIdScheme.CLIENT = 2;
 ReplicaIdScheme.SESSION = 3;
-
+ReplicaIdScheme.DB_OPTION_NAME = "DBIdScheme";
 ReplicaIdScheme.FORMAT_RE = /^(\d)(\d)(\d)(\d)$/;
+ReplicaIdScheme.DEFAULT_SCHEME = '0262';
+
 
 module.exports = ReplicaIdScheme;

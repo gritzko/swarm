@@ -25,7 +25,7 @@ class LWWObject extends Syncable {
 
     set (name, value) {
         if (value===undefined) {
-            Object.keys(name).
+            Object.keys(name).sort().
                 filter(name=>LWWObject.reFieldName.test(name)).
                 forEach(n => this.set(n, name[n]));
         } else if (name.constructor===String) {
@@ -59,13 +59,13 @@ class LWWObject extends Syncable {
     }
 
     _rebuild (op) {
-        if (op.name===Op.state || this._version>op.spec.stamp) { // rebuild
+        if (op.spec.method===Op.METHOD_STATE || this._version>op.spec.stamp) { // rebuild
             this._values = Object.create(null);
             this._state.entries.forEach(e=>{
-                this._values[e.name] = LWWObject.str2val(e.value);
+                this._values[e.name] = e.value;
             });
         } else { // adjust
-            this._values[op.name] = LWWObject.str2val(op.value); // FIXME wrong :(((((
+            this._values[op.name] = op.value; // FIXME wrong :(((((
         }
     }
 
@@ -135,14 +135,14 @@ class LWWEntry {
     }
 
     static fromString (line) {
-        let m = /^(\S+)\s*(.*)$/.exec(line);
+        let m = /^\s*(\S+)\s*(.*)$/.exec(line);
         let spec = new Spec(m[1]);
-        return new LWWEntry(spec.stamp, spec.name, m[2]);
+        return new LWWEntry(spec.stamp, spec.name, JSON.parse(m[2]));
     }
 
     toString() {
         return '!' + this.stamp + '.' + this.name +
-            (this.value ? '\t' + this.value : '');
+            (this.value ? '\t' + JSON.stringify(this.value) : '');
     }
 
 }

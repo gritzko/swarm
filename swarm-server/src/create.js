@@ -6,6 +6,7 @@ const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 const peer = require('swarm-peer');
 const Swarm = sync.Swarm;
+const ReplicaIdScheme  = swarm.ReplicaIdScheme;
 
 let db, dbname, replid;
 
@@ -37,30 +38,31 @@ function create (home, args, done) {
     }
 
     // understand the id scheme
-    const scheme_opt = args['o'+Swarm.DB_ID_SCHEME_OPTION];
-    let scheme = scheme_opt ?
-        Swarm.parseReplicaIdScheme(scheme_opt) : Swarm.DEFAULT_REPLICA_ID_SCHEME;
+    const scheme_opt = args['o'+ReplicaIdScheme.DB_OPTION_NAME];
+    let scheme =  new ReplicaIdScheme(scheme_opt);
     if (!scheme)
         return done('malformed id scheme');
     if (scheme.primuses)
         return done('primuses are not supported yet');
     if (replid.length!==scheme.peers)
-        return done('peer id length does not match the scheme');
+        return done('peer id length does not match the scheme ('+scheme.peers+')');
 
     // let's read the options
-    let options = new sync.Swarm();
-    options.set(Swarm.DB_ID_SCHEME_OPTION, scheme.toString());
+    let opts = Object.create(null);
     Object.keys(args).
-        filter(key=>key[0]==='o').
-        map(key=>key.substr(1)).
-        filter(opt=>swarm.Base64x64.is(opt) && opt!=Swarm.DB_ID_SCHEME_OPTION).
-        forEach(
-            opt => options.set(opt, args['o'+opt])
-        );
+    filter(key=>key[0]==='o').
+    map(key=>key.substr(1)).
+    filter(opt=>swarm.Base64x64.is(opt) && opt!=ReplicaIdScheme.DB_OPTION_NAME).
+    forEach(
+        opt => opts[opt] = args['o'+opt]
+    );
+    opts[ReplicaIdScheme.DB_OPTION_NAME] = scheme.toString(); // FIXME timestamp !~
+    let options = new sync.Swarm();
+    options._clock = new swarm.Clock(replid, opts);
+    options.set(opts);
     options._id = new swarm.Stamp(dbname, '0'); //options._clock.issueTimestamp()
 
-    let clock = new swarm.Clock(replid, options);
-    let state = options.toOp().restamped(clock.issueTimestamp());
+    let state = options.toOp(); //.restamped(clock.issueTimestamp());
 
     // OK, let's create things
     if (!fs.existsSync(home)) {
@@ -74,11 +76,14 @@ function create (home, args, done) {
         if (err)
             return done(err);
 
+        const stamp = state.spec.Stamp;
+
         db.putAll ([state], err => {
+            console.warn(stamp)
             if (err)
                 done(err);
             else
-                db.close(done);
+                level.put('+'+stamp.origin, stamp.value, err=>db.close(done));
         });
 
     });

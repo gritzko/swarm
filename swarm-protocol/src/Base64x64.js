@@ -101,6 +101,14 @@ class Base64x64 {
         return this._base;
     }
 
+    get length () {
+        return this._base.length;
+    }
+
+    isZero () {
+        return this._base==='0';
+    }
+
     toArray () {
         if (this._high===-1) {
             this._base2pair();
@@ -247,6 +255,24 @@ class Base64x64 {
         return new Base64x64(str).inc().toString();
     }
 
+    /** @param {String|Base64x64} str
+     *  @param {Number} pos */
+    static rightShift (str, pos) {
+        str = str.toString();
+        if (pos<0 || str.length+pos>10)
+            throw new Error('invalid arguments');
+        for(let i=0; i<pos; i++)
+            str = '0' + str;
+        return new Base64x64(str).toString();
+    }
+
+    static leftShift (str, pos) {
+        str = str.toString();
+        if (pos < 0 || pos > 10)
+            throw new Error('invalid arguments');
+        return new Base64x64(str.substr(pos) || '0').toString();
+    }
+
     next (length) {
         if (!length || length>10)
             throw new Error('invalid base64 number length');
@@ -261,6 +287,10 @@ class Base64x64 {
         let i = codes[base.charCodeAt(at)];
         let p = base64[i+1];
         return new Base64x64(base.substr(0,at) + p);
+    }
+
+    round (till) {
+        return new Base64x64(this._base.substr(0, till));
     }
 
     get highInt () {

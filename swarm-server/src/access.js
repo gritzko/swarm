@@ -19,6 +19,7 @@ function access (home, args, done) {
             let erase_prefix = args.e || args.erase;
             let put_file = args.p || args.put;
             let scan_prefix = args.s || args.scan;
+            const list = args.v || args.vv;
 
             if (erase_prefix)
                 erase(db, erase_prefix, done);
@@ -26,10 +27,11 @@ function access (home, args, done) {
             if (put_file)
                 put(db, put_file, done);
 
-            if (scan_prefix || !(put_file || erase_prefix))
+            if (list)
+                list_vv(db, list_vv, done);
+
+            if (scan_prefix || !(put_file || erase_prefix || list))
                 scan(db, scan_prefix||true, done);
-
-
             // TODO -g get, -O -0 edit options
 
         }
@@ -66,5 +68,22 @@ function put (db, file, done) {
     db.save(ops, done);
 }
 
+function list_vv (db, filter, done) {
+    let i = db.level.iterator({
+        gte: '+0',
+        lte: '+~~~~~~~~~~',
+        keyAsBuffer: false,
+        valueAsBuffer: false
+    });
+    const next = (err, key, value) => {
+        if (err)
+            return done(err);
+        if (!key)
+            return done();
+        console.log(value+key);
+        i.next(next);
+    }
+    i.next(next);
+}
 
 module.exports = access;

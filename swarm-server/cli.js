@@ -20,6 +20,7 @@ var help = [
     '    -s --scan /Type#id!prefix  list all records under a prefix',
     '    -e --erase /Type#id!prefix  erase records',
     '    -p --put filename  add ops to the database',
+    '    -v --vv print the version vector',
     "    -g --get /Type#id  print the object's state (merge ops)",
     '    --OXxx, --0Xxx     edit database options (as above)',
     '-R --run               run a database (the default)',
@@ -31,6 +32,10 @@ var help = [
     '    -i --ingest file.op ingest ops from a file (default: stdin/out)',
     '    -f --filter        grep log events (e.g. -f /Swarm.on.off)',
     '    -a --auth          auth OpStream implementation (default: trusty)',
+    '-U --user add/remove/list users/clients',
+    '    -a --add login add a user (take the password from stdin)',
+    '    -r --remove login',
+    '    -l --list',
     '',
     '-T --trace [SLP]       trace op processing pipeline (switch/log/patch)',
     ''
@@ -45,6 +50,7 @@ let create = args.C || args.create;
 let fork = args.F || args.fork;
 let access = args.A || args.access;
 let run = args.R || args.run;
+let user = args.U || args.user;
 
 if (create) {
     require('./src/create')(create, args, done);
@@ -54,6 +60,8 @@ if (create) {
     require('./src/access')(access, args, done);
 } else if (run) {
     require('./src/run')(run, args, done);
+} else if (user) {
+    require('./src/user')(user, args, done);
 } else {
     console.log(help);
     done('no run mode specified');

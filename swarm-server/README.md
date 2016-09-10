@@ -22,21 +22,26 @@ swarm -R ./test-1 --listen ws://localhost:8080
 
 ## Options
 
-- [ ] `-C --create` create a database (dir name == db name)
-    - [ ] `-n --name` database name (default: take from the path)
+- [x] `-C --create` create a database (dir name == db name)
+    - [x] `-n --name` database name (default: take from the path)
     - [ ] `-i --id XY` replica id (default: take from the path)
-    - [ ] `--oXxx="Yyy"` set a global database option Xxx to "Yyy"
+    - [x] `--oXxx="Yyy"` set a global database option Xxx to "Yyy"
     - [ ] `--OXxx="Yyy"` set a scoped database option 
     - [ ] `--0Xxx="Yyy"` set a local database option override
 - [ ] `-F --fork` fork a database
     - [ ] `-t --to /path/dbname-YZ` a path for the new replica
     - [ ] `-i --id YZ` as above
-- [ ] `-A --access` access a database
-    - [ ] `-r --read /Type#id!prefix` list all records under a prefix
-    - [ ] `-e --erase /Type#id!prefix` erase records
-    - [ ] `-p --put file` add ops to the database (default: read stdin)
+- [x] `-A --access` access a database
+    - [ ] `-s --scan /Type#id!prefix` list all records under a prefix
+    - [x] `-e --erase /Type#id!prefix` erase records
+    - [x] `-p --put file` add ops to the database (default: read stdin)
+    - [x] `-v --vv` print the version vector
     - [ ] `-g --get /Type#id` print the object's state 
     - [ ] `--OXxx, --0Xxx` edit database options (as above)
+- [x] `-U --user` add/remove/list users/clients
+    - [x] `-a --add login` add a user (take the password from stdin)
+    - [x] `-r --remove login`
+    - [x] `-l --list`
 - [ ] `-R --run` run a database (the default)
     - [ ] `-l --listen scheme:url` listen for client conns on URL
                 (stdin `-`, WebSocket `ws://host:port`, TCP `tcp:...`)

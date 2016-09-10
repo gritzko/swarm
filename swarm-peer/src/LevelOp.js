@@ -2,7 +2,7 @@
 const swarm = require('swarm-protocol');
 const Spec = swarm.Spec;
 
-/** just a nice thin wrapper for leveldown API */
+/** just a nice thin wrapper for LevelDOWN API */
 class LevelOp {
 
     constructor (db, options, callback) {
@@ -24,7 +24,10 @@ class LevelOp {
      *  @param {Object} options (skipOp, reverse)
      */
     scan ( from, till, on_op, on_end, options ) {
-        const skip_op = !!(options && options.skipOp);
+        options = options || Object.create(null);
+        const skip_op = !!options.skipOp;
+        const filter = options.filter || null;
+        let limit = options.limit || (1<<30);
         if (till===null) {
             till = from.restamp(swarm.Stamp.ERROR);
         }
@@ -33,13 +36,18 @@ class LevelOp {
             lt: till.toString(),
             keyAsBuffer: false,
             valueAsBuffer: false,
-            reverse: !!(options && options.reverse)
+            reverse: !!options.reverse,
+            limit: (!filter && options.limit) || -1
         });
         let levelop_read_op = (err, key, value) => {
             let ret;
             if (key && !err) {
                 let op = skip_op ? null : new swarm.Op(key, value);
-                ret = on_op(op, key, value);
+                if (filter===null || filter(op)) {
+                    ret = on_op(op, key, value);
+                    if (!--limit)
+                        ret = LevelOp.ENOUGH;
+                }
             }
             if ( !key || err || ret===LevelOp.ENOUGH ) {
                 i.end(()=>{});
@@ -54,16 +62,16 @@ class LevelOp {
     /** @param {Array} ops - an array of Op to save
      *  @param {Function} callback  */
     putAll (ops, callback) {
-        let batch = ops.map(op => new LevelOpPut(op));
+        let batch = ops.map(op => new LevelOp.Put(op));
         this._db.batch(batch, {sync: true}, callback);
     }
 
     put (op, callback) {
-        this._db.put(op.spec.toString(), op.value, {sync: true}, callback);
+        this.putAll([op], callback);
     }
 
     replace (delop, addop, callback) {
-        let batch = [new LevelOpDel(delop.spec), new LevelOpPut(addop)];
+        let batch = [new LevelOp.Del(delop.spec), new LevelOp.Put(addop)];
         this._db.batch(batch, {sync: true}, callback);
     }
 
@@ -78,7 +86,7 @@ class LevelOp {
     }
 
     delAll (specs, callback) {
-        let dels = specs.map(spec => new LevelOpDel(spec));
+        let dels = specs.map(spec => new LevelOp.Del(spec));
         this._db.batch(dels, {sync: true}, (err) => callback && callback(err));
     }
 
@@ -86,11 +94,13 @@ class LevelOp {
         this._db.close(callback);
     }
 
+    get level () {return this._db;}
+
 }
 
 LevelOp.ENOUGH = Symbol('Enough!');
 
-class LevelOpPut {
+LevelOp.Put = class LevelOpPut {
     constructor(op) {
         this.type = 'put';
         this.key = op.spec.toString();
@@ -98,7 +108,7 @@ class LevelOpPut {
     }
 }
 
-class LevelOpDel {
+LevelOp.Del = class LevelOpDel {
     constructor(spec) {
         this.type = 'del';
         this.key = spec.toString();
