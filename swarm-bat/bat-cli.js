@@ -15,9 +15,12 @@ var script_file = scripts.shift(); // TODO script sequence
 
 var script_body = fs.readFileSync(script_file).toString();
 
+if (argv.whitespace && !/count|ignore|collapse|exact/.test(argv.whitespace))
+    console.warn('invalid whitespace mode');
+
 var options = {
     ignoreCase: argv.C,
-    collapseWhitespace: argv.W,
+    whitespace: argv.whitespace,
     anyOrder: argv.O,
     runAll: argv.x
 };

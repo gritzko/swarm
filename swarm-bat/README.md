@@ -49,12 +49,12 @@ see test/ for examples of [API](test/00_parse_format.js) and
 - [ ] -r record de-facto output to a new test script
 - [x] -x don't stop on errors, just log them
 - [ ] -v comment on every step
-- [x] -W collapse whitespace
 - [ ] -L ignore empty lines
 - [x] -C ignore case
 - [ ] -d mandatory delay (let'em think); default 10ms
 - [ ] -D mismatch delay (wait, they're still thinking); default 100ms
 - [x] -O output lines may go in any order
+- [x] --whitespace collapse|ignore|exact|count
 
 ## Codes
 

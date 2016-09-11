@@ -15,7 +15,9 @@ class BatResult {
         var output_norm = BatScript.output2script
             (this.output, options);
         const dmp = new DiffMatchPatch();
-        var diff = dmp.diff_main(output_norm, expected_norm);
+        const policy = options.whitespace || 'collapse';
+        const wsp = BatResult.WHITESPACE_POLICIES[policy];
+        var diff = dmp.diff_main(wsp(output_norm), wsp(expected_norm));
         dmp.diff_cleanupSemantic(diff);
         this.ok = diff && (diff.length===0 || (diff.length===1 && diff[0][0]===0));
         this.diff = diff;
@@ -37,5 +39,12 @@ class BatResult {
     }
 
 }
+
+BatResult.WHITESPACE_POLICIES = {
+    count: str => str.replace(/\t/g, ' '),
+    collapse: str => str.replace(/[\t ]+/g, ' '),
+    exact: str => str,
+    ignore: str => str.replace(/[\t ]+/g, '')
+};
 
 module.exports = BatResult;
