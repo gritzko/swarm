@@ -54,21 +54,7 @@ class Stamp {
         this._parsed = null;
         this._string = null;
         if (origin) {
-            if (stamp.constructor===String) {
-                this._value = Base64x64.toString(stamp);
-            } else if (stamp.constructor===Date) {
-                this._parsed = new Base64x64(stamp);
-                this._value = this._parsed.toString();
-            } else if (stamp.constructor===Stamp) {
-                this._value = stamp._value;
-            } else if (stamp.constructor===Base64x64) {
-                this._value = stamp.toString();
-                this._parsed = stamp;
-            } else {
-                //throw new Error("unrecognized value");
-                this._value = Base64x64.INCORRECT;
-                origin = '0';
-            }
+            this._value = Base64x64.toString(stamp);
             this._origin = Base64x64.toString(origin);
         } else if (stamp) {
             if (stamp.constructor===Stamp) {
@@ -77,7 +63,7 @@ class Stamp {
                 this._string = stamp._string;
             } else {
                 Stamp.reTokExt.lastIndex = 0;
-                var m = Stamp.reTokExt.exec(stamp);
+                var m = Stamp.reTokExt.exec(stamp.toString());
                 if (m) {
                     this._string = m[0];
                     this._value = Base64x64.toString(m[1]);

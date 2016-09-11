@@ -41,7 +41,7 @@ class Base64x64 {
         if (!value) value = '0';
         switch (value.constructor) {
             case String:
-                this._base = Base64x64.toString(value);
+                this._base = Base64x64.normalize(value);
                 break;
             case Date:
                 this._date = value;
@@ -67,24 +67,21 @@ class Base64x64 {
                 this._base = value._base;
                 break;
             default:
-                this._base = Base64x64.toString(value.toString());
+                this._base = Base64x64.normalize(value.toString());
         }
     }
 
-    static toString (base) {
-        if (!base) {
-            return '0';
-        } else if (base.constructor===Base64x64) {
-            return base._base;
-        } else {
-            reNorm64x64.lastIndex = 0;
-            let m = reNorm64x64.exec(base.toString());
-            if (m===null) {
-                throw new Error("not a Base64x64 string");
-            } else {
-                return m[1];
-            }
+    static normalize (base) {
+        reNorm64x64.lastIndex = 0;
+        let m = reNorm64x64.exec(base.toString());
+        if (m===null) {
+            throw new Error("not a Base64x64 string");
         }
+        return m[1];
+    }
+
+    static toString (base) {
+        return new Base64x64(base).toString();
     }
 
     static is (base) {
