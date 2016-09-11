@@ -14,7 +14,7 @@ var codes =
 var rs64 = '[0-9A-Za-z_~]';
 var rs64x64 = rs64+'{1,10}'; // 60 bits is enough for everyone
 var reTok =  new RegExp('^'+rs64x64+'$'); // plain no-extension token
-var reNorm64x64 = /^([0-9A-Za-z_~][0-9A-Za-z_~]*?)0*$/;
+var reNorm64x64 = /^([0-9A-Za-z_~]+?)0*$/;
 
 /**
  * Base64x64 timestamps are 64-bit timestamps in Base64.
@@ -38,6 +38,7 @@ class Base64x64 {
         this._low = -1;
         this._base = '0';
         this._date = null;
+        if (!value) value = '0';
         switch (value.constructor) {
             case String:
                 this._base = Base64x64.toString(value);
@@ -65,6 +66,8 @@ class Base64x64 {
             case Base64x64:
                 this._base = value._base;
                 break;
+            default:
+                this._base = Base64x64.toString(value.toString());
         }
     }
 
@@ -85,8 +88,7 @@ class Base64x64 {
     }
 
     static is (base) {
-        return base && base.constructor===String &&
-            base.length<=10 && reTok.test(base);
+        return base && (base.constructor===Base64x64 || reTok.test(base.toString()) );
     }
 
     static now (offset_ms) {
@@ -222,7 +224,7 @@ class Base64x64 {
     }
 
     isAbnormal () {
-        return this._base.charAt(0)==='~' && this._base.length>1;
+        return this._base >= Base64x64.INFINITY;
     }
 
     get ms () {
@@ -232,10 +234,14 @@ class Base64x64 {
     equals (b) {
         if (!b) {
             return false;
+        } else if (b.constructor===Base64x64) {
+            return this._base === b._base;
         } else {
-            return this._base === new Base64x64(b)._base;
+            return this.equals(new Base64x64(b));
         }
     }
+
+    eq (b) { return this.equals(b); }
 
     inc () {
         if (this._high===-1) {
@@ -255,22 +261,27 @@ class Base64x64 {
         return new Base64x64(str).inc().toString();
     }
 
+    /** @param {Number} pos - positions (not bits) */
+    rightShift (pos) {
+        let base = this._base;
+        for(let i=0; i<pos; i++)
+            base = '0' + base;
+        base = base.substr(0,10);
+        return new Base64x64(base);
+    }
+
     /** @param {String|Base64x64} str
      *  @param {Number} pos */
     static rightShift (str, pos) {
-        str = str.toString();
-        if (pos<0 || str.length+pos>10)
-            throw new Error('invalid arguments');
-        for(let i=0; i<pos; i++)
-            str = '0' + str;
-        return new Base64x64(str).toString();
+        return new Base64x64(str).rightShift(pos).toString();
+    }
+
+    leftShift (pos) {
+        return new Base64x64(this._base.substr(pos) || '0');
     }
 
     static leftShift (str, pos) {
-        str = str.toString();
-        if (pos < 0 || pos > 10)
-            throw new Error('invalid arguments');
-        return new Base64x64(str.substr(pos) || '0').toString();
+        return new Base64x64(str).leftShift(pos).toString();
     }
 
     next (length) {
@@ -290,7 +301,11 @@ class Base64x64 {
     }
 
     round (till) {
-        return new Base64x64(this._base.substr(0, till));
+        return new Base64x64(this._base.substr(0, till) || '0');
+    }
+
+    static round (base, pos) {
+        return new Base64x64(base).round(pos).toString();
     }
 
     get highInt () {

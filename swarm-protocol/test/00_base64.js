@@ -56,6 +56,13 @@ tap('protocol.00.A basic API', function (t) {
     t.equals(num.next(6).toString(), '0abd');
     t.equals(num.next(2).toString(), '0b');
     t.equals(new Base64x64('0').next(3).toString(), '001');
+    t.ok( num.eq(num) );
+    t.ok( num.eq('0abc~~0') );
+
+    t.ok(num.round(3).eq('0ab'));
+
+    t.notOk(Base64x64.is(':)'));
+
 
     t.end();
 });

@@ -1,8 +1,9 @@
 "use strict";
-var swarm = require('..');
-var tape = require('tap').test;
+const swarm = require('..');
+const tape = require('tap').test;
 const ReplicaId = swarm.ReplicaId;
 const ReplicaIdScheme = swarm.ReplicaIdScheme;
+const Base64x64 = swarm.Base64x64;
 
 tape ('protocol.06.A scheme', function (tap) {
 
@@ -35,15 +36,18 @@ tape ('protocol.06.B replica id', function (tap) {
     tap.equals(id1.peer, '0AB');
     tap.equals(id1.client, '000user');
     tap.equals(id1.session, '0000000003');
+    tap.ok(Base64x64.is(id1));
 
     const id2 = new ReplicaId('1ABuser', scheme);
     tap.equals(id2.primus, '1');
     tap.equals(id2.peer, '0AB');
     tap.equals(id2.client, '000user');
     tap.equals(id2.session, '0');
+    tap.ok(Base64x64.is(id2));
 
     const id3 = ReplicaId.createId(['P', '0ee', '000client', '000000000S'], scheme);
     tap.equals(id3.toString(), 'PeeclientS');
+    tap.ok(Base64x64.is(id3));
 
     tap.end();
 });
