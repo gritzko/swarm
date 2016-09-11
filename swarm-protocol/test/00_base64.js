@@ -33,7 +33,7 @@ tap('protocol.00.A basic API', function (t) {
 
     // conversion cycle: string->base->date->base->string,date
     var a = "1F7Ca8";
-    var b = new Base64x64("1F7Ca8");
+    var b = new Base64x64(a);
     var c = b.toDate();
     var d = new Base64x64(c);
     var e = d.toString();
@@ -63,6 +63,12 @@ tap('protocol.00.A basic API', function (t) {
 
     t.notOk(Base64x64.is(':)'));
 
+    const o1 = new Base64x64("abc01023fg");
+    const o2 = new Base64x64("abc");
+    t.equals( o1.relax(o2).toString(), "abc01" );
+    t.equals( o2.relax(o1).toString(), "abc" );
+    t.equals( o1.relax(o2,6).toString(), "abc01" );
+    t.equals( o1.relax(o2,7).toString(), "abc0102" );
 
     t.end();
 });

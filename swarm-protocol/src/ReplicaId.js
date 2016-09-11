@@ -8,17 +8,19 @@ class ReplicaId {
     /** @param {Base64x64|String|Array} id
      *  @param {ReplicaIdScheme} scheme */
     constructor(id, scheme) {
-        this._id = new Base64x64(id).toString();
+        this._id = null;
         this._scheme = scheme;
-        this._parts = ['0','0','0','0'];
-        let prefix = '';
-        for(let p=0, off=0; p<4; p++) {
-            const len = scheme.partLength(p);
-            if (len===0) continue;
-            const segment = this._id.substr(off, len) || '0';
-            this._parts[p] = new Base64x64(prefix+segment).toString();
-            off += len;
-            for(let i=0; i<len; i++) prefix += '0';
+        this._parts = [null,null,null,null];
+        let base = null;
+        if (id.constructor===Array) {
+            if (id.length!==4)
+                throw new Error("need all 4 parts");
+            this._parts = id.map( (val, p) => scheme.slice(val, p) );
+            this._id = scheme.join(this._parts);
+        } else {
+            base = new Base64x64(id);
+            this._id = base.toString();
+            this._parts = scheme.split(this._id);
         }
     }
 

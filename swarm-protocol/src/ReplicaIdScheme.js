@@ -16,9 +16,10 @@ class ReplicaIdScheme {
         if (!ReplicaIdScheme.FORMAT_RE.test(formula))
             throw new Error('invalid replica id scheme formula');
         this._formula = formula;
-        this._parts = formula.match(/\d/g).map(d=>parseInt(d));
+        let p = this._parts = formula.match(/\d/g).map(d=>parseInt(d));
         if (!this.isCorrect())
             throw new Error('inconsistent replica id scheme formula');
+        this._offsets = [0, p[0], p[0]+p[1], p[0]+p[1]+p[2]];
     }
 
     get primuses () {return this._parts[0];}
@@ -31,11 +32,28 @@ class ReplicaIdScheme {
         return this._parts[i];
     }
 
+    length (p) { return this.partLength(p); }
+
     partOffset (i) {
-        let ret = 0;
-        for(let p=0; p<i && p<4; p++)
-            ret += this._parts[p];
+        return this._offsets[i];
+    }
+
+    offset (p) { return this.partOffset(p); }
+
+    split (base) {
+        base = new Base64x64(base);
+        const ret = [null,null,null,null];
+        for(let p=0; p<4; p++)
+            ret[p] = base.slice(this.offset(p), this.length(p)).toString();
         return ret;
+    }
+
+    join (parts) {
+        let ret = '';
+        for(let p=0; p<4; p++)
+            ret +=  new Base64x64(parts[p]).toFullString().
+                substr(this.offset(p), this.length(p));
+        return new Base64x64(ret).toString();
     }
 
     isPrimusless () {

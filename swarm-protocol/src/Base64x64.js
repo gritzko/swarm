@@ -320,28 +320,26 @@ class Base64x64 {
     }
 
     /** Shorten the number by removing trailing chars, while still
-     * staying above the floor value. (Variable precision trick.) */
-    relax (floor, min_length) {
-        floor = new Base64x64(floor);
-        if (floor.highInt<this.highInt) {
-            return new Base64x64([this._high, 0]);
-        } else if (floor.highInt>this.highInt) {
-            return this;
-        } else {
-            var low = this._low;
-            var toolow = floor.lowInt;
-            var length = 10;
-            if (min_length<5) { min_length=5; }
-            var mask = ((1<<31)-1) << 6;
-            while (length>min_length && (low&mask)>toolow) {
-                length--;
-                low &= mask;
-                mask<<=6;
-            }
-            let ret = new Base64x64([this._high, low]);
-            //console.log('relax', this._base, floor._base, ret._base);
-            return ret;
-        }
+     *  preserving order relative to repere. (Variable precision trick.) */
+    relax (repere, min_length) {
+        min_length = min_length || 1;
+        const reper = new Base64x64(repere).toFullString();
+        const mine = this.toFullString();
+        let p = 0;
+        while (p<10 && mine[p] === reper[p])
+            p++;
+        p++;
+        if (p<min_length)
+            p = min_length;
+        return new Base64x64(mine.substr(0, p));
+    }
+
+    toFullString () {
+        return this._base + Base64x64.FULL_ZERO.substr(this._base.length);
+    }
+
+    slice (offset, length) {
+        return new Base64x64(Base64x64.FULL_ZERO.substr(0, offset)+this._base.substr(offset, length));
     }
 
 }
@@ -351,7 +349,7 @@ Base64x64.INCORRECT = "~~~~~~~~~~";
 Base64x64.MAX32 = (1<<30)-1;
 Base64x64.ZERO = "0"; // FIXME object or string?!!!
 Base64x64.rs64x64 = rs64x64;
-
+Base64x64.FULL_ZERO = '0000000000';
 
 // convert int to a classic base64 number (left zeroes skipped)
 Base64x64.int2base = function (i, padlen) {
