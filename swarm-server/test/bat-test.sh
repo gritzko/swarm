@@ -14,9 +14,9 @@ rm -rf $DB
 echo CREATE DB
 $SWARM -C $DB \
     --oDBIdScheme 172 \
-    --oStrmAbbrev "Stream" \
     --oClock "Logical" \
     --oClockLen 5
 $SWARM -A $DB -s
+echo 1 | $SWARM -U $DB -a testusr
 echo BASIC PEER TESTS
-$BAT -e "$SWARM -R $DB -l" $TEST_DIR/peer-basic.batt
+$BAT $JSON -e "$SWARM -R $DB -l" $TEST_DIR/peer-basic.batt

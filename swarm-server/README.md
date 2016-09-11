@@ -44,7 +44,9 @@ swarm -R ./test-1 --listen ws://localhost:8080
     - [x] `-l --list`
 - [ ] `-R --run` run a database (the default)
     - [ ] `-l --listen scheme:url` listen for client conns on URL
-                (stdin `-`, WebSocket `ws://host:port`, TCP `tcp:...`)
+        - [x] `-` stdin (default)
+        - [ ] `ws://hostname:port` WebSocket
+        - [ ] `tcp://11.22.33.44:5555` TCP
     - [ ] `-c --connect scheme:url` connect to a peer
     - [ ] `-e --exec script.js` execute a script once connected
     - [ ] `-r --repl` start REPL

@@ -50,7 +50,7 @@ class Spec {
             Spec.reSpec.lastIndex = 0;
             let m = Spec.reSpec.exec(spec);
             if (m===null) {
-                throw new Error("invalid spec");
+                throw new Error("not a specifier");
             }
             for(let i=1; i<=4; i++) {
                 if (m[i]!==null) {

@@ -16,6 +16,7 @@ class BatResult {
             (this.output, options);
         const dmp = new DiffMatchPatch();
         var diff = dmp.diff_main(output_norm, expected_norm);
+        dmp.diff_cleanupSemantic(diff);
         this.ok = diff && (diff.length===0 || (diff.length===1 && diff[0][0]===0));
         this.diff = diff;
         this.comment = round.comment;

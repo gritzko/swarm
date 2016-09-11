@@ -42,6 +42,9 @@ tape ('protocol.06.B replica id', function (tap) {
     tap.equals(id2.client, '000user');
     tap.equals(id2.session, '0');
 
+    const id3 = ReplicaId.createId(['P', '0ee', '000client', '000000000S'], scheme);
+    tap.equals(id3.toString(), 'PeeclientS');
+
     tap.end();
 });
 

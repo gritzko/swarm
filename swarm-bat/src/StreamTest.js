@@ -74,7 +74,7 @@ class StreamTest {
             this.output[stream_id] += data.toString();
         });
         stream.on("close", data => {
-            this.output[stream_id] += "<\n";
+            //this.output[stream_id] += "<<<\n";
         });
     }
 

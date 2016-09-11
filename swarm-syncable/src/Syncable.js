@@ -86,7 +86,7 @@ class Syncable extends OpStream {
         } else if ( this._id !== op.id ) {
             throw new Error('not my op');
         }
-        if (op.name===Op.state) {
+        if (op.spec.method===Op.METHOD_STATE) {
             this._state = new this.constructor.RDT(op.value);
         } else {
             if (!this._state) {

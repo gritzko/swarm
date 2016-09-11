@@ -28,6 +28,7 @@ class ReplicaId {
         let full = '';
         for(let p=0, off=0; p<4; p++) {
             const len = scheme.partLength(p);
+            if (len===0) continue;
             let segment = parts[p].substr(off, len) || '0';
             while (segment.length<len) segment = segment + '0';
             full += segment;
@@ -53,6 +54,10 @@ class ReplicaId {
     isClientOf(rid) {
         return this.primus===rid.primus && this.peer===rid.peer &&
             this.isClient() && rid.isPeer();
+    }
+
+    toString () {
+        return this._id;
     }
 
 }

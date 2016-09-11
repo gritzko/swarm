@@ -47,6 +47,11 @@ class ReplicaIdScheme {
         return length<=10;
     }
 
+    isAbnormalPart (part, i) {
+        const shifted = Base64x64.leftShift(part, this.partOffset(i));
+        return shifted[0]==='~';
+    }
+
     toString() {
         return this._formula;
     }

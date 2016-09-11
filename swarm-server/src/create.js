@@ -59,7 +59,7 @@ function create (home, args, done) {
     opts[ReplicaIdScheme.DB_OPTION_NAME] = scheme.toString(); // FIXME timestamp !~
     let options = new sync.Swarm();
     options._clock = new swarm.Clock(replid, opts);
-    options.set(opts);
+    options.setAll(opts);
     options._id = new swarm.Stamp(dbname, '0'); //options._clock.issueTimestamp()
 
     let state = options.toOp(); //.restamped(clock.issueTimestamp());

@@ -130,15 +130,15 @@ class AuthOpStream  {
 
     denyAccess (on, stream, message) {
         this.streams.delete(stream._id.value);
-        stream.offer(new Op(on.spec.rename('off')), message);
+        stream.offer(new Op(on.spec.rename('off'), message));
         stream.end();
     }
 
     grantSsn (op, stream) {
         let max = '0';
         const client_id = new ReplicaId(op.scope, this.db.scheme).client;
-        let from = new Spec(AuthOpStream.CLIENT_CLASS, client_id, Stamp.ZERO, Stamp.ZERO);
-        const now = this.db.time();
+        let from = new Spec([AuthOpStream.CLIENT_CLASS, client_id.toString(), Stamp.ZERO, Stamp.ZERO]);
+        const now = this.db.now();
         this.db.scan(
             from, null,
             o => max=o.scope,
@@ -146,20 +146,20 @@ class AuthOpStream  {
                 if (err)
                     return this.denyAccess(op, stream, err);
                 let new_ssn = new Base64x64(max).inc();
-                if (this.db.scheme.isAbnormal(new_ssn, ReplicaIdScheme.SESSION))
+                if (this.db.scheme.isAbnormalPart(new_ssn, ReplicaIdScheme.SESSION))
                     return this.reclaimAndGrantSsn(op, stream);
-                const myid = this.db.clock.id;
+                const myid = new ReplicaId(this.db.clock.origin, this.db.scheme); // FIXME encaps
                 let new_replica_id = ReplicaId.createId([
                     myid.primus,
                     myid.peer,
-                    client_id,
-                    new_ssn
+                    client_id.toString(), // FIXME signatures
+                    new_ssn.toString()
                 ], this.db.scheme);
                 const new_on = new Op( new Spec([
                     op.spec.Type,
                     op.spec.Id,
-                    now,
-                    new Stamp(Op.METHOD_ON, new_replica_id)
+                    Stamp.ZERO,
+                    new Stamp(Op.METHOD_ON, new_replica_id.toString()) // FIXME
                 ]), '');
                 const spec = new Spec([
                     AuthOpStream.CLIENT_CLASS,
@@ -208,7 +208,8 @@ class AuthOpStream  {
     }
 
     grantAccess (on, stream) {
-        stream._id = new Stamp(ts, op.scope);
+        const ts = stream._id.value;
+        stream._id = new Stamp(ts, on.spec.scope);
         this.streams.delete(ts);
         this.swtch.addClient(stream, stream._id, on);
     }
