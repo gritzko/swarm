@@ -19,4 +19,4 @@ $SWARM -C $DB \
 $SWARM -A $DB -s
 echo 1 | $SWARM -U $DB -a testusr
 echo BASIC PEER TESTS
-$BAT $JSON -e "$SWARM -R $DB -l" $TEST_DIR/peer-basic.batt
+$BAT -e "$SWARM -R $DB -l" $TEST_DIR/peer-basic.batt

@@ -10,29 +10,22 @@ const VV = swarm.VV;
 class LogOpStream extends BatchedOpStream {
 
     /**
-     * @param {LevelOp} db - database (key-value op storage)
+     * @param {SwarmDB} db - database (key-value op storage)
      * @param {Function} callback
      * */
     constructor (db, callback) {
 
         super();
 
-        this.vv = new VV();
+        this.vv = null;
         this.tips = new Map();
         this.tip_bottom = '0';
         this.db = db;
 
-        this.db.scan(
-            LogOpStream.VV_SPEC,
-            null,
-            (op, key, value) => {
-                this.vv.addPair(op.value, op.spec.Stamp.value);
-                if (value>this.tip_bottom)
-                    this.tip_bottom = value;
-            },
-            err => callback && callback(err),
-            { /*skipOpCreation: true*/ }
-        );
+        this.db.read_vv( (err, vv) => {
+            this.vv = vv;
+            callback(err);
+        } );
 
     }
 
@@ -43,14 +36,15 @@ class LogOpStream extends BatchedOpStream {
 
         this._processed_batch.reverse().forEach( op => { // FIXME reverse
 
-            if (op.isNormal())
+            if (op.isNormal()) {
                 this._processMutation(op, save, emit);
-            else if (op.isOnOff()) // FIXME ALL CASES (error, etc)
+            } else if (op.isOnOff()) {
                 this._processOnOff(op, save, emit);
-            else if (op.isError())
+            } else if (op.isError()) {
                 emit.push(op);
-            else if (op.isState())
+            } else if (op.isState()) {
                 this._processState(op, save, emit);
+            }
         });
 
         this._processed_batch = [];
@@ -88,7 +82,6 @@ class LogOpStream extends BatchedOpStream {
             return;
         } else {
             this.vv.add(spec.Stamp);
-            save.push(new Op(LogOpStream.VV_SPEC.restamp(spec.origin), spec.time));
             emit.push(op);
         }
 

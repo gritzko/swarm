@@ -7,7 +7,7 @@ const Spec = swarm.Spec;
 const Stamp = swarm.Stamp;
 
 
-/** stores subscriptions to a leveldown instance, like
+/** stores subscriptions to a LevelDOWN instance, like
  *  /Type#id!connid+replica.on  ''
  *  can be abbreviated to /Type#id!connid
  * */
@@ -27,11 +27,14 @@ class Switch extends BatchedOpStream {
      * @param {OpStream} client - the client op stream
      * @param {Stamp} stream_id
      */
-    addClient (client, stream_id) {
+    addClient (client, stream_id, reinject) {
+        // FIXME no concurrent logins; close the old one
         this.ssn_ids.add(stream_id);
         this.streams.set(stream_id.origin, client);
         // stamp, add
         client._id = stream_id;
+        if (reinject)
+            this._on_op(reinject, client);
         client.on(this._on_op_cb);
     }
 

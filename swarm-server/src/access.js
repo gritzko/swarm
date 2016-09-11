@@ -1,5 +1,6 @@
 "use strict";
 const fs = require('fs');
+const path = require('path');
 const leveldown = require('leveldown');
 const swarm = require('swarm-protocol');
 const peer = require('swarm-peer');
@@ -10,8 +11,10 @@ const Stamp = swarm.Stamp;
 function access (home, args, done) {
 
     let level = new leveldown(home);
+    let basename = path.basename(home);
+    let dbid = new Stamp(basename);
 
-    let db = new peer.LevelOp(level, null, err => {
+    let db = new peer.SwarmDB(dbid, level, null, err => {
         if (err) {
             done(err);
         } else {
@@ -69,21 +72,11 @@ function put (db, file, done) {
 }
 
 function list_vv (db, filter, done) {
-    let i = db.level.iterator({
-        gte: '+0',
-        lte: '+~~~~~~~~~~',
-        keyAsBuffer: false,
-        valueAsBuffer: false
+    db.read_vv((err, vv)=>{
+        if (err) return done(err);
+        vv.map.forEach((v,k)=>console.log(k,v));
+        done();
     });
-    const next = (err, key, value) => {
-        if (err)
-            return done(err);
-        if (!key)
-            return done();
-        console.log(value+key);
-        i.next(next);
-    }
-    i.next(next);
 }
 
 module.exports = access;

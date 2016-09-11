@@ -47,6 +47,25 @@ class SwarmDB extends LevelOp {
         );
     }
 
+    read_vv (callback) {
+        const vv = new swarm.VV();
+        let i = this.level.iterator({
+            gte: '+0',
+            lte: '+~~~~~~~~~~',
+            keyAsBuffer: false,
+            valueAsBuffer: false
+        });
+        const next = (err, key, value) => {
+            if (err)
+                return callback(err, null);
+            if (!key)
+                return callback(null, vv);
+            vv.addPair(value, key.substr(1));
+            i.next(next);
+        };
+        i.next(next);
+    }
+
     _create_clock (err, max, done) {
         if (err) return done(err);
         let meta = this._meta;

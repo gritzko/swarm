@@ -46,6 +46,7 @@ class PatchOpStream extends BatchedOpStream {
                     last_stamp = op.spec.Stamp;
                 } else if (op.spec.Stamp.eq(on.spec.Stamp)) {
                     met = true;
+                    last_stamp = op.spec.Stamp;
                 }
             },
             err => {

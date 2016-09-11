@@ -79,7 +79,6 @@ function create (home, args, done) {
         const stamp = state.spec.Stamp;
 
         db.putAll ([state], err => {
-            console.warn(stamp)
             if (err)
                 done(err);
             else

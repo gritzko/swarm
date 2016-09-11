@@ -77,18 +77,19 @@ class Op {
     /** parse a frame of several serialized concatenated newline-
      * terminated ops. Does not parse buffers (because partial ops,
      * partial Unicode chars). */
-    static parseFrame (text, source) {
+    static parseFrame (text) {
         var ret = [];
         var m = null;
         Op.reOp.lastIndex = 0;
+        let prev; // FIXME constructor
         while ( m = Op.reOp.exec(text) ) {
-            let spec = m[1],
+            let spec_str = m[1],
                 empty = m[2],
                 line = m[3],
                 lines = m[4],
                 length = m[5],
                 value;
-            if (!spec)
+            if (!spec_str)
                 continue; // empty line
             if (empty!==undefined) {
                 value = '';
@@ -104,7 +105,11 @@ class Op {
                     throw new Error('unterminated op body');
                 }                Op.reOp.lastIndex = start+char_length;
             }
-            ret.push(new Op(spec, value, source));
+            let spec = new Spec(spec_str);
+            if (prev)
+                spec = spec.fill(prev);
+            prev = spec;
+            ret.push(new Op(spec, value));
         }
         if (Op.reOp.lastIndex!==0) {
             throw new Error("mismatched content");
