@@ -30,7 +30,7 @@ class Switch extends BatchedOpStream {
     addClient (client, stream_id, reinject) {
         // FIXME no concurrent logins; close the old one
         this.ssn_ids.add(stream_id);
-        this.streams.set(stream_id.origin, client);
+        this.streams.set(stream_id.origin, client); // FIXME use ts, not origin?!!
         // stamp, add
         client._id = stream_id;
         if (reinject)
@@ -84,7 +84,15 @@ class Switch extends BatchedOpStream {
         if (op.isOn()) { // outgoing on => add to the table
             this.db.put(new swarm.Op(record, ''), done);
         } else { // outgoing off => remove from the table
-            this.db.del(record, done);
+            if (op.spec.class===sync.Swarm.id) {
+                this.db.del(record, (err) => {
+                    stream.offer(op); // TODO clean up
+                    this.removeClient(stream);
+                    done();
+                });
+            } else {
+                this.db.del(record, done);
+            }
         }
 
     }
@@ -129,14 +137,16 @@ class Switch extends BatchedOpStream {
             this.removeClient(stream);
             return;
         }
-        if (op.isOnOff()) {
+        if (sync.Syncable._classes[op.spec.class]===undefined) {
+            op = op.error('CLASS UNKNOWN', stream._id.origin);
+        } else if (op.isOnOff()) {
             let check = this.streams.get(op.spec.scope);
             if (check!==stream)
-                op = op.error('invalid scope');
+                op = op.error('WRONG SCOPE', stream._id.origin);
         } else {
             let check = this.streams.get(op.origin);
             if (check!==stream)
-                op = op.error('invalid origin');
+                op = op.error('WRONG ORIGIN', stream._id.origin);
         }
         this._emit(op); // preserve batching
     }

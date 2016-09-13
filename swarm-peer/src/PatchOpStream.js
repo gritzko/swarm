@@ -101,7 +101,7 @@ class PatchOpStream extends BatchedOpStream {
             this._batch(on.restamped(snapshot.spec.Stamp));
             return done();
         }
-        let syncable = sync.Syncable._classes[on.spec.Type.value];
+        let syncable = sync.Syncable._classes[on.spec.class];
         if (!syncable) {
             this._batch(snapshot.clearstamped(scope));
             tail.forEach(op=>this._batch(op.clearstamped(scope)));

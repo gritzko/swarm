@@ -38,8 +38,10 @@ class LogOpStream extends BatchedOpStream {
 
             if (op.isNormal()) {
                 this._processMutation(op, save, emit);
-            } else if (op.isOnOff()) {
-                this._processOnOff(op, save, emit);
+            } else if (op.isOn()) {
+                this._processOn(op, save, emit);
+            } else if (op.isOff()) {
+                this._processOff(op, save, emit);
             } else if (op.isError()) {
                 emit.push(op);
             } else if (op.isState()) {
@@ -53,7 +55,7 @@ class LogOpStream extends BatchedOpStream {
 
     }
 
-    _processOnOff (op, save, emit) {
+    _processOn (op, save, emit) {
 
         const spec = op.spec;
 
@@ -71,6 +73,18 @@ class LogOpStream extends BatchedOpStream {
 
     }
 
+    _processOff (off, save, emit) {
+
+        if (off.spec.class===sync.Swarm.id) {
+            const origin = off.scope;
+            let top = this.vv.get(origin);
+            off = off.restamped(top);
+        }
+
+        emit.push(off);
+
+    }
+
     _processMutation (op, save, emit) {
 
         const spec = op.spec;
@@ -78,7 +92,7 @@ class LogOpStream extends BatchedOpStream {
         let top = this.vv.get(op.origin);
 
         if (top && spec.time<=top) {
-            emit.push(op.error("OP REPLAY"));
+            emit.push(op.error("OP REPLAY", op.spec.origin));
             return;
         } else {
             this.vv.add(spec.Stamp);
@@ -98,7 +112,7 @@ class LogOpStream extends BatchedOpStream {
 
     _processState (state_op, save, emit) {
         if (!state_op.spec.Stamp.eq(state_op.spec.Id)) {
-            emit.push(state_op.error('INIT STATE ONLY'));
+            emit.push(state_op.error('NO STATE PUSH', state_op.spec.origin));
         } else {
             this._processMutation(state_op, save, emit);
         }

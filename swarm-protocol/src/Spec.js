@@ -237,6 +237,10 @@ class Spec {
         return new Spec([this.Type, this.Id, this.Stamp, new Stamp(this.method, scope)]);
     }
 
+    rescope (scope) {
+        return this.scoped(scope); // FIXME naming conventions!!!
+    }
+
 }
 
 Spec.quants = ['/', '#', '!', '.'];

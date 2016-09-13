@@ -163,8 +163,11 @@ class Op {
     /**
      * @param {String} message
      * @returns {Op} error op */
-    error (message) {
-        return new Op(this.spec.rename(Stamp.ERROR), message);
+    error (message, scope) {
+        let spec = this.spec.rename(Stamp.ERROR);
+        if (scope)
+            spec = spec.rescope(scope);
+        return new Op(spec, message);
     }
 
     /** @param {Base64x64|String} stamp */
