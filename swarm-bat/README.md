@@ -33,8 +33,8 @@ of several implementations: their APIs differ, but tests are the same.
 ## Usage
 
 - [x]     bat -e command simple_script.batt
-- [ ]     bat -c host:port multistream_script.batt
-- [ ]     bat -l 127.0.0.1:12345 server_script.batt
+- [x]     bat -c host:port multistream_script.batt
+- [x]     bat -l 127.0.0.1:12345 server_script.batt
 - [ ]     bat -e new_version -r new_script.batt old_script.batt
 - [ ]     command | bat expected_output.batt -W
 
@@ -45,12 +45,11 @@ see test/ for examples of [API](test/00_parse_format.js) and
 
 - [x] -e test an executable (stdin/stdout)
 - [ ] -r record de-facto output to a new test script
-- [x] -x don't stop on errors, just log them
-- [ ] -v comment on every step
+- [x] -i don't stop on errors, just log them
+- [x] -v comment on every step
 - [ ] -L ignore empty lines
 - [x] -C ignore case
-- [ ] -d mandatory delay (let'em think); default 10ms
-- [ ] -D mismatch delay (wait, they're still thinking); default 100ms
+- [x] -d max delay (let'em think); default 500ms
 - [x] -O output lines may go in any order
 - [x] --whitespace collapse|ignore|exact|count
 

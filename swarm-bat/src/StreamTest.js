@@ -8,7 +8,7 @@ class StreamTest {
     /**
      *  @param {BatScript} script
      *  @param {Object|String} options - run mode options:
-     *      connect, listen, stream
+     *      stream, server, connect, runAll
      * */
     constructor (script, options) {
         if (!options)
@@ -22,24 +22,23 @@ class StreamTest {
         this.streams = new Map();
         this.error = null;
         this.output = Object.create(null);
-        this.callback = null;
         this.results = [];
         this.input_time = 0;
         this.check_interval = null;
         this._listen_for_id = null;
-        const defstr = options.default;
-        if (defstr) {
-            this._add_stream (defstr, 'default');
-        }
-        options.listen && su.listen(options.listen, (err, server) => {
-            if (err) return this._finish(err);
-            server.on('connection', stream => {
-                if (this._listen_for_id)
-                    this._add_stream(stream, this._listen_for_id);
-                else
-                    this._finish('unexpected incoming connection');
-            } );
-        });
+        this._pending_conns = [];
+        if (options.stream)
+            this.addStream (options.stream, 'default');
+        if (options.server)
+            options.server.on('connection', this._accept_connection.bind(this));
+    }
+
+    _accept_connection (stream) {
+        StreamTest.debug && console.warn('ACCEPT');
+        if (this._listen_for_id)
+            this.addStream(stream, this._listen_for_id);
+        else
+            this._pending_conns.push(stream);
     }
 
     get running () {
@@ -55,6 +54,7 @@ class StreamTest {
     _progressCheck () {
         var TOO_LONG = StreamTest.LONG_DELAY;
         if (this.roundElapsed() < TOO_LONG) return;
+        StreamTest.debug && console.warn('TIME!');
         this._check_output(true);
     }
 
@@ -64,30 +64,33 @@ class StreamTest {
             throw new Error("test is running");
         }
         this.check_interval = setInterval(this._progressCheck.bind(this), 100);
-        this.callback = callback;
+        this.options.callback = callback;
+        this.input_time = new Date().getTime();
         setImmediate(this._next_round.bind(this));
     }
 
     _finish (err) {
         this.error = err;
-        clearInterval(this.check_interval);
+        if (this.check_interval)
+            clearInterval(this.check_interval);
         this.streams.forEach(stream => stream.end());
-        this.callback(this.results, this);
+        this.options.callback(err, this.results, this);
     }
 
     /** invoked by: run, _open_stream, _check_output */
     _run_round () {
         const not_open = this.script.streams.find(id => !this.streams.has(id));
         if (not_open) { // missing a stream
-            if (this.options.listen)
-                this._listen_for_id = not_open;
-            else
+            if (this.options.server) {
+                if (this._pending_conns.length)
+                    this.addStream(this._pending_conns.shift(), not_open);
+                else
+                    this._listen_for_id = not_open; // TODO []
+            } else {
                 this._connect_stream(not_open);
+            }
         } else { // all streams ready
-            Object.keys(this.round.output).forEach(
-                id => this.output[id] = ""
-            );
-            //console.warn('WROTE', this.round.input);
+            StreamTest.debug && console.warn('WROTE', this.round.input);
             Object.keys(this.round.input).forEach(
                 id => this.streams.get(id).write(this.round.input[id])
             );
@@ -96,27 +99,34 @@ class StreamTest {
     }
 
     _connect_stream (stream_id) {
-        su.connect (this.options.connect, (err, stream) => {
+        StreamTest.debug && console.warn('CONNECTING');
+        if (!this.options.url) {
+            return this._finish("no connect url");
+        }
+        su.connect (this.options.url, (err, stream) => {
             if (err) {
                 this._finish(err);
             } else {
-                this._add_stream(stream, stream_id);
+                this.addStream(stream, stream_id);
                 this._run_round();
             }
         });
 
     }
 
-    _add_stream (stream, stream_id) {
+    addStream (stream, stream_id) {
         this.streams.set(stream_id, stream);
         stream.on("data", data => {
-            //console.warn('GOT',stream_id, data.toString());
+            StreamTest.debug && console.warn('GOT',stream_id, data.toString());
+            if (this.output[stream_id]===undefined)
+                this.output[stream_id] = '';
             this.output[stream_id] += data.toString();
             this._check_output(false);
         });
     }
 
     _next_round (result) {
+        StreamTest.debug && console.warn('NEXT_ROUND');
         this.round = this.script.rounds[++this.round_i];
         this._run_round();
     }
@@ -138,6 +148,6 @@ class StreamTest {
 }
 
 StreamTest.SHORT_DELAY = 10;
-StreamTest.LONG_DELAY = 250;
-
+StreamTest.LONG_DELAY = 500;
+StreamTest.debug = false;
 module.exports = StreamTest;

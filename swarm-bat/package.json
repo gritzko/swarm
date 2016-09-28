@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.2.5",
+    "version": "1.2.8",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
@@ -24,7 +24,8 @@
         "diff-match-patch": "1.0.0",
         "chalk": "^1.1.2",
         "stream-url": "^0.2.2",
-        "duplexify": "^3.4.5"
+        "duplexify": "^3.4.5",
+        "async": "^2.0.1"
     },
     "scripts": {
         "test": "make test"

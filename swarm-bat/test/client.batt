@@ -1,0 +1,10 @@
+; ping the server
+> HELLO
+; first exchange
+< SERVER SAYS
+> CLIENT RESPONDS
+; silence
+< SERVER REPEATS
+; response
+< SEVER REPEATS AGAIN
+> CLIENT IS STILL HERE
