@@ -4,14 +4,23 @@
 >rm -rf .tmp-batt
 >mkdir .tmp-batt
 > cd .tmp-batt
-> touch 1
+> touch file 
 > ls
-1
+> echo done
+file
+done
 ;
 ; test echo, cat
 ;
-> echo -e TEST\\nMORE > 1
-> cat 1
+> echo -e TEST\\nMORE > testmore
+> cat testmore
 TEST
 MORE
+; ls again
+> ls
+< file
+< testmore
+; cleanup
+> cd ..
 > rm -rf .tmp-batt
+> 

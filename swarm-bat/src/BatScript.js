@@ -95,14 +95,16 @@ class BatScript {
     }
 
     parseScript (script_text) {
+        var comment = "";
         var rounds = this._rounds = [];
         var round = null;
         function addRound () {
             round = {
-                comment: "",
+                comment: comment,
                 input:   Object.create(null),
                 output:  Object.create(null)
             };
+            comment = "";
             round.output.default = '';
             rounds.push(round);
         }
@@ -118,7 +120,6 @@ class BatScript {
         var m = null;
         var stage = 0;
         var re_mark = /^(([<>;])|(\w+)([<>])|)[\t ]?(.*)\n?/mg;
-        var comment = "";
         while ( null != (m = re_mark.exec(script_text)) ) {
             if (m[0].length===0) { break; }
             var type = m[2]||m[4]||'<';
@@ -196,6 +197,16 @@ class BatScript {
 
     get rounds () {
         return this._rounds;
+    }
+
+    get streams () {
+        const ids = Object.create(null);
+        ids.default = true;
+        this._rounds.forEach( round => {
+            Object.keys(round.input).forEach( id => ids[id]=true );
+            Object.keys(round.output).forEach( id => ids[id]=true );
+        } );
+        return Object.keys(ids);
     }
 
     get size () {

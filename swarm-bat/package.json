@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
@@ -20,10 +20,11 @@
     "main": "bat-api.js",
     "dependencies": {
         "eventemitter3": "^1.1.1",
-        "minimist": "^1.2.0",
+        "commander": "^2.9.0",
         "diff-match-patch": "1.0.0",
         "chalk": "^1.1.2",
-        "duplexer": "^0.1.1"
+        "stream-url": "^0.2.2",
+        "duplexify": "^3.4.5"
     },
     "scripts": {
         "test": "make test"

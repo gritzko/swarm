@@ -44,8 +44,6 @@ see test/ for examples of [API](test/00_parse_format.js) and
 ## Options
 
 - [x] -e test an executable (stdin/stdout)
-- [ ] -c connect by tcp to a host/port
-- [ ] -w connect by WebSocket to a host/port
 - [ ] -r record de-facto output to a new test script
 - [x] -x don't stop on errors, just log them
 - [ ] -v comment on every step

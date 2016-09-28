@@ -1,6 +1,6 @@
 "use strict";
 var bat = require('../bat-api');
-
+const su = require('stream-url');
 var tap = require('tap').test;
 
 tap ('1.A parse trivial .batt scripts', function (t) {
@@ -43,9 +43,16 @@ tap ('1.B typical use cases', function (t) {
         "skipped"
     ].join('\n'));
 
-    var loopback = new bat.LoopbackStream(null, {encoding:"utf8"});
+    // bind a loopback echo server
+    su.listen('0://1B', (err, server) => {
+        server.on('connection', stream =>
+            stream.on('data', data =>
+                stream.write(data)
+            )
+        );
+    });
 
-    new bat.StreamTest(echo, loopback).run( result => {
+    new bat.StreamTest(echo, '0://1B').run( result => {
 
         t.notOk(result.every(r=>r.ok));
         t.equal(result.length, 3);
@@ -81,7 +88,15 @@ tap ('1.C options', function (t) {
         anyOrder: true
     });
 
-    new bat.StreamTest(echo, new bat.LoopbackStream(null)).run( r => {
+    su.listen('0://1C', (err, server) => {
+        server.on('connection', stream =>
+            stream.on('data', data =>
+                stream.write(data)
+            )
+        );
+    });
+
+    new bat.StreamTest(echo, '0://1C').run( r => {
 
         t.equals(r.length, 3);
         t.equals(r[2].comment, "reordering");
