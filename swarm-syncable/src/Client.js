@@ -9,35 +9,31 @@ let OpStream = require('./OpStream');
 let Syncable = require('./Syncable');
 
 /**
- * Host is the world of actual replicated/synchronized objects of various types.
- * Host contains inner CRDT objects and their outer API parts (Syncables).
+ * Client is the world of actual replicated/synchronized objects of various types.
+ * Client contains inner CRDT objects and their outer API parts (Syncables).
  * A host is (a) passive and (b) synchronous.
- * Host has an OpStream interface, consuming and emitting ops.
+ * Client has an OpStream interface, consuming and emitting ops.
  * To keep a host synchronized, it has to be connected to some
- * transport/storage, e.g. see `swarm-replica`. As a Host has no own storage,
+ * transport/storage, e.g. see `swarm-replica`. As a Client has no own storage,
  * it does not persist any information between runs. Hence, it dies once
  * disconnected from its upstream (Replica).
  *
- * Once a Host gets a replica id (hence, its own clock), it can create objects
+ * Once a Client gets a replica id (hence, its own clock), it can create objects
  * and ops. Objects retrieved by their id remain stateless till some state
  * arrives from the upstream.
  * @class
- * @implements OpStream
  */
-class Host extends OpStream {
+class Client extends OpStream {
 
     /**
-     * Create a Host given an upstream and a database id.
+     * Create a Client given an upstream and a database id.
      * Replica id is granted by the upstream.
      *
      * @param {Spec} spec - typeid spec for the database, e.g. `/Swarm#test` or
      *      `test` or `` for the default database
-     * @param {OpStream} upstream - home peer stream, implements the client
-     *    protocol. It can be directly a Replica, a transport stream (TCP,
-     *    WebSocket) or a cache stream (WebStorage, IndexedDB, LevelDB, etc).
      * @param {Object} options - local defaults and overrides for the metadata object
      */
-    constructor (spec, upstream, options) {
+    constructor (spec, options) {
         super();         // TODO snapshots (Swarm 1.4)
         /** syncables, API objects, the outer state */
         this._syncables = Object.create(null);
@@ -48,8 +44,8 @@ class Host extends OpStream {
 
         this._op_cb = this.onSyncableOp.bind(this);
 
-        if (!Syncable.multiHost && !Syncable.defaultHost) {
-            Syncable.defaultHost = this;
+        if (!Syncable.multiClient && !Syncable.defaultClient) {
+            Syncable.defaultClient = this;
         }
 
         /** database meta object */
@@ -80,8 +76,8 @@ class Host extends OpStream {
         Object.keys(this._syncables).forEach(typeid => this.removeSyncable(this._syncables[typeid]));
         this._emit(new Op(this.typeid.rename('off'), ''));
         this._emit(null);
-        if (Syncable.defaultHost===this) {
-            Syncable.defaultHost = null;
+        if (Syncable.defaultClient===this) {
+            Syncable.defaultClient = null;
         }
     }
 
@@ -190,17 +186,17 @@ class Host extends OpStream {
     }
 
     static get (type, id) {
-        return Syncable.defaultHost.get(type, id);
+        return Syncable.defaultClient.get(type, id);
     }
 
     static getBySpec (spec) {
-        return Syncable.defaultHost.getBySpec(spec);
+        return Syncable.defaultClient.getBySpec(spec);
     }
 
     static create (type) {
-        return Syncable.defaultHost.create(type);
+        return Syncable.defaultClient.create(type);
     }
 
 }
 
-module.exports = Host;
+module.exports = Client;
