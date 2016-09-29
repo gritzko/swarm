@@ -103,14 +103,14 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
 
     stream.on(op => total++);
     stream.on(op => total2++);
-    stream.once('.on', () => once++);
+    stream.once('.on', op => once++ );
     stream.on('.on', () => ons++ );
     stream.on('.on', op => {
         first_on = true;
         return op => second_on=true;
     });
     stream.on( op => {
-        if (op.value)
+        if (op && op.value)
             return OpStream.ENOUGH;
         before_value++;
     });

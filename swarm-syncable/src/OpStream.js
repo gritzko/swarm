@@ -187,12 +187,20 @@ class OpStream {
         return list;
     }
 
+    /** Try creating a replacement for a closed OpStream. (Optional.)
+     *  @param {Function} callback - invoked with 2 arguments, error message and
+     *      a successor opstream (one must be null) */
+    retry (callback) {
+        callback("not implemented", null);
+    }
+
 }
 
 OpStream.MUTATIONS = "^.on.off.error.~";
 OpStream.HANDSHAKES = ".on.off";
 OpStream.STATES = ".~";
 OpStream.ENOUGH = Symbol('enough');
+OpStream.OK = Symbol('ok');
 OpStream.SLOW_DOWN = Symbol('slow'); // TODO relay backpressure
 
 module.exports = OpStream;
@@ -239,11 +247,11 @@ class Filter {
         if (this.callback && this.covers(op)) {
             let ret = this.callback.call(context, op, context);
             if (this.once || ret === OpStream.ENOUGH)
-                return false;
+                return OpStream.ENOUGH;
             if (ret && ret.constructor === Function)
                 this.callback = ret;
         }
-        return true;
+        return OpStream.OK;
     }
 
     toString () {
