@@ -3,7 +3,7 @@
     "browser": true,
 
     "boss": true,
-    "curly": true,
+    "curly": false,
     "devel": true,
     "eqnull": true,
     "expr": true,

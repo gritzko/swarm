@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.2.8",
+    "version": "1.2.10",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
@@ -31,6 +31,6 @@
         "test": "make test"
     },
     "bin": {
-        "bat": "tap test/00*js && ./test/bat-cli.js"
+        "bat": "./bat-cli.js"
     }
 }
