@@ -3,61 +3,73 @@ let tap = require('tap').test;
 let swarm = require('swarm-protocol');
 let Op = swarm.Op;
 let LWWObject = require('../src/LWWObject');
+let Clock = swarm.Clock; //require('../src/Clock');
+
+
+tap ('syncable.03.A LWW object API', function (t) {
+
+    let clock = new Clock('test', {ClockMode: 'Logical'});
+
+    let lww = new LWWObject();
+    lww._clock = clock;
+
+    // get-set field access
+    t.equal( lww.get('field'), undefined );
+    t.equal( lww.set('field', 'string'), undefined );
+    t.equal( lww.get('field'), 'string' );
+    t.ok( lww.field===undefined ); // no direct field access
+
+    let ops = lww.spill();
+    t.equals(ops.length, 1);
+    t.equals(ops[0].value, '"string"');
+    t.equals(ops[0].spec.name, 'field');
+
+    t.end();
+
+});
 
 let simple_state_op_str =
-    '/LWWObject#createdBy+author!longago+changed.~' + '\t' +
-    '{"!longago+changed.field": "string",' +
-    '"!createdBy+author.value": {"number":31415}}\n';
+    '/LWWObject#createdBy+author!longago+changed.~=\n' +
+    '\t!longago+changed.field\tstring\n' +
+    '\t!createdBy+author.value\t{"number":31415}\n\n';
 let simple_state_op = Op.parseFrame(simple_state_op_str)[0];
 
-tap ('syncable.03.A LWW object RDT parse/serialize', function (t) {
+tap ('syncable.03.B LWW object RDT parse/serialize', function (t) {
 
-    let rdt = new LWWObject._rdt(simple_state_op);
+    let rdt = new LWWObject.RDT(simple_state_op.value);
 
     t.equals(rdt.get("field"), "string");
-    t.deepEqual(rdt.get("value"), {number:31415});
+    t.deepEqual(rdt.get("value"), '{"number":31415}');
 
-    let json = rdt.toString();
-    t.deepEqual(JSON.parse(ops[0].value), JSON.parse(json));
-
-    t.end();
-
-});
-
-
-tap ('syncable.03.B LWW object API', function (t) {
-
-    let lww = new LWWObject(simple_state_op);
-
-    t.ok( lww.get('field'), 'string' );
-    // Object.defineProperty
-    t.ok( lww.field, 'string' );
-
-    let state = lww.toOp();
-
-    t.ok(state.spec.eq(simple_state_op.spec));
-    t.deepEqual(JSON.parse(state.value), JSON.parse(simple_state_op.value));
-
-    // array indices   2 syncable
-    let nothing = lww.at(4);
-    t.equals(nothing, undefined);
-    lww.setAt(4, 'value');
-    t.equals(lww.at(4), 'value');
-    lww.setAt(4, 0, '[4,0]');
-    t.equals(lww.at(4,0), '[4,0]');
-    t.equals(lww.at(4), 'value');
-
-    concurrent;
+    let state = rdt.toString();
+    t.deepEqual(state, simple_state_op.value);
 
     t.end();
 
 });
+
 
 tap ('syncable.03.C LWW object concurrent modification', function (t) {
 
-    let ops = Op.parseFrame(
+    let rdt = new LWWObject.RDT(simple_state_op.value);
 
-    );
+    const concurrent_op = Op.parseFrame(
+        '/LWWObject#createdBy+author!longago+c0ncurrent.field\twrong\n\n'
+    )[0];
+
+    rdt.apply(concurrent_op);
+
+    t.equals(rdt.get('field'), 'string');
+
+    const non_concurrent_op = Op.parseFrame(
+        '/LWWObject#createdBy+author!longago+concurrent.field\tright\n\n'
+    )[0];
+
+    rdt.apply(non_concurrent_op);
+
+    t.equals(rdt.get('field'), 'right');
+
+    t.end();
 
 });
 

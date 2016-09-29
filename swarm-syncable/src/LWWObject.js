@@ -42,82 +42,74 @@ class LWWObject extends Syncable {
         return this._values.hasOwnProperty(name);
     }
 
-    StampOf (key) {
-        let vals = this._state.entries.filter(e => e.name===key).sort();
-        if (!vals.length)
-            return Stamp.ZERO;
-        return new Stamp(vals.pop().stamp);
+    StampOf (name) {
+        const at = this._state.at(name);
+        return at===-1 ? Stamp.ZERO : this._state.ops[at].spec.Stamp;
     }
 
     stampOf (key) {
         return this.StampOf(key).toString();
     }
 
+    get pojo () {
+        return this._values;
+    }
+
     _rebuild (op) {
-        if (op.spec.method===Op.METHOD_STATE || this._version>op.spec.stamp) { // rebuild
+        const name = op.spec.method;
+        if (name===Op.METHOD_STATE) { // rebuild
             this._values = Object.create(null);
-            this._state.entries.forEach(e=>{
-                this._values[e.name] = JSON.parse(e.value);
+            this._state.ops.forEach(e=>{
+                this._values[e.spec.method] = JSON.parse(e.value);
             });
-        } else {
-            this._values[op.name] = JSON.parse(op.value);
+        } else if (this._version < op.spec.stamp) {
+            this._values[name] = JSON.parse(op.value);
+        } else { // reorder
+            this._values[name] = JSON.parse(this._state.get(name));
         }
     }
 
 }
 module.exports = LWWObject;
+
 LWWObject.reFieldName = /^[a-zA-Z][A-Za-z_0-9]{0,9}$/;
 
 LWWObject.id = 'LWWObject';
 Syncable._classes[LWWObject.id] = LWWObject;
 
 
-class LWWEntry {
-
-    constructor (stamp, name, value) {
-        this.stamp = stamp;
-        this.name = name;
-        this.value = value;
-    }
-
-    static fromString (line) {
-        let m = /^\s*(\S+)\s*(.*)$/.exec(line);
-        let spec = new Spec(m[1]);
-        return new LWWEntry(spec.stamp, spec.name, m[2]);
-    }
-
-    toString() {
-        return '!' + this.stamp + '.' + this.name +
-            (this.value ? '\t' + this.value : '');
-    }
-
-}
-
-
-/**  !stamp.field  JSON|/Type#ref|''  */
+/**  reducer:  (string, op) -> new_string  */
 class LWWObjectRDT extends Syncable.RDT {
 
     constructor (state) {
         super();
-        this.entries = !state ? [] : state.split('\n').map(
-            str => LWWEntry.fromString(str)
-        );
+        this.ops = Op.parseFrame(state+'\n\n') || [];
+    }
+
+    at (name) {
+        for(let i=0; i<this.ops.length; i++)
+            if (this.ops[i].spec.method===name)
+                return i;
+        return -1;
     }
 
     apply (op) {
-        let entries = this.entries;
-        let name = op.spec.name;
-        let stamp = op.spec.stamp;
-        let competes = entries.filter( e=> e.name===name );
-        if (competes.every( e => e.stamp < stamp )) {
-            entries = entries.filter( e=> e.name!==name );
-            entries.push(new LWWEntry(stamp, name, op.value));
-            this.entries = entries;
-        }
+        const at = this.at(op.spec.method);
+        if (at===-1)
+            this.ops.push(op);
+        else if (op.spec.Stamp.gt(this.ops[at].spec.Stamp))
+            this.ops[at] = op;
+    }
+
+    get (name) {
+        const at = this.at(name);
+        return at===-1 ? undefined : this.ops[at].value;
     }
 
     toString () {
-        return this.entries.join('\n');
+        if (this.ops.length===0) return '';
+        const frame = Op.serializeFrame(this.ops, Spec.ZERO);
+        return frame.substring(0, frame.length-2);
     }
 
 

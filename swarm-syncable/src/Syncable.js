@@ -194,7 +194,7 @@ class Syncable extends OpStream {
 
     /** fires once the object gets some state */
     onceReady (callback) {
-        if (!this._version==='0')
+        if (this._version!=='0')
             callback();
         else
             super.once(callback);
@@ -231,7 +231,9 @@ Syncable.defaultHost = null;
 
 module.exports = Syncable;
 
-/** Abstract base class for all replicated data types; not an OpStream */
+/** Abstract base class for all replicated data types; not an OpStream
+ *  RDT is a reducer:  (state_string, op) -> new_state_string
+ */
 class RDT {
 
     /**

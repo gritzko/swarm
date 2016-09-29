@@ -101,7 +101,7 @@ class Spec {
         return this._toks[2];
     }
 
-    get Name () {
+    get Name () { // FIXME sync with the spec
         return this._toks[3];
     }
 
@@ -110,8 +110,7 @@ class Spec {
     }
 
     get typeid () {
-        let tispec = this.blank('/#');
-        return tispec.toString(Spec.ZERO);
+        return this.object;
     }
 
     get class () {
@@ -150,12 +149,20 @@ class Spec {
         return this.scope !== Base64x64.ZERO;
     }
 
-    static stampop (stamp, name) {
-        return Spec.quants[2] + stamp + Spec.quants[3] + name;
+    get Object () {
+        return new Spec([this.Type, this.Id, Stamp.ZERO, Stamp.ZERO]);
     }
 
-    get stampop () {
-        return Spec.stampop(this._toks[2], this._toks[3]);
+    get object () {
+        return this.Object.toString(Spec.ZERO);
+    }
+
+    get Event () {
+        return new Spec([Stamp.ZERO, Stamp.ZERO, this.Stamp, this.Name]);
+    }
+
+    get event () {
+        return this.Event.toString(Spec.ZERO);
     }
 
     toString (defaults) {

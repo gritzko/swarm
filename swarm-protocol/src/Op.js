@@ -114,6 +114,16 @@ class Op {
         }
         return ret;
     }
+    
+    static serializeFrame (ops, prev_spec) {
+        let frame = '';
+        ops.forEach( op => {
+            frame += op.toString(prev_spec) + '\n';
+            prev_spec = op.spec;
+        });
+        frame += '\n'; // frame terminator
+        return frame;
+    }
 
     get type () { return this._spec.type; }
     get id () { return this._spec.id; }
@@ -209,7 +219,7 @@ Op.SERIALIZATION_MODES = {
     EXPLICIT: 2,
     EXPLICIT_ONLY: 3
 };
-Op.rsOp = '\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/g, '(?:') + ')' +
+Op.rsOp = '^\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/mg, '(?:') + ')' +
     '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+Base64x64.rs64x64+')\\n)';
 Op.reOp = new RegExp(Op.rsOp, "mg");
 Op.METHOD_ON = "on";
