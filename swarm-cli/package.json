@@ -1,6 +1,6 @@
 {
   "name": "swarm-cli",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -17,11 +17,12 @@
     "test/*.js",
     "Makefile",
     "LICENSE",
+    "cli.js",
     "README.md"
   ],
   "main": "index.js",
   "bin": {
-      "swarm-cli" : "cli.js"
+      "swarm-cli" : "./cli.js"
   },
   "dependencies": {
       "swarm-syncable":   "^1.2.0",
