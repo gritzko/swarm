@@ -19,9 +19,10 @@ cli
     .option("-W --whitespace <policy>", "whitespace policy (count|ignore|collapse|exact)",
         /^(count|ignore|collapse|exact)$/)
     .option("-O --any-order", "lines may go in any order")
-    .option("-d --max-delay", "max response delay time")
+    .option("-d --max-delay", "max response delay time (ms, default 500)", parseInt)
     .option("-j --json", "JSON output")
     .option("-r --record <script>", "record mode (create a new BAT script")
+    .option("-v --verbose", "verbose mode")
     .parse(process.argv);
 
 const scripts = cli.args;
@@ -88,6 +89,10 @@ function connect (next) {
 } 
 
 function run (next) {
+    if (cli.verbose)
+        api.StreamTest.debug = true;
+    if (cli.maxDelay)
+        api.StreamTest.LONG_DELAY = cli.maxDelay;
     var stream_test = new api.StreamTest(script, run_options);
     stream_test.run(next);
 }

@@ -31,6 +31,6 @@
         "test": "make test"
     },
     "bin": {
-        "bat": "./bat-cli.js"
+        "bat": "tap test/00*js && ./test/bat-cli.js"
     }
 }

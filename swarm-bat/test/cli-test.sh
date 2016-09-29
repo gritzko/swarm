@@ -1,4 +1,5 @@
 #!/bin/bash
+cd "$( dirname "${BASH_SOURCE[0]}" )"
 BAT=../bat-cli.js
 
 echo == simply run bash, execute commands, test the output ==

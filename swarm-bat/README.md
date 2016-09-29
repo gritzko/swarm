@@ -36,7 +36,6 @@ of several implementations: their APIs differ, but tests are the same.
 - [x]     bat -c host:port multistream_script.batt
 - [x]     bat -l 127.0.0.1:12345 server_script.batt
 - [ ]     bat -e new_version -r new_script.batt old_script.batt
-- [ ]     command | bat expected_output.batt -W
 
 see test/ for examples of [API](test/00_parse_format.js) and
 [CLI](test/cli-test.sh) usage, [.batt](test/bash.batt) scripts.

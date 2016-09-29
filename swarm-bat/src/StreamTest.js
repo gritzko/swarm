@@ -14,6 +14,8 @@ class StreamTest {
         if (!options)
             options = Object.create(null);
         else if (options.constructor===String)
+            options = {url: options};
+        else if (typeof options.write === 'function')
             options = {connect: options};
         this.options = options;
         this.script = script;

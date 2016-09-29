@@ -52,7 +52,7 @@ tap ('1.B typical use cases', function (t) {
         );
     });
 
-    new bat.StreamTest(echo, '0://1B').run( result => {
+    new bat.StreamTest(echo, '0://1B').run( (err, result) => {
 
         t.notOk(result.every(r=>r.ok));
         t.equal(result.length, 3);
@@ -96,11 +96,11 @@ tap ('1.C options', function (t) {
         );
     });
 
-    new bat.StreamTest(echo, '0://1C').run( r => {
+    new bat.StreamTest(echo, '0://1C').run( (err, res) => {
 
-        t.equals(r.length, 3);
-        t.equals(r[2].comment, "reordering");
-        t.ok(r.every(res=>res.ok));
+        t.equals(res.length, 3);
+        t.equals(res[2].comment, "reordering");
+        t.ok(res.every(r=>r.ok));
         t.end();
 
     });
