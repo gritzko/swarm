@@ -1,6 +1,8 @@
 #!/bin/bash
 cd "$( dirname "${BASH_SOURCE[0]}" )"
-BAT=../bat-cli.js
+NODE=`which node`
+echo $NODE && $NODE -v
+BAT="$NODE ../bat-cli.js"
 
 echo == simply run bash, execute commands, test the output ==
 $BAT -i -e bash bash.batt
