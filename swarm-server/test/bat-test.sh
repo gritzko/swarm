@@ -1,10 +1,11 @@
 #!/bin/bash
-
+NODE=`which node`
+echo $NODE && $NODE -v
 cd "$( dirname "${BASH_SOURCE[0]}" )"
 TEST_DIR=../../protocol-docs/test
-SWARM=../cli.js
+SWARM="$NODE ../cli.js"
 #BAT=bat
-BAT=../../swarm-bat/bat-cli.js
+BAT="$NODE ../../swarm-bat/bat-cli.js"
 #if ! which bat; then
 #    BAT=../../swarm-bat/bat-cli.js
 #fi
