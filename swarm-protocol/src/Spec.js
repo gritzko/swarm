@@ -42,11 +42,13 @@ class Spec {
      * * new Spec("/Object#1CQKn+0r1g1n!0.on")
      * * new Spec(["Object", "1CQKn+0r1g1n", "0", "on"])
      * */
-    constructor (spec, s2, s3, s4) {
+    constructor (spec, defaults) {
         let t = this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
         if (!spec) {
             'nothing';
         } else if (spec.constructor===String) {
+            if (defaults && !defaults._toks)
+                throw new Error('defaults must be a Spec');
             Spec.reSpec.lastIndex = 0;
             let m = Spec.reSpec.exec(spec);
             if (m===null) {
@@ -55,6 +57,8 @@ class Spec {
             for(let i=1; i<=4; i++) {
                 if (m[i]!==null) {
                     t[i-1] = new Stamp(m[i]);
+                } else if (defaults) {
+                    t[i-1] = defaults._toks[i-1];
                 }
             }
         } else if (spec.constructor===Spec) {
@@ -64,11 +68,6 @@ class Spec {
                 var s = spec[i] || Stamp.ZERO;
                 t[i] = s.constructor === Stamp ? s : new Stamp(s);
             }
-        } else if (spec.constructor===Stamp) {
-            t[0] = spec.constructor === Stamp ? spec : new Stamp(spec);
-            t[1] = s2.constructor === Stamp ? s2 : new Stamp(s2);
-            t[2] = s3.constructor === Stamp ? s3 : new Stamp(s3);
-            t[3] = s4.constructor === Stamp ? s4 : new Stamp(s4);
         } else {
             throw new Error("unrecognized parameter");
         }

@@ -105,9 +105,7 @@ class Op {
                     throw new Error('unterminated op body');
                 }                Op.reOp.lastIndex = start+char_length;
             }
-            let spec = new Spec(spec_str);
-            if (prev)
-                spec = spec.fill(prev);
+            let spec = new Spec(spec_str, prev);
             prev = spec;
             ret.push(new Op(spec, value));
         }
