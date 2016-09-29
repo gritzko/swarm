@@ -47,7 +47,8 @@ tape ('protocol.03.A basic specifier syntax', function (tap) {
     tap.equal(fieldSet.name,'set');
 
     tap.equal(fieldSet.typeid, '/TodoItem+~x#7AM0f+gritzko');
-    tap.equal(fieldSet.stampop, '!7AMTc+gritzko.set');
+    tap.equal(fieldSet.object, '/TodoItem+~x#7AM0f+gritzko');
+    tap.equal(fieldSet.event, '!7AMTc+gritzko.set');
 
     tap.end();
 
