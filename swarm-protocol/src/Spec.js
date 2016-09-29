@@ -55,7 +55,7 @@ class Spec {
                 throw new Error("not a specifier");
             }
             for(let i=1; i<=4; i++) {
-                if (m[i]!==null) {
+                if (m[i]) {
                     t[i-1] = new Stamp(m[i]);
                 } else if (defaults) {
                     t[i-1] = defaults._toks[i-1];
