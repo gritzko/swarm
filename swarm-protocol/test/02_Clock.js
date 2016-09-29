@@ -28,7 +28,7 @@ tap ('protocol.02.A Logical clocks API', function(tap) {
         ClockLen: 5
     });
     var st5 = len5.issueTimestamp();
-    tap.equal(st5.value.length, 5, 'length5');
+    tap.ok (st5.value.length<=5, 'length5');
 
     var fullLength = new Clock('long', {ClockLen: 8});
     var stamp = fullLength.issueTimestamp();

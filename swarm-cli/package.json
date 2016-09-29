@@ -24,10 +24,11 @@
       "swarm-cli" : "cli.js"
   },
   "dependencies": {
-      "swarm-client":   "^1.2.0",
-      "commander": "^2.9.0",
-      "duplexer":       "0.1.1",
-      "cpr":            "^1.0.0"
+      "swarm-syncable":   "^1.2.0",
+      "commander": "^2.9.0"
+  },
+  "devDependencies": {
+      "swarm-bat": "^1.2.0"
   },
   "scripts": {
     "test": "true"
