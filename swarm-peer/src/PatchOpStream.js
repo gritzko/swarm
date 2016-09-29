@@ -67,7 +67,7 @@ class PatchOpStream extends BatchedOpStream {
         const spec = on.spec;
 
         this.db.scan(
-            new Spec(spec.Type, spec.Id, Stamp.ZERO, Stamp.ZERO),
+            new Spec([spec.Type, spec.Id, Stamp.ZERO, Stamp.ZERO]),
             null,
             op => {
                 if (op.isState()) {

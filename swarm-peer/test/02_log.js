@@ -3,6 +3,7 @@ const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 const tap = require('tap').test;
 const LevelOp = require('../src/LevelOp');
+const SwarmDB = require('../src/SwarmDB');
 const LevelDOWN = require('leveldown');
 const LogOpStream = require('../src/LogOpStream');
 const rimraf = require('rimraf');
@@ -38,7 +39,7 @@ tap ('peer.02.A op log append basics', function(t) {
     let list = [];
 
     rimraf.sync('.peer.02.A');
-    let db = new LevelOp(new LevelDOWN('.peer.02.A'), () => {
+    let db = new SwarmDB("test", new LevelDOWN('.peer.02.A'), {}, () => {
 
         let log = new LogOpStream(db, (err) => {
             if (err) { return t.fail() && t.end(); }

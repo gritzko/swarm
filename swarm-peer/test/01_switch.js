@@ -24,10 +24,10 @@ class StashOpStream extends sync.OpStream {
 tap ('peer.01.A switch basic test', function(t) {
 
     let ops = swarm.Op.parseFrame([
-        '/Type#id!0.on+client',
-        '/Type#id!now00+client.op',
-        '/Type#id!now00+client.off+client',
-        '/Type#id!now01+client.op',
+        '/LWWObject#id!0.on+client',
+        '/LWWObject#id!now00+client.op',
+        '/LWWObject#id!now00+client.off+client',
+        '/LWWObject#id!now01+client.op',
         ''
     ].join('\n'));
 
@@ -53,7 +53,7 @@ tap ('peer.01.A switch basic test', function(t) {
 
         t.equals(re.length, 3);
 
-        re.forEach(op => console.log(op+''));
+        //re.forEach(op => console.log(op+''));
 
         t.end();
 
