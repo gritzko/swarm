@@ -1,16 +1,12 @@
 BIN = ./node_modules/.bin
-PACKAGES = \
-	swarm-bat \
-	swarm-stamp \
-	swarm-syncable \
-	swarm-replica \
-	swarm-server \
-	swarm-client \
-	swarm-cli \
-	swarm-gw \
-	swarm-tests \
-	doc
-
+PACKAGES = swarm-bat \
+		   swarm-protocol \
+		   swarm-syncable \
+		   swarm-cli \
+		   swarm-peer \
+		   swarm-server \
+#		   swarm-browser \
+#		   swarm-gw
 
 foreach_package = $(foreach pkg,$(PACKAGES),(cd $(pkg) && $(1)) || exit 1;)
 
@@ -24,7 +20,7 @@ bootstrap: install
 	@node ./scripts/bootstrap.js
 
 test:
-	@$(call foreach_package, make test)
+	@$(call foreach_package, npm test)
 
 clean:
 	@rm -rf node_modules
