@@ -5,7 +5,7 @@ const args = require('minimist')(process.argv.slice(2));
 
 var help = [
     '',
-    'Command-line Swarm client. Usage: ',
+    'Basic Swarm server. Usage: ',
     '    swarm [-C|-F|-A|-R] path/to/database-id [options]',
     '',
     '-C --create            create a database (dir name == db name)',

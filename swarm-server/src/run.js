@@ -6,7 +6,7 @@ const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 const peer = require('swarm-peer');
 const async = require('async');
-const NodeOpStream = require('./NodeOpStream');
+const NodeOpStream = require('swarm-cli').NodeOpStream;
 const AuthOpStream = require('./AuthOpStream');
 
 module.exports = function open (home, args, done) {

@@ -4,7 +4,7 @@ A simple LevelDB-backed WebSocket and TCP-listening Swarm server (peer).
 
 ## Usage
 
-    swarm [-C|-F|-A|-R] [options] path/database-id
+    swarmd [-C|-F|-A|-R] [options] path/database-id
 
 C, F, A, R are run modes (create, fork, access, run).
 The database directory name consists of the database id and peer id.
@@ -14,10 +14,10 @@ The database directory name consists of the database id and peer id.
 npm install -g swarm-server
     
 # creates an empty "test" database replica (peer id 1) at ./test-1
-swarm -C --oClock=Logical ./test-1
+swarmd -C --oClock=Logical ./test-1
 
 # WebSocket-only Swarm server, runs REPL, which is good for debugging
-swarm -R ./test-1 --listen ws://localhost:8080
+swarmd -R ./test-1 --listen ws://localhost:8080
 ```
 
 ## Options
@@ -57,8 +57,9 @@ swarm -R ./test-1 --listen ws://localhost:8080
 ## Database options
 
 1. Globals (relayed to every replica)
-    - [ ] `IdScheme` replica id scheme (e.g. `--oIdScheme=0280`)
-    - [ ] `Clock` clock mode (`5`-`8`, `Logical`)
+    - [x] `DBIdScheme` replica id scheme (e.g. `--oIdScheme=0280`)
+    - [x] `Clock` clock mode (`Logical`, `Hybrid`)
+    - [x] `ClockLen` minimum time value length (e.g. 6 for `1GDBdW`)
 2. Scopeds (relayed to clients, but not peers)
 3. Locals (not relayed)
     - [ ] `Listen` listen url (e.g. `-0Listen=wss://swarmdb.net:1234`)
