@@ -21,12 +21,9 @@ class Op {
             this._spec = spec;
             this._value = value.toString();
             //this._source = source || Stamp.ZERO;
-        } else if (spec.constructor===String) {
+        } else {
             this._spec = new Spec(spec);
             this._value = value.toString();
-            //this._source = source || Stamp.ZERO;
-        } else {
-            throw new Error("unrecognized parameter type: "+spec.constructor.name);
         }
     }
 

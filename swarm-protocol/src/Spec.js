@@ -46,11 +46,18 @@ class Spec {
         let t = this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
         if (!spec) {
             'nothing';
-        } else if (spec.constructor===String) {
+        } else if (spec.constructor===Spec) {
+            this._toks = spec._toks;
+        } else if (spec.constructor===Array && spec.length===4) {
+            for (let i = 0; i < 4; i++) {
+                var s = spec[i] || Stamp.ZERO;
+                t[i] = s.constructor === Stamp ? s : new Stamp(s);
+            }
+        } else {
             if (defaults && !defaults._toks)
                 throw new Error('defaults must be a Spec');
             Spec.reSpec.lastIndex = 0;
-            let m = Spec.reSpec.exec(spec);
+            let m = Spec.reSpec.exec(spec.toString());
             if (m===null) {
                 throw new Error("not a specifier");
             }
@@ -61,15 +68,6 @@ class Spec {
                     t[i-1] = defaults._toks[i-1];
                 }
             }
-        } else if (spec.constructor===Spec) {
-            this._toks = spec._toks;
-        } else if (spec.constructor===Array && spec.length===4) {
-            for (let i = 0; i < 4; i++) {
-                var s = spec[i] || Stamp.ZERO;
-                t[i] = s.constructor === Stamp ? s : new Stamp(s);
-            }
-        } else {
-            throw new Error("unrecognized parameter");
         }
     }
 
