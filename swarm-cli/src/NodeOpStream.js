@@ -1,7 +1,8 @@
 "use strict";
-let swarm = require('swarm-protocol');
-let sync = require('swarm-syncable');
-let OpStream = sync.OpStream;
+const swarm = require('swarm-protocol');
+const sync = require('swarm-syncable');
+const OpStream = sync.OpStream;
+const Op = swarm.Op;
 
 /** An OpStream on top of a Node.js stream.
  *  Maintains batching guarantees: sends data asynchronously, terminates
@@ -75,12 +76,8 @@ class NodeOpStream extends OpStream {
             return;
         if (this._debug)
             console.warn('['+this._debug+'\t['+ops.length+']');
-        let chunk = ops[0].toString()+'\n';
-        for(let i=1; i<ops.length; i++) {
-            chunk += ops[i].toString(ops[i-1]._spec) + '\n';
-        }
-        chunk += '\n'; // batch terminator
-        this._stream.write(chunk);
+        let frame = Op.serializeFrame(ops);
+        this._stream.write(frame);
         this._ops.length = 0;
     }
 
