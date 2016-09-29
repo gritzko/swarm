@@ -102,10 +102,10 @@ function report (results, stream_test, next) {
         console.log(JSON.stringify(results, null, 4));
     } else {
         results.forEach(result =>
-            process.stdout.write(result.toColorString())
+            process.stderr.write(result.toColorString())
         );
     }
-    next();
+    next(null, results);
 }
 
 const actions = [
@@ -118,11 +118,15 @@ const actions = [
 
 async.waterfall(actions, end);
 
-function end (err) {
-    if (err)
+function end (err, results) {
+    if (err) {
         console.warn(err);
-    if (run_options.server)
-        run_options.server.close();
+        process.exitCode = -1;
+    } else if (!results.every(r=>r.ok)) {
+        process.exitCode = 1;
+    }
     if (run_options.stream)
         run_options.stream.end();
+    if (run_options.server)
+        run_options.server.close();
 }
