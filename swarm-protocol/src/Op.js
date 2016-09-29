@@ -26,7 +26,7 @@ class Op {
             this._value = value.toString();
             //this._source = source || Stamp.ZERO;
         } else {
-            throw new Error("unrecognized parameter");
+            throw new Error("unrecognized parameter type: "+spec.constructor.name);
         }
     }
 
