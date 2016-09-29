@@ -94,6 +94,7 @@ class LWWObjectRDT extends Syncable.RDT {
     }
 
     apply (op) {
+        op = new Op(op.spec.Event, op.value);
         const at = this.at(op.spec.method);
         if (at===-1)
             this.ops.push(op);

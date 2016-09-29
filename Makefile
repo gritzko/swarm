@@ -20,7 +20,7 @@ bootstrap: install
 	@node ./scripts/bootstrap.js
 
 test:
-	@$(call foreach_package, npm test)
+	@$(call foreach_package, make test)
 
 clean:
 	@rm -rf node_modules
