@@ -5,11 +5,12 @@
 class URL {
 
     constructor (url) {
+        URL.RE_URI.lastIndex = 0;
         const m = URL.RE_URI.exec(url);
         if (!m)
             throw new Error('invalid URL syntax');
         this.url = m[0];
-        this.scheme = m[1];
+        this.scheme = m[1].split('+');
         this.creds = m[2];
         this.replica = undefined;
         this.password = undefined;
@@ -22,25 +23,45 @@ class URL {
         this.search = m[6];
         this.query;
         this.hash = m[7];
-        this.scheme_stack;
     }
 
-    popScheme () {
+    get protocol () {
+        return this.scheme.join('+');
+    }
 
+    clone () {
+        return new URL(this.toString());
+    }
+
+    eq (url) {
+        return this.toString() === url.toString();
+    }
+
+    toString () {
+        let ret = this.protocol+':';
+        if (this.host)
+            ret += '//' + (this.creds?this.creds+'@':'') + this.host;
+        if (this.path)
+            ret += this.path;
+        if (this.search)
+            ret += '?' + this.search;
+        if (this.hash)
+            ret += '#' + this.hash;
+        return ret;
     }
 
 }
-//[\w\-]+(?:\\+[\w\-]+)*
+
 URL.RE_URI = new RegExp(
-    "(?:(\\w+):)" +    // scheme
+    "^(?:([\\w\\-]+(?:\\+[\\w\\-]+)*):)" +    // scheme
     "(?://" +
-    "(?:([^/?#\\s]*)@)?" +                  // credentials
-    "((?:[^/?#:@\\s]+\\.)*[^/?#:@\\s]+)" + // domain
-    "(?::([0-9]+))?" +                    // port
+        "(?:([^/?#\\s]*)@)?" +                  // credentials
+        "((?:[^/?#:@\\s]+\\.)*[^/?#:@\\s]+)" + // domain
+        "(?::([0-9]+))?" +                    // port
     ")" +
     "(/[^?#'\"\\s]*)?" +         // path
     "(?:\\?([^'\"#\\s]*))?" +   // query
-    "(?:#(\\S*))?",            // fragment
+    "(?:#(\\S*))?$",            // fragment
     "gi"
 );
 
