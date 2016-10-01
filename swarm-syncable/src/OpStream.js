@@ -1,7 +1,10 @@
 "use strict";
-let swarm = require('swarm-protocol');
-let Spec = swarm.Spec;
-let Op = swarm.Op;
+const swarm = require('swarm-protocol');
+const Spec = swarm.Spec;
+const Op = swarm.Op;
+const URL = require('./URL');
+
+const MUTE=0, ONE_LSTN=1, MANY_LSTN=2, PENDING=3;
 
 /**
  *
@@ -14,72 +17,92 @@ class OpStream {
         this._debug = null;
     }
 
+    _lstn_state () {
+        if (this._lstn===null)
+            return MUTE;
+        else if (this._lstn._apply)
+            return ONE_LSTN;
+        else if (this._lstn.length===0 || this._lstn[0].constructor===Op)
+            return PENDING;
+        else if (this._lstn[0]._apply)
+            return MANY_LSTN;
+        else
+            throw new Error('invalid _lstn');
+    }
 
     /** add a new listener
-     *  @param {String} event - a specifier filter, e.g. ".on.off"
-     *  @param {Function} callback - a callback function
-     *  @param {Boolean} once */
-    on (event, callback, once) {
-        if (event && event.constructor===Function) { // normalize
-            callback = event;
-            event = '';
-        }
-        let filter = new Filter(event, callback, once);
-        if (this._lstn===null) {
-            this._lstn = filter;
-            this._start();
-        } else if (this._lstn.constructor===Op) {
-            let op = this._lstn;
-            this._lstn = filter;
-            this._emit(op);
-        } else if (this._lstn.constructor===Filter) {
-            this._lstn = [this._lstn, filter];
-        } else if (this._lstn.constructor===Array) {
-            if (this._lstn[0].constructor===Op) {
-                let ops = this._lstn;
-                this._lstn = filter;
+     *  @param {OpStream} opstream - the downstream
+     */
+    on (opstream) {
+        if (opstream.constructor===Function)
+            opstream = new CallbackOpStream(opstream);
+        if (!opstream._apply || opstream._apply.constructor!==Function)
+            throw new Error('opstreams only');
+        switch (this._lstn_state()) {
+            case MUTE:
+                this._lstn = opstream;
+                break;
+            case ONE_LSTN:
+                this._lstn = [this._lstn, opstream];
+                break;
+            case MANY_LSTN:
+                this._lstn.push(opstream);
+                break;
+            case PENDING:
+                const ops = this._lstn;
+                this._lstn = opstream;
                 this._emitAll(ops);
-            } else {
-                this._lstn.push(filter);
-            }
-        } else {
-            throw new Error('invalid listeners list');
+                break;
         }
+        return opstream;
+    }
+
+    onMatch (filter, opstream) {
+        if (opstream.constructor===Function)
+            opstream = new CallbackOpStream(opstream);
+        const fs = new FilterOpStream(filter);
+        fs.on(opstream);
+        return this.on(fs);
+    }
+
+    onceMatch (filter, callback) {
+        const fs = new FilterOpStream(filter);
+        const opstream = new CallbackOpStream(callback, true);
+        fs.on(opstream);
+        return this.on(fs);
+    }
+
+    once (callback) {
+        const opstream = new CallbackOpStream(callback, true);
+        return this.on(opstream);
     }
 
     /** internal callback; triggered on a first listener added iff nothing
      *  has been emitted yet. */
     _start () {}
 
-    once (event, callback) {
-        if (event.constructor===Function) {
-            callback = event;
-            event = '';
-        }
-        this.on(event, callback, true);
-    }
-
     /** remove listener(s) */
-    off (event, callback) {
-        if (event && event.constructor===Function) {
-            callback = event;
-            event = undefined;
+    off (opstream) {
+        if (!opstream._apply)
+            throw new Error("can only add/remove opstreams");
+        switch (this._lstn_state()) {
+            case MUTE:
+                break;
+            case ONE_LSTN:
+                if (this._lstn === opstream)
+                    this._lstn = null;
+                break;
+            case MANY_LSTN:
+                const i = this._lstn.indexOf(opstream);
+                if (i!==-1)
+                    this._lstn.splice(i, 1);
+                if (this._lstn.length===0)
+                    this._lstn = null;
+                break;
+            case PENDING:
+                break;
         }
-
-        if (this._lstn===null) {
-            return;
-        } else if (this._lstn.constructor===Filter) {
-            if (this._lstn.callback===callback)
-                this._lstn = null;
-        } else if (this._lstn.constructor===Array) {
-            this._lstn = this._lstn.filter( f =>
-                f.constructor!==Filter ||
-                (callback && f.callback !== callback) ||
-                (event!==undefined && f.toString()!==event)
-            );
-            if (this._lstn.length===0)
-                this._lstn = null;
-        }
+        return opstream;
     }
 
     /** Emit a new op to all the interested listeners.
@@ -89,62 +112,51 @@ class OpStream {
     _emit (op) {
         if (this._debug)
             console.warn('{'+this._debug+'\t'+(op?op.toString():'[EOF]'));
-        if (this._lstn===null) {
-            this._lstn = op;
-        } else if (this._lstn.constructor===Filter) {
-            if (this._lstn.offer(op, this)===OpStream.ENOUGH)
-                this._lstn = null;
-        } else if (this._lstn.constructor===Array) {
-            if (this._lstn[0].constructor===Op) {
-                this._lstn.push(op);
-            } else {
-                let ejects = [];
-                this._lstn.forEach( f =>
-                    f.offer(op, this)===OpStream.ENOUGH && ejects.push(f)
-                );
-                if (ejects.length) {
-                    this._lstn = this._lstn.filter(f=>ejects.indexOf(f)===-1);
-                    if (this._lstn.length===0)
-                        this._lstn = null;
+        switch (this._lstn_state()) {
+            case MUTE:
+                break;
+            case ONE_LSTN:
+                if (this._lstn._apply(op)===OpStream.ENOUGH)
+                    this._lstn = null;
+                break;
+            case MANY_LSTN:
+                let ejects = 0, l = this._lstn;
+                for(let i=0; i<l.length; i++)
+                    if ( l[i] && l[i]._apply(op)===OpStream.ENOUGH ) {
+                        l[i] = null;
+                        ejects++;
+                    }
+                if (ejects>0) {
+                    l = l.filter( x => x!==null );
+                    this._lstn = l.length ? l : null;
                 }
-            }
-        } else if (this._lstn.constructor===Op) {
-            this._lstn = [this._lstn, op];
+                break;
+            case PENDING:
+                this._lstn.push(op);
+                break;
         }
-        // FIXME null is delivered to all listeners, _lstn:=null
-        // test: emit op, end(), then on()
+        if (op===null)
+            this._lstn = null;
     }
 
     _emitAll (ops) {
         ops.forEach(op => this._emit(op));
     }
 
-    spill () {
-        let ret = [];
-        if (!this._lstn) {
-        } else if (this._lstn.constructor===Array &&
-            this._lstn[0].constructor===Op) {
-            ret = this._lstn;
-        } else if (this._lstn.constructor===Op) {
-            ret = [this._lstn];
-        }
-        this._lstn = null;
-        return ret;
-    }
-
-    poll () {
-        let ret;
-        if (!this._lstn) {
-        } else if (this._lstn.constructor===Array &&
-            this._lstn[0].constructor===Op) {
-            ret = this._lstn.shift();
-            if (!this._lstn.length)
-                this._lstn = null;
-        } else if (this._lstn.constructor===Op) {
+    pollAll () {
+        let ret = null;
+        if (this._lstn_state()===PENDING) {
             ret = this._lstn;
             this._lstn = null;
         }
         return ret;
+    }
+
+    poll () {
+        if (this._lstn_state()===PENDING)
+            return this._lstn.shift();
+        else
+            return null;
     }
 
     /** by default, an echo stream */
@@ -162,37 +174,23 @@ class OpStream {
         this.offer(null);
     }
 
-    /** @param {OpStream} sink */
-    pipe (sink) {
-        this.on('', sink.offer.bind(sink));
-        // TODO test
-    }
-
-    connect (opstream) {
-        this.pipe(opstream);
-        opstream.pipe(this);
-    }
-
-    _end () {
-        this._emit(null);
-    }
-
-    onEnd (callback) {
-        this.on(null, callback);
+    onceEnd (callback) {
+        this.onceMatch(null, callback);
     }
 
     onHandshake (callback) {
-        this.on(OpStream.HANDSHAKES, callback);
+        this.onMatch(OpStream.HANDSHAKES, callback);
     }
 
     onMutation (callback) {
-        this.on(OpStream.MUTATIONS, callback);
+        this.onMatch(OpStream.MUTATIONS, callback);
     }
 
     onState (callback) {
-        this.on(OpStream.STATES, callback);
+        this.onMatch(OpStream.STATES, callback);
     }
 
+    /*
     _listFilters () {
         if (!this._filters) return '';
         let list = this._up ? '*\t' + this._up.toString() : '';
@@ -201,17 +199,11 @@ class OpStream {
         ).join('\n');
         return list;
     }
-
-    /** Try creating a replacement for a closed OpStream. (Optional.)
-     *  @param {Function} callback - invoked with 2 arguments, error message and
-     *      a successor opstream (one must be null) */
-    retry (callback) {
-        callback("not implemented", null);
-    }
+    */
 
     static connect (url, options) {
         const m = /^([\w\-]+)(\+[\w\-]+)*:/.exec(url);
-        if (!m) throw new Error("invalid url")
+        if (!m) throw new Error("invalid url");
         const top_proto = m[1];
         const fn = OpStream._URL_HANDLERS[top_proto];
         if (!fn) throw new Error('unknown protocol: '+top_proto);
@@ -234,9 +226,9 @@ class ZeroOpStream extends OpStream {
     constructor (url, options) {
         super();
         this.ops = [];
-        const m = /([\w\-\+]+):(\/\/)?(\w+)/.exec(url);
-        if (m)
-            OpStream.QUEUES[m[3]] = this;
+        this.url = new URL(url);
+        if (this.url.host)
+            OpStream.QUEUES[this.url.host] = this;
     }
 
     offer (op) {
@@ -248,20 +240,38 @@ OpStream.QUEUES = Object.create(null);
 OpStream._URL_HANDLERS['0'] = ZeroOpStream;
 
 
-class Filter {
+class CallbackOpStream extends OpStream {
+    
+    constructor (callback, once) {
+        super();
+        if (!callback || callback.constructor!==Function)
+            throw new Error('callback is not a function');
+        this._callback = callback;
+        this._once = !!once;
+    }
+    
+    _apply (op) {
+        return this._callback(op)===OpStream.ENOUGH || this._once ?
+            OpStream.ENOUGH : OpStream.OK;
+    }
+    
+}
 
-    constructor (string, callback, once) {
-        this.callback = callback;
-        this.negative = string && string.charAt(0)==='^';
+
+class FilterOpStream extends OpStream {
+
+    constructor (string, once) {
+        super();
+        this._negative = string && string.charAt(0)==='^';
         this._patterns = [null, null, null, null];
-        this.once = once;
+        this._once = once;
         if (string===null) { //eof
             this._patterns = null;
             return;
         }
         let m = null;
-        Filter.reTok.lastIndex = this.negative ? 1 : 0;
-        while (m = Filter.reTok.exec(string)) {
+        FilterOpStream.reTok.lastIndex = this._negative ? 1 : 0;
+        while (m = FilterOpStream.reTok.exec(string)) {
             let quant = m[1], stamp = m[2], t = Spec.quants.indexOf(quant);
             if (this._patterns[t]===null) {
                 this._patterns[t] = [];
@@ -270,7 +280,7 @@ class Filter {
         }
     }
 
-    covers (op) {
+    matches (op) {
         let pns = this._patterns;
         if (op===null || pns===null) {
             return op===null && (pns===null || pns.every(p=>p===null));
@@ -281,26 +291,25 @@ class Filter {
             if (mine===null) continue;
             let its = spec._toks[t];
             let bad = mine.every(stamp => !stamp.eq(its));
-            if (bad) return this.negative;
+            if (bad) return this._negative;
         }
-        return !this.negative;
+        return !this._negative;
+    }
+    
+    _offer () {
+        throw new Error('not implemented');
     }
 
-    offer (op, context) {
-        if (this.callback && this.covers(op)) {
-            let ret = this.callback.call(context, op, context);
-            if (this.once || ret === OpStream.ENOUGH)
-                return OpStream.ENOUGH;
-            if (ret && ret.constructor === Function)
-                this.callback = ret;
-        }
-        return OpStream.OK;
+    _apply (op, opstream) {
+        if (this.matches(op))
+            this._emit(op);
+        return this._once || this._lstn===null ? OpStream.ENOUGH : OpStream.OK;
     }
 
     toString () {
         let p = this._patterns;
         if (p===null) return null; // take that (TODO)
-        let ret = this.negative ? '^' : '';
+        let ret = this._negative ? '^' : '';
         for(let q=0; q<4; q++)
             if (p[q]!==null) {
                 p[q].forEach(stamp => ret+=Spec.quants[q]+stamp);
@@ -310,10 +319,6 @@ class Filter {
 
 }
 
-Filter.rsTok = '([/#!\\.])(' + swarm.Stamp.rsTok + ')';
-Filter.reTok = new RegExp(Filter.rsTok, 'g');
-OpStream.Filter = Filter;
-
-OpStream.TRACE = op => console.log(op.toString());
-
-// TODO ENLIGHT FilterOpStream :)
+FilterOpStream.rsTok = '([/#!\\.])(' + swarm.Stamp.rsTok + ')';
+FilterOpStream.reTok = new RegExp(FilterOpStream.rsTok, 'g');
+OpStream.Filter = FilterOpStream;

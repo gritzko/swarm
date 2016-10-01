@@ -1,5 +1,5 @@
 "use strict";
-let tape = require('tap').test;
+let tape = require('tape').test;
 let swarm = require('swarm-protocol');
 let OpStream = require('../src/OpStream');
 let Op = swarm.Op;
@@ -25,31 +25,31 @@ tape ('syncable.00.A echo op stream - event filtering', function (t) {
     // except each token may have many accepted values (OR)
     // Different tokens are AND'ed.
 
-    stream.on(".on", op => ons++);
+    stream.onMatch(".on", op => ons++);
 
     // may use stream.onHandshake(op => onoffs++)
     // means: ".on OR .off"
-    stream.on(".on.off", op => onoffs++);
+    stream.onMatch(".on.off", op => onoffs++);
 
     // may use stream.on(".~", op => states++)
     stream.onState(op => states++);
 
     // the leading ^ is a negation, i.e "NOT (.on OR .off OR ...)"
-    stream.on("^.on.off.error.~", op=> mutationsA++);
+    stream.onMatch("^.on.off.error.~", op=> mutationsA++);
     // exactly the same result, without the mumbo-jumbo:
     stream.onMutation(op=> mutationsB++);
 
     // filters database close event, ".off AND /Swarm"
-    stream.on("/Swarm.off", op=> unsub=true);
+    stream.onMatch("/Swarm.off", op=> unsub=true);
 
     // this catches a fresh subscription to #7AM0f+gritzko
-    stream.on("/Object#7AM0f+gritzko!0", on => {
+    stream.onMatch("/Object#7AM0f+gritzko!0", on => {
         myobj++;
         t.ok(on.isOn());
     });
 
     // may use stream.on ( null, () => {...} )
-    stream.onEnd(nothing => {
+    stream.onceEnd(nothing => {
         t.equals(nothing, null);
         t.equals(ons, 1);
         t.equals(onoffs, 2);
@@ -63,7 +63,7 @@ tape ('syncable.00.A echo op stream - event filtering', function (t) {
     // feed all the ops into the echo stream to trigger listeners
     stream.offerAll(ops);
     // stream.offer(null) has the same effect as stream.end()
-    stream.end();
+    stream.offer(null);
 
     // in case you'll need to debug that, v8 is awesome:
     // console.log(stream._listFilters());
@@ -98,26 +98,25 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
 
     let stream = new OpStream();
 
-    let once = 0, ons = 0, first_on = false, second_on = false;
+    let once = 0, ons = 0, first_on = false;
     let total = 0, total2 = 0, before_value = 0, three=0;
 
     stream.on(op => total++);
     stream.on(op => total2++);
-    stream.once('.on', op => once++ );
-    stream.on('.on', () => ons++ );
-    stream.on('.on', op => {
+    stream.onceMatch('.on', op => once++ );
+    stream.onMatch('.on', () => ons++ );
+    stream.onMatch('.on', op => {
         first_on = true;
-        return op => second_on=true;
     });
     stream.on( op => {
         if (op && op.value)
             return OpStream.ENOUGH;
         before_value++;
     });
-    stream.on(function removable (op) {
+    const handle = stream.on(function removable (op) {
         three++;
         if (op.type=='Swarm')
-            stream.off(removable);
+            stream.off(handle);
     });
 
     stream.offerAll(ops);
@@ -130,7 +129,6 @@ tape ('syncable.00.A echo op stream - listener mgmt', function (t) {
     t.equals(before_value, 2);
     t.equals(three, 3);
     t.ok(first_on);
-    t.ok(second_on);
 
     t.end();
 
@@ -151,6 +149,7 @@ tape ('syncable.00.B op stream - filter', function (t) {
 
 tape ('syncable.00.C op stream - queue', function (t) {
     let stream = new OpStream();
+    stream._lstn = [];
     let count = 0, tail = 0;
     stream.offer(Op.NOTHING);
     stream.offer(Op.NOTHING);
@@ -159,12 +158,16 @@ tape ('syncable.00.C op stream - queue', function (t) {
     stream.offer(Op.NOTHING);
     t.equals(count, 3);
     t.equals(tail, 1);
+    stream._lstn = null; // only pool ops if lstn is []
+    stream.offer(Op.NOTHING);
+    t.equals(count, 3);
+    t.equals(tail, 1);
     t.end();
 });
 
 tape ('syncable.00.D op stream URL', function (t) {
-    const zero = OpStream.connect('0://name');
-    t.ok(zero===OpStream.QUEUES.name);
+    const zero = OpStream.connect('0://00.D');
+    t.ok(zero===OpStream.QUEUES['00.D']);
     zero.offer(Op.NON_SPECIFIC_NOOP);
     t.equals(zero.ops.length, 1);
     t.ok(zero.ops[0]===Op.NON_SPECIFIC_NOOP);
