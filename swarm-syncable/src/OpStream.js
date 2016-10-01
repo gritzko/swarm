@@ -132,6 +132,21 @@ class OpStream {
         return ret;
     }
 
+    poll () {
+        let ret;
+        if (!this._lstn) {
+        } else if (this._lstn.constructor===Array &&
+            this._lstn[0].constructor===Op) {
+            ret = this._lstn.shift();
+            if (!this._lstn.length)
+                this._lstn = null;
+        } else if (this._lstn.constructor===Op) {
+            ret = this._lstn;
+            this._lstn = null;
+        }
+        return ret;
+    }
+
     /** by default, an echo stream */
     offer (op) {
         if (this._debug)
@@ -194,6 +209,15 @@ class OpStream {
         callback("not implemented", null);
     }
 
+    static connect (url, options) {
+        const m = /^([\w\-]+)(\+[\w\-]+)*:/.exec(url);
+        if (!m) throw new Error("invalid url")
+        const top_proto = m[1];
+        const fn = OpStream._URL_HANDLERS[top_proto];
+        if (!fn) throw new Error('unknown protocol: '+top_proto);
+        return new fn(url, options);
+    }
+
 }
 
 OpStream.MUTATIONS = "^.on.off.error.~";
@@ -202,8 +226,27 @@ OpStream.STATES = ".~";
 OpStream.ENOUGH = Symbol('enough');
 OpStream.OK = Symbol('ok');
 OpStream.SLOW_DOWN = Symbol('slow'); // TODO relay backpressure
-
+OpStream._URL_HANDLERS = Object.create(null);
 module.exports = OpStream;
+
+class ZeroOpStream extends OpStream {
+
+    constructor (url, options) {
+        super();
+        this.ops = [];
+        const m = /([\w\-\+]+):(\/\/)?(\w+)/.exec(url);
+        if (m)
+            OpStream.QUEUES[m[3]] = this;
+    }
+
+    offer (op) {
+        this.ops.push(op);
+    }
+
+}
+OpStream.QUEUES = Object.create(null);
+OpStream._URL_HANDLERS['0'] = ZeroOpStream;
+
 
 class Filter {
 

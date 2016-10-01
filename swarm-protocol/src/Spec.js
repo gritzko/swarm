@@ -115,6 +115,10 @@ class Spec {
         return this.Type.value;
     }
 
+    get clazz () {
+        return this.Type.value;
+    }
+
     get scope () {
         return this.Name.origin;
     }

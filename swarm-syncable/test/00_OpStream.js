@@ -161,3 +161,12 @@ tape ('syncable.00.C op stream - queue', function (t) {
     t.equals(tail, 1);
     t.end();
 });
+
+tape ('syncable.00.D op stream URL', function (t) {
+    const zero = OpStream.connect('0://name');
+    t.ok(zero===OpStream.QUEUES.name);
+    zero.offer(Op.NON_SPECIFIC_NOOP);
+    t.equals(zero.ops.length, 1);
+    t.ok(zero.ops[0]===Op.NON_SPECIFIC_NOOP);
+    t.end();
+});
