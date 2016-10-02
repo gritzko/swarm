@@ -7,9 +7,6 @@ const ReplicaIdScheme = swarm.ReplicaIdScheme;
 /** Database metadata object. */
 class Swarm extends LWWObject {
 
-    constructor (value_or_anything, host) {
-        super(value_or_anything, host);
-    }
 
     filterByPrefix (prefix) {
         let ret = Object.create(null);
@@ -23,9 +20,14 @@ class Swarm extends LWWObject {
 
 }
 
+class SwarmRDT extends LWWObject.RDT {
+    constructor (state, host) {
+        super(state, host);
+    }
+}
 
-
-Swarm.id = 'Swarm'; // FIXME rename to CLASS
-Syncable._classes[Swarm.id] = Swarm;
+Swarm.RDT = SwarmRDT;
+SwarmRDT.Type = new swarm.Stamp('Swarm'); // FIXME rename to CLASS
+Syncable.addClass(Swarm);
 
 module.exports = Swarm;

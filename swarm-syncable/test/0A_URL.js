@@ -1,13 +1,16 @@
 "use strict";
-let tape = require('tap').test;
+let tape = require('tape').test;
 let swarm = require('swarm-protocol');
 let URL = require('../src/URL');
 
 tape ('syncable.0A.A OpStream URL - basic syntax', function (t) {
 
-    const url_str = 'ws://host.com:1234/path?query#hash';
+    const url_str = 'ws://user:pwd@host.com:1234/path?query#hash';
     const url1 = new URL(url_str);
     t.equals(url1.protocol,"ws");
+    t.equals(url1.replica, 'user');
+    t.equals(url1.creds, 'user:pwd');
+    t.equals(url1.password, 'pwd');
     t.equals(url1.host,"host.com:1234");
     t.equals(url1.hostname,"host.com");
     t.equals(url1.port,1234);

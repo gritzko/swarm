@@ -21,95 +21,60 @@ class Syncable extends OpStream {
 
     /**
      * @constructor
-     * @param {String} state - the state to init a new object with
-     *            ('' for the type's default state, null for "not retrieved yet")
+     * @param {Op} state_op - the state to init a new object with
+     *            (can be the type's default state, version 0)
+     * @param {Client} host - the client that hosts this syncable (optional)
+     * @param {Function} callback - callback to invoke once the object is stateful
      */
-    constructor (state) {
+    constructor (rdt, callback) {
         super();
 
-        if (state===undefined)
-            state = ''; // new object in the default state
-
-        /** The id of an object is typically the timestamp of the first
-         operation. Still, it can be any Base64 string (see swarm-stamp). */
-        this._id = Stamp.zero; // string, not stamp (it's cheaper this way)
         /** The RDT inner state */
-        this._state = state===null ? null : new this.constructor.RDT(state);
-        /** the clock to stamp ops with */
-        this._clock = null;
-        /** Timestamp of the last change op. Transcendent stamps are used
-         *  for detached objects. */
-        this._version = Stamp.zero;
-        /** Cached "/type#id" string key */
-        this._typeid = null;
+        this._rdt = rdt;
+        rdt.on(this);
+        this._rebuild();
 
-        if (state!==null && Syncable.defaultHost) {
-            Syncable.defaultHost.addNewSyncable(this);
-        }
+        if (callback)
+            this.once(callback);
+
     }
 
-    static setDefaultHost (host) {
-        Syncable.defaultHost = host;
+    /** @returns {Client} host */
+    get host () {
+        return this._rdt._host;
     }
 
     noop () {
-        this._submit("0", "", this);
+        this._submit("0", "");
     }
 
     /** Create, apply and emit a new op.
      * @param {String} op_name - the operation name (Base64x64, transcendent) 
      * @param {String} op_value - the op value */
-    _submit (op_name, op_value) {
-        if (!this._clock && this.id!=='0')
-            throw new Error('stateful obj, no clock');
-        let stamp = this._clock ? this._clock.issueTimestamp() : Base64x64.inc(this._version);
-        if (!op_name) {
-            op_name = '~';
-            op_value = this.state;
-        }
-        let spec = new Spec([
-            this.type,
-            this._id==='0' && this._clock ? stamp : this._id,
-            stamp,
-            op_name
-        ]);
-        let op = new Op(spec, op_value);
-        this.offer(op);
+    _offer (op_name, op_value) { // FIXME BAD!!!
+        const stamp = this._rdt._host.time();
+        const spec = new Spec([this.Type, this.Id, stamp, new Stamp(op_name)]);
+        const op = new Op(spec, op_value);
+        this._rdt.offer(op);
     }
 
     /** Apply an op to the object's state.
       * @param {Op} op - the op */
-    offer (op) {
-        if (this._id==='0') {
-            this._id = op.spec.id;
-            this._typeid = null;
-        } else if ( this._id !== op.id ) {
-            throw new Error('not my op');
-        }
-        if (op.spec.method===Op.METHOD_STATE) {
-            this._state = new this.constructor.RDT(op.value);
-        } else {
-            if (!this._state) {
-                let default_state = new Op(op.spec.rename('~'), '');
-                this.offer(default_state);
-            }
-            this._state.apply(op);
-        }
+    _apply (op) {
         this._rebuild(op);
-        if (!op.isOnOff())
-            this._version = op.spec.stamp; // after the rebuild!
-        if (!op.spec.Stamp.isTranscendent()) // dry run ops are not emitted
-            this._emit(op);
+        this._emit(op);
     }
 
-    _rebuild (op) {}
+    _rebuild (op) {
+
+    }
 
     get id () {
-        return this._id;
+        return this.Id.toString();
     }
 
     get Id () {
-        return new Stamp(this._id);
+        return this._rdt.Id;
     }
 
     /**
@@ -126,11 +91,12 @@ class Syncable extends OpStream {
      *  to the local order (in other replicas, the order may differ).
      */
     get version () {
-        return this._version;
+        return this.Version.toString();
     }
 
+    /** @returns {Stamp} */
     get Version () {
-        return new Stamp(this._version);
+        return this._rdt.Version;
     }
 
     get author () {
@@ -140,117 +106,154 @@ class Syncable extends OpStream {
     /** Syncable type name
      *  @returns {String} */
     get type () {
-        return this.constructor.id;
+        return this.Type.toString();
+    }
+
+    get clazz () {
+        return this.constructor.RDT.Type.value;
     }
 
     /** @returns {Stamp} - the object's type with all the type parameters */
     get Type () {
-        // TODO type parameters
-        return new Stamp(this.type, '0');
+        return this._rdt.Type;
     }
 
-    get host () {
-        return this._host;
-    }
     /** Objects created by supplying an id need  to query the upstream
      *  for their state first. Until the state arrives, they are
      *  stateless. Use `obj.once(callback)` to get notified of state arrival.
      */
     hasState () {
-        return this._state !== null;
-    }
-
-    get state () {
-        return this._state===null ? null : this._state.toString();
+        return !this.Version.isZero();
     }
 
     get spec () {
         return new Spec([
-            this.type, this._id, this._version, Op.STATE
+            this.Type, this.Id, this.Version, Op.STATE
         ]);
     }
 
     close () {
-        this._emit(null);
+        this._rdt.off(this); // FIXME OpStream listener
+        this._rdt = null;
     }
 
     get typeid () {
-        if (null===this._typeid) {
-            this._typeid = this.TypeId.toString(Spec.ZERO);
-        }
-        return this._typeid;
+        return this.TypeId.toString(Spec.ZERO);
     }
 
     get TypeId () {
-        return new Spec([this.type, this._id, Stamp.ZERO, Stamp.ZERO]);
+        return new Spec([this.Type, this.Id, Stamp.ZERO, Stamp.ZERO]);
     }
 
     /** Invoke a listener after applying an op of this name
      *  @param {String} op_name - name of the op
      *  @param {Function} callback - listener */
-    onOp (op_name, callback) {
-        this.on('.'+op_name, callback);
-    }
+    // onOp (op_name, callback) {
+    //     this.on('.'+op_name, callback);
+    // }
 
     /** fires once the object gets some state */
-    onceReady (callback) {
-        if (this._version!=='0')
-            callback();
-        else
-            super.once(callback);
+    onceStateful (callback) {
+         if (!this.Version.isZero())
+             callback();
+         else
+             super.once(callback);
     }
 
-    clone () {
-        return new this.constructor(this._state.clone(), null);
-    }
-
-    /** Returns a subscription op for this object */
-    toOnOff (is_on) {
-        let name = is_on ? Op.ON : Op.OFF;
-        let spec = new Spec([this.type, this._id, this._version, name]);
-        return new Op(spec, '');
-    }
-
-    toOp () {
-        let spec = new Spec([this.type, this._id, this._version, Op.METHOD_STATE]);
-        return new Op(spec, this._state.toString());
+    onceSync (callback) {
+        super.on(function (op) { // FIXME catch reon
+            if (op.isOn()) {
+                callback (op);
+                return OpStream.ENOUGH;
+            }
+            return OpStream.OK;
+        });
     }
 
     toString () {
-        return this._state && this._state.toString();
+        return this.toOp().toString();
+    }
+
+    static addClass (fn) {
+        Syncable._classes[fn.RDT.Type.value] = fn;
+    }
+
+    /** @param {Stamp|String|Base64x64} type */
+    static getClass (type) {
+        const Type = new Stamp(type);
+        return Syncable._classes[Type.value];
+    }
+
+    static getRDTClass (type) {
+        return Syncable.getClass(type).RDT;
     }
 
 }
 
-Syncable._classes = Object.create(null);
-Syncable._classes.Syncable = Syncable;
-Syncable.id = "Syncable";
-
-Syncable.multiHost = false;
-Syncable.defaultHost = null;
-
-module.exports = Syncable;
-
 /** Abstract base class for all replicated data types; not an OpStream
- *  RDT is a reducer:  (state_string, op) -> new_state_string
+ *  RDT is a reducer:  (state, op) -> new_state
  */
-class RDT {
+class RDT extends OpStream {
 
     /**
-     * @param {String} state - the serialized state string
+     * @param {Op} state - the serialized state
+     * @param {Client} host
      */
-    constructor (state) {
+    constructor (state, host) {
+        super();
+        /** The id of an object is typically the timestamp of the first
+         operation. Still, it can be any Base64 string (see swarm-stamp). */
+        this._id = state.spec.Id;
+        this._host = host;
+        /** Timestamp of the last change op. */
+        this._version = null;
+        this._apply(state);
     }
 
-    apply (op) {
-        switch (op.name) {
-            case "0":    this.noop(); break;
-            case "on":   break;
-            default:     console.warn("unknown op", op.toString()); break;
+    offer (op) {
+        this._apply(op);
+        if (this._host)
+            this._host.offer(op);
+    }
+
+    _apply (op) {
+        switch (op.spec.method) {
+            case "0":
+                this.noop();
+                this._version = op.spec.Stamp;
+                break;
+            case "~":
+                this.reset(op);
+                this._version = op.spec.Stamp;
+                break;
+            case "off":  break;
+            case "on":
+                if (op.spec.Stamp.isZero() && !this.Version.isZero())
+                    this._host.offer(this.toOp());
+                break;
+            default:
+                this._version = op.spec.Stamp;
+                break;
         }
+        this._emit(op);
     }
 
     noop () {
+    }
+
+    reset (op) {
+    }
+
+    get Type () {
+        return this.constructor.Type;
+    }
+
+    get Version () {
+        return this._version;
+    }
+
+    get Id () {
+        return this._id;
     }
 
     /**
@@ -260,12 +263,36 @@ class RDT {
         return "";
     }
 
+    /** Returns a subscription op for this object */
+    toOnOff (is_on) {
+        let name = is_on ? Op.STAMP_ON : Op.STAMP_OFF;
+        let spec = new Spec([this.Type, this.Id, this.Version, name]);
+        return new Op(spec, '');
+    }
+
+    toOp () {
+        return new Op([
+            this.Type,
+            this._id,
+            this._version,
+            Op.STAMP_STATE
+        ], this.toString());
+    }
+
     clone () {
-        return new this.constructor(this.toString());
+        return new this.constructor(this.toOp());
     }
 
 }
 Syncable.RDT = RDT;
+Syncable.RDT.Type = new Stamp("Syncable"); // FIXME TYPE
+
+Syncable._classes = Object.create(null);
+Syncable.defaultHost = null;
+
+Syncable.addClass(Syncable);
+
+module.exports = Syncable;
 
 // ----8<----------------------------
 

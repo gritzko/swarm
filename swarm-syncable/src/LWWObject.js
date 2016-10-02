@@ -8,14 +8,8 @@ let Op = swarm.Op;
 /** Flat LWW object: field values are either a string or a number or a reference. */
 class LWWObject extends Syncable {
 
-    /**
-     * @param {Object} state - a {key: value} state for a new object
-     */
-    constructor (state) {
-        super();
-        this._values = Object.create(null);
-        if (state)
-            this.setAll(state);
+    static normalize_start_state (something, stamp) {
+        // return a string
     }
 
     /** @param {Object} obj - field-value map */
@@ -26,12 +20,22 @@ class LWWObject extends Syncable {
             forEach(key => this.set(key, obj[key]));
     }
 
+    static _init_state (obj, stamp, clock) {
+        let ret =  Object.keys(obj).filter(key=>LWWObject.reFieldName.test(key)).
+        sort().map( key =>
+                new Spec([Stamp.ZERO, Stamp.ZERO, clock.issueTimestamp(), key]).event +
+                '\t' +
+                JSON.stringify(obj[key])
+        );
+        return ret.join('\n');
+    }
+
     set (name, value) {
         if (value===undefined)
             throw new Error('need a valid JSON value');
         if (!LWWObject.reFieldName.test(name))
             throw new Error('need a valid Base64x64 field name');
-        this._submit(name, JSON.stringify(value));
+        this._offer(name, JSON.stringify(value));
     }
 
     get (name) {
@@ -43,8 +47,8 @@ class LWWObject extends Syncable {
     }
 
     StampOf (name) {
-        const at = this._state.at(name);
-        return at===-1 ? Stamp.ZERO : this._state.ops[at].spec.Stamp;
+        const at = this._rdt.at(name);
+        return at===-1 ? Stamp.ZERO : this._rdt.ops[at].spec.Stamp;
     }
 
     stampOf (key) {
@@ -56,16 +60,20 @@ class LWWObject extends Syncable {
     }
 
     _rebuild (op) {
-        const name = op.spec.method;
+        const name = op ? op.spec.method : Op.METHOD_STATE; // :(
         if (name===Op.METHOD_STATE) { // rebuild
             this._values = Object.create(null);
-            this._state.ops.forEach(e=>{
+            this._rdt.ops.forEach(e=>{
                 this._values[e.spec.method] = JSON.parse(e.value);
             });
         } else if (this._version < op.spec.stamp) {
             this._values[name] = JSON.parse(op.value);
         } else { // reorder
-            this._values[name] = JSON.parse(this._state.get(name));
+            const value = this._rdt.get(name);
+            if (value===undefined)
+                delete this._values[name];
+            else
+                this._values[name] = JSON.parse(value);
         }
     }
 
@@ -74,16 +82,16 @@ module.exports = LWWObject;
 
 LWWObject.reFieldName = /^[a-zA-Z][A-Za-z_0-9]{0,9}$/;
 
-LWWObject.id = 'LWWObject';
-Syncable._classes[LWWObject.id] = LWWObject;
-
-
 /**  reducer:  (string, op) -> new_string  */
 class LWWObjectRDT extends Syncable.RDT {
 
-    constructor (state) {
-        super();
-        this.ops = Op.parseFrame(state+'\n\n') || [];
+    constructor (state, host) {
+        super(state, host);
+        this.ops = this.ops || [];
+    }
+
+    reset (state_op) {
+        this.ops = Op.parseFrame(state_op.value+'\n\n') || [];
     }
 
     at (name) {
@@ -93,7 +101,21 @@ class LWWObjectRDT extends Syncable.RDT {
         return -1;
     }
 
-    apply (op) {
+    _apply (op) {
+        switch (op.spec.method) { // FIXME ugly
+            case Op.METHOD_NOOP:
+            case Op.METHOD_ON:
+            case Op.METHOD_OFF:
+            case Op.METHOD_STATE:
+            case Op.METHOD_ERROR:
+                break;
+            default:
+                this._set(op);
+        }
+        super._apply(op);
+    }
+
+    _set (op) {
         op = new Op(op.spec.Event, op.value);
         const at = this.at(op.spec.method);
         if (at===-1)
@@ -116,3 +138,5 @@ class LWWObjectRDT extends Syncable.RDT {
 
 }
 LWWObject.RDT = LWWObjectRDT;
+LWWObjectRDT.Type = new Stamp('LWWObject');
+Syncable.addClass(LWWObject);

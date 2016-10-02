@@ -1,5 +1,5 @@
 "use strict";
-var tap = require('tap').test;
+var tap = require('tape').test;
 
 var swarm = require('swarm-protocol');
 var Spec = swarm.Spec;
@@ -15,23 +15,26 @@ tap ('syncable.02.A empty cycle', function (t) {
         clock: new stamp.LamportClock('anon')
     });
     host.go();*/
-    var ops = Op.parseFrame(
-        '/Syncable#time+author!time+author.~\n' +
-        '/Syncable#time+author!update+author.0\n'
-    );
-    t.equals(ops.length, 2);
+    var ops = Op.parseFrame([
+        '/Syncable#time+author!0.~\n',
+        '/Syncable#time+author!time+author.~\n',
+        '/Syncable#time+author!update+author.0\n',
+        '/Syncable#time+author!time+author.on+replica\n'
+    ].join('\n'));
+    t.equals(ops.length, 4);
 
-    var empty = new Syncable();
+    const zero = ops[0];
+    const state = ops[1];
+    const noop = ops[2];
+    const reon = ops[3];
+
+    let rdt = new Syncable.RDT(zero, null);
+    var empty = new Syncable(rdt);
 
     t.equal(empty.version, '0', 'version comes from an op');
-    t.equal(empty.id, '0', 'id comes from an op');
+    t.equal(empty.id, 'time+author', 'id comes from an op');
 
-    empty.noop();
-
-    t.equal(empty.version, '0000000001', 'detached versions');
-    t.equal(empty.id, '0', 'still no id');
-
-    empty.offer(ops[0]);
+    rdt._apply(state);
     
     t.equal(empty.version, 'time+author', 'version id OK');
     t.equal(empty.id, 'time+author', 'id OK');
@@ -39,10 +42,7 @@ tap ('syncable.02.A empty cycle', function (t) {
     t.equal(empty.typeid, '/Syncable#time+author');
     t.ok(empty.hasState());
 
-    let check = 0;
-    empty.onOp('0', ()=>check++ );
-
-    empty.offer(ops[1]);
+    rdt._apply(noop);
 
     t.equal(empty.version, 'update+author', 'version id OK');
     t.ok(empty.Version.eq( new Stamp('update+author') ));
@@ -50,7 +50,8 @@ tap ('syncable.02.A empty cycle', function (t) {
     t.equal(empty.author, 'author');
     t.equal(empty.typeid, '/Syncable#time+author');
 
-    t.equal(check, 1);
+    rdt._apply(reon);
+    t.equal(empty.version, 'update+author', 'version id OK');
 
     t.end();
 });

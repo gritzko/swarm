@@ -1,12 +1,13 @@
 'use strict';
-let swarm = require('swarm-protocol');
-let Base64x64 = swarm.Base64x64;
-let Stamp = swarm.Stamp;
-let Spec = swarm.Spec;
-let Op = swarm.Op;
-let SwarmMeta = require('./Swarm');
-let OpStream = require('./OpStream');
-let Syncable = require('./Syncable');
+const swarm = require('swarm-protocol');
+const Stamp = swarm.Stamp;
+const Spec = swarm.Spec;
+const Op = swarm.Op;
+const SwarmMeta = require('./Swarm');
+const OpStream = require('./OpStream');
+const Syncable = require('./Syncable');
+const LWWObject = require('./LWWObject');
+const URL = require('./URL');
 
 /**
  * Client is the world of actual replicated/synchronized objects of various types.
@@ -29,46 +30,72 @@ class Client extends OpStream {
      * Create a Client given an upstream and a database id.
      * Replica id is granted by the upstream.
      *
-     * @param {Spec} spec - typeid spec for the database, e.g. `/Swarm#test` or
+     * @param {String} url - typeid spec for the database, e.g. `/Swarm#test` or
      *      `test` or `` for the default database
      * @param {Object} options - local defaults and overrides for the metadata object
      */
-    constructor (spec, options) {
-        super();         // TODO snapshots (Swarm 1.4)
+    constructor (url, options) {
+        super();
+        this._url = new URL(url);
+        this._id = this._url.replica || '0';
         /** syncables, API objects, the outer state */
         this._syncables = Object.create(null);
         /** we can only init the clock once we have a meta object */
         this._clock = null;
-
         this._last_acked = Stamp.ZERO;
+        let next = this._url.clone();
+        next.scheme.shift();
+        this._upstream = OpStream.connect(next);
+        this._upstream.on(this);
+        this._unsynced = new Map();
+        this._meta = this.get(
+            SwarmMeta.RDT.Type,
+            this.dbid,
+            state => {
+                this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
+                this._id = state.scope;
+                this._clock.seeTimestamp(state.spec.Stamp);
+            }
+        );
+        this._meta.onceSync (
+            reon => this._clock.seeTimestamp(reon.spec.Stamp)
+        );
+        if (!Syncable.defaultHost) // TODO deprecate
+            Syncable.defaultHost = this;
+    }
 
-        this._op_cb = this.onSyncableOp.bind(this);
+    get dbid () {
+        return this._url.basename;
+    }
 
-        if (!Syncable.multiClient && !Syncable.defaultClient) {
-            Syncable.defaultClient = this;
-        }
+    get origin () {
+        return this._clock && this._clock.origin;
+    }
 
-        /** database meta object */
-        spec = new Spec(spec);
-        this._meta = new SwarmMeta(spec, null, options); // FIXME defaults
-        // tip the avalanche
-        this._meta.onceReady( on => {
-            this._clock = new swarm.Clock(on.scope, this._meta.filterByPrefix('Clock'));
-        });
-        this.addSyncable(this._meta, spec.Id);
+    onceReady (callback) {
+        this._meta.onceReady(callback);
     }
 
     /** Inject an op. */
-    offer(op) {
-        let obj = this._syncables[op.typeid];
-        if (op.origin === this._id) {
+    _apply (op) {
+        const rdt = this._syncables[op.typeid]._rdt;
+        if (!op.spec.Stamp.isAbnormal() && this._clock)
+            this._clock.seeTimestamp(op.spec.Stamp);
+        if (op.isOnOff())
+            this._unsynced.delete(op.spec.object);
+        if (op.origin === this.origin) {
             this._last_acked = op.spec.Stamp;
-        } else if (!obj) { // not intereted
-            if (op.name !== "off")
-                this.emit(new Op(op.spec.rename('off'), ''));
         } else {
-            obj.offer(op);
+            if (!rdt && op.name !== "off")
+                this._upstream.offer(new Op(op.spec.rename('off'), ''));
+            else
+                rdt._apply(op);
+            this._emit(op);
         }
+    }
+
+    offer (op, source) {
+        this._upstream.offer(op);
     }
 
     close () {
@@ -87,38 +114,64 @@ class Client extends OpStream {
 
 
     /**
-     * Open a syncable and attach it to this replica. The state is queried from
+     * Attach a syncable to this replica. The state is queried from
      * the upstream. Till the state is received, the object is stateless.
-     * @param {Spec} spec - the object's /type#id
+     * @param {Syncable} obj - the object
      */
-    addSyncable (spec) {
-        let fn = Syncable._classes[spec.type];
-        if (!fn)
-            throw new Error('unknown syncable type '+spec.type);
-        let obj = new fn(null);
-        obj.on(this._op_cb);
-        obj._clock = this._clock;
-        obj._id = spec.id;
-        this._syncables[obj.typeid] = obj;
-        this._emit(obj.toOnOff(true));
-        return obj;
+    //---
+
+    createOp (opname, opvalue, syncable) {
+        const stamp = this.time();
+        const spec = new Spec([ syncable.Type, syncable.Id, stamp, opname ]);
+        const op = new Op(spec, opvalue);
+        syncable.apply(op);
+        this._emit(op);
     }
 
     /**
      * Create a syncable and attach it to this replica. Tthe existing object's
      * state it taken as the initial state, timestamped and broadcast. The
      * object gets an id (the stamp of that very op).
-     * @param {Syncable} obj - the syncable object
+     * @param {Stamp|String|Base64x64} type - the syncable object type
+     * @param feed_state - the initial state
      */
-    addNewSyncable (obj) {
-        obj.on(this._op_cb);
-        obj._clock = this._clock;
-        obj._submit();
-        this._emit(obj.toOnOff(true));
-        this._syncables[obj.typeid] = obj;
+    create (type, feed_state) {
+        const fn = Syncable.getClass(type);
+        if (!fn)
+            throw new Error('unknown syncable type '+type);
+        const stamp = this.time();
+        const spec = new Spec([ type, stamp, stamp, Op.STAMP_STATE ]);
+        const state = feed_state===undefined ? '' :
+            fn._init_state(feed_state, stamp, this._clock);
+        const op = new Op( spec, state );
+        this._upstream.offer(op);
+        const rdt = new fn.RDT(op, this);
+        this._upstream.offer(rdt.toOnOff(true).scoped(this._id), this);
+        return this._syncables[spec.object] = new fn(rdt);
     }
 
-    removeSyncable (obj) {
+    /** Fetch an object by its id
+     *  @param {Spec} spec */
+    fetch (spec, on_state) {
+        const have = this._syncables[spec.object];
+        if (have) {
+            on_state && on_state();
+            return have;
+        }
+        const state0 = new Op( [spec.Type, spec.Id, Stamp.ZERO, Op.STAMP_STATE], '' );
+        const fn = Syncable.getClass(spec.Type);
+        if (!fn)
+            throw new Error('unknown syncable type '+spec);
+        const rdt = new fn.RDT(state0, this);
+        const on = rdt.toOnOff(true).scoped(this._id);
+        if (on.spec.clazz==='Swarm' && this._url.password)
+            on._value = 'Password: '+this._url.password; // FIXME E E
+        this._upstream.offer(on, this);
+        this._unsynced.set(spec.object, 1);
+        return this._syncables[spec.object] = new fn(rdt, on_state);
+    }
+
+    _remove_syncable (obj) {
         let prev = this._syncables[obj.typeid];
         if (prev!==obj) {
             return;
@@ -127,15 +180,6 @@ class Client extends OpStream {
         obj._clock = null;
         this._emit(obj.toOnOff(false));
     }
-
-    onSyncableOp (op, obj) {
-        if (op===null) {
-            this.removeSyncable(obj);
-        } else if (this._clock && op.origin===this._clock.origin) {
-            this._emit(op);
-        }
-    }
-
 
     get id () {
         return this._clock.origin;
@@ -154,14 +198,23 @@ class Client extends OpStream {
         return this._clock ? this._clock.issueTimestamp() : null;
     }
 
+    /** @return {Swarm} */
+    get meta () {
+        return this._meta;
+    }
+
     // mark-and-sweep kind-of distributed garbage collection
     gc () {
         // NOTE objects in this.pending can NOT be gc'd
     }
 
     /** Get a Syncable object for of the given type, with the given id. */
-    get (type, id) {
-        return this.getBySpec(new Spec([type, id, Stamp.ZERO, Stamp.ZERO]));
+    get (type, id, callback) {
+        if (id===undefined) {
+            id = type;
+            type = LWWObject.Type;
+        }
+        return this.fetch(new Spec([type, id, Stamp.ZERO, Stamp.ZERO]), callback);
     }
 
     /** Retrieve a Syncable object for a given specifier.
@@ -177,24 +230,35 @@ class Client extends OpStream {
         return have;
     }
 
-    create (type) {
-        if (type.constructor!==Stamp)
-            type = new Stamp(type);
-        let typefn = Syncable._classes[type.value];
-        if (!typefn) throw new Error('unknown type '+type.value);
-        return new typefn(null, this);
+    onSync (callback) {
+        if (this._unsynced.size===0) {
+            callback(null);
+        } else {
+            this.on(op => { // TODO .on .off
+                if (this._unsynced.size === 0) {
+                    callback(op);
+                    return OpStream.ENOUGH;
+                } else {
+                    return OpStream.OK;
+                }
+            });
+        }
     }
 
     static get (type, id) {
         return Syncable.defaultClient.get(type, id);
     }
 
-    static getBySpec (spec) {
-        return Syncable.defaultClient.getBySpec(spec);
+    static fetch (spec) {
+        return Syncable.defaultClient.fetch(spec);
     }
 
-    static create (type) {
-        return Syncable.defaultClient.create(type);
+    static create (type, state) {
+        return Syncable.defaultClient.create(type, state);
+    }
+
+    newLWWObject (init_obj) {
+        return this.create(LWWObject.RDT.Type, init_obj);
     }
 
 }
