@@ -40,6 +40,12 @@ class URL {
         return new URL(this.toString());
     }
 
+    nested () {
+        let next = this.clone();
+        next.scheme.shift();
+        return next;
+    }
+
     eq (url) {
         return this.toString() === url.toString();
     }

@@ -59,6 +59,10 @@ class LWWObject extends Syncable {
         return this._values;
     }
 
+    save () {
+        // TODO
+    }
+
     _rebuild (op) {
         const name = op ? op.spec.method : Op.METHOD_STATE; // :(
         if (name===Op.METHOD_STATE) { // rebuild

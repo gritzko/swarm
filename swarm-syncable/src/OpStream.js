@@ -202,11 +202,12 @@ class OpStream {
     */
 
     static connect (url, options) {
-        const m = /^([\w\-]+)(\+[\w\-]+)*:/.exec(url);
-        if (!m) throw new Error("invalid url");
-        const top_proto = m[1];
+        if (url.constructor!==URL)
+            url = new URL(url.toString());
+        const top_proto = url.scheme[0];
         const fn = OpStream._URL_HANDLERS[top_proto];
-        if (!fn) throw new Error('unknown protocol: '+top_proto);
+        if (!fn)
+            throw new Error('unknown protocol: '+top_proto);
         return new fn(url, options);
     }
 
@@ -251,7 +252,7 @@ class CallbackOpStream extends OpStream {
     }
     
     _apply (op) {
-        return this._callback(op)===OpStream.ENOUGH || this._once ?
+        return (this._callback(op)===OpStream.ENOUGH || this._once) ?
             OpStream.ENOUGH : OpStream.OK;
     }
     

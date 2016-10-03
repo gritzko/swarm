@@ -51,7 +51,7 @@ class Client extends OpStream {
         this._meta = this.get(
             SwarmMeta.RDT.Type,
             this.dbid,
-            state => {
+            state => { // FIXME htis must be state!!!
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
                 this._id = state.scope;
                 this._clock.seeTimestamp(state.spec.Stamp);
@@ -73,12 +73,12 @@ class Client extends OpStream {
     }
 
     onceReady (callback) {
-        this._meta.onceReady(callback);
+        this._meta.onceStateful(callback);
     }
 
     /** Inject an op. */
     _apply (op) {
-        const rdt = this._syncables[op.typeid]._rdt;
+        const rdt = this._syncables[op.spec.object]._rdt;
         if (!op.spec.Stamp.isAbnormal() && this._clock)
             this._clock.seeTimestamp(op.spec.Stamp);
         if (op.isOnOff())
@@ -166,9 +166,11 @@ class Client extends OpStream {
         const on = rdt.toOnOff(true).scoped(this._id);
         if (on.spec.clazz==='Swarm' && this._url.password)
             on._value = 'Password: '+this._url.password; // FIXME E E
+        const syncable = new fn(rdt, on_state);
+        this._syncables[spec.object] = syncable;
         this._upstream.offer(on, this);
         this._unsynced.set(spec.object, 1);
-        return this._syncables[spec.object] = new fn(rdt, on_state);
+        return syncable;
     }
 
     _remove_syncable (obj) {
