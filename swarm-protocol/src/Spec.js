@@ -46,7 +46,7 @@ class Spec {
         let t = this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
         if (!spec) {
             'nothing';
-        } else if (spec.constructor===Spec) {
+        } else if (spec._toks && spec._toks.constructor===Array) {
             this._toks = spec._toks;
         } else if (spec.constructor===Array && spec.length===4) {
             for (let i = 0; i < 4; i++) {
@@ -225,28 +225,21 @@ class Spec {
         return this._toks.every(t => t.isEmpty());
     }
 
-    restamp (stamp, origin) {
-        if (origin) stamp = new Stamp(stamp, origin);
+    restamped (stamp, origin) {
+        if (origin)
+            stamp = new Stamp(stamp, origin);
         return new Spec([this.Type, this.Id, stamp, this.Name]);
     }
 
-    rename (stamp, origin) {
-        if (origin) stamp = new Stamp(stamp, origin);
+    renamed (stamp, origin) {
+        if (origin)
+            stamp = new Stamp(stamp, origin);
         return new Spec([this.Type, this.Id, this.Stamp, stamp]);
     }
 
-    /** @param {String|Base64x64} method */
-    remethod (method) {
-        return new Spec([this.Type, this.Id, this.Stamp, new Stamp(method, this.scope)]);
-    }
-
     /** @param {String|Base64x64} scope */
-    scoped (scope) {
+    rescoped (scope) {
         return new Spec([this.Type, this.Id, this.Stamp, new Stamp(this.method, scope)]);
-    }
-
-    rescope (scope) {
-        return this.scoped(scope); // FIXME naming conventions!!!
     }
 
 }

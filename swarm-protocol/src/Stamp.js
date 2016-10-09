@@ -138,6 +138,14 @@ class Stamp {
             (this._value===s._value && this._origin<s._origin);
     }
 
+    le (stamp) {
+        return !this.gt(stamp);
+    }
+
+    ge (stamp) {
+        return !this.lt(stamp);
+    }
+
     eq (stamp) {
         var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
         return this._value===s._value && this._origin===s._origin;

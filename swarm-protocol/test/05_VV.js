@@ -1,7 +1,7 @@
 "use strict";
 var swarm = require('..');
 var VV = swarm.VV;
-var tape = require('tap').test;
+var tape = require('tape').test;
 
 tape ('protocol.05.A VV basics', function (tap) {
 

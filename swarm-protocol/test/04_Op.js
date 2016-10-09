@@ -1,6 +1,6 @@
 "use strict";
 var swarm = require('..');
-var tape = require('tap').test;
+var tape = require('tape').test;
 var Op = swarm.Op;
 
 

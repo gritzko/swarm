@@ -1,8 +1,8 @@
 "use strict";
-var sync = require('..');
-var Spec = sync.Spec;
-var Op = sync.Op;
-var tape = require('tap').test;
+const sync = require('..');
+const Spec = sync.Spec;
+const Op = sync.Op;
+const tape = require('tape').test;
 
 
 tape ('protocol.03.A basic specifier syntax', function (tap) {

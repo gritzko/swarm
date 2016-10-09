@@ -2,7 +2,7 @@
 var protocol = require('..');
 var Stamp = protocol.Stamp;
 var Base64x64 = protocol.Base64x64;
-var tap = require('tap').test;
+var tap = require('tape').test;
 
 
 tap ('protocol.01.A Lamport timestamp', function(tap){

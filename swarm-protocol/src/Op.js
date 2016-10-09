@@ -7,57 +7,28 @@ var Spec = require('./Spec');
  *  Immutable Swarm op, see the specification at
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
  * */
-class Op {
+class Op extends Spec {
 
-    constructor (spec, value, source) {
-        this._spec = this._value = null;
-        if (spec===undefined) {
-            return Op.NON_SPECIFIC_NOOP;
-        } else if (spec.constructor===Op) {
-            this._spec = spec._spec;
-            this._value = spec._value;
-            //this._source = spec._source;
-        } else if (spec.constructor===Spec) {
-            this._spec = spec;
-            this._value = value.toString();
-            //this._source = source || Stamp.ZERO;
-        } else {
-            this._spec = new Spec(spec);
-            this._value = value.toString();
-        }
+    constructor (spec, value) {
+        super(spec);
+        this._value = value || '';
     }
 
     get spec () {
-        return this._spec;
+        return new Spec (this);
     }
 
     get specifier () {
-        return this._spec;
+        return this.spec;
     }
 
     get value () {
         return this._value;
     }
 
-    /** an immediate connection id this op was received from, where
-     *  op.source.value is a connection id per se, while
-     *  op.source.origin is the id of the connected replica
-     *  (op.spec.origin is the id of a replica that created the op) */
-    get source () {
-        return this._source;
-    }
-
-    get origin () {
-        return this._spec.origin;
-    }
-
-    get scope () {
-        return this._spec.scope;
-    }
-
     toString (defaults) {
-        let ret = this._spec.toString(defaults);
-        if (!this._value) {
+        let ret = super.toString(defaults);
+        if (this._value==='') {
         } else if (this._value.indexOf('\n')===-1) {
             ret += '\t' + this._value;
         } else {
@@ -68,7 +39,7 @@ class Op {
 
     /** whether this is not a state-mutating op */
     isPseudo () {
-        return Op.PSEUDO_OP_NAMES.indexOf(this._spec.name.value)!==-1;
+        return Op.PSEUDO_OP_NAMES.indexOf(this.method)!==-1;
     }
 
     /** parse a frame of several serialized concatenated newline-
@@ -122,90 +93,81 @@ class Op {
         return frame;
     }
 
-    get type () { return this._spec.type; }
-    get id () { return this._spec.id; }
-    get stamp () { return this._spec.stamp; }
-    get name () { return this._spec.name; }
-    get typeid () { return this._spec.typeid; }
+    isOn () { return this.method === Op.METHOD_ON; }
 
-    isOn () { return this.spec.method === Op.METHOD_ON; }
-
-    isOff () { return this.spec.method === Op.METHOD_OFF; }
+    isOff () { return this.method === Op.METHOD_OFF; }
 
     isOnOff () {
         return this.isOn() || this.isOff();
     }
 
-    isMutation () {
+    isHandshake () {
+        return this.isOnOff() && this.clazz==='Swarm';
+    }
+
+    isMutation () { // FIXME abnormal vs normal
         return !this.isOnOff() && !this.isError() && !this.isState();
     }
 
     isState () {
-        return this.spec.method === Op.METHOD_STATE;
+        return this.method === Op.METHOD_STATE;
     }
 
     isNoop () {
-        return this.spec.method === Op.METHOD_NOOP;
+        return this.method === Op.METHOD_NOOP;
     }
 
     isError () {
-        return this.spec.method === Op.METHOD_ERROR;
+        return this.method === Op.METHOD_ERROR;
     }
 
     isNormal () {
-        return !this._spec.Name.isAbnormal() && !this.isOnOff(); // TODO ~on?
-    }
-
-    isSameObject (spec) {
-        if (spec.constructor===Op) {
-            spec = spec.spec;
-        } else if (spec.constructor!==Spec) {
-            spec = new Spec(spec);
-        }
-        return this.spec.isSameObject(spec);
+        return !this.Name.isAbnormal() && !this.isOnOff(); // TODO ~on?
     }
 
     /**
      * @param {String} message
+     * @param {String|Base64x64} scope - the receiver
      * @returns {Op} error op */
     error (message, scope) {
-        let spec = this.spec.rename(Stamp.ERROR);
-        if (scope)
-            spec = spec.rescope(scope);
-        return new Op(spec, message);
+        const Name = new Stamp(Base64x64.INCORRECT, scope || '0');
+        return new Op([this.Type, this.Id, this.Stamp, Name], message);
     }
 
-    /** @param {Base64x64|String} stamp */
-    overstamped (stamp) {
-        if (this.spec.isScoped())
+    /** @param {Base64x64|String} new_stamp */
+    overstamped (new_stamp) {
+        if (this.isScoped())
             throw new Error('can not overstamp a scoped op');
-        let spec = new Spec([
-            this.spec.Type,
-            this.spec.Id,
-            new Stamp(stamp, this.spec.origin),
-            new Stamp(this.spec.method, this.spec.time)
-        ]);
-        return new Op(spec, this.value);
+        return new Op([
+            this.Type,
+            this.Id,
+            new Stamp(new_stamp, this.origin),
+            new Stamp(this.method, this.time)
+        ], this._value);
     }
 
     clearstamped (new_scope) {
-        if (!this.spec.isScoped())
-            return !new_scope ? this : this.scoped(new_scope);
-        let spec = new Spec([
-            this.spec.Type,
-            this.spec.Id,
-            new Stamp(this.spec.scope, this.spec.origin),
-            new Stamp(this.spec.method, new_scope||'0')
-        ]);
-        return new Op(spec, this.value);
+        if (!this.isScoped() && !new_scope)
+            return this;
+        return new Op ([
+            this.Type,
+            this.Id,
+            new Stamp(this.scope ? this.scope : this.time, this.origin),
+            new Stamp(this.method, new_scope||'0')
+        ], this._value);
     }
 
-    restamped (stamp) {
-        return new Op(this._spec.restamp(stamp), this._value);
+    stamped (stamp) {
+        return new Op([this.Type, this.Id, stamp, this.Name], this._value);
     }
 
     scoped (scope) {
-        return new Op(this._spec.scoped(scope), this._value);
+        return new Op([
+            this.Type,
+            this.Id,
+            this.Stamp,
+            new Stamp(this.method, scope)
+        ], this._value);
     }
 
 }

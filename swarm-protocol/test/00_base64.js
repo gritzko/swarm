@@ -1,5 +1,5 @@
 "use strict";
-var tap = require('tap').test;
+var tap = require('tape').test;
 var Base64x64 = require("../src/Base64x64");
 
 tap('protocol.00.A basic API', function (t) {

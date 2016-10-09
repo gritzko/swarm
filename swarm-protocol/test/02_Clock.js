@@ -1,5 +1,5 @@
 "use strict";
-var tap = require('tap').test;
+var tap = require('tape').test;
 var swarm = require('..');
 var Stamp = swarm.Stamp;
 var Clock = swarm.Clock;

@@ -1,6 +1,6 @@
 "use strict";
 const swarm = require('..');
-const tape = require('tap').test;
+const tape = require('tape').test;
 const ReplicaId = swarm.ReplicaId;
 const ReplicaIdScheme = swarm.ReplicaIdScheme;
 const Base64x64 = swarm.Base64x64;
