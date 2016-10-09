@@ -54,11 +54,11 @@ class Client extends OpStream {
             state => { // FIXME htis must be state!!!
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
                 this._id = state.scope;
-                this._clock.seeTimestamp(state.spec.Stamp);
+                this._clock.seeTimestamp(state.Stamp);
             }
         );
         this._meta.onceSync (
-            reon => this._clock.seeTimestamp(reon.spec.Stamp)
+            reon => this._clock.seeTimestamp(reon.Stamp)
         );
         if (!Syncable.defaultHost) // TODO deprecate
             Syncable.defaultHost = this;
@@ -78,16 +78,16 @@ class Client extends OpStream {
 
     /** Inject an op. */
     _apply (op) {
-        const rdt = this._syncables[op.spec.object]._rdt;
-        if (!op.spec.Stamp.isAbnormal() && this._clock)
-            this._clock.seeTimestamp(op.spec.Stamp);
+        const rdt = this._syncables[op.object]._rdt;
+        if (!op.Stamp.isAbnormal() && this._clock)
+            this._clock.seeTimestamp(op.Stamp);
         if (op.isOnOff())
-            this._unsynced.delete(op.spec.object);
+            this._unsynced.delete(op.object);
         if (op.origin === this.origin) {
-            this._last_acked = op.spec.Stamp;
+            this._last_acked = op.Stamp;
         } else {
             if (!rdt && op.name !== "off")
-                this._upstream.offer(new Op(op.spec.rename('off'), ''));
+                this._upstream.offer(new Op(op.rename('off'), ''));
             else
                 rdt._apply(op);
             this._emit(op);
@@ -164,7 +164,7 @@ class Client extends OpStream {
             throw new Error('unknown syncable type '+spec);
         const rdt = new fn.RDT(state0, this);
         const on = rdt.toOnOff(true).scoped(this._id);
-        if (on.spec.clazz==='Swarm' && this._url.password)
+        if (on.clazz==='Swarm' && this._url.password)
             on._value = 'Password: '+this._url.password; // FIXME E E
         const syncable = new fn(rdt, on_state);
         this._syncables[spec.object] = syncable;

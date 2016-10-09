@@ -13,7 +13,8 @@ class OpStream {
 
     constructor () {
         this._lstn = null;
-        this._id = null;
+        /** db replica id: dbname+replica */
+        this._dbrid = null;
         this._debug = null;
     }
 
@@ -120,16 +121,13 @@ class OpStream {
                     this._lstn = null;
                 break;
             case MANY_LSTN:
-                let ejects = 0, l = this._lstn;
+                let ejects = [], l = this._lstn;
                 for(let i=0; i<l.length; i++)
                     if ( l[i] && l[i]._apply(op)===OpStream.ENOUGH ) {
-                        l[i] = null;
-                        ejects++;
+                        ejects.push(l[i]);
                     }
-                if (ejects>0) {
-                    l = l.filter( x => x!==null );
-                    this._lstn = l.length ? l : null;
-                }
+                if (ejects.length)
+                    ejects.forEach( e => this.off(e) );
                 break;
             case PENDING:
                 this._lstn.push(op);
@@ -141,6 +139,9 @@ class OpStream {
 
     _emitAll (ops) {
         ops.forEach(op => this._emit(op));
+    }
+
+    _apply (op, upstream) {
     }
 
     pollAll () {
@@ -160,7 +161,7 @@ class OpStream {
     }
 
     /** by default, an echo stream */
-    offer (op) {
+    offer (op, downstream) {
         if (this._debug)
             console.warn('}'+this._debug+'\t'+op.toString());
         this._emit(op);

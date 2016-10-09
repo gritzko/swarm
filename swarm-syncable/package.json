@@ -1,6 +1,6 @@
 {
   "name": "swarm-syncable",
-  "version": "1.2.1",
+  "version": "1.2.4",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -25,7 +25,9 @@
       "swarm-protocol": "^1.2.0"
   },
   "devDependencies": {
-    "swarm-bat": "1.0.x"
+    "swarm-bat": "1.0.x",
+    "tape": "4.6.2",
+    "tap-diff": "^0.1.1"
   },
   "scripts": {
     "test": "make test"

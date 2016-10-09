@@ -110,7 +110,7 @@ class Cache extends OpStream {
     }
 
     offer (op) {
-        switch (op.spec.method) {
+        switch (op.method) {
 
             case Op.METHOD_STATE:
                 this.markDirty(op.object);
@@ -119,7 +119,7 @@ class Cache extends OpStream {
 
             case Op.METHOD_ON:
             case Op.METHOD_OFF:
-                this._cache_read(op.spec.object, state => {
+                this._cache_read(op.object, state => {
                     if (state) {
                         this._emit(state);
                         op = op.restamped(state.stamp);

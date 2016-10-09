@@ -45,23 +45,23 @@ tape ('syncable.09.A client cache - basic', function (t) {
     t.equal( client.time().origin, 'ReplicaSSN' );
 
     // inject a cache record
-    const oid = new_op.spec.object;
+    const oid = new_op.object;
     cache.__[oid] = cached_state_op.toString();
 
     // open an object
     let obj_stateful = false;
     let obj_synced = false;
-    const obj = client.get( new_op.spec.type, new_op.spec.id, () => obj_stateful = true );
+    const obj = client.get( new_op.type, new_op.id, () => obj_stateful = true );
     t.ok(obj_stateful);
     t.ok(obj.hasState());
     t.equals(obj.get('cachedkey'), "cached_value");
 
     // check the subscription
     const on = up.ops.shift();
-    t.equals(on.spec.object, oid);
+    t.equals(on.object, oid);
     up._emit(new_op);
     // TODO onSync t.notOk(obj_synced);
-    t.equals(obj.version, new_op.spec.stamp);
+    t.equals(obj.version, new_op.stamp);
     t.equals(obj.get('new_key'), "new_value");
     up._emit(re_on_op);
     // TODO t.ok(obj_synced);
@@ -77,7 +77,7 @@ tape ('syncable.09.A client cache - basic', function (t) {
     up._emit(change_op);
     t.equals(cache.__log.length, 0);
     const cached = cache.__[oid]; // FIXME back .on
-    //t.equals(cached.spec.stamp, change.spec.stamp);
+    //t.equals(cached.stamp, change.stamp);
     //t.ok(cached.value.indexOf("changedkey")!==-1);
 
     // create object, check cache

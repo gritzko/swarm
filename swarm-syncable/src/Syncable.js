@@ -21,9 +21,7 @@ class Syncable extends OpStream {
 
     /**
      * @constructor
-     * @param {Op} state_op - the state to init a new object with
-     *            (can be the type's default state, version 0)
-     * @param {Client} host - the client that hosts this syncable (optional)
+     * @param {RDT} rdt - the state to init a new object with
      * @param {Function} callback - callback to invoke once the object is stateful
      */
     constructor (rdt, callback) {
@@ -35,7 +33,7 @@ class Syncable extends OpStream {
         this._rebuild();
 
         if (callback)
-            this.once(callback);
+            this.once(callback); // FIXME
 
     }
 
@@ -53,8 +51,7 @@ class Syncable extends OpStream {
      * @param {String} op_value - the op value */
     _offer (op_name, op_value) { // FIXME BAD!!!
         const stamp = this._rdt._host.time();
-        const spec = new Spec([this.Type, this.Id, stamp, new Stamp(op_name)]);
-        const op = new Op(spec, op_value);
+        const op = new Op([this.Type, this.Id, stamp, new Stamp(op_name)], op_value);
         this._rdt.offer(op);
     }
 
@@ -203,7 +200,7 @@ class RDT extends OpStream {
         super();
         /** The id of an object is typically the timestamp of the first
          operation. Still, it can be any Base64 string (see swarm-stamp). */
-        this._id = state.spec.Id;
+        this._id = state.Id;
         this._host = host;
         /** Timestamp of the last change op. */
         this._version = null;
@@ -217,22 +214,22 @@ class RDT extends OpStream {
     }
 
     _apply (op) {
-        switch (op.spec.method) {
+        switch (op.method) {
             case "0":
                 this.noop();
-                this._version = op.spec.Stamp;
+                this._version = op.Stamp;
                 break;
             case "~":
                 this.reset(op);
-                this._version = op.spec.Stamp;
+                this._version = op.Stamp;
                 break;
             case "off":  break;
             case "on":
-                if (op.spec.Stamp.isZero() && !this.Version.isZero())
+                if (op.Stamp.isZero() && !this.Version.isZero())
                     this._host.offer(this.toOp());
                 break;
             default:
-                this._version = op.spec.Stamp;
+                this._version = op.Stamp;
                 break;
         }
         this._emit(op);

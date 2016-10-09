@@ -48,7 +48,7 @@ class LWWObject extends Syncable {
 
     StampOf (name) {
         const at = this._rdt.at(name);
-        return at===-1 ? Stamp.ZERO : this._rdt.ops[at].spec.Stamp;
+        return at===-1 ? Stamp.ZERO : this._rdt.ops[at].Stamp;
     }
 
     stampOf (key) {
@@ -64,13 +64,13 @@ class LWWObject extends Syncable {
     }
 
     _rebuild (op) {
-        const name = op ? op.spec.method : Op.METHOD_STATE; // :(
+        const name = op ? op.method : Op.METHOD_STATE; // :(
         if (name===Op.METHOD_STATE) { // rebuild
             this._values = Object.create(null);
             this._rdt.ops.forEach(e=>{
-                this._values[e.spec.method] = JSON.parse(e.value);
+                this._values[e.method] = JSON.parse(e.value);
             });
-        } else if (this._version < op.spec.stamp) {
+        } else if (this._version < op.stamp) {
             this._values[name] = JSON.parse(op.value);
         } else { // reorder
             const value = this._rdt.get(name);
@@ -100,13 +100,13 @@ class LWWObjectRDT extends Syncable.RDT {
 
     at (name) {
         for(let i=0; i<this.ops.length; i++)
-            if (this.ops[i].spec.method===name)
+            if (this.ops[i].method===name)
                 return i;
         return -1;
     }
 
     _apply (op) {
-        switch (op.spec.method) { // FIXME ugly
+        switch (op.method) { // FIXME ugly
             case Op.METHOD_NOOP:
             case Op.METHOD_ON:
             case Op.METHOD_OFF:
@@ -120,11 +120,11 @@ class LWWObjectRDT extends Syncable.RDT {
     }
 
     _set (op) {
-        op = new Op(op.spec.Event, op.value);
-        const at = this.at(op.spec.method);
+        op = new Op(op.Event, op.value);
+        const at = this.at(op.method);
         if (at===-1)
             this.ops.push(op);
-        else if (op.spec.Stamp.gt(this.ops[at].spec.Stamp))
+        else if (op.Stamp.gt(this.ops[at].Stamp))
             this.ops[at] = op;
     }
 
