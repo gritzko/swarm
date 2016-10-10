@@ -107,7 +107,7 @@ class Syncable extends OpStream {
     }
 
     get clazz () {
-        return this.constructor.RDT.Type.value;
+        return this.constructor.RDT.Class;
     }
 
     /** @returns {Stamp} - the object's type with all the type parameters */
@@ -172,13 +172,12 @@ class Syncable extends OpStream {
     }
 
     static addClass (fn) {
-        Syncable._classes[fn.RDT.Type.value] = fn;
+        Syncable._classes[fn.RDT.Class] = fn;
     }
 
-    /** @param {Stamp|String|Base64x64} type */
-    static getClass (type) {
-        const Type = new Stamp(type);
-        return Syncable._classes[Type.value];
+    /** @param {String|Base64x64} type */
+    static getClass (clazz) {
+        return Syncable._classes[clazz];
     }
 
     static getRDTClass (type) {
@@ -242,7 +241,7 @@ class RDT extends OpStream {
     }
 
     get Type () {
-        return this.constructor.Type;
+        return this.constructor.Class;
     }
 
     get Version () {
@@ -282,7 +281,7 @@ class RDT extends OpStream {
 
 }
 Syncable.RDT = RDT;
-Syncable.RDT.Type = new Stamp("Syncable"); // FIXME TYPE
+RDT.Class = "Syncable";
 
 Syncable._classes = Object.create(null);
 Syncable.defaultHost = null;

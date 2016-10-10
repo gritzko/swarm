@@ -22,6 +22,7 @@ class LevelOp {
      *  @param {Function} on_op - a callback for every op found
      *  @param {Function} on_end - a final callback
      *  @param {Object} options (skipOp, reverse)
+     *  @returns {Iterator}
      */
     scan ( from, till, on_op, on_end, options ) {
         options = options || Object.create(null);
@@ -29,7 +30,7 @@ class LevelOp {
         const filter = options.filter || null;
         let limit = options.limit || (1<<30);
         if (till===null) {
-            till = from.restamp(swarm.Stamp.ERROR);
+            till = from.restamped(swarm.Stamp.ERROR);
         }
         let i = this._db.iterator({
             gte: from.toString(),
@@ -57,6 +58,7 @@ class LevelOp {
             }
         };
         i.next(levelop_read_op);
+        return i;
     }
 
     /** @param {Array} ops - an array of Op to save
@@ -106,13 +108,13 @@ LevelOp.Put = class LevelOpPut {
         this.key = op.spec.toString();
         this.value = op.value;
     }
-}
+};
 
 LevelOp.Del = class LevelOpDel {
     constructor(spec) {
         this.type = 'del';
         this.key = spec.toString();
     }
-}
+};
 
 module.exports = LevelOp;

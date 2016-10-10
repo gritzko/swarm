@@ -49,7 +49,7 @@ class Client extends OpStream {
         this._upstream.on(this);
         this._unsynced = new Map();
         this._meta = this.get(
-            SwarmMeta.RDT.Type,
+            SwarmMeta.RDT.Class,
             this.dbid,
             state => { // FIXME htis must be state!!!
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
@@ -260,7 +260,7 @@ class Client extends OpStream {
     }
 
     newLWWObject (init_obj) {
-        return this.create(LWWObject.RDT.Type, init_obj);
+        return this.create(LWWObject.RDT.Class, init_obj);
     }
 
 }

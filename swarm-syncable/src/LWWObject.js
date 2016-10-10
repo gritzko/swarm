@@ -142,5 +142,5 @@ class LWWObjectRDT extends Syncable.RDT {
 
 }
 LWWObject.RDT = LWWObjectRDT;
-LWWObjectRDT.Type = new Stamp('LWWObject');
+LWWObjectRDT.Class = 'LWWObject';
 Syncable.addClass(LWWObject);

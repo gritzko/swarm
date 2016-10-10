@@ -7,6 +7,10 @@ const ReplicaIdScheme = swarm.ReplicaIdScheme;
 /** Database metadata object. */
 class Swarm extends LWWObject {
 
+    constructor (rdt, host) {
+        super(rdt, host);
+        this._scheme = null;
+    }
 
     filterByPrefix (prefix) {
         let ret = Object.create(null);
@@ -18,6 +22,12 @@ class Swarm extends LWWObject {
         return ret;
     }
 
+    get replicaIdScheme () {
+        if (this._scheme===null)
+            this._scheme = new ReplicaIdScheme(this.get('DBIdScheme'));
+        return this._scheme;
+    }
+
 }
 
 class SwarmRDT extends LWWObject.RDT {
@@ -27,7 +37,7 @@ class SwarmRDT extends LWWObject.RDT {
 }
 
 Swarm.RDT = SwarmRDT;
-SwarmRDT.Type = new swarm.Stamp('Swarm'); // FIXME rename to CLASS
+SwarmRDT.Class = 'Swarm'; // FIXME rename to CLASS
 Syncable.addClass(Swarm);
 
 module.exports = Swarm;
