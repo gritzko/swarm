@@ -223,23 +223,38 @@ OpStream.SLOW_DOWN = Symbol('slow'); // TODO relay backpressure
 OpStream._URL_HANDLERS = Object.create(null);
 module.exports = OpStream;
 
+/** a test op stream */
 class ZeroOpStream extends OpStream {
 
     constructor (url, options) {
         super();
-        this.ops = [];
-        this.url = new URL(url);
-        if (this.url.host)
-            OpStream.QUEUES[this.url.host] = this;
+        if (url) {
+            this.url = new URL(url);
+            const host = this.url.host;
+            if (OpStream.QUEUES[host]) {
+                return OpStream.QUEUES[host];
+            } else {
+                OpStream.QUEUES[host] = this;
+            }
+        } else {
+            this.url = null;
+        }
+        this.ops = this.offered = [];
+        this.applied = [];
     }
 
     offer (op) {
         this.ops.push(op);
     }
 
+    _apply (op) {
+        this.applied.push(op);
+    }
+
 }
 OpStream.QUEUES = Object.create(null);
 OpStream._URL_HANDLERS['0'] = ZeroOpStream;
+OpStream.ZeroOpStream = ZeroOpStream;
 
 
 class CallbackOpStream extends OpStream {

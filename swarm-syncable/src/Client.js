@@ -30,22 +30,30 @@ class Client extends OpStream {
      * Create a Client given an upstream and a database id.
      * Replica id is granted by the upstream.
      *
-     * @param {String} url - typeid spec for the database, e.g. `/Swarm#test` or
-     *      `test` or `` for the default database
+     * @param {String} url -
      * @param {Object} options - local defaults and overrides for the metadata object
      */
-    constructor (url, options) {
+    constructor (url, options, callback) {
         super();
+        if (options && options.constructor===Function) {
+            callback = options;
+            options = {};
+        }
+        this.options = options || Object.create(null);
         this._url = new URL(url);
-        this._id = this._url.replica || '0';
+        this._id = new Stamp (this._url.basename, this._url.replica); //:(
         /** syncables, API objects, the outer state */
         this._syncables = Object.create(null);
         /** we can only init the clock once we have a meta object */
         this._clock = null;
         this._last_acked = Stamp.ZERO;
-        let next = this._url.clone();
-        next.scheme.shift();
-        this._upstream = OpStream.connect(next);
+        this._upstream = this.options.upstream;
+        if (!this._upstream) {
+            let next = this._url.clone();
+            next.scheme.shift();
+            if (!next.scheme.length) throw new Error('upstream not specified');
+            this._upstream = OpStream.connect(next);
+        }
         this._upstream.on(this);
         this._unsynced = new Map();
         this._meta = this.get(
@@ -53,8 +61,9 @@ class Client extends OpStream {
             this.dbid,
             state => { // FIXME htis must be state!!!
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
-                this._id = state.scope;
+                this._id = new Stamp(state.birth, state.scope);
                 this._clock.seeTimestamp(state.Stamp);
+                callback && callback();
             }
         );
         this._meta.onceSync (
@@ -62,6 +71,10 @@ class Client extends OpStream {
         );
         if (!Syncable.defaultHost) // TODO deprecate
             Syncable.defaultHost = this;
+    }
+
+    get replicaId () {
+        return this._id.origin;
     }
 
     get dbid () {
@@ -78,7 +91,9 @@ class Client extends OpStream {
 
     /** Inject an op. */
     _apply (op) {
-        const rdt = this._syncables[op.object]._rdt;
+        const syncable = this._syncables[op.object];
+        if (!syncable) return;
+        const rdt = syncable._rdt;
         if (!op.Stamp.isAbnormal() && this._clock)
             this._clock.seeTimestamp(op.Stamp);
         if (op.isOnOff())
@@ -87,7 +102,7 @@ class Client extends OpStream {
             this._last_acked = op.Stamp;
         } else {
             if (!rdt && op.name !== "off")
-                this._upstream.offer(new Op(op.rename('off'), ''));
+                this._upstream.offer(new Op(op.renamed('off', this.replicaId), ''), this);
             else
                 rdt._apply(op);
             this._emit(op);
@@ -95,7 +110,7 @@ class Client extends OpStream {
     }
 
     offer (op, source) {
-        this._upstream.offer(op);
+        this._upstream.offer(op, this);
     }
 
     close () {
@@ -144,9 +159,9 @@ class Client extends OpStream {
         const state = feed_state===undefined ? '' :
             fn._init_state(feed_state, stamp, this._clock);
         const op = new Op( spec, state );
-        this._upstream.offer(op);
+        this._upstream.offer(op, this);
         const rdt = new fn.RDT(op, this);
-        this._upstream.offer(rdt.toOnOff(true).scoped(this._id), this);
+        this._upstream.offer(rdt.toOnOff(true).scoped(this._id.origin), this);
         return this._syncables[spec.object] = new fn(rdt);
     }
 
@@ -163,7 +178,7 @@ class Client extends OpStream {
         if (!fn)
             throw new Error('unknown syncable type '+spec);
         const rdt = new fn.RDT(state0, this);
-        const on = rdt.toOnOff(true).scoped(this._id);
+        const on = rdt.toOnOff(true).scoped(this._id.origin);
         if (on.clazz==='Swarm' && this._url.password)
             on._value = 'Password: '+this._url.password; // FIXME E E
         const syncable = new fn(rdt, on_state);

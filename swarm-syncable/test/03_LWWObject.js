@@ -1,16 +1,24 @@
 "use strict";
-let tap = require('tap').test;
-let swarm = require('swarm-protocol');
-let Op = swarm.Op;
-let LWWObject = require('../src/LWWObject');
-let Clock = swarm.Clock; //require('../src/Clock');
+const tap = require('tape').test;
+const swarm = require('swarm-protocol');
+const Op = swarm.Op;
+const LWWObject = require('../src/LWWObject');
+const Clock = swarm.Clock; //require('../src/Clock');
+const Stamp = swarm.Stamp;
 
 
 tap ('syncable.03.A LWW object API', function (t) {
 
     let clock = new Clock('test', {ClockMode: 'Logical'});
 
-    let lww = new LWWObject();
+    const op = new Op([Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Op.METHOD_STATE], '');
+    const ops = [];
+
+    let lww = new LWWObject(new LWWObject.RDT(op, {
+        _clock: clock,
+        time: function() {return clock.issueTimestamp();},
+        offer: function(op) {ops.push(op)}
+    }));
     lww._clock = clock;
 
     // get-set field access
@@ -19,7 +27,6 @@ tap ('syncable.03.A LWW object API', function (t) {
     t.equal( lww.get('field'), 'string' );
     t.ok( lww.field===undefined ); // no direct field access
 
-    let ops = lww.spill();
     t.equals(ops.length, 1);
     t.equals(ops[0].value, '"string"');
     t.equals(ops[0].spec.name, 'field');
@@ -36,7 +43,7 @@ let simple_state_op = Op.parseFrame(simple_state_op_str)[0];
 
 tap ('syncable.03.B LWW object RDT parse/serialize', function (t) {
 
-    let rdt = new LWWObject.RDT(simple_state_op.value);
+    let rdt = new LWWObject.RDT(simple_state_op);
 
     t.equals(rdt.get("field"), "string");
     t.deepEqual(rdt.get("value"), '{"number":31415}');
@@ -51,13 +58,13 @@ tap ('syncable.03.B LWW object RDT parse/serialize', function (t) {
 
 tap ('syncable.03.C LWW object concurrent modification', function (t) {
 
-    let rdt = new LWWObject.RDT(simple_state_op.value);
+    let rdt = new LWWObject.RDT(simple_state_op);
 
     const concurrent_op = Op.parseFrame(
         '/LWWObject#createdBy+author!longago+c0ncurrent.field\twrong\n\n'
     )[0];
 
-    rdt.apply(concurrent_op);
+    rdt._apply(concurrent_op);
 
     t.equals(rdt.get('field'), 'string');
 
@@ -65,7 +72,7 @@ tap ('syncable.03.C LWW object concurrent modification', function (t) {
         '/LWWObject#createdBy+author!longago+concurrent.field\tright\n\n'
     )[0];
 
-    rdt.apply(non_concurrent_op);
+    rdt._apply(non_concurrent_op);
 
     t.equals(rdt.get('field'), 'right');
 

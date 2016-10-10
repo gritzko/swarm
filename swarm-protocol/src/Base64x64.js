@@ -1,8 +1,8 @@
 "use strict";
 
-var base64 =
+const base64 =
    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
-var codes =
+const codes =
     [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
     -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
     -1,-1,-1,-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,-1,-1,-1,-1,-1,-1,-1, 10,
@@ -11,10 +11,10 @@ var codes =
     41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
     58, 59, 60, 61, 62,-1,-1,-1, 63, -1];
 
-var rs64 = '[0-9A-Za-z_~]';
-var rs64x64 = rs64+'{1,10}'; // 60 bits is enough for everyone
-var reTok =  new RegExp('^'+rs64x64+'$'); // plain no-extension token
-var reNorm64x64 = /^([0-9A-Za-z_~]+?)0*$/;
+const rs64 = '[0-9A-Za-z_~]';
+const rs64x64 = rs64+'{1,10}'; // 60 bits is enough for everyone
+const reTok =  new RegExp('^'+rs64x64+'$'); // plain no-extension token
+const reNorm64x64 = /^([0-9A-Za-z_~]+?)0*$/;
 
 /**
  * Base64x64 timestamps are 64-bit timestamps in Base64.
@@ -75,7 +75,7 @@ class Base64x64 {
         reNorm64x64.lastIndex = 0;
         let m = reNorm64x64.exec(base.toString());
         if (m===null) {
-            throw new Error("not a Base64x64 string");
+            throw new Error("not a Base64x64 string: "+base);
         }
         return m[1];
     }
@@ -222,6 +222,10 @@ class Base64x64 {
 
     isAbnormal () {
         return this._base >= Base64x64.INFINITY;
+    }
+
+    static isAbnormal (base) {
+        return base.charAt(0)==='~';
     }
 
     get ms () {

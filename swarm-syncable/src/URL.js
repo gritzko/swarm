@@ -20,7 +20,6 @@ class URL {
         this.hostname = m[6];
         this.port = m[7] ? parseInt(m[7]) : 0;
         this.path = m[8];
-        this.basename;
         this.search = m[9];
         this.query;
         this.hash = m[10];
