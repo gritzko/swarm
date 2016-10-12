@@ -70,7 +70,7 @@ tap ('peer.02.A op log append basics', function(t) {
         t.equals(list.length, 3);
 
         t.end();
-        //rimraf.sync('.peer.02.A');
+        rimraf.sync('.peer.02.A');
 
     }
 

@@ -61,7 +61,7 @@ class LevelOp {
                 }
             }
             if ( !key || err || ret===LevelOp.ENOUGH ) {
-                i.end(()=>{});
+                i.end(()=>{}); // FIXME
                 on_end(err);
             } else {
                 i.next(levelop_read_op);
@@ -73,33 +73,21 @@ class LevelOp {
     
     /** spec: stamp=0=> to the state callback(err, [ops]) */
     getTail (spec, callback) {
-        const obj_end = spec.restamped(Stamp.ERROR);
-        const till = spec.stamp;
-        const i = this._db.iterator({
-            gte: spec.toString(),
-            lt: obj_end.toString(),
-            keyAsBuffer: false,
-            valueAsBuffer: false,
-            reverse: true
-        });
         const ops = [];
-        function on_op (err, key, value) {
-            if (err) // FIXME i.end() !!!
-                return callback(err);
-            if (!key)
-                return callback(null, ops);
-            const op = new Op(key, value);
-            if (till!=='0') {
-                if (op.stamp<=till)
-                    return callback(null, ops);
-            } else {
-                if (op.isState())
-                    return callback(null, ops);
-            }
-            ops.push(op);
-            i.next(on_op);
-        }
-        i.next(on_op);
+        const till = spec.stamp;
+        this.scan (
+            spec,
+            null,
+            op => {
+                if (!op.isState() || till==='0')
+                    ops.push(op);
+                const enough = till==='0' ? op.isState() : ((op.isScoped()?op.scope:op.stamp)<=till);
+                console.warn('XXX', till, op.stamp, enough);
+                return enough ? LevelOp.ENOUGH : undefined; // FIXME
+            },
+            err => callback(err, err?null:ops),
+            {reverse: true}
+        );
     }
     
 

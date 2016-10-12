@@ -70,7 +70,7 @@ class PeerOpStream extends OpStream {
         this._emit(err);
     }
 
-    _processOn (op) {
+    _processOn (op) { // FIXME  LATE, NO EARLY!!!!!!!!
 
         const spec = op.spec;
 
@@ -152,7 +152,7 @@ class PeerOpStream extends OpStream {
             const on = this.pending_scans.shift();
             const memo = {
                 on,
-                races: []
+                races: [] // FIXME test races
             };
             this.active_scans.push(memo);
             this.db.getTail(on.spec, this.endScan.bind(this, memo));
@@ -172,26 +172,26 @@ class PeerOpStream extends OpStream {
         } else if (!on.spec.Stamp.isZero()) { // patch
             // if (!this.met)
             //     return this._emit(this.on_op.error('NO SUCH OP'));
-            re_ops = ops.map(o => o.overstamped(on.scope)).reverse();
+            re_ops = ops.map(o => o.clearstamped(on.scope)).reverse();
             const max = re_ops.length ? re_ops[re_ops.length - 1].Stamp : Stamp.ZERO;
             re_ops.push(on.stamped(max));
         } else if (!ops.length) { // object unknown
             re_ops = [on];
-        } else if (sync_fn) { // make a snapshot
+        } else if (sync_fn) { // make a snapshot FIXME no state
             const state = ops.pop();
             const rdt = new sync_fn.RDT(state);
             while (ops.length)
-                rdt.apply(ops.pop().overstamped(on.scope));
+                rdt._apply(ops.pop().clearstamped(on.scope));
             while (races.length)
-                rdt.apply(races.shift());
+                rdt._apply(races.shift());
             const new_state = rdt.toOp();
             if (!state.spec.Stamp.eq(state.spec.Id))
-                this.db.replace(state, new_state);
+                this.db.replace(state, new_state, ()=>{});
             else
-                this.db.put(new_state);
-            re_ops = [new_state, on.stamped(new_state.Stamp)];
+                this.db.put(new_state, ()=>{}); // TODO?
+            re_ops = [new_state.scoped(on.scope), on.stamped(new_state.Stamp)];
         } else {
-            re_ops = ops.map(o => o.overstamped(on.scope)).reverse();
+            re_ops = ops.map(o => o.clearstamped(on.scope)).reverse();
             const max = re_ops[re_ops.length - 1].Stamp;
             re_ops.push(on.stamped(max));
         }

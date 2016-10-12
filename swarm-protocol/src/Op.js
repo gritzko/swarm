@@ -152,7 +152,7 @@ class Op extends Spec {
         return new Op ([
             this.Type,
             this.Id,
-            new Stamp(this.scope ? this.scope : this.time, this.origin),
+            new Stamp(this.isScoped() ? this.scope : this.time, this.origin),
             new Stamp(this.method, new_scope||'0')
         ], this._value);
     }
