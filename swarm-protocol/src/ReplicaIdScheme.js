@@ -7,10 +7,11 @@ class ReplicaIdScheme {
 
     /** @param {Number|String} formula - scheme formula, e.g. `"0262"`, `181`... */
     constructor (formula) {
-        if (formula===undefined)
+        if (!formula)
             formula = ReplicaIdScheme.DEFAULT_SCHEME;
         if ((formula).constructor===Number)
             formula = '' + formula;
+        formula = formula.toString();
         if (formula.length===3)
             formula = '0' + formula;
         if (!ReplicaIdScheme.FORMAT_RE.test(formula))
@@ -54,6 +55,10 @@ class ReplicaIdScheme {
             ret +=  new Base64x64(parts[p]).toFullString().
                 substr(this.offset(p), this.length(p));
         return new Base64x64(ret).toString();
+    }
+
+    slice (base64, part) {
+        return new Base64x64(base64).slice(this.offset(part), this.length(part));
     }
 
     isPrimusless () {

@@ -49,6 +49,11 @@ tape ('protocol.06.B replica id', function (tap) {
     tap.equals(id3.toString(), 'PeeclientS');
     tap.ok(Base64x64.is(id3));
 
+    const id4 = new ReplicaId("0client", "163");
+    id4.session = '0000000SSN';
+    id4.peer = 'R';
+    tap.equals( id4+'', 'RclientSSN' );
+
     tap.end();
 });
 
