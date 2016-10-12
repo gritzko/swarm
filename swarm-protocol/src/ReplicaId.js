@@ -50,19 +50,19 @@ class ReplicaId {
     get client () {return this._parts[2];}
     get session () {return this._parts[3];}
     set primus (base) {
-        this._parts[0] = this._scheme.slice(base, 0);
+        this._parts[0] = this._scheme.slice(base, 0).toString();
         return this._rebuild();
     }
     set peer (base) {
-        this._parts[1] = this._scheme.slice(base, 1);
+        this._parts[1] = this._scheme.slice(base, 1).toString();
         return this._rebuild();
     }
     set client (base) {
-        this._parts[2] = this._scheme.slice(base, 2);
+        this._parts[2] = this._scheme.slice(base, 2).toString();
         return this._rebuild();
     }
     set session (base) {
-        this._parts[3] = this._scheme.slice(base, 3);
+        this._parts[3] = this._scheme.slice(base, 3).toString();
         return this._rebuild();
     }
 
@@ -78,6 +78,10 @@ class ReplicaId {
     isClientOf(rid) {
         return this.primus===rid.primus && this.peer===rid.peer &&
             this.isClient() && rid.isPeer();
+    }
+
+    clone () {
+        return new ReplicaId(this.toString(), this._scheme);
     }
 
     toString () {

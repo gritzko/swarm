@@ -14,7 +14,7 @@ tap ('peer.01.A switch basic test', function(t) {
         '/Swarm#test!0.on+R',
         '/Swarm#test!now.~+R=\n\t!2.Clock "Logical"\n\t!3.DBIdScheme "0172"',
         '/Swarm#test!now.on+R',
-        '/Swarm#test!0.on+0client Password: 1',
+        '/Swarm#test!0.on+0client {"Password": 1}',
         '/~Client#0client!ago.~+R !2.Password 1',
         '/~Client#0client!ago.on+R',
         '/LWWObject#id!0.on+Rclient001',

@@ -165,6 +165,8 @@ class SwitchOpStream extends OpStream {
             return;
         } else if (!stream._id) {
             const req = this.req4stream(stream);
+            if (!req)
+                throw new Error('unknown stream');
             if (!req.hs && op.isHandshake() && op.scope) {
                 req.hs = op;
                 req.rid = new ReplicaId(op.scope, this.meta.replicaIdScheme);
@@ -201,24 +203,39 @@ class SwitchOpStream extends OpStream {
     }
 
     _deny (hs_obj, message) {
-        const i = this.pending.indexOf(hs_obj);
-        if (i===-1) throw new Error('no such request');
-        this.pending.splice(i, 1);
         if (hs_obj.hs)
             hs_obj.stream._apply(hs_obj.hs.error(message));
         hs_obj.stream._apply(null);
     }
 
+    _assign_ssn (req) {
+        // TODO getScoped
+        const max_rid = req.client.get('max_ssn', this.replicaId) || '0';
+        const next_rid = this.rid.clone();
+        next_rid.client = req.rid.client;
+        next_rid.session = Base64x64.inc(max_rid);
+        if (next_rid.session==='0')
+            return this._deny(req, 'TODO: ssn id recycling');
+        const rid = next_rid.toString();
+        req.client.set('max_ssn', next_rid.session); //, this.replicaId);
+        // req.client.setScoped('login', 'ok', rid);
+        if (this._debug)
+            console.warn('!'+this._debug+' assign ssn '+rid);
+        return rid;
+    }
+
     _accept (req) {
-        const i = this.pending.indexOf(req);
-        if (i===-1) throw new Error('no such request');
-        this.pending.splice(i, 1);
+        // conn id, ssn grant
         const hs = req.hs;
         const now = this.clock.issueTimestamp().value;
-        req.rid.peer = this.rid.peer;
-        req.rid.session = '0000000001';
-        const rid = 'Rclient001'; // req.rid.toString();
+        let rid;
+        if (req.rid.peer==='0') { // new ssn grant
+            rid = this._assign_ssn(req);
+        } else {
+            rid = req.rid;
+        }
         req.stream._id = new Stamp(this.dbrid.value, rid);
+        // register the conn
         const prev_conn_id = this.replid2connid.get(rid);
         if (prev_conn_id) {
             const prev_stream = this.conns.get(prev_conn_id);
@@ -227,6 +244,7 @@ class SwitchOpStream extends OpStream {
         }
         this.replid2connid.set(rid, now);
         this.conns.set(now, req.stream);
+        // reinject queued ops
         if (this._debug)
             console.warn(this._debug+'>'+'\t'+hs+' ['+req.ops.length+']');
         this.log.offer(hs);
@@ -236,12 +254,23 @@ class SwitchOpStream extends OpStream {
 
     _auth_client (req) {
         const client = req.client;
-        req.hs.value;
-        if (client.hasState()) {
+        let props;
+        try {
+            const creds = req.hs.value;
+            if (creds && creds[0]==='{')
+                props = JSON.parse(creds);
+            else
+                props = {Password: creds};
+        } catch (ex) {}
+        if (!props || !client.hasState()) {
+            this._deny(req, 'INVALID CREDENTIALS');
+        } else if (props.Password===client.get('Password')) {
             this._accept(req);
         } else {
             this._deny(req, 'INVALID CREDENTIALS');
         }
+        const i = this.pending.indexOf(req);
+        this.pending.splice(i, 1);
         client.close();
     }
 
