@@ -23,8 +23,10 @@ class Swarm extends LWWObject {
     }
 
     get replicaIdScheme () {
-        if (this._scheme===null)
-            this._scheme = new ReplicaIdScheme(this.get('DBIdScheme'));
+        if (this._scheme===null) {
+            const formula = this.get(ReplicaIdScheme.DB_OPTION_NAME);
+            this._scheme = new ReplicaIdScheme(formula);
+        }
         return this._scheme;
     }
 

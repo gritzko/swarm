@@ -265,9 +265,12 @@ class CallbackOpStream extends OpStream {
             throw new Error('callback is not a function');
         this._callback = callback;
         this._once = !!once;
+        this._in = false;
     }
     
     _apply (op) {
+        if (this._in) return;
+        this._in = true;
         return (this._callback(op)===OpStream.ENOUGH || this._once) ?
             OpStream.ENOUGH : OpStream.OK;
     }

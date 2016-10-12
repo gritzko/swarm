@@ -1,6 +1,8 @@
 "use strict";
 const swarm = require('swarm-protocol');
 const Spec = swarm.Spec;
+const Stamp = swarm.Stamp;
+const Op = swarm.Op;
 
 /** just a nice thin wrapper for LevelDOWN API */
 class LevelOp {
@@ -12,7 +14,15 @@ class LevelOp {
         }
         options = options || Object.create(null);
         this._db = db;
-        db.open(options, callback);
+        this.vv = null;
+        db.open(options, err => {
+            if (err)
+                return callback(err);
+            this._read_vv((err, vv) => {
+                this.vv = vv;
+                callback(err, this);
+            });
+        });
     }
 
     /** Scan a db in the given object's range, starting after the stamp,
@@ -30,7 +40,7 @@ class LevelOp {
         const filter = options.filter || null;
         let limit = options.limit || (1<<30);
         if (till===null) {
-            till = from.restamped(swarm.Stamp.ERROR);
+            till = from.restamped(Stamp.ERROR);
         }
         let i = this._db.iterator({
             gte: from.toString(),
@@ -43,7 +53,7 @@ class LevelOp {
         let levelop_read_op = (err, key, value) => {
             let ret;
             if (key && !err) {
-                let op = skip_op ? null : new swarm.Op(key, value);
+                let op = skip_op ? null : new Op(key, value);
                 if (filter===null || filter(op)) {
                     ret = on_op(op, key, value);
                     if (!--limit)
@@ -60,11 +70,64 @@ class LevelOp {
         i.next(levelop_read_op);
         return i;
     }
+    
+    /** spec: stamp=0=> to the state callback(err, [ops]) */
+    getTail (spec, callback) {
+        const obj_end = spec.restamped(Stamp.ERROR);
+        const till = spec.stamp;
+        const i = this._db.iterator({
+            gte: spec.toString(),
+            lt: obj_end.toString(),
+            keyAsBuffer: false,
+            valueAsBuffer: false,
+            reverse: true
+        });
+        const ops = [];
+        function on_op (err, key, value) {
+            if (err) // FIXME i.end() !!!
+                return callback(err);
+            if (!key)
+                return callback(null, ops);
+            const op = new Op(key, value);
+            if (till!=='0') {
+                if (op.stamp<=till)
+                    return callback(null, ops);
+            } else {
+                if (op.isState())
+                    return callback(null, ops);
+            }
+            ops.push(op);
+            i.next(on_op);
+        }
+        i.next(on_op);
+    }
+    
 
+    _read_vv (callback) {
+        const vv = new swarm.VV();
+        let i = this._db.iterator({
+            gte: '+0',
+            lte: '+~~~~~~~~~~',
+            keyAsBuffer: false,
+            valueAsBuffer: false
+        });
+        const next = (err, key, value) => {
+            if (err || !key) {
+                i.end(()=>{});
+                callback(err, err ? null : vv);
+            } else {
+                vv.addPair(value, key.substr(1));
+                i.next(next);
+            }
+        };
+        i.next(next);
+    }
+    
     /** @param {Array} ops - an array of Op to save
      *  @param {Function} callback  */
     putAll (ops, callback) {
         let batch = ops.map(op => new LevelOp.Put(op));
+        ops.forEach(op=>batch.push(new LevelOp.VVAdd(op)));
         this._db.batch(batch, {sync: true}, callback);
     }
 
@@ -80,7 +143,7 @@ class LevelOp {
     /** @param {Spec} spec - the key */
     get (spec, callback) {
         this._db.get(spec.toString(), {asBuffer:false},
-            (err, value) => callback && callback(err?null:new swarm.Op(spec, value)) );
+            (err, value) => callback && callback(err?null:new Op(spec, value)) );
     }
 
     del (spec, callback) {
@@ -114,6 +177,14 @@ LevelOp.Del = class LevelOpDel {
     constructor(spec) {
         this.type = 'del';
         this.key = spec.toString();
+    }
+};
+
+LevelOp.VVAdd = class {
+    constructor (op) {
+        this.type = 'put';
+        this.key = '+' + op.spec.Stamp.origin;
+        this.value = op.spec.Stamp.value;
     }
 };
 
