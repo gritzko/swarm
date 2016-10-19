@@ -1,6 +1,6 @@
 {
     "name": "swarm-server",
-    "version": "1.2.1",
+    "version": "1.2.2",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -19,9 +19,10 @@
         "README.md",
         "index.js"
     ],
-    "main": "./index.js",
+    "main": "./src/api.js",
     "bin":  {
-        "swarmd": "./cli.js"
+        "swarm": "./src/cli.js",
+        "swarm-create": "./src/create.js"
     },
     "dependencies": {
         "swarm-protocol":   "^1.2.0",
@@ -30,7 +31,8 @@
         "leveldown":        "^1.4.6",
         "daemon":           "^1.1.0",
         "minimist":         "^1.2.0",
-        "swarm-cli":        "^1.2.0"
+        "swarm-cli":        "^1.2.0",
+        "commander":        "^2.9.0"
     },
     "devDependencies": {
         "swarm-bat": "1.0.x",

@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+"use strict";
+const fs = require('fs');
+const path = require('path');
+const cli = require("commander");
+const leveldown = require('leveldown');
+const swarm = require('swarm-protocol');
+const peer = require('swarm-peer');
+const Spec = swarm.Spec;
+const Stamp = swarm.Stamp;
+
+cli
+    .version("0.0.1")
+    .usage("[options] <db_dir>")
+    .option("-p, --prefix <spec>", "key (spec) prefix")
+    .option("-w, --write <value>", "write a value at the exact prefix")
+    .option("-d, --delete", "delete at the exact prefix")
+    .option("-x, --delete-all", "delete all values at the prefix")
+    .option("-v, --vv", "print out the version vector")
+    .parse(process.argv);
+
+if (!cli.args[0]) {
+    console.error('no db specified');
+    return 1;
+}
+const db_path = path.resolve(cli.args[0]);
+if (!fs.existsSync(db_path) || !fs.statSync(db_path).isDirectory()) {
+    console.warn('the dir does not exist');
+    return 2;
+}
+
+const level = new leveldown(db_path);
+const db = new peer.LevelOp(level, {}, err => {
+    if (err) return on_err(err);
+    const prefix = new Spec(cli.prefix);
+    const till = new Spec([z2e(prefix.Type), z2e(prefix.Id), z2e(prefix.Stamp), z2e(prefix.Name)]);
+    if (cli.vv) {
+        db._read_vv((err, vv)=>{
+            if (err) return on_err(err);
+            vv.map.forEach((v,k)=>console.log(k,v));
+        });
+    }
+    if (cli.deleteAll) {
+        const specs = [];
+        db.scan(
+            prefix,
+            till,
+            op=>specs.push(op.spec),
+            err=> {
+                if (err)
+                    on_err(err);
+                else
+                    db.delAll(specs, on_err);
+            }
+        );
+    } else if (cli.delete) {
+        db.del(prefix, on_err);
+    } else if (cli.write) {
+        const op = new swarm.Op(prefix, cli.write);
+        db.put(op, on_err);
+    } else {
+        db.scan(
+            prefix,
+            till,
+            op=>console.log(op.toString()),
+            on_err
+        );
+    }
+});
+
+function on_err (err) {
+    if (err) {
+        console.error(err);
+        process.exitCode = 3;
+    }
+}
+
+function z2e (stamp) {
+    return stamp.isZero() ? Stamp.ERROR : stamp;
+}

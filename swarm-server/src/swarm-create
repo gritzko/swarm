@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+"use strict";
+const fs = require('fs');
+const path = require('path');
+const cli = require("commander");
+const swarm = require('swarm-protocol');
+const sync = require('swarm-syncable');
+require('./api');
+const Base64x64 = swarm.Base64x64;
+// const Swarm = sync.Swarm;
+const Stamp = swarm.Stamp;
+const Clock = swarm.Clock;
+// const Op = swarm.Op;
+const ReplicaIdScheme  = swarm.ReplicaIdScheme;
+
+function more_options (kv, opts) {
+    let i = kv.indexOf('=');
+    if (i===-1) i = kv.length;
+    const key = new Base64x64(kv.substr(0,i));
+    const val = kv.substr(i+1);
+    opts[key] = val;
+    return opts;
+}
+
+cli
+    .version("0.0.1")
+    .usage("[options] <db_dir>")
+    .option("-c, --clocklen <n>", "Timestamp minimum length", parseInt)
+    .option("-l, --logical", "Use sequential (not hybrid) timestamps")
+    .option("-s, --scheme", "Replica id scheme", /^\d{3,4}$/)
+    .option("-o, --option <key=value>", "Database option", more_options, {})
+    .parse(process.argv);
+
+const db_path = path.resolve(cli.args[0]);
+if (fs.existsSync(db_path)) {
+    console.warn('the dir already exists');
+    return 1;
+}
+fs.mkdirSync(db_path);
+
+const basename = path.basename(db_path);
+if (!Stamp.is(basename)) {
+    console.warn('not a proper database replica id (dbid-replid): '+basename);
+    return 2;
+}
+const dbrid = new Stamp(basename);
+const replid = dbrid.origin;
+const dbid = dbrid.value;
+
+// understand the id scheme
+const scheme_str = cli.scheme || "0172";
+if (!ReplicaIdScheme.is(scheme_str)) {
+    console.warn('invalid replica id scheme: '+scheme_str);
+    return 3;
+}
+const scheme =  new ReplicaIdScheme(scheme_str);
+
+if (replid.length!==scheme.peers+scheme.primuses) {
+    console.warn('peer id length does not match the scheme ('+scheme+')');
+    return 4;
+}
+
+const host = new sync.Client(
+    'swarm+level:'+db_path,
+    {},
+    create_meta
+);
+// host._upstream._debug = 'L';
+// host._debug = 'H';
+
+function create_meta (err) {
+    const meta = host.meta;
+    meta.set(ReplicaIdScheme.DB_OPTION_NAME, scheme.toString());
+    if (cli.clocklen)
+        meta.set(Clock.OPTION_CLOCK_LENGTH, cli.clocklen);
+    if (cli.logical)
+        meta.set(Clock.OPTION_CLOCK_MODE, "Logical");
+    meta.setAll(cli.option);
+    //host.onSync(90=>console.log('database created'));
+    console.log('created database', dbid, 'replica', replid);
+}
