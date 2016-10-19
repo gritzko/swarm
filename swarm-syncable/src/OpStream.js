@@ -16,6 +16,7 @@ class OpStream {
         /** db replica id: dbname+replica */
         this._dbrid = null;
         this._debug = null;
+        this.error_message = null;
     }
 
     _lstn_state () {
@@ -137,6 +138,11 @@ class OpStream {
             this._lstn = null;
     }
 
+    _error (message) {
+        this.error_message = message;
+        this._emit(null);
+    }
+
     _emitAll (ops) {
         ops.forEach(op => this._emit(op));
     }
@@ -209,7 +215,7 @@ class OpStream {
         const fn = OpStream._URL_HANDLERS[top_proto];
         if (!fn)
             throw new Error('unknown protocol: '+top_proto);
-        return new fn(url, options);
+        return new fn(url, options||Object.create(null));
     }
 
 }
@@ -258,7 +264,7 @@ OpStream.ZeroOpStream = ZeroOpStream;
 
 
 class CallbackOpStream extends OpStream {
-    
+
     constructor (callback, once) {
         super();
         if (!callback || callback.constructor!==Function)
@@ -267,14 +273,16 @@ class CallbackOpStream extends OpStream {
         this._once = !!once;
         this._in = false;
     }
-    
+
     _apply (op) {
         if (this._in) return;
         this._in = true;
-        return (this._callback(op)===OpStream.ENOUGH || this._once) ?
+        const enough = this._callback(op)===OpStream.ENOUGH;
+        this._in = false; // FIXME
+        return (enough || this._once) ?
             OpStream.ENOUGH : OpStream.OK;
     }
-    
+
 }
 
 
@@ -315,7 +323,7 @@ class FilterOpStream extends OpStream {
         }
         return !this._negative;
     }
-    
+
     _offer () {
         throw new Error('not implemented');
     }

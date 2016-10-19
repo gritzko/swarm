@@ -19,7 +19,9 @@ class URL {
         this.host = m[5];
         this.hostname = m[6];
         this.port = m[7] ? parseInt(m[7]) : 0;
-        this.path = m[8];
+        this.path = m[8] || '';
+        const lastslash = this.path.lastIndexOf('/');
+        this.dbid = lastslash===-1 ? this.path : this.path.substr(lastslash+1);
         this.search = m[9];
         this.query;
         this.hash = m[10];
@@ -70,7 +72,7 @@ URL.RE_URI = new RegExp(
         "(?:((B)(?:\\:(\\w+))?)@)?" +                  // credentials
         "(((?:[^/?#:@\\s]+\\.)*[^/?#:@\\s]+)" + // domain
         "(?::([0-9]+))?)" +                    // port
-    ")" +
+    ")?" +
     "(/[^?#'\"\\s]*)?" +         // path
     "(?:\\?([^'\"#\\s]*))?" +   // query
     "(?:#(\\S*))?$")             // fragment
@@ -80,3 +82,4 @@ URL.RE_URI = new RegExp(
 
 
 module.exports = URL;
+

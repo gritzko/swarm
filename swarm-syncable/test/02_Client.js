@@ -63,6 +63,7 @@ tap ( 'syncable.02.B Client add/removeSyncable API', function (t) {
     t.notOk(synced);
     t.equals(host.time().toString(), 'time01+ReplicaSSN'); // cache init
     upstream._emit(ops[2]);
+
     t.ok(synced);
 
     // by-value constructor
@@ -105,3 +106,4 @@ tap ( 'syncable.02.B Client add/removeSyncable API', function (t) {
     t.end();
 
 });
+

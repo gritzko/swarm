@@ -52,7 +52,7 @@ class Client extends OpStream {
             let next = this._url.clone();
             next.scheme.shift();
             if (!next.scheme.length) throw new Error('upstream not specified');
-            this._upstream = OpStream.connect(next);
+            this._upstream = OpStream.connect(next, options);
         }
         this._upstream.on(this);
         this._unsynced = new Map();
@@ -98,7 +98,7 @@ class Client extends OpStream {
             this._clock.seeTimestamp(op.Stamp);
         if (op.isOnOff())
             this._unsynced.delete(op.object);
-        if (op.origin === this.origin) {
+        if (!op.isOnOff() && op.origin === this.origin) {  // :(
             this._last_acked = op.Stamp;
         } else {
             if (!rdt && op.name !== "off")
@@ -110,6 +110,8 @@ class Client extends OpStream {
     }
 
     offer (op, source) {
+        if (this._debug)
+            console.warn('}'+this._debug+'>\t'+op);
         this._upstream.offer(op, this);
     }
 
@@ -150,18 +152,23 @@ class Client extends OpStream {
      * @param {Stamp|String|Base64x64} type - the syncable object type
      * @param feed_state - the initial state
      */
-    create (type, feed_state) {
+    create (type, feed_state, static_id) {
         const fn = Syncable.getClass(type);
         if (!fn)
             throw new Error('unknown syncable type '+type);
         const stamp = this.time();
-        const spec = new Spec([ type, stamp, stamp, Op.STAMP_STATE ]);
+        const spec = new Spec([
+            fn.RDT.Class,
+            static_id ? new Stamp(static_id) : stamp,
+            stamp,
+            Op.STAMP_STATE
+        ]);
         const state = feed_state===undefined ? '' :
             fn._init_state(feed_state, stamp, this._clock);
         const op = new Op( spec, state );
         this._upstream.offer(op, this);
         const rdt = new fn.RDT(op, this);
-        this._upstream.offer(rdt.toOnOff(true).scoped(this._id.origin), this);
+        this.offer(rdt.toOnOff(true).scoped(this._id.origin), this);
         return this._syncables[spec.object] = new fn(rdt);
     }
 
@@ -183,7 +190,7 @@ class Client extends OpStream {
             on._value = 'Password: '+this._url.password; // FIXME E E
         const syncable = new fn(rdt, on_state);
         this._syncables[spec.object] = syncable;
-        this._upstream.offer(on, this);
+        this.offer(on, this);
         this._unsynced.set(spec.object, 1);
         return syncable;
     }
@@ -248,18 +255,16 @@ class Client extends OpStream {
     }
 
     onSync (callback) {
-        if (this._unsynced.size===0) {
-            callback(null);
-        } else {
-            this.on(op => { // TODO .on .off
-                if (this._unsynced.size === 0) {
-                    callback(op);
-                    return OpStream.ENOUGH;
-                } else {
-                    return OpStream.OK;
-                }
-            });
-        }
+        if (this._unsynced.size===0)
+            return callback(null);
+        this.on(op => { // TODO .on .off
+            if (this._unsynced.size === 0) {
+                callback(op);
+                return OpStream.ENOUGH;
+            } else {
+                return OpStream.OK;
+            }
+        });
     }
 
     static get (type, id) {
@@ -281,3 +286,4 @@ class Client extends OpStream {
 }
 
 module.exports = Client;
+

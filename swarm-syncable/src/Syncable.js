@@ -47,7 +47,7 @@ class Syncable extends OpStream {
     }
 
     /** Create, apply and emit a new op.
-     * @param {String} op_name - the operation name (Base64x64, transcendent) 
+     * @param {String} op_name - the operation name (Base64x64, transcendent)
      * @param {String} op_value - the op value */
     _offer (op_name, op_value) { // FIXME BAD!!!
         const stamp = this._rdt._host.time();
@@ -177,6 +177,8 @@ class Syncable extends OpStream {
 
     /** @param {String|Base64x64} type */
     static getClass (clazz) {
+        if (typeof(clazz)==='function')
+            clazz = clazz.RDT.Class; // :)
         return Syncable._classes[clazz];
     }
 
@@ -253,7 +255,7 @@ class RDT extends OpStream {
     }
 
     /**
-     * @returns {String} - the serialized state string 
+     * @returns {String} - the serialized state string
      */
     toString () {
         return "";
