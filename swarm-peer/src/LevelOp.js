@@ -70,7 +70,7 @@ class LevelOp {
         i.next(levelop_read_op);
         return i;
     }
-    
+
     /** spec: stamp=0=> to the state callback(err, [ops]) */
     getTail (spec, callback) {
         const ops = [];
@@ -89,7 +89,7 @@ class LevelOp {
             {reverse: true}
         );
     }
-    
+
 
     _read_vv (callback) {
         const vv = new swarm.VV();
@@ -110,7 +110,7 @@ class LevelOp {
         };
         i.next(next);
     }
-    
+
     /** @param {Array} ops - an array of Op to save
      *  @param {Function} callback  */
     putAll (ops, callback) {
@@ -176,4 +176,7 @@ LevelOp.VVAdd = class {
     }
 };
 
+function noop() {}
+
 module.exports = LevelOp;
+

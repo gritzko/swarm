@@ -1,12 +1,11 @@
 "use strict";
 const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
-const Spec = swarm.Spec;
+// const Spec = swarm.Spec;
 const Stamp = swarm.Stamp;
-const Op = swarm.Op;
+// const Op = swarm.Op;
 const OpStream = sync.OpStream;
 const Base64x64 = swarm.Base64x64;
-const Swarm = sync.Swarm;
 const ClientMeta = require('./ClientMeta');
 const Client = sync.Client;
 const Syncable = sync.Syncable;
@@ -160,7 +159,7 @@ class SwitchOpStream extends OpStream {
             console.warn('}'+this._debug+'\t'+op);
 
         // sanity checks - stamps, scopes
-        if (op===null) {
+        if (op===null) { // FIXME  STRUCTURE CHECKS
             // TODO inject .off
             return;
         } else if (!stream._id) {
@@ -183,6 +182,8 @@ class SwitchOpStream extends OpStream {
                 req.ops.push(op);
             }
             return;
+        } else if (op.isState() && !op.Stamp.eq(op.Id)) {
+            op = op.error('NO STATE PUSH', op.origin);
         } else if (Base64x64.isAbnormal(op.class) && stream!==this.pocket) {
             op = op.error('PRIVATE CLASS', stream._id.origin);
         } else if (!Syncable.getClass(op.class)) {
@@ -194,6 +195,7 @@ class SwitchOpStream extends OpStream {
             if (stream._id.origin !== op.origin)
                 op = op.error('WRONG ORIGIN', stream._id.origin);
         }
+
 
         if (this._debug)
             console.warn(this._debug+'>'+'\t'+op);

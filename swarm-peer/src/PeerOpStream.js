@@ -22,8 +22,14 @@ class PeerOpStream extends OpStream {
         this.tips = new Map();
         this.tip_bottom = '0';
         this.db = new LevelOp(db, options, err => {
-            this.vv = this.db.vv;
-            callback(err, this);
+            if (!err && !this.db.vv) err = 'no vv';
+            if (err) {
+                this._error(err);
+            } else {
+                this.vv = this.db.vv;
+                this._suspend.forEach(op => this.offer(op));
+            }
+            if (callback) callback(err, this);
         });
 
         this.offered_queue = [];
@@ -32,17 +38,20 @@ class PeerOpStream extends OpStream {
         this.pending_scans = [];
         this.active_scans = [];
 
+        this._suspend = [];
         this._save_cb = this._save_batch.bind(this);
 
     }
 
 
     offer (op) {
+        if (!this.vv)
+            return this._suspend.push(op);
         if (this._debug)
             console.warn('}'+this._debug+'\t'+op);
         // .on : create iterator, register
         // .op : push to matching iterators
-        switch (op.spec.method) {
+        switch (op.method) {
             case Op.METHOD_STATE:   this._processState(op); break;
             case Op.METHOD_ERROR:   this._processError(op); break;
             case Op.METHOD_ON:      this._processOn(op); break;
@@ -72,16 +81,14 @@ class PeerOpStream extends OpStream {
 
     _processOn (op) { // FIXME  LATE, NO EARLY!!!!!!!!
 
-        const spec = op.spec;
-
         let tip = this.tips.get(op.id);
         let top = this.vv.get(op.origin);
 
-        if (spec.Stamp.isZero())
+        if (op.Stamp.isZero())
             this.queueScan(op);
-        else if (tip>'0' && spec.Stamp.value>tip)
+        else if (tip>'0' && op.Stamp.value>tip)
             this._emit(op.error('UNKNOWN BASE > '+tip));
-        else if (!top || top<spec.time)
+        else if (!top || top<op.time)
             this._emit(op.error('BASE AHEAD > '+top)); // leaks max stamp
         else
             this.queueScan(op);
@@ -102,35 +109,29 @@ class PeerOpStream extends OpStream {
 
     _processMutation (op) {
 
-        const spec = op.spec;
-
         let top = this.vv.get(op.origin);
-        if (spec.time<=top) {
-            return this._emit(op.error("OP REPLAY", op.spec.origin));
+        if (op.time<=top) {
+            return this._emit(op.error("OP REPLAY", op.origin));
         }
-        this.vv.add(spec.Stamp); // FIXME to LevelOp
+        this.vv.add(op.Stamp); // FIXME to LevelOp
 
         let tip = this.tips.get(op.id) || this.tip_bottom;
         // we guarantee unique monotonous time values by overstamping ops
-        if (spec.Stamp.value <= tip)
+        if (op.Stamp.value <= tip)
             op = op.overstamped(swarm.Base64x64.inc(tip));
-        this.tips.set(op.id, op.spec.Stamp.value);
+        this.tips.set(op.id, op.Stamp.value);
 
         this.save_queue.push(op);
 
         this.active_scans.forEach( scan => {
-            if (scan.spec.isSameObject(op.spec))
+            if (scan.on.isSameObject(op))
                 scan.races.push(op);
         });
 
     }
 
     _processState (state_op) {
-        if (!state_op.spec.Stamp.eq(state_op.spec.Id)) {
-            this._emit(state_op.error('NO STATE PUSH', state_op.spec.origin));
-        } else {
-            this._processMutation(state_op, this.save, this.forward);
-        }
+        this._processMutation(state_op, this.save, this.forward);
     }
 
     _apply (op, source) {
@@ -207,4 +208,3 @@ PeerOpStream.VV_PREFIX_LEN = PeerOpStream.VV_SPEC.typeid.length+1;
 PeerOpStream.SCAN_CONCURRENCY = 2;
 
 module.exports = PeerOpStream;
-
