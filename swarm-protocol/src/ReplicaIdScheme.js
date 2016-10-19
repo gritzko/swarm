@@ -65,6 +65,12 @@ class ReplicaIdScheme {
         return this.primuses===0;
     }
 
+    static is (scheme) {
+        if (!ReplicaIdScheme.FORMAT_RE.test(scheme)) return false;
+        const rids = new ReplicaIdScheme(scheme);
+        return rids.isCorrect();
+    }
+
     isCorrect () {
         const length = this.primuses+this.peers+this.clients+this.sessions;
         return length<=10;
@@ -104,3 +110,4 @@ ReplicaIdScheme.DEFAULT_SCHEME = '0262';
 
 
 module.exports = ReplicaIdScheme;
+

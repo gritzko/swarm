@@ -215,7 +215,7 @@ class Spec {
     }
 
     isSameObject (spec) {
-        if (spec.constructor!==Spec) {
+        if (!spec._toks) {
             spec = new Spec(spec);
         }
         return this.Type.eq(spec.Type) && this.Id.eq(spec.Id);
@@ -252,3 +252,4 @@ Spec.ZERO = new Spec();
 Spec.ERROR = new Spec([Stamp.ERROR, Stamp.ERROR, Stamp.ERROR, Stamp.ERROR]);
 
 module.exports = Spec;
+
