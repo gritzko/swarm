@@ -1,5 +1,5 @@
 include ../Makefile.package.in
 
 test:
-	@tap test/??_*.js
+	@tape test/??_*.js | tap-diff
 	@test/cli-test.sh

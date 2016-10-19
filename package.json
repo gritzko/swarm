@@ -1,6 +1,6 @@
 {
   "name": "swarm",
-  "version": "1.0.16",
+  "version": "1.2.2",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -39,6 +39,8 @@
     "mkdirp": "^0.5.1",
     "rimraf": "^2.4.4",
     "tap": "^2.3.1",
+    "tape": "^4.6.2",
+    "tap-diff": "^0.1.1",
     "jsdoc": "^3.4.0"
   },
   "scripts": {

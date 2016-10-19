@@ -1,6 +1,6 @@
 {
     "name": "swarm-bat",
-    "version": "1.2.12",
+    "version": "1.2.14",
     "repository": {
       "type": "git",
       "url": "https://github.com/gritzko/swarm.git"
@@ -29,6 +29,9 @@
     },
     "scripts": {
         "test": "make test"
+    },
+    "devDependencies": {
+        "tape": "4.6.2"
     },
     "bin": {
         "bat": "./bat-cli.js"

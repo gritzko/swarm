@@ -54,11 +54,9 @@ see test/ for examples of [API](test/00_parse_format.js) and
 
 ## Codes
 
-- [ ]     0 OK
-- [ ]     1 no match
-- [ ]     2 script error
-- [ ]     3 argument error
-- [ ]     4 io error
+ 0  OK
+ 1  test fails
+-1  error
 
 
 ## TODO

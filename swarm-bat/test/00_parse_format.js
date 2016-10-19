@@ -1,7 +1,7 @@
 "use strict";
 var bat = require('../bat-api');
 const su = require('stream-url');
-var tap = require('tap').test;
+var tap = require('tape').test;
 
 tap ('1.A parse trivial .batt scripts', function (t) {
 
