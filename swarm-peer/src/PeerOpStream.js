@@ -16,7 +16,7 @@ class PeerOpStream extends OpStream {
      * */
     constructor (db, options, callback) {
 
-        super();
+        super(options);
 
         this.vv = null;
         this.tips = new Map();
@@ -179,10 +179,12 @@ class PeerOpStream extends OpStream {
         } else if (!ops.length) { // object unknown
             re_ops = [on];
         } else if (sync_fn) { // make a snapshot FIXME no state
-            const state = ops.pop();
+            const last_op = ops[ops.length-1];
+            const state = last_op.method===Op.METHOD_STATE ?
+                ops.pop() : Op.zeroStateOp(on);
             const rdt = new sync_fn.RDT(state);
             while (ops.length)
-                rdt._apply(ops.pop().clearstamped(on.scope));
+                rdt._apply(ops.pop().clearstamped());
             while (races.length)
                 rdt._apply(races.shift());
             const new_state = rdt.toOp();

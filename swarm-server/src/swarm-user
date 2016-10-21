@@ -1,0 +1,150 @@
+#!/usr/bin/env node
+"use strict";
+const fs = require('fs');
+const path = require('path');
+const cli = require("commander");
+const crypto = require('crypto');
+const readline = require('readline');
+const LevelDOWN = require('leveldown');
+const swarm = require('swarm-protocol');
+const peer = require('swarm-peer');
+const sync = require('swarm-syncable');
+const Spec = swarm.Spec;
+const Stamp = swarm.Stamp;
+const ReplicaId = swarm.ReplicaId;
+const ReplicaIdScheme = swarm.ReplicaIdScheme;
+const Base64x64 = swarm.Base64x64;
+const ClientMeta = peer.ClientMeta;
+require('./api');
+
+/**
+    (change or create fixed id)
+    swarm user
+        --id 0gritzko
+        --name "Victor Grishchenko"
+        --email victor.grishchenko@gmail.com
+        --password 1
+
+    (create a new user, algorithmic id, ask for the password)
+    swarm user
+        --name "Victor Grishchenko"
+        --email victor.grishchenko@gmail.com
+        --password
+
+    (block a user)
+    swarm user
+        --id 0gritzko
+        --block
+
+*/
+
+cli
+    .version("0.0.1")
+    .usage("[options] <db_dir>")
+    .option("-i, --id <clientid>", "client id to create/edit/block")
+    // .option("-l, --list", "list users") TODO  * queries
+    .option("-s, --show", "print out user's details")
+    .option("-n, --name <Human Name>", "a human-readable name for the user")
+    .option("-p, --password [password]", "user's password")
+    .option("-h, --hash [salted]", "clientid-salted user password's hash")
+    .option("-b, --block", "deactivate a user")
+    .option("-u, --unblock", "reactivate a user")
+    .option("-d, --debug", "trace ops")
+    .parse(process.argv);
+
+if (!cli.args[0]) {
+    console.error('no db specified');
+    return 1;
+}
+const db_path = path.resolve(cli.args[0]);
+if (!fs.existsSync(db_path) || !fs.statSync(db_path).isDirectory()) {
+    console.warn('the dir does not exist');
+    return 2;
+}
+
+
+let userid = cli.id;
+let user;
+
+if (!Base64x64.is(userid))
+    return on_err('user id must be Base64x64');
+
+// FIXME  probably, generate id
+
+const host = new sync.Client('swarm+level:'+db_path, {debug: true}, err => {
+
+    if (err) return on_err(err);
+
+    const scheme = host.meta.replicaIdScheme;
+
+    if (scheme.slice(userid,ReplicaIdScheme.CLIENT)!=userid)
+        return on_err("user id does not match the db's replica id scheme");
+
+    user = host.get(ClientMeta, userid, do_things);
+
+});
+
+function on_err (err) {
+    console.error(err, new Error().stack);
+    process.exitCode = 1;
+}
+
+function do_things () {
+    if (cli.name)
+        user.set('name', cli.name);
+    if (cli.password)
+        user.set('password', cli.password);
+    if (cli.block)
+        user.set('blocked', true);
+    if (cli.unblock)
+        user.set('blocked', false);
+
+    if (cli.show)
+        console.log(userid + ':\t' + user.toString()+'');
+
+}
+
+
+function salted_hash (client_id, password) {
+    const add_salt = crypto.createHash('sha256');
+    // TODO  stdio cycle
+    add_salt.update(client_id);
+    add_salt.update(' ');
+    add_salt.update(password);
+    return add_salt.digest('base64');
+
+}
+
+// FIXME read stdin
+// const rl = readline.createInterface({
+//     input: process.stdin,
+//     output: process.stdout
+// });
+//
+// rl.question(login + ' password: ', (password) => {} );
+
+
+// FIXME open-all
+// function list_users (db, args, done) {
+//     const from = new Spec([Auth.CLIENT_CLASS,Stamp.ZERO,Stamp.ZERO,Stamp.ZERO]);
+//     const till = new Spec([Auth.CLIENT_CLASS,Stamp.NEVER,Stamp.NEVER,Stamp.NEVER]);
+//     const offset = db.scheme.partOffset(ReplicaIdScheme.CLIENT);
+//     let user = '';
+//     let status = '';
+//     db.scan( from, till,
+//         o=> {
+//             let new_user = Base64x64.leftShift(o.spec.Id.value, offset);
+//             if (user!==new_user)
+//                 console.log(user, status);
+//             user = new_user;
+//             status = o.value==='(blocked)' ? 'BLOCKED' : 'ACTIVE';
+//         },
+//         err => {
+//             console.log(user, status);
+//             done(err);
+//         },
+//         {
+//             filter: o => o.spec.method === Auth.METHOD_PASSWORD
+//         }
+//     );
+// }

@@ -34,7 +34,7 @@ class Client extends OpStream {
      * @param {Object} options - local defaults and overrides for the metadata object
      */
     constructor (url, options, callback) {
-        super();
+        super(options);
         if (options && options.constructor===Function) {
             callback = options;
             options = {};
@@ -89,8 +89,9 @@ class Client extends OpStream {
         this._meta.onceStateful(callback);
     }
 
-    /** Inject an op. */
     _apply (op) {
+        if (this._debug)
+            console.warn(this._debug+'{\t'+op);
         const syncable = this._syncables[op.object];
         if (!syncable) return;
         const rdt = syncable._rdt;
@@ -102,7 +103,7 @@ class Client extends OpStream {
             this._last_acked = op.Stamp;
         } else {
             if (!rdt && op.name !== "off")
-                this._upstream.offer(new Op(op.renamed('off', this.replicaId), ''), this);
+                this.offer(new Op(op.renamed('off', this.replicaId), ''), this);
             else
                 rdt._apply(op);
             this._emit(op);
@@ -166,7 +167,7 @@ class Client extends OpStream {
         const state = feed_state===undefined ? '' :
             fn._init_state(feed_state, stamp, this._clock);
         const op = new Op( spec, state );
-        this._upstream.offer(op, this);
+        this.offer(op, this);
         const rdt = new fn.RDT(op, this);
         this.offer(rdt.toOnOff(true).scoped(this._id.origin), this);
         return this._syncables[spec.object] = new fn(rdt);
@@ -238,6 +239,8 @@ class Client extends OpStream {
             id = type;
             type = LWWObject.Type;
         }
+        if (type.constructor === Function)
+            type = type.RDT.Class;
         return this.fetch(new Spec([type, id, Stamp.ZERO, Stamp.ZERO]), callback);
     }
 
@@ -286,4 +289,3 @@ class Client extends OpStream {
 }
 
 module.exports = Client;
-

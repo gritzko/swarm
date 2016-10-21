@@ -168,7 +168,7 @@ class Syncable extends OpStream {
     }
 
     toString () {
-        return this.toOp().toString();
+        return this._rdt.toOp().toString();
     }
 
     static addClass (fn) {

@@ -82,7 +82,6 @@ class LevelOp {
                 if (!op.isState() || till==='0')
                     ops.push(op);
                 const enough = till==='0' ? op.isState() : ((op.isScoped()?op.scope:op.stamp)<=till);
-                console.warn('XXX', till, op.stamp, enough);
                 return enough ? LevelOp.ENOUGH : undefined; // FIXME
             },
             err => callback(err, err?null:ops),

@@ -11,11 +11,12 @@ const MUTE=0, ONE_LSTN=1, MANY_LSTN=2, PENDING=3;
  * */
 class OpStream {
 
-    constructor () {
+    constructor (options) {
         this._lstn = null;
         /** db replica id: dbname+replica */
         this._dbrid = null;
-        this._debug = null;
+        this._debug = options && options.debug ?
+            this.constructor.name.substr(0,1) : null;
         this.error_message = null;
     }
 

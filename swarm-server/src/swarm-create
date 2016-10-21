@@ -28,6 +28,7 @@ cli
     .option("-c, --clocklen <n>", "Timestamp minimum length", parseInt)
     .option("-l, --logical", "Use sequential (not hybrid) timestamps")
     .option("-s, --scheme", "Replica id scheme", /^\d{3,4}$/)
+    .option("-d, --debug", "trace ops")
     .option("-o, --option <key=value>", "Database option", more_options, {})
     .parse(process.argv);
 
@@ -62,11 +63,10 @@ if (replid.length!==scheme.peers+scheme.primuses) {
 
 const host = new sync.Client(
     'swarm+level:'+db_path,
-    {},
+    {debug: !!cli.debug},
     create_meta
 );
-// host._upstream._debug = 'L';
-// host._debug = 'H';
+
 
 function create_meta (err) {
     const meta = host.meta;

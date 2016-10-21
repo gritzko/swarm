@@ -82,7 +82,7 @@ class Op extends Spec {
         }
         return ret;
     }
-    
+
     static serializeFrame (ops, prev_spec) {
         let frame = '';
         ops.forEach( op => {
@@ -168,6 +168,10 @@ class Op extends Spec {
             this.Stamp,
             new Stamp(this.method, scope)
         ], this._value);
+    }
+
+    static zeroStateOp (spec) {
+        return new Op([spec.Type, spec.Id, Stamp.ZERO, Op.METHOD_STATE], '');
     }
 
 }

@@ -9,9 +9,8 @@ cli
     .command("create [options] <path>", "create a database").alias('C')
     .command("db [options] <path>", "read/write from/to a database").alias('D')
     // .command("fork")
-    // .command("access")
+    .command("user [options] <path>", "create/edit users").alias('U')
     .command("run [options] <path>", "run a database (the default)", {isDefault: true}).alias('R')
-    // .command("user")
     .parse(process.argv);
 
 /*

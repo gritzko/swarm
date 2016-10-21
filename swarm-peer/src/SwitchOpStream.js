@@ -254,7 +254,7 @@ class SwitchOpStream extends OpStream {
             this.log.offerAll(req.ops);
     }
 
-    _auth_client (req) {
+    _auth_client (req) { // FIXME move to ClientMEta!!!
         const client = req.client;
         let props;
         try {
