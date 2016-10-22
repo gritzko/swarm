@@ -41,7 +41,7 @@ class Client extends OpStream {
         }
         this.options = options || Object.create(null);
         this._url = new URL(url);
-        this._id = new Stamp (this._url.basename, this._url.replica); //:(
+        this._id = new Stamp (this._url.basename); //:(
         /** syncables, API objects, the outer state */
         this._syncables = Object.create(null);
         /** we can only init the clock once we have a meta object */
@@ -56,6 +56,7 @@ class Client extends OpStream {
         }
         this._upstream.on(this);
         this._unsynced = new Map();
+        this._ssn_stamp = this._last_stamp = this._acked_stamp = Stamp.ZERO;
         this._meta = this.get(
             SwarmMeta.RDT.Class,
             this.dbid,
@@ -63,6 +64,7 @@ class Client extends OpStream {
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
                 this._id = new Stamp(state.birth, state.scope);
                 this._clock.seeTimestamp(state.Stamp);
+                this._ssn_stamp = this._last_stamp = this._acked_stamp = this.time();
                 callback && callback();
             }
         );
@@ -78,7 +80,7 @@ class Client extends OpStream {
     }
 
     get dbid () {
-        return this._url.basename;
+        return this._id.value;
     }
 
     get origin () {
@@ -89,7 +91,7 @@ class Client extends OpStream {
         this._meta.onceStateful(callback);
     }
 
-    _apply (op) {
+    _apply (op) { // FIXME chaotic; restructure
         if (this._debug)
             console.warn(this._debug+'{\t'+op);
         const syncable = this._syncables[op.object];
@@ -98,9 +100,9 @@ class Client extends OpStream {
         if (!op.Stamp.isAbnormal() && this._clock)
             this._clock.seeTimestamp(op.Stamp);
         if (op.isOnOff())
-            this._unsynced.delete(op.object);
-        if (!op.isOnOff() && op.origin === this.origin) {  // :(
-            this._last_acked = op.Stamp;
+            this._unsynced.delete(op.object); // FIXME to RDT
+        if (!op.isOnOff() && op.origin===this.origin && op.Stamp.gt(this._ssn_stamp)) {  // :(
+            this._acked_stamp = op.Stamp;
         } else {
             if (!rdt && op.name !== "off")
                 this.offer(new Op(op.renamed('off', this.replicaId), ''), this);
@@ -187,12 +189,12 @@ class Client extends OpStream {
             throw new Error('unknown syncable type '+spec);
         const rdt = new fn.RDT(state0, this);
         const on = rdt.toOnOff(true).scoped(this._id.origin);
-        if (on.clazz==='Swarm' && this._url.password)
-            on._value = 'Password: '+this._url.password; // FIXME E E
+        if (on.isHandshake() && this._url.password)
+            on._value = JSON.stringify({Password: this._url.password});// FIXME
         const syncable = new fn(rdt, on_state);
         this._syncables[spec.object] = syncable;
-        this.offer(on, this);
         this._unsynced.set(spec.object, 1);
+        this.offer(on, this);
         return syncable;
     }
 
@@ -220,7 +222,8 @@ class Client extends OpStream {
 
     // Returns a new unique timestamp from the host's clock.
     time () {
-        return this._clock ? this._clock.issueTimestamp() : null;
+        if (!this._clock) return null;
+        return this._last_stamp = this._clock.issueTimestamp();
     }
 
     /** @return {Swarm} */

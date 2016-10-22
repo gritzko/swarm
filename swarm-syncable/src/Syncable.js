@@ -25,7 +25,7 @@ class Syncable extends OpStream {
      * @param {Function} callback - callback to invoke once the object is stateful
      */
     constructor (rdt, callback) {
-        super();
+        super(Syncable.OPTIONS);
 
         /** The RDT inner state */
         this._rdt = rdt;
@@ -52,12 +52,18 @@ class Syncable extends OpStream {
     _offer (op_name, op_value) { // FIXME BAD!!!
         const stamp = this._rdt._host.time();
         const op = new Op([this.Type, this.Id, stamp, new Stamp(op_name)], op_value);
+        if (this._debug)
+            console.warn('}'+this._debug+'#'+(this._rdt?this.id:'x')+
+                '\t'+(op?op.toString():'[EOF]'));
         this._rdt.offer(op);
     }
 
     /** Apply an op to the object's state.
       * @param {Op} op - the op */
     _apply (op) {
+        if (this._debug)
+            console.warn(this._debug+'#'+(this._rdt?this.id:'x')+
+                '{\t'+(op?op.toString():'[EOF]'));
         this._rebuild(op);
         this._emit(op);
     }
@@ -225,7 +231,7 @@ class RDT extends OpStream {
                 this._version = op.Stamp;
                 break;
             case "off":  break;
-            case "on":
+            case "on": // cache state kickback
                 if (op.Stamp.isZero() && !this.Version.isZero())
                     this._host.offer(this.toOp());
                 break;
@@ -289,6 +295,10 @@ Syncable._classes = Object.create(null);
 Syncable.defaultHost = null;
 
 Syncable.addClass(Syncable);
+
+Syncable.OPTIONS = {
+    debug: 'Z'
+};
 
 module.exports = Syncable;
 

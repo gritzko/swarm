@@ -3,7 +3,7 @@ const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 // const Spec = swarm.Spec;
 const Stamp = swarm.Stamp;
-// const Op = swarm.Op;
+const Op = swarm.Op;
 const OpStream = sync.OpStream;
 const Base64x64 = swarm.Base64x64;
 const ClientMeta = require('./ClientMeta');
@@ -30,7 +30,7 @@ class SwitchOpStream extends OpStream {
      *  @param {Object} options
      *  @param {Function} callback */
     constructor (db_repl_id, log, options, callback) {
-        super();
+        super(options);
         this.dbrid = new Stamp(db_repl_id);
         this.rid = null;
         this.log = log;
@@ -43,17 +43,22 @@ class SwitchOpStream extends OpStream {
         this.options = options || Object.create(null);
         this.clock = null;
         this.meta = null;
-        this._debug = options.debug;
+        this.closing = new Map();
         log.on(this);
-        const local_url = 'swarm://'+this.dbrid.origin+'@local/'+this.dbrid.value;
-        this.pocket = new Client(local_url, {upstream: this}, err => {
-            if (!err) {
-                this.clock = this.pocket._clock;
-                this.meta = this.pocket._meta;
-                this.rid = new ReplicaId(this.dbrid.origin, this.meta.replicaIdScheme);
-            }
-            callback && callback (err);
-        });
+        const local_url = 'swarm://' + this.dbrid.origin +
+            '@local/' + this.dbrid;
+        this.pocket = new Client(local_url, {
+                upstream: this,
+                debug: options.debug
+            },
+            err => {
+                if (!err) {
+                    this.clock = this.pocket._clock;
+                    this.meta = this.pocket._meta;
+                    this.rid = new ReplicaId(this.dbrid.origin, this.meta.replicaIdScheme);
+                }
+                callback && callback (err);
+            });
         this.replid2connid.set (this.replicaId, '0');
         this.conns.set( '0', this.pocket );
     }
@@ -94,7 +99,7 @@ class SwitchOpStream extends OpStream {
     _apply (op, _log) {
 
         if (this._debug)
-            console.warn(this._debug+'<'+'\t'+op);
+            console.warn(this._debug+'{\t'+(op?op:'[EOF]'));
 
         if (op.isOnOff()) {
 
@@ -105,8 +110,9 @@ class SwitchOpStream extends OpStream {
             if (!conn_id) return;
 
             if (op.isOn()) {
-                if (op.isHandshake()) // send back a timestamp
-                    op = op.stamped(new Stamp(conn_id, this.dbrid.origin));
+                // FIXME put into the value, don't mess up the semantics
+                // if (op.isHandshake()) // send back a timestamp
+                //     op = op.stamped(new Stamp(conn_id, this.dbrid.origin));
                 if (sub === undefined)
                     this.subs.set(oid, sub=[]);  // TODO typed array impl
                 if (sub.indexOf(conn_id)===-1)
@@ -144,8 +150,18 @@ class SwitchOpStream extends OpStream {
         if (op.isScoped()) {
             const replid = op.scope;
             const conn_id = this.replid2connid.get(replid);
-            const stream = this.conns.get(conn_id);
-            stream._apply (op);
+            if (conn_id) {
+                const stream = this.conns.get(conn_id);
+                stream._apply (op, this);
+                if (op.isHandshake() && op.isOff()) {
+                    this.closing.delete(conn_id);
+                    this.conns.delete(conn_id); // TODO unify
+                    this.replid2connid.delete(replid);
+                    stream._apply(null, this);
+                }
+            } else {
+                console.warn('write to a closed stream: '+replid);
+            }
         } else {
             const sub = this.subs.get(op.object);
             if (sub)
@@ -156,12 +172,21 @@ class SwitchOpStream extends OpStream {
     /** an op from a downstream */
     offer (op, stream) {
         if (this._debug)
-            console.warn('}'+this._debug+'\t'+op);
+            console.warn('}'+this._debug+'\t'+(op?op:'[EOF]'));
 
         // sanity checks - stamps, scopes
         if (op===null) { // FIXME  STRUCTURE CHECKS
-            // TODO inject .off
-            return;
+            if (stream._id && !this.closing.has(stream._id)) {
+                op = new Op([
+                    this.meta.Type,
+                    this.meta.Id,
+                    this.clock.issueTimestamp(),
+                    new Stamp(Op.METHOD_OFF,stream._id.origin)
+                ], '');
+                this.closing.set(stream._id, Date.now());
+            } else {
+                return; // FIXME state machine unauthd close
+            }
         } else if (!stream._id) {
             const req = this.req4stream(stream);
             if (!req)
@@ -191,14 +216,15 @@ class SwitchOpStream extends OpStream {
         } else if (op.isOnOff()) {
             if (stream._id.origin !== op.scope)
                 op = op.error('WRONG SCOPE', stream._id.origin);
+            else if (op.isHandshake() && op.isOff())
+                this.closing.set(stream._id, Date.now());
         } else {
             if (stream._id.origin !== op.origin)
                 op = op.error('WRONG ORIGIN', stream._id.origin);
         }
 
-
         if (this._debug)
-            console.warn(this._debug+'>'+'\t'+op);
+            console.warn(this._debug+'>\t'+op);
 
         this.log.offer(op);
 
@@ -228,7 +254,6 @@ class SwitchOpStream extends OpStream {
 
     _accept (req) {
         // conn id, ssn grant
-        const hs = req.hs;
         const now = this.clock.issueTimestamp().value;
         let rid;
         if (req.rid.peer==='0') { // new ssn grant
@@ -236,7 +261,8 @@ class SwitchOpStream extends OpStream {
         } else {
             rid = req.rid;
         }
-        req.stream._id = new Stamp(this.dbrid.value, rid);
+        const hs = req.hs.scoped(rid);
+        req.stream._id = new Stamp(this.dbrid.value, rid); // TODO check it's dbrid!!!
         // register the conn
         const prev_conn_id = this.replid2connid.get(rid);
         if (prev_conn_id) {
@@ -260,20 +286,22 @@ class SwitchOpStream extends OpStream {
         try {
             const creds = req.hs.value;
             if (creds && creds[0]==='{')
-                props = JSON.parse(creds);
+                props = JSON.parse(creds); // FIXME report err
             else
                 props = {Password: creds};
         } catch (ex) {}
         if (!props || !client.hasState()) {
+            console.warn(props, client._rdt.ops);
             this._deny(req, 'INVALID CREDENTIALS');
-        } else if (props.Password===client.get('Password')) {
+        } else if (props.password===client.get('password')) {
             this._accept(req);
         } else {
+            console.warn(props.password,client.get('password'));
             this._deny(req, 'INVALID CREDENTIALS');
         }
         const i = this.pending.indexOf(req);
         this.pending.splice(i, 1);
-        client.close();
+        // FIXME client.close();
     }
 
     close (callback) {

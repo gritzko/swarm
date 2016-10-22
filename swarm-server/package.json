@@ -1,6 +1,6 @@
 {
     "name": "swarm-server",
-    "version": "1.2.3",
+    "version": "1.2.4",
     "homepage": "http://github.com/gritzko/swarm",
     "repository": {
         "type": "git",
@@ -34,6 +34,7 @@
         "leveldown":        "^1.4.6",
         "daemon":           "^1.1.0",
         "swarm-cli":        "^1.2.0",
+        "duplexify":        "^3.4.6",
         "commander":        "^2.9.0"
     },
     "devDependencies": {

@@ -49,7 +49,7 @@ cli
     .option("-h, --hash [salted]", "clientid-salted user password's hash")
     .option("-b, --block", "deactivate a user")
     .option("-u, --unblock", "reactivate a user")
-    .option("-d, --debug", "trace ops")
+    .option("-D, --debug", "trace ops")
     .parse(process.argv);
 
 if (!cli.args[0]) {
