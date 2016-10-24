@@ -15,8 +15,8 @@ class OpStream {
         this._lstn = null;
         /** db replica id: dbname+replica */
         this._dbrid = null;
-        this._debug = options && options.debug ?
-            this.constructor.name.substr(0,1) : null;
+        this._debug = (options && options.debug) ?
+            (options.debug===true?this.constructor.name[0]:options.debug) : null;
         this.error_message = null;
     }
 
@@ -219,6 +219,16 @@ class OpStream {
         return new fn(url, options||Object.create(null));
     }
 
+    static listen (url, options, upstream) {
+        if (url.constructor!==URL)
+            url = new URL(url.toString());
+        const top_proto = url.scheme[0];
+        const fn = OpStream._SERVER_URL_HANDLERS[top_proto];
+        if (!fn)
+            throw new Error('unknown protocol: '+top_proto);
+        return new fn(url, options||Object.create(null), upstream);
+    }
+
 }
 
 OpStream.MUTATIONS = "^.on.off.error.~";
@@ -228,6 +238,7 @@ OpStream.ENOUGH = Symbol('enough');
 OpStream.OK = Symbol('ok');
 OpStream.SLOW_DOWN = Symbol('slow'); // TODO relay backpressure
 OpStream._URL_HANDLERS = Object.create(null);
+OpStream._SERVER_URL_HANDLERS = Object.create(null);
 module.exports = OpStream;
 
 /** a test op stream */

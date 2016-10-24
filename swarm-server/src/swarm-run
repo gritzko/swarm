@@ -38,6 +38,7 @@ const dbrid = new Stamp(basename);
 const options = {
     debug: !!cli.debug
 };
+sync.Syncable.OPTIONS.debug = !!cli.debug;
 const level = new leveldown(db_path);
 const log_os = new peer.PeerOpStream(level, options);
 const switch_os = new peer.SwitchOpStream(dbrid, log_os, options, once_ready);

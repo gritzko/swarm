@@ -297,7 +297,7 @@ Syncable.defaultHost = null;
 Syncable.addClass(Syncable);
 
 Syncable.OPTIONS = {
-    debug: 'Z'
+    debug: null
 };
 
 module.exports = Syncable;

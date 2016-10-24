@@ -174,40 +174,17 @@ class SwitchOpStream extends OpStream {
         if (this._debug)
             console.warn('}'+this._debug+'\t'+(op?op:'[EOF]'));
 
-        // sanity checks - stamps, scopes
-        if (op===null) { // FIXME  STRUCTURE CHECKS
-            if (stream._id && !this.closing.has(stream._id)) {
-                op = new Op([
-                    this.meta.Type,
-                    this.meta.Id,
-                    this.clock.issueTimestamp(),
-                    new Stamp(Op.METHOD_OFF,stream._id.origin)
-                ], '');
-                this.closing.set(stream._id, Date.now());
-            } else {
-                return; // FIXME state machine unauthd close
-            }
-        } else if (!stream._id) {
-            const req = this.req4stream(stream);
-            if (!req)
-                throw new Error('unknown stream');
-            if (!req.hs && op.isHandshake() && op.scope) {
-                req.hs = op;
-                req.rid = new ReplicaId(op.scope, this.meta.replicaIdScheme);
-                if (req.stream===this.pocket)
-                    return this._accept(req);
-                req.client = this.pocket.get(
-                    ClientMeta.RDT.Class,
-                    req.rid.client,
-                    this._auth_client.bind(this, req)
-                );
-            } else if (!req.hs) {
-                this._deny (req, 'HANDSHAKE FIRST');
-            } else {
-                req.ops.push(op);
-            }
-            return;
-        } else if (op.isState() && !op.Stamp.eq(op.Id)) {
+        if (op===null)
+            this._offer_end (null, stream);
+        else if (!stream._id)
+            this._offer_new (op, stream);
+        else
+            this._offer_op (op, stream);
+
+    }
+
+    _offer_op (op, stream) {
+        if (op.isState() && !op.Stamp.eq(op.Id)) {
             op = op.error('NO STATE PUSH', op.origin);
         } else if (Base64x64.isAbnormal(op.class) && stream!==this.pocket) {
             op = op.error('PRIVATE CLASS', stream._id.origin);
@@ -222,12 +199,47 @@ class SwitchOpStream extends OpStream {
             if (stream._id.origin !== op.origin)
                 op = op.error('WRONG ORIGIN', stream._id.origin);
         }
-
-        if (this._debug)
-            console.warn(this._debug+'>\t'+op);
-
         this.log.offer(op);
+    }
 
+    _offer_new (op, stream) {
+        const req = this.req4stream(stream);
+        if (!req)
+            throw new Error('unknown stream');
+        if (!req.hs && op.isHandshake() && op.scope) {
+            req.hs = op;
+            req.rid = new ReplicaId(op.scope, this.meta.replicaIdScheme);
+            if (req.stream===this.pocket)
+                return this._accept(req);
+            req.client = this.pocket.get(
+                ClientMeta.RDT.Class,
+                req.rid.client,
+                this._auth_client.bind(this, req)
+            );
+        } else if (!req.hs) {
+            this._deny (req, 'HANDSHAKE FIRST');
+        } else {
+            req.ops.push(op);
+        }
+    }
+
+    _offer_end (_null, stream) {
+        if (!stream._id) { // purge silently
+            let i = 0;
+            const p = this.pending;
+            while (i<p.length && p[i].stream!==stream) i++;
+            if (i<p.length) p.splice(i,1);
+        } else if (!this.closing.has(stream._id)) {
+            const inject_op = new Op([ // inject an .off
+                this.meta.Type,
+                this.meta.Id,
+                this.clock.issueTimestamp(),
+                new Stamp(Op.METHOD_OFF,stream._id.origin)
+            ], '');
+            this.closing.set(stream._id, Date.now());
+            this.log.offer(inject_op);
+            // the rest is done after the .off leaves
+        }
     }
 
     _deny (hs_obj, message) {
