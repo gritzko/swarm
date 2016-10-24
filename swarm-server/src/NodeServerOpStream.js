@@ -67,8 +67,6 @@ class NodeServerOpStream extends OpStream {
     _apply (op) {
         if (this._debug)
             console.warn(this._debug+'{\t'+(op?op.toString():'[EOF]'));
-        if (op===null)
-            this._upstream.off(this);
         this._ops.push(op);
         if (this._send_to===null)
             this._send_to = setTimeout(this._send_cb, 1);
