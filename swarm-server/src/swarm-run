@@ -99,6 +99,10 @@ function on_err (err) {
     process.exitCode = 1;
 }
 
+process.on('uncaughtException', function (err) {
+  console.error("UNCAUGHT EXCEPTION", err, err.stack);
+});
+
 // process.on('SIGTERM', on_err.bind('SIGTERM')); TODO graceful close
 // process.on('SIGINT', on_err.bind('SIGINT'));
 // process.on('SIGQUIT', on_err.bind('SIGQUIT'));

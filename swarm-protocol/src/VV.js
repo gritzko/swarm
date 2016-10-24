@@ -6,11 +6,12 @@ class VV {
 
     constructor (vec) {
         this.map = new Map();
+        this._max = '0';
         if (vec) {
             this.addAll(vec);
         }
     }
-    
+
     // simple string serialization of the vector
     toString () {
         var stamps = [];
@@ -35,11 +36,14 @@ class VV {
         if (value>existing && value!=='0') {
             this.map.set(origin, value);
         }
+        if (value > this._max)
+            this._max = value;
     }
 
-    remove (origin) {
+    remove (origin) { // FIXME remove this op
+        console.warn('VV.remove() is deprecated');
         origin = VV.norm_src(origin);
-        delete this.map.delete(origin);
+        this.map.delete(origin);
         return this;
     }
 
@@ -92,12 +96,7 @@ class VV {
     }
 
     get max () {
-        var max = '0';
-        for (var ts of this.map.values()) {
-            if (ts>max)
-                max = ts;
-        }
-        return max;
+        return this._max;
     }
 
     static norm_src (origin) {

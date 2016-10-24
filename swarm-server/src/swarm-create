@@ -5,12 +5,14 @@ const path = require('path');
 const cli = require("commander");
 const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
+const peer = require('swarm-peer');
+const LevelDOWN = require('leveldown');
 require('./api');
 const Base64x64 = swarm.Base64x64;
-// const Swarm = sync.Swarm;
+const Swarm = sync.Swarm;
 const Stamp = swarm.Stamp;
 const Clock = swarm.Clock;
-// const Op = swarm.Op;
+const Op = swarm.Op;
 const ReplicaIdScheme  = swarm.ReplicaIdScheme;
 
 function more_options (kv, opts) {
@@ -27,7 +29,7 @@ cli
     .usage("[options] <db_dir>")
     .option("-c, --clocklen <n>", "Timestamp minimum length", parseInt)
     .option("-l, --logical", "Use sequential (not hybrid) timestamps")
-    .option("-s, --scheme", "Replica id scheme", /^\d{3,4}$/)
+    .option("-s, --scheme <dddd>", "Replica id scheme", /^\d{3,4}$/)
     .option("-d, --debug", "trace ops")
     .option("-o, --option <key=value>", "Database option", more_options, {})
     .parse(process.argv);
@@ -61,21 +63,51 @@ if (replid.length!==scheme.peers+scheme.primuses) {
     return 4;
 }
 
-const host = new sync.Client(
-    'swarm+level:'+db_path,
-    {debug: !!cli.debug},
-    create_meta
-);
+const options = Object.create(null);
+if (cli.logical)
+    options[Clock.OPTION_CLOCK_MODE] = "Logical";
+if (cli.clocklen)
+    options[Clock.OPTION_CLOCK_LENGTH] = cli.clocklen;
+options[ReplicaIdScheme.DB_OPTION_NAME] = scheme.toString();
 
+const clock = new swarm.Clock(replid, options);
 
-function create_meta (err) {
-    const meta = host.meta;
-    meta.set(ReplicaIdScheme.DB_OPTION_NAME, scheme.toString());
-    if (cli.clocklen)
-        meta.set(Clock.OPTION_CLOCK_LENGTH, cli.clocklen);
-    if (cli.logical)
-        meta.set(Clock.OPTION_CLOCK_MODE, "Logical");
-    meta.setAll(cli.option);
-    //host.onSync(90=>console.log('database created'));
+const level = new peer.LevelOp(new LevelDOWN(db_path), {
+    createIfMissing: true,
+    errorIfExists: true
+}, write_ops);
+
+function write_ops () {
+    const ops = [];
+    cli.logical && ops.push(new Op([
+            Swarm.RDT.Class,
+            dbid,
+            clock.time(),
+            Clock.OPTION_CLOCK_MODE],
+            '"Logical"'));
+    cli.clocklen && ops.push(new Op([
+            Swarm.RDT.Class,
+            dbid,
+            clock.time(),
+            Clock.OPTION_CLOCK_LENGTH],
+            cli.clocklen));
+    ops.push(new Op([
+            Swarm.RDT.Class,
+            dbid,
+            clock.time(),
+            ReplicaIdScheme.DB_OPTION_NAME],
+            '"'+scheme.toString()+'"'));
+    level.putAll(ops, err => {
+        if (err)
+            console.error(err);
+        else
+            level.close(done);
+    });
+
+}
+
+function noop() {}
+
+function done () {
     console.log('created database', dbid, 'replica', replid);
 }

@@ -20,6 +20,18 @@ class OpStream {
         this.error_message = null;
     }
 
+    get replicaId () {
+        return this._dbrid && this._dbrid.origin;
+    }
+
+    get dbId () {
+        return this._dbrid && this._dbrid.value;
+    }
+
+    get dbrid () {
+        return this._dbrid.toString();
+    }
+
     _lstn_state () {
         if (this._lstn===null)
             return MUTE;
@@ -135,6 +147,7 @@ class OpStream {
                 this._lstn.push(op);
                 break;
         }
+        // this._emit(null) removes all listeners to prevent further emits
         if (op===null)
             this._lstn = null;
     }

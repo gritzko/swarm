@@ -46,7 +46,8 @@ class Client extends OpStream {
         this._syncables = Object.create(null);
         /** we can only init the clock once we have a meta object */
         this._clock = null;
-        this._last_acked = Stamp.ZERO;
+        this._ssn_stamp = this._last_stamp = this._acked_stamp = Stamp.ZERO;
+        this._unsynced = new Map();
         this._upstream = this.options.upstream;
         if (!this._upstream) {
             let next = this._url.clone();
@@ -55,8 +56,6 @@ class Client extends OpStream {
             this._upstream = OpStream.connect(next, options);
         }
         this._upstream.on(this);
-        this._unsynced = new Map();
-        this._ssn_stamp = this._last_stamp = this._acked_stamp = Stamp.ZERO;
         this._meta = this.get(
             SwarmMeta.RDT.Class,
             this.dbid,
@@ -64,12 +63,8 @@ class Client extends OpStream {
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
                 this._id = new Stamp(state.birth, state.scope);
                 this._clock.seeTimestamp(state.Stamp);
-                this._ssn_stamp = this._last_stamp = this._acked_stamp = this.time();
                 callback && callback();
             }
-        );
-        this._meta.onceSync (
-            reon => this._clock.seeTimestamp(reon.Stamp)
         );
         if (!Syncable.defaultHost) // TODO deprecate
             Syncable.defaultHost = this;
@@ -97,12 +92,22 @@ class Client extends OpStream {
         const syncable = this._syncables[op.object];
         if (!syncable) return;
         const rdt = syncable._rdt;
+
         if (!op.Stamp.isAbnormal() && this._clock)
             this._clock.seeTimestamp(op.Stamp);
+
+        if (this._ssn_stamp.isZero() && this._clock && op.isOn()) { //FIXME
+            this._ssn_stamp = this._acked_stamp = this.time();
+            if (this._last_stamp.isZero())
+                this._last_stamp = this._ssn_stamp;
+        }
+
         if (op.isOnOff())
             this._unsynced.delete(op.object); // FIXME to RDT
+
         if (!op.isOnOff() && op.origin===this.origin && op.Stamp.gt(this._ssn_stamp)) {  // :(
             this._acked_stamp = op.Stamp;
+            console.warn('ACKED: '+op.stamp+' '+this._ssn_stamp)
         } else {
             if (!rdt && op.name !== "off")
                 this.offer(new Op(op.renamed('off', this.replicaId), ''), this);

@@ -31,7 +31,7 @@ class SwitchOpStream extends OpStream {
      *  @param {Function} callback */
     constructor (db_repl_id, log, options, callback) {
         super(options);
-        this.dbrid = new Stamp(db_repl_id);
+        this._dbrid = new Stamp(db_repl_id);
         this.rid = null;
         this.log = log;
         this.subs = new Map();
@@ -45,8 +45,8 @@ class SwitchOpStream extends OpStream {
         this.meta = null;
         this.closing = new Map();
         log.on(this);
-        const local_url = 'swarm://' + this.dbrid.origin +
-            '@local/' + this.dbrid;
+        const local_url = 'swarm://' + this.replicaId +
+            '@local/' + this.dbrid; // FIXME /dbid
         this.pocket = new Client(local_url, {
                 upstream: this,
                 debug: options.debug
@@ -55,40 +55,35 @@ class SwitchOpStream extends OpStream {
                 if (!err) {
                     this.clock = this.pocket._clock;
                     this.meta = this.pocket._meta;
-                    this.rid = new ReplicaId(this.dbrid.origin, this.meta.replicaIdScheme);
+                    this.rid = new ReplicaId(this.replicaId, this.meta.replicaIdScheme); // TODO to OpStream
                 }
                 callback && callback (err);
             });
-        this.replid2connid.set (this.replicaId, '0');
-        this.conns.set( '0', this.pocket );
-    }
-
-    get dbId () {
-        return this.dbrid.value;
-    }
-
-    get replicaId () {
-        return this.dbrid.origin;
     }
 
     /***
      * @param {OpStream} opstream - the client op stream
      */
     on (opstream) {
-        // opstream._dbrid = null;
-        this.pending.push({
-            stream: opstream,
-            hs:     null,
-            rid:    null,
-            ops:    [],
-            client: null
-        });
+        if (!this.pocket && opstream.constructor===Client) {
+            opstream._dbrid = this._dbrid;
+            this.replid2connid.set (this.replicaId, '0');
+            this.conns.set( '0', opstream );
+        } else {
+            this.pending.push({
+                stream: opstream,
+                hs:     null,
+                rid:    null,
+                ops:    [],
+                client: null
+            });
+        }
     }
 
     off (opstream) {
         const dbrid = opstream._dbrid;
         if (!dbrid || this.repl2conn.get(dbrid)!==opstream)
-            return console.warn('unknown stream');
+            return console.warn(new Error('unknown stream: '+dbrid).stack);
         const connid = this.repl2conn.get(dbrid);
         this.replid2connid.delete(dbrid.origin);
         this.conns.delete(connid);
@@ -176,7 +171,7 @@ class SwitchOpStream extends OpStream {
 
         if (op===null)
             this._offer_end (null, stream);
-        else if (!stream._id)
+        else if (!stream._dbrid)
             this._offer_new (op, stream);
         else
             this._offer_op (op, stream);
@@ -187,17 +182,17 @@ class SwitchOpStream extends OpStream {
         if (op.isState() && !op.Stamp.eq(op.Id)) {
             op = op.error('NO STATE PUSH', op.origin);
         } else if (Base64x64.isAbnormal(op.class) && stream!==this.pocket) {
-            op = op.error('PRIVATE CLASS', stream._id.origin);
+            op = op.error('PRIVATE CLASS', stream.replicaId);
         } else if (!Syncable.getClass(op.class)) {
-            op = op.error('CLASS UNKNOWN', stream._id.origin);
+            op = op.error('CLASS UNKNOWN', stream.replicaId);
         } else if (op.isOnOff()) {
-            if (stream._id.origin !== op.scope)
-                op = op.error('WRONG SCOPE', stream._id.origin);
+            if (stream.replicaId !== op.scope)
+                op = op.error('WRONG SCOPE', stream.replicaId);
             else if (op.isHandshake() && op.isOff())
-                this.closing.set(stream._id, Date.now());
+                this.closing.set(stream.replicaId, Date.now());
         } else {
-            if (stream._id.origin !== op.origin)
-                op = op.error('WRONG ORIGIN', stream._id.origin);
+            if (stream.replicaId !== op.origin)
+                op = op.error('WRONG ORIGIN', stream.replicaId);
         }
         this.log.offer(op);
     }
@@ -224,19 +219,19 @@ class SwitchOpStream extends OpStream {
     }
 
     _offer_end (_null, stream) {
-        if (!stream._id) { // purge silently
+        if (!stream._dbrid) { // purge silently
             let i = 0;
             const p = this.pending;
             while (i<p.length && p[i].stream!==stream) i++;
             if (i<p.length) p.splice(i,1);
-        } else if (!this.closing.has(stream._id)) {
+        } else if (!this.closing.has(stream._dbrid)) {
             const inject_op = new Op([ // inject an .off
                 this.meta.Type,
                 this.meta.Id,
                 this.clock.issueTimestamp(),
-                new Stamp(Op.METHOD_OFF,stream._id.origin)
+                new Stamp(Op.METHOD_OFF,stream.replicaId)
             ], '');
-            this.closing.set(stream._id, Date.now());
+            this.closing.set(stream._dbrid, Date.now());
             this.log.offer(inject_op);
             // the rest is done after the .off leaves
         }
@@ -274,7 +269,7 @@ class SwitchOpStream extends OpStream {
             rid = req.rid;
         }
         const hs = req.hs.scoped(rid);
-        req.stream._id = new Stamp(this.dbrid.value, rid); // TODO check it's dbrid!!!
+        req.stream._dbrid = new Stamp(this.dbId, rid); // TODO check it's dbrid!!!
         // register the conn
         const prev_conn_id = this.replid2connid.get(rid);
         if (prev_conn_id) {
@@ -300,16 +295,15 @@ class SwitchOpStream extends OpStream {
             if (creds && creds[0]==='{')
                 props = JSON.parse(creds); // FIXME report err
             else
-                props = {Password: creds};
+                props = {password: creds};
         } catch (ex) {}
         if (!props || !client.hasState()) {
-            console.warn(props, client._rdt.ops);
-            this._deny(req, 'INVALID CREDENTIALS');
+            this._deny(req, 'INVALID CREDENTIALS 1');
         } else if (props.password===client.get('password')) {
             this._accept(req);
         } else {
-            console.warn(props.password,client.get('password'));
-            this._deny(req, 'INVALID CREDENTIALS');
+            console.warn(props, props.password,client.get('password'));
+            this._deny(req, 'INVALID CREDENTIALS 2');
         }
         const i = this.pending.indexOf(req);
         this.pending.splice(i, 1);

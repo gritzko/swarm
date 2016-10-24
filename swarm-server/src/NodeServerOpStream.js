@@ -85,7 +85,8 @@ class NodeServerOpStream extends OpStream {
             console.warn('<'+this._debug+'\t['+(end?(ops.length-1)+'EOF':ops.length)+']');
         if (end) {
             ops.pop();
-            this._stream.end(Op.serializeFrame(ops));
+            this._stream.write(Op.serializeFrame(ops));
+            this._stream.end();
             this._stream = null;
         } else {
             this._stream.write(Op.serializeFrame(ops));

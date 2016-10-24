@@ -58,20 +58,21 @@ if (!cli.args[0]) {
 }
 const db_path = path.resolve(cli.args[0]);
 if (!fs.existsSync(db_path) || !fs.statSync(db_path).isDirectory()) {
-    console.warn('the dir does not exist');
+    console.warn('the dir does not exist: '+db_path);
     return 2;
 }
 
 
 let userid = cli.id;
 let user;
+const opts = {debug: !!cli.debug};
 
 if (!Base64x64.is(userid))
     return on_err('user id must be Base64x64');
 
 // FIXME  probably, generate id
 
-const host = new sync.Client('swarm+level:'+db_path, {debug: true}, err => {
+const host = new sync.Client('swarm+level:'+db_path, opts, err => {
 
     if (err) return on_err(err);
 

@@ -25,7 +25,7 @@ if (!cli.args[0]) {
 }
 const db_path = path.resolve(cli.args[0]);
 if (!fs.existsSync(db_path) || !fs.statSync(db_path).isDirectory()) {
-    console.warn('the dir does not exist');
+    console.warn('the dir does not exist: '+db_path);
     return 2;
 }
 

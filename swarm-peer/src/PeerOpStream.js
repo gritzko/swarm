@@ -79,10 +79,12 @@ class PeerOpStream extends OpStream {
         this._emit(err);
     }
 
-    _processOn (op) { // FIXME  LATE, NO EARLY!!!!!!!!
+    _processOn (op) { // FIXME  REORDERING: LATE, NO EARLY!!!!!!!!
 
         let tip = this.tips.get(op.id);
         let top = this.vv.get(op.origin);
+
+        //FIXME NO CHANGES
 
         if (op.Stamp.isZero())
             this.queueScan(op);
@@ -174,10 +176,8 @@ class PeerOpStream extends OpStream {
             // if (!this.met)
             //     return this._emit(this.on_op.error('NO SUCH OP'));
             re_ops = ops.map(o => o.clearstamped(on.scope)).reverse();
-            const max = re_ops.length ? re_ops[re_ops.length - 1].Stamp : Stamp.ZERO;
-            re_ops.push(on.stamped(max));
         } else if (!ops.length) { // object unknown
-            re_ops = [on];
+            re_ops = [];
         } else if (sync_fn) { // make a snapshot FIXME no state
             const last_op = ops[ops.length-1];
             const state = last_op.method===Op.METHOD_STATE ?
@@ -192,16 +192,20 @@ class PeerOpStream extends OpStream {
                 this.db.replace(state, new_state, ()=>{});
             else
                 this.db.put(new_state, ()=>{}); // TODO?
-            re_ops = [new_state.scoped(on.scope), on.stamped(new_state.Stamp)];
+            re_ops = [new_state.scoped(on.scope)];
         } else {
             re_ops = ops.map(o => o.clearstamped(on.scope)).reverse();
-            const max = re_ops[re_ops.length - 1].Stamp;
-            re_ops.push(on.stamped(max));
         }
         this._emitAll(re_ops);
+        if (!err) {
+            let re_on = on;
+            if (on.isHandshake())
+                re_on = on.stamped( this.vv.max );
+            else if (re_ops.length)
+                re_on = on.stamped( re_ops[re_ops.length - 1].Stamp );
+            this._emit(new Op(re_on, ''));
+        }
     }
-
-
 
 }
 

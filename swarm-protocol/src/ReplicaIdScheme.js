@@ -15,11 +15,9 @@ class ReplicaIdScheme {
         if (formula.length===3)
             formula = '0' + formula;
         if (!ReplicaIdScheme.FORMAT_RE.test(formula))
-            throw new Error('invalid replica id scheme formula');
+            formula = '0000';
         this._formula = formula;
         let p = this._parts = formula.match(/\d/g).map(d=>parseInt(d));
-        if (!this.isCorrect())
-            throw new Error('inconsistent replica id scheme formula');
         this._offsets = [0, p[0], p[0]+p[1], p[0]+p[1]+p[2]];
     }
 
@@ -66,14 +64,13 @@ class ReplicaIdScheme {
     }
 
     static is (scheme) {
-        if (!ReplicaIdScheme.FORMAT_RE.test(scheme)) return false;
         const rids = new ReplicaIdScheme(scheme);
         return rids.isCorrect();
     }
 
     isCorrect () {
         const length = this.primuses+this.peers+this.clients+this.sessions;
-        return length<=10;
+        return length<=10 && length>0;
     }
 
     isAbnormalPart (part, i) {
@@ -110,4 +107,3 @@ ReplicaIdScheme.DEFAULT_SCHEME = '0262';
 
 
 module.exports = ReplicaIdScheme;
-

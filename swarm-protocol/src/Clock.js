@@ -91,6 +91,10 @@ class Clock {
         return next;
     }
 
+    time () {
+        return this.issueTimestamp();
+    }
+
     get lastStamp () {
         return this._last;
     }

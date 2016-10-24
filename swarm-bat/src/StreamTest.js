@@ -75,7 +75,10 @@ class StreamTest {
         this.error = err;
         if (this.check_interval)
             clearInterval(this.check_interval);
-        this.streams.forEach(stream => stream.end());
+        this.streams.forEach(stream => {
+            stream.end();
+            stream.removeAllListeners();
+        });
         this.options.callback(err, this.results, this);
     }
 
@@ -123,7 +126,8 @@ class StreamTest {
             if (this.output[stream_id]===undefined)
                 this.output[stream_id] = '';
             this.output[stream_id] += data.toString();
-            this._check_output(false);
+            if (this.round)
+                this._check_output(false);
         });
     }
 
