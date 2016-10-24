@@ -42,6 +42,15 @@ class LWWObject extends Syncable {
         return this._values[name];
     }
 
+    getScoped (name, scope) {
+        return this._values[new Stamp(name, scope)];
+    }
+
+    setScoped (name, value, scope) {
+        const event_name = new Stamp(name, scope);
+        this._offer(event_name, JSON.stringify(value));
+    }
+
     has (name) {
         return this._values.hasOwnProperty(name);
     }
@@ -68,16 +77,26 @@ class LWWObject extends Syncable {
         if (name===Op.METHOD_STATE) { // rebuild
             this._values = Object.create(null);
             this._rdt.ops.forEach(e=>{
-                this._values[e.method] = JSON.parse(e.value);
+                this._values[e.method] = LWWObject.parse(e.value);
             });
         } else if (this._version < op.stamp) {
-            this._values[name] = JSON.parse(op.value);
+            this._values[name] = LWWObject.parse(op.value);
         } else { // reorder
             const value = this._rdt.get(name);
-            if (value===undefined)
+            if (value===undefined) {
                 delete this._values[name];
-            else
-                this._values[name] = JSON.parse(value);
+            } else {
+                this._values[name] = LWWObject.parse(value);
+            }
+        }
+    }
+
+    static parse (json) {
+        try {
+            return json ? JSON.parse(json) : undefined;
+        } catch (ex) {
+            console.warn('Invalid input:', json, '\n', ex);
+            return undefined;
         }
     }
 
