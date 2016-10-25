@@ -32,8 +32,8 @@ class PeerOpStream extends OpStream {
             if (callback) callback(err, this);
         });
 
-        this.offered_queue = [];
         this.save_queue = [];
+        this.scan_queue = [];
 
         this.pending_scans = [];
         this.active_scans = [];
@@ -65,12 +65,15 @@ class PeerOpStream extends OpStream {
     _save_batch () {
         let save = this.save_queue;
         this.save_queue = [];
+        const scans = this.scan_queue;
+        this.scan_queue = [];
 
         this.db.putAll(save, err => {
             this._handle = null;
             this._emitAll(save.map( op => op.clearstamped() ));
             if (this.save_queue.length)
                 this._handle = setImmediate(this._save_cb);
+            scans.forEach( on => this.queueScan(on) );
         });
 
     }
@@ -87,22 +90,22 @@ class PeerOpStream extends OpStream {
         //FIXME NO CHANGES
 
         if (op.Stamp.isZero())
-            this.queueScan(op);
+            this.scan_queue.push(op);
         else if (tip>'0' && op.Stamp.value>tip)
             this._emit(op.error('UNKNOWN BASE > '+tip));
         else if (!top || top<op.time)
             this._emit(op.error('BASE AHEAD > '+top)); // leaks max stamp
         else
-            this.queueScan(op);
+            this.scan_queue.push(op);
 
     }
 
     _processOff (off) {
 
-        if (off.spec.class===sync.Swarm.id) {
+        if (off.spec.clazz===sync.Swarm.RDT.Class) {
             const origin = off.scope;
             let top = this.vv.get(origin);
-            off = off.restamped(top);
+            off = off.stamped(top);
         }
 
         this._emit(off); // FIXME order same-source same-object
@@ -136,15 +139,6 @@ class PeerOpStream extends OpStream {
         this._processMutation(state_op, this.save, this.forward);
     }
 
-    _apply (op, source) {
-        if (op===null) {
-            const i = this.active_scans.indexOf(source);
-            this.active_scans.splice(i, 1);
-            this.queueScan();
-        } else {
-            this._emit(op);
-        }
-    }
 
     queueScan (on) {
         if (on)
