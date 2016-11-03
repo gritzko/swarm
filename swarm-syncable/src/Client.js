@@ -52,14 +52,19 @@ class Client extends OpStream {
         if (!this._upstream) {
             let next = this._url.clone();
             next.scheme.shift();
-            if (!next.scheme.length) throw new Error('upstream not specified');
+            if (!next.scheme.length)
+                throw new Error('upstream not specified');
             this._upstream = OpStream.connect(next, options);
         }
         this._upstream.on(this);
         this._meta = this.get(
             SwarmMeta.RDT.Class,
             this.dbid,
-            state => { // FIXME htis must be state!!!
+            (err, meta, state) => {
+                if (err) {
+                    callback && callback(err);
+                    return;
+                }
                 this._clock = new swarm.Clock(state.scope, this._meta.filterByPrefix('Clock'));
                 this._id = new Stamp(state.birth, state.scope);
                 this._clock.seeTimestamp(state.Stamp);
@@ -107,7 +112,6 @@ class Client extends OpStream {
 
         if (!op.isOnOff() && op.origin===this.origin && op.Stamp.gt(this._ssn_stamp)) {  // :(
             this._acked_stamp = op.Stamp;
-            console.warn('ACKED: '+op.stamp+' '+this._ssn_stamp)
         } else {
             if (!rdt && op.name !== "off")
                 this.offer(new Op(op.renamed('off', this.replicaId), ''), this);
@@ -185,7 +189,7 @@ class Client extends OpStream {
     fetch (spec, on_state) {
         const have = this._syncables[spec.object];
         if (have) {
-            on_state && on_state();
+            on_state && setImmediate(on_state); // force async
             return have;
         }
         const state0 = new Op( [spec.Type, spec.Id, Stamp.ZERO, Op.STAMP_STATE], '' );
@@ -193,14 +197,22 @@ class Client extends OpStream {
         if (!fn)
             throw new Error('unknown syncable type '+spec);
         const rdt = new fn.RDT(state0, this);
-        const on = rdt.toOnOff(true).scoped(this._id.origin);
-        if (on.isHandshake() && this._url.password)
-            on._value = JSON.stringify({Password: this._url.password});// FIXME
+        let on = rdt.toOnOff(true).scoped(this._id.origin); // FIXME scope
+        if (on.isHandshake())
+            on = this._populate_handshake(on);
         const syncable = new fn(rdt, on_state);
         this._syncables[spec.object] = syncable;
         this._unsynced.set(spec.object, 1);
         this.offer(on, this);
         return syncable;
+    }
+
+    _populate_handshake (on) {
+        if (this._url.replica)
+            on = on.scoped(this._url.replica);
+        if (this._url.password)
+            on._value = JSON.stringify({Password: this._url.password});
+        return on;
     }
 
     _remove_syncable (obj) {
@@ -270,7 +282,7 @@ class Client extends OpStream {
             return callback(null);
         this.on(op => { // TODO .on .off
             if (this._unsynced.size === 0) {
-                callback(op);
+                callback(null, op);
                 return OpStream.ENOUGH;
             } else {
                 return OpStream.OK;

@@ -1,0 +1,195 @@
+#!/usr/bin/env node
+"use strict";
+const fs = require('fs');
+const path = require('path');
+const child = require('child_process');
+const swarm = require('swarm-protocol');
+const sync = require('swarm-syncable');
+const swarm_cli = require('..');
+const cli = require('commander');
+const Stamp = swarm.Stamp;
+const Spec = swarm.Spec;
+
+cli
+    .version('0.0.1')
+    .arguments('[path]')
+    .option("-C --connect <url>", 'connect to a server, init a replica',
+        str=>new sync.URL(str))
+    .option("-c --create [type]", "create an object (e.g. -c LWWObject)")
+    .option("-g --get <object>", "retrieve the object", arg2specs)
+    .option("-r --recur <depth>", "recursive retrieval", parseInt)
+    .option("-p --put <object>", "commit a manually edited JSON object", arg2specs)
+    .option("-e --edit <object>", "edit and put a JSON state(uses $EDITOR)", arg2specs)
+    .option("-o --op <object>", "feed an op", arg2specs)
+    .option("    -n --name <name>", "op name to feed")
+    .option("    -v --value <value>", "op value to feed")
+    .option("-E --exec <file>", "execute a script")
+    .option("-R --repl", "run REPL")
+    .option("-L --log", "list the log of yet-unacked local ops")
+    .option("-m --mute", "don't talk to the server")
+    .option("-n --now", "issue a timestamp")
+    .option("-8 --stay", "run indefinitely")
+    .option("-D --debug", "tracing")
+    .parse(process.argv)
+;
+
+const re_path = new RegExp(
+    "(B)/+(B)(\\.\\w+)?$".replace(/B/g, swarm.Base64x64.rs64x64)
+);
+
+// takes filenames, ids or specs, produces [spec]
+function arg2specs (arg, list) { // TODO stdin / file read!!!
+    list = list || [];
+    if (Stamp.is(arg)) {
+        list.push(new Spec([
+            sync.LWWObject.RDT.Class,
+            new Stamp(arg),
+            Stamp.ZERO, Stamp.ZERO
+        ]));
+    } else if (Spec.is(arg)) {
+        list.push(new Spec(arg));
+    } else if (re_path.test(arg)) { // path?
+        re_path.lastIndex = 0;
+        const m = re_path.exec(arg);
+        list.push(new Spec([
+            new Stamp(m[1]),
+            new Stamp(m[2]),
+            Stamp.ZERO, Stamp.ZERO
+        ]));
+    } else {
+        console.warn('malformed spec: '+arg);
+    }
+    return list;
+}
+
+function spec2path (spec) {
+    return cache.filePath(spec);
+}
+
+let dir;
+if (cli.args[0]) {
+    dir = cli.args[0];
+} else if (fs.existsSync('.swarm')) {
+    dir = '.';
+} else if (cli.connect) {
+    dir = path.basename(cli.connect.path);
+} else {
+    console.error('no dir specified');
+    return 1;
+}
+
+const db_path = path.resolve(dir);
+const config_path = path.join(db_path, '.swarm');
+
+if (!fs.existsSync(db_path)) {
+    if (!cli.connect) {
+        console.error('no such dir');
+        return 3;
+    }
+    fs.mkdirSync(db_path);
+    const json = JSON.stringify({connect: cli.connect.toString()});
+    fs.writeFileSync(config_path, json);
+} else if (!fs.statSync(db_path).isDirectory()) {
+    console.error('not a dir');
+    return 2;
+} else if (!fs.existsSync(config_path)) {
+    console.error('not a swarm dir: '+db_path);
+    return 4;
+}
+
+
+const config = fs.readFileSync(config_path);
+const props = JSON.parse(config);
+const connect = new sync.URL
+    (cli.connect || props.connect || 'swarm+fs+tcp://localhost/test');
+const options = { debug: !!cli.debug };
+
+const client = new sync.Client(connect, options, err => {
+    if (err) {
+        console.error(err);
+    } else {
+        do_things();
+    }
+});
+const cache = client.upstream;
+
+
+function do_things (op) {
+
+    if (cli.now)
+        console.log(client.time().toString());
+
+    // console.warn(cli);
+
+    // TODO .get options {recur: 5}
+    // TODO default: update all objects
+    cli.get && cli.get.forEach( spec =>
+        client.get(spec, () => cache.flush(spec, true))
+    );
+
+    if (cli.create) {
+        const clazz = cli.create===true ? 'LWWObject' : cli.create;
+        console.log ( client.create(clazz)._id );
+    }
+
+    cli.cat && cli.cat.forEach( spec =>
+        client.get(spec, obj => console.log(obj.toString()) )
+    );
+
+    cli.put && cli.put.forEach ( spec =>
+        client.get(spec, obj =>
+            obj.fromString(fs.readFileSync(spec2path(spec)))
+        )
+    );
+
+    const editor = process.env.EDITOR || 'vi';
+    cli.put && cli.put.forEach ( spec =>
+        client.get(spec, obj => {
+            const path = spec2path(spec);
+            cache.flush(spec, true);
+            child.execFileSync(editor, path);
+            obj.fromString(fs.readFileSync(path));
+        })
+    );
+
+    cli.op && cli.op.forEach ( spec =>
+        client.get(spec, obj =>
+            obj._offer (cli.name||'0', cli.value||'')
+        )
+    );
+
+    if (cli.exec)
+        require(cli.exec);
+
+    if (cli.mute) {
+        done();
+    } else if (cli.stay) {
+
+    } else if (cli.repl) {
+        require('repl').start({
+            prompt:'> ',
+            useColors: true,
+            useGlobal: true
+        });
+    } else {
+        client.onSync(done);
+    }
+
+}
+
+
+function done (err) {
+    if (err) {
+        if (cli.debug) {
+            console.error(new Error(err).stack);
+        } else {
+            console.error(err);
+        }
+    }
+    process.exit(err?-1:0);
+}
+
+// be ready
+process.on('uncaughtException', function (err) {
+    console.error("UNCAUGHT EXCEPTION", err, err.stack);
+});

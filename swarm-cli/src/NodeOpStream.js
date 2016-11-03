@@ -1,4 +1,5 @@
 "use strict";
+const net = require('net');
 const swarm = require('swarm-protocol');
 const sync = require('swarm-syncable');
 const OpStream = sync.OpStream;
@@ -10,10 +11,20 @@ const Op = swarm.Op;
 class NodeOpStream extends OpStream {
 
     /** @param stream - Node.js stream */
-    constructor (stream) {
-        super();
-        this._stream = stream;
-        stream.setEncoding('utf8');
+    constructor (url, options) {
+        super(options);
+        const scheme = url.scheme[0];
+        if (scheme==='std') {
+            this._stream = require('duplexify')(process.stdout, process.stdin);
+            this._stream.end = function(){console.warn('end');};
+        } else if (scheme==='tcp') {
+            this._stream = net.connect(url.port||31415, url.hostname, options);
+        } else if (scheme==='sock') {
+            this._stream = net.connect(url.path, options);
+        } else {
+            throw new Error('protocol unknown: '+scheme);
+        }
+        this._stream.setEncoding('utf8');
         this._chunks = [];
         this._ops = [];
         this._send_to = null;
@@ -36,7 +47,7 @@ class NodeOpStream extends OpStream {
             this._on_batch();
             this._on_data(chunk.substr(1));
         } else if (at!==-1) {
-            chunks.push(chunk.substr(0, at+2))
+            chunks.push(chunk.substr(0, at+2));
             this._on_batch();
             if (at+2<chunk.length)
                 this._on_data(chunk.substr(at+2));
@@ -50,8 +61,12 @@ class NodeOpStream extends OpStream {
         this._chunks = [];
         let ops = swarm.Op.parseFrame(frame);
         if (!ops.length || ops===null) {
+            if (this._debug)
+                console.warn(this._debug+'< \t[EOF]');
             this._close();
         } else {
+            if (this._debug)
+                console.warn(this._debug+'< \t['+ops.length+']');
             this._emitAll(ops);
         }
     }
@@ -75,7 +90,7 @@ class NodeOpStream extends OpStream {
         if (!ops.length)
             return;
         if (this._debug)
-            console.warn('['+this._debug+'\t['+ops.length+']');
+            console.warn(this._debug+'> \t['+ops.length+']');
         let frame = Op.serializeFrame(ops);
         this._stream.write(frame);
         this._ops.length = 0;
@@ -88,17 +103,22 @@ class NodeOpStream extends OpStream {
         this.close();
     }
 
+    // FIXME rework close/null/end sequences
     close () {
         if (this._stream===null)
             return;
         this._stream.removeListener('data', this._on_data_cb);
         this._stream.removeListener('end', this._on_end_cb);
         this._send();
-        this._stream.end();
-        this._stream = null;
-        super._end();
+        // this._stream.end();
+        // this._stream = null;
+        // super._end();
     }
 
 }
+
+OpStream._URL_HANDLERS.tcp = NodeOpStream;
+OpStream._URL_HANDLERS.std = NodeOpStream;
+OpStream._URL_HANDLERS.sock = NodeOpStream;
 
 module.exports = NodeOpStream;

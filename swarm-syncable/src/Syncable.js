@@ -33,7 +33,7 @@ class Syncable extends OpStream {
         this._rebuild();
 
         if (callback)
-            this.once(callback); // FIXME
+            this.onceStateful(callback);
 
     }
 
@@ -151,25 +151,50 @@ class Syncable extends OpStream {
     /** Invoke a listener after applying an op of this name
      *  @param {String} op_name - name of the op
      *  @param {Function} callback - listener */
-    // onOp (op_name, callback) {
-    //     this.on('.'+op_name, callback);
-    // }
-
-    /** fires once the object gets some state */
-    onceStateful (callback) {
-         if (!this.Version.isZero())
-             callback();
-         else
-             super.once(callback);
+    onOp (op_name, callback) {
+        this.on('.'+op_name, callback);
     }
 
-    onceSync (callback) {
-        super.on(function (op) { // FIXME catch reon
-            if (op.isOn()) {
-                callback (op);
-                return OpStream.ENOUGH;
+    /** Fires once the object gets some state or once that becomes unlikely.
+      * callback(err, obj, op). */
+    onceStateful (callback) {
+         if (!this.Version.isZero()) return callback();
+         super.once( op => {
+             if (this._rdt && !this.Version.isZero()) { // FIXME _rdt?
+                 callback(null, this, op);
+             } else if (op.isOff()) {
+                 callback(op.value, op, this);
+             } else { // FIXME no such object!
+                callback('object unknown', op, this);
             }
-            return OpStream.OK;
+         });
+    }
+
+    /** Fires on every sync state event.
+     *  Invokes callback(op), where op is either .on or .off */
+    onSync (callback) {
+        super.on( op => {
+            if (!op.isOnOff()) return OpStream.OK;
+            callback (op);
+            return OpStream.ENOUGH;
+        });
+    }
+
+    /** Fires on the first sync event. */
+    onceSync (callback) {
+        super.on( op => {
+            if (!op.isOnOff()) return OpStream.OK;
+            callback (op);
+            return OpStream.ENOUGH;
+        });
+    }
+
+    /** Fires on the first successfull sync event. */
+    onceSynced (callback) {
+        super.on( op => {
+            if (!op.isOn()) return OpStream.OK;
+            callback (op);
+            return OpStream.ENOUGH;
         });
     }
 

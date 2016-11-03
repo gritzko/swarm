@@ -170,6 +170,15 @@ class Op extends Spec {
         ], this._value);
     }
 
+    named (name, value) {
+        return new Op([
+            this.Type,
+            this.Id,
+            this.Stamp,
+            name
+        ], value || this._value);
+    }
+
     static zeroStateOp (spec) {
         return new Op([spec.Type, spec.Id, Stamp.ZERO, Op.METHOD_STATE], '');
     }

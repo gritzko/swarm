@@ -52,16 +52,23 @@ class NodeServerOpStream extends OpStream {
         this._chunks = [];
         let ops = swarm.Op.parseFrame(frame);
         if (!ops.length || ops===null) {
-            this._close();
-        } else {
+            this._close('parsing error');
+        } else try {
             this.offerAll(ops);
+        } catch (ex) {
+            console.error(ex);
+            this._close('internal error: '+ex.message);
         }
     }
 
     offer (op) {
+        if (this._upstream===null)
+            return;
         if (this._debug)
-            console.warn(this._debug+'}}\t'+(op?op.toString():'[EOF]'));
+            console.warn(this._debug+'}\t'+(op?op.toString():'[EOF]'));
         this._upstream.offer(op, this);
+        if (op===null)
+            this._upstream = null;
     }
 
     _apply (op) {
@@ -91,6 +98,14 @@ class NodeServerOpStream extends OpStream {
         } else {
             this._stream.write(Op.serializeFrame(ops));
         }
+    }
+
+    _close (msg) {
+        if (msg) {
+            this._apply(new Op(['0','0','0',Op.METHOD_OFF], msg));
+            this._apply(null);
+        }
+        this.offer(null);
     }
 
     _on_end () {

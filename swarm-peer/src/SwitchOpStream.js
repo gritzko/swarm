@@ -201,7 +201,7 @@ class SwitchOpStream extends OpStream {
         const req = this.req4stream(stream);
         if (!req)
             throw new Error('unknown stream');
-        if (!req.hs && op.isHandshake() && op.scope) {
+        if (!req.hs && op.isHandshake() && op.scope!=='0') {
             req.hs = op;
             req.rid = new ReplicaId(op.scope, this.meta.replicaIdScheme);
             if (req.stream===this.pocket)
@@ -211,6 +211,9 @@ class SwitchOpStream extends OpStream {
                 req.rid.client,
                 this._auth_client.bind(this, req)
             );
+        } else if (!req.hs && op.isHandshake()) {
+            req.hs = op;
+            this._deny (req, 'INVALID HANDSHAKE');
         } else if (!req.hs) {
             this._deny (req, 'HANDSHAKE FIRST');
         } else {
@@ -239,7 +242,10 @@ class SwitchOpStream extends OpStream {
 
     _deny (hs_obj, message) {
         if (hs_obj.hs)
-            hs_obj.stream._apply(hs_obj.hs.error(message));
+            hs_obj.stream._apply(hs_obj.hs.named(Op.METHOD_OFF, message));
+        else if (message)
+            hs_obj.stream._apply(
+                new Op([sync.Swarm.RDT.Class,'0','0',Op.METHOD_OFF], message));
         hs_obj.stream._apply(null);
     }
 
@@ -295,14 +301,14 @@ class SwitchOpStream extends OpStream {
             if (creds && creds[0]==='{')
                 props = JSON.parse(creds); // FIXME report err
             else
-                props = {password: creds};
+                props = {Password: creds};
         } catch (ex) {}
         if (!props || !client.hasState()) {
             this._deny(req, 'INVALID CREDENTIALS 1');
-        } else if (props.password===client.get('password')) {
+        } else if (props.password===client.get('Password')) {
             this._accept(req);
         } else {
-            console.warn(props, props.password,client.get('password'));
+            console.warn(props, props.password,client.get('Password'));
             this._deny(req, 'INVALID CREDENTIALS 2');
         }
         const i = this.pending.indexOf(req);
