@@ -2,7 +2,8 @@
 
 var Swarm = {
     Base64x64: require('./src/Base64x64'),
-    Stamp: require('./src/Stamp'),
+    Id: require('./src/Id'),
+    Stamp: require('./src/Id'),
     Clock: require('./src/Clock'),
     Spec: require('./src/Spec'),
     Op: require('./src/Op'),

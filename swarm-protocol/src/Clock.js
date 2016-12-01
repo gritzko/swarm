@@ -1,6 +1,6 @@
 "use strict";
 var Base64x64 = require('./Base64x64');
-var Stamp = require('./Stamp');
+var Id = require('./Id');
 
 /**  Swarm is based on the Lamport model of time and events in a
  * distributed system, so Lamport logical timestamps are essential
@@ -9,12 +9,14 @@ var Stamp = require('./Stamp');
  * Hence, we use logical timestamps that match the wall clock time
  * numerically. A similar approach was termed "hybrid timestamps"
  * in http://www.cse.buffalo.edu/tech-reports/2014-04.pdf.
+ * MTproto employs some variety of plausible timestamps.
  * Unfortunately, we can not rely on client-side NTP, so our
  * approach differs in some subtle but critical ways.
  * The correct Swarm time is mostly dictated from upstream
- * to downstream replicas, recursively. We only expect
- * local clocks to have some reasonable skew, so replicas can
+ * to downstream replicas, recursively. As long as the
+ * local clock has a reasonable skew, replicas can
  * produce correct timestamps while being offline (temporarily).
+ * This borrows from the LEDBAT approach (good skew is enough).
  *
  * Again, this is logical clock that tries to be as close to
  * wall clock as possible, so downstream replicas may
@@ -24,15 +26,17 @@ var Stamp = require('./Stamp');
  *
  * The format of a timestamp is calendar-friendly.
  * Separate base64 characters denote UTC month (since Jan 2010),
- * date, hour, minute, second and millisecond, plus three base64
- * chars for a sequence number: `MMDHmSssiii`. Every base64 char is
+ * date, hour, minute, second and millisecond, plus two
+ * chars for a sequence number: `MMDHmSssii`. Every base64 char is
  * 6 bits, but date (1-31) and hour (0-23) chars waste 1 bit each,
- * so a timestamp has 64 meaningful bits in 11 base64 chars.
+ * while the first millisecond char wastes 2 bits.
+ * So, a timestamp has 56 meaningful bits in 10 base64 chars.
  *
  * We don't always need full 11 chars of a timestamp, so the class
  * produces Lamport timestamps of adaptable length, 5 to 11 chars,
  * depending on the actual event frequency. For the goals of
  * comparison, missing chars are interpreted as zeros.
+ * The most common length is 6 chars (second-precise).
  * The alphanumeric order of timestamps is correct, thanks to
  * our custom version of base64 (01...89AB...YZ_ab...yz~).
  *
@@ -43,7 +47,7 @@ var Stamp = require('./Stamp');
 class Clock {
 
     constructor (origin, meta_options) {
-        this._last = Stamp.ZERO;
+        this._last = Id.ZERO;
         if (!Base64x64.is(origin))
             throw new Error('invalid origin');
         this._origin = origin.toString();
@@ -61,7 +65,7 @@ class Clock {
             this._offset = parseInt(options.ClockOffst);
         }
         if (options.ClockLast) {
-            this._last = new Stamp(options.ClockLast);
+            this._last = new Id(options.ClockLast);
         }
         if (options.ClockNow) {
             let now = parseInt(options.ClockNow);
@@ -76,13 +80,13 @@ class Clock {
 
     issueTimestamp () {
         var next = this._logical ?
-            new Stamp(this._last.Value.next(this._minlen), this._origin) :
-            Stamp.now(this._origin, this._offset);
+            new Id(this._last.Value.next(this._minlen), this._origin) :
+            Id.now(this._origin, this._offset);
         var last = this._last;
         if (!next.gt(last)) {// either seq++ or stuck-ahead :(
             next = last.next(this._origin);
         } else if (this._minlen<8) { // shorten?
-            next = new Stamp (
+            next = new Id (
                 next.Value.relax(last.value, this._minlen),
                 this._origin
             );
@@ -95,12 +99,12 @@ class Clock {
         return this.issueTimestamp();
     }
 
-    get lastStamp () {
+    get lastId () {
         return this._last;
     }
 
     seeTimestamp (stamp) {
-        stamp = Stamp.as(stamp);
+        stamp = Id.as(stamp);
         if (stamp.gt(this._last)) {
             this._last = stamp;
         }

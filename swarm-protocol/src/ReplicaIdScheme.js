@@ -103,7 +103,7 @@ ReplicaIdScheme.CLIENT = 2;
 ReplicaIdScheme.SESSION = 3;
 ReplicaIdScheme.DB_OPTION_NAME = "DBIdScheme";
 ReplicaIdScheme.FORMAT_RE = /^(\d)(\d)(\d)(\d)$/;
-ReplicaIdScheme.DEFAULT_SCHEME = '0262';
+ReplicaIdScheme.DEFAULT_SCHEME = '0172';
 
 
 module.exports = ReplicaIdScheme;

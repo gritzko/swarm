@@ -10,7 +10,13 @@ class ReplicaId {
      *  @param {ReplicaIdScheme} scheme */
     constructor(id, scheme) {
         this._id = null;
-        this._scheme = new Scheme( scheme );
+        if (!scheme) {
+            this.scheme = ReplicaId.DEFAULT_SCHEME;
+        } else if (scheme.constructor!==Scheme) {
+            this.scheme = new Scheme( scheme.toString() );
+        } else {
+            this._scheme = scheme;
+        }
         this._parts = [null,null,null,null];
         let base = null;
         if (id.constructor===Array) {
@@ -89,5 +95,10 @@ class ReplicaId {
     }
 
 }
+
+/** Assumption: even if you open multiple databases, they still belong
+    to the same pool, so the replica id scheme is the same.
+    If you open dbs from multiple pools, you must know what you are doing. */
+ReplicaId.DEFAULT_SCHEME = new Scheme();
 
 module.exports = ReplicaId;

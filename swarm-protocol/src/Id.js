@@ -1,11 +1,12 @@
 "use strict";
-var Base64x64 = require('./Base64x64');
+const Base64x64 = require('./Base64x64');
+const ReplicaId = require('./ReplicaId');
 
 /**
  *
  * ![events](https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Vector_Clock.svg/750px-Vector_Clock.svg.png)
  *
- * Stamp implements Base64 string Lamport timestamps. First described in
+ * Id implements Base64 string Lamport timestamps. First described in
  * ["Time, clocks, and the ordering of events in a distributed system"][paper]
  * by Leslie Lamport these timestamps are designed to track events in
  * a distributed system.
@@ -28,7 +29,7 @@ var Base64x64 = require('./Base64x64');
  *
  * This class defines the timestamp serialization format other classes
  * reuse: `timestamp+replicaId`.
- * Base64x64 time value followed by a separator (the plus sign) and
+ * Base64x64 time value followed by a separator (plus or minus sign) and
  * a Base64x64 process id. In our case, a "process" is a Swarm
  * db replica (one process runs one replica, owns one clock).
  *
@@ -40,30 +41,31 @@ var Base64x64 = require('./Base64x64');
  * [paper]: http://amturing.acm.org/p558-lamport.pdf
  * @class
  */
-class Stamp {
+class Id {
 
     /**
      * Constructor valid parameters:
-     * * new Stamp("time","origin")
-     * * new Stamp("time+origin")
-     * * new Stamp("transcndnt")
-     * * new Stamp(stamp)
-     * * new Stamp() // zero
+     * * new Id("time","origin")
+     * * new Id("time-origin")
+     * * new Id("transcndnt")
+     * * new Id(stamp)
+     * * new Id() // zero
      */
     constructor (stamp, origin) {
         this._parsed = null;
+        this._rid = null;
         this._string = null;
         if (origin) {
             this._value = Base64x64.toString(stamp);
             this._origin = Base64x64.toString(origin);
         } else if (stamp) {
-            if (stamp.constructor===Stamp) {
+            if (stamp.constructor===Id) {
                 this._value = stamp._value;
                 this._origin = stamp._origin;
                 this._string = stamp._string;
             } else {
-                Stamp.reTokExt.lastIndex = 0;
-                var m = Stamp.reTokExt.exec(stamp.toString());
+                Id.reTokExt.lastIndex = 0;
+                var m = Id.reTokExt.exec(stamp.toString());
                 if (m) {
                     this._string = m[0];
                     this._value = Base64x64.toString(m[1]);
@@ -92,7 +94,14 @@ class Stamp {
         }
         return this._parsed;
     }
-    
+
+    /** ReplicaIdScheme.DEFAULT_SCHEME must be set correctly */
+    get Origin () {
+        if (this._rid === null)
+            this._rid = new ReplicaId(this._origin);
+        return this._rid;
+    }
+
     get date () {
         return this.Value.toDate();
     }
@@ -102,38 +111,34 @@ class Stamp {
     }
 
     static now (origin, offset) {
-        return new Stamp( Base64x64.now(offset), origin );
+        return new Id( Base64x64.now(offset), origin );
     }
 
     toString () {
-        return this.string;
-    }
-
-    static toString (time, origin) {
-        return time + (origin==='0' ? '' : '+' + origin);
-    }
-
-    get string () {
         if (this._string===null) {
-            this._string = Stamp.toString(this._value, this._origin);
+            this._string = Id.toString(this._value, this._origin);
         }
         return this._string;
     }
 
+    static toString (time, origin) {
+        return time + (origin==='0' ? '' : '-' + origin);
+    }
+
     static is (str) {
-        Stamp.reTokExt.lastIndex = 0;
-        return Stamp.reTokExt.test(str);
+        Id.reTokExt.lastIndex = 0;
+        return Id.reTokExt.test(str);
     }
 
     // Is greater than the other stamp, according to the the lexicographic order
     gt (stamp) {
-        var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
+        var s = stamp.constructor===Id ? stamp : new Id(stamp);
         return this._value > s._value ||
             (this._value===s._value && this._origin>s._origin);
     }
 
     lt (stamp) {
-        var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
+        var s = stamp.constructor===Id ? stamp : new Id(stamp);
         return this._value < s._value ||
             (this._value===s._value && this._origin<s._origin);
     }
@@ -147,7 +152,7 @@ class Stamp {
     }
 
     eq (stamp) {
-        var s = stamp.constructor===Stamp ? stamp : new Stamp(stamp);
+        var s = stamp.constructor===Id ? stamp : new Id(stamp);
         return this._value===s._value && this._origin===s._origin;
     }
 
@@ -156,7 +161,13 @@ class Stamp {
     }
 
     isAbnormal () {
-        return this._value.charAt(0)==='~';
+        return Base64x64.isAbnormal(this._value) ||
+            Base64x64.isAbnormal(this._origin);
+    }
+
+    /** just a timestamp */
+    isNormal () {
+        return ! this.isTranscendent() && !this.isAbnormal();
     }
 
     isNever () {
@@ -164,7 +175,7 @@ class Stamp {
     }
 
     isZero () {
-        return this._value===Base64x64.ZERO;
+        return this._value===Base64x64.zero;
     }
 
     isError () {
@@ -172,41 +183,41 @@ class Stamp {
     }
 
     isEmpty () {
-        return this._value===Base64x64.ZERO && this._origin===Base64x64.ZERO;
+        return this._value===Base64x64.zero && this._origin===Base64x64.zero;
     }
 
     static to (value) {
-        return value && value.constructor===Stamp ?
-            value : new Stamp(value);
+        return value && value.constructor===Id ?
+            value : new Id(value);
     }
 
     isUpstreamOf (stamp) {
-        let s = Stamp.to(stamp);
+        let s = Id.to(stamp);
         return s._origin.length > this._origin.length &&
             s._origin.substr(0, this._origin.length) === this._origin;
     }
 
     isDownstreamOf (stamp) {
-        let s = Stamp.to(stamp);
+        let s = Id.to(stamp);
         return this._origin.length > s._origin.length &&
             this._origin.substr(0, s._origin.length) === s._origin;
     }
 
     isSameOrigin (stamp) {
-        let s = Stamp.to(stamp);
+        let s = Id.to(stamp);
         return this._origin === s._origin;
     }
 
     next (origin) {
         let val = this.Value;
-        return new Stamp(val.inc().toString(), origin||this._origin);
+        return new Id(val.inc().toString(), origin||this._origin);
     }
 
     static as (val) {
-        if (val && val.constructor===Stamp) {
+        if (val && val.constructor===Id) {
             return val;
         } else {
-            return new Stamp(val);
+            return new Id(val);
         }
     }
 
@@ -216,14 +227,14 @@ class Stamp {
 
 }
 
-Stamp.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
-Stamp.rsTokExt = '(=)(?:[+-](=))?'.replace(/=/g, Base64x64.rs64x64);
-Stamp.reTokExt = new RegExp('^'+Stamp.rsTokExt+'$');
+Id.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
+Id.rsTokExt = '(=)(?:[+-](=))?'.replace(/=/g, Base64x64.rs64x64);
+Id.reTokExt = new RegExp('^'+Id.rsTokExt+'$');
 
-Stamp.zero = '0';
-Stamp.ZERO = new Stamp(Stamp.zero);
-Stamp.never = '~';
-Stamp.NEVER = new Stamp(Stamp.never);
-Stamp.ERROR = new Stamp(Base64x64.INCORRECT, '0');
+Id.zero = Base64x64.zero;
+Id.ZERO = new Id(Id.zero);
+Id.never = '~';
+Id.NEVER = new Id(Id.never);
+Id.ERROR = new Id(Base64x64.INCORRECT, '0');
 
-module.exports = Stamp;
+module.exports = Id;

@@ -1,5 +1,5 @@
 "use strict";
-var Stamp = require('./Stamp');
+var Stamp = require('./Id');
 
 /** Version vector represented as a {origin: time} map. */
 class VV {

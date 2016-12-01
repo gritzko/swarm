@@ -114,7 +114,7 @@ class Base64x64 {
         }
         return [this._high, this._low];
     }
-    
+
     toDate () {
         if (this._date===null) {
             if (this._high===-1) {
@@ -124,7 +124,7 @@ class Base64x64 {
         }
         return this._date;
     }
-    
+
     get seq () {
         if (this._high===-1) {
             this._base2pair();
@@ -351,7 +351,8 @@ class Base64x64 {
 Base64x64.INFINITY = "~";
 Base64x64.INCORRECT = "~~~~~~~~~~";
 Base64x64.MAX32 = (1<<30)-1;
-Base64x64.ZERO = "0"; // FIXME object or string?!!!
+Base64x64.zero = "0";
+Base64x64.ZERO = new Base64x64(Base64x64.zero);
 Base64x64.rs64x64 = rs64x64;
 Base64x64.FULL_ZERO = '0000000000';
 
@@ -381,4 +382,3 @@ Base64x64.base2int = function (base) {
 };
 
 module.exports = Base64x64;
-
