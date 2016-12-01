@@ -152,8 +152,9 @@ class Id {
     }
 
     eq (stamp) {
-        var s = stamp.constructor===Id ? stamp : new Id(stamp);
-        return this._value===s._value && this._origin===s._origin;
+        if (!stamp) return false;
+        const id = Id.as(stamp);
+        return this._value===id._value && this._origin===id._origin;
     }
 
     isTranscendent () {
@@ -217,7 +218,7 @@ class Id {
         if (val && val.constructor===Id) {
             return val;
         } else {
-            return new Id(val);
+            return new Id(val.toString());
         }
     }
 
@@ -227,8 +228,8 @@ class Id {
 
 }
 
-Id.rsTok = '=(?:\\+=)?'.replace(/=/g, Base64x64.rs64x64);
-Id.rsTokExt = '(=)(?:[+-](=))?'.replace(/=/g, Base64x64.rs64x64);
+Id.rsTok = '=(?:[\\+\\-]=)?'.replace(/=/g, Base64x64.rs64x64);
+Id.rsTokExt = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.rs64x64);
 Id.reTokExt = new RegExp('^'+Id.rsTokExt+'$');
 
 Id.zero = Base64x64.zero;

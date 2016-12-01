@@ -1,6 +1,6 @@
 "use strict";
 var Base64x64 = require('./Base64x64');
-var Stamp = require('./Stamp');
+var Id = require('./Id');
 
 //  S P E C I F I E R
 //
@@ -19,7 +19,7 @@ var Stamp = require('./Stamp');
 //  the rest of the related state.  For every atomic operation, be it a
 //  field mutation or a method invocation, a specifier contains its
 //  class, object id, a method name and, most importantly, its
-//  version id (see Stamp).
+//  version id (see Id).
 //
 //  A serialized specifier is a sequence of Base64 tokens each prefixed
 //  with a "quant". A quant for a class name is '/', an object id is
@@ -42,16 +42,19 @@ class Spec {
      * * new Spec("/Object#1CQKn+0r1g1n!0.on")
      * * new Spec(["Object", "1CQKn+0r1g1n", "0", "on"])
      * */
-    constructor (spec, defaults) {
-        let t = this._toks = [Stamp.ZERO, Stamp.ZERO, Stamp.ZERO, Stamp.ZERO];
-        if (!spec) {
+    constructor (id, type, stamp, location) {
+        this._id = id ? Id.as(id) : Id.ZERO;
+        this._type = type ? Id.as(type) : Id.ZERO;
+        this._stamp = stamp ? Id.as(stamp) : Id.ZERO;
+        this._loc = location ? Id.as(location) : Id.ZERO;
+        /*if (!spec) {
             'nothing';
         } else if (spec._toks && spec._toks.constructor===Array) {
             this._toks = spec._toks;
         } else if (spec.constructor===Array && spec.length===4) {
             for (let i = 0; i < 4; i++) {
-                var s = spec[i] || Stamp.ZERO;
-                t[i] = s.constructor === Stamp ? s : new Stamp(s);
+                var s = spec[i] || Id.ZERO;
+                t[i] = s.constructor === Id ? s : new Id(s);
             }
         } else {
             if (defaults && !defaults._toks)
@@ -63,96 +66,114 @@ class Spec {
             }
             for(let i=1; i<=4; i++) {
                 if (m[i]) {
-                    t[i-1] = new Stamp(m[i]);
+                    t[i-1] = new Id(m[i]);
                 } else if (defaults) {
                     t[i-1] = defaults._toks[i-1];
                 }
             }
-        }
+        }*/
     }
 
-    get type () {
-        return this._toks[0].string;
-    }
-
-    get id () {
-        return this._toks[1].string;
-    }
-
-    get stamp () {
-        return this._toks[2].string;
-    }
-
-    get name () {
-        return this._toks[3].string;
+    static fromString (str, defaults) {
+        const def = defaults || Spec.ZERO;
+        Spec.reSpec.lastIndex = 0;
+        const m = Spec.reSpec.exec(str);
+        if (!m) throw new Error('not a specifier');
+        return new Spec(
+            m[1]||def._id,
+            m[2]||def._type,
+            m[3]||def._stamp,
+            m[4]||def._loc
+        );
     }
 
     get Type () {
-        return this._toks[0];
+        return this._type;
     }
 
     get Id () {
-        return this._toks[1];
+        return this._id;
     }
 
     get Stamp () {
-        return this._toks[2];
+        return this._stamp;
     }
 
-    get Name () { // FIXME sync with the spec
-        return this._toks[3];
+    get Location () {
+        return this._loc;
+    }
+
+    get Loc () {
+        return this.Location;
+    }
+
+    get type () {
+        return this.Type.toString();
+    }
+
+    get id () {
+        return this.Id.toString();
+    }
+
+    get stamp () {
+        return this.Stamp.toString();
+    }
+
+    get location () {
+        return this.Location.toString();
+    }
+
+    get loc () {
+        return this.Location.toString();
     }
 
     get origin () {
         return this.Stamp.origin;
     }
 
+    /** @deprecated */
     get typeid () {
         return this.object;
     }
 
-    get class () {
-        return this.Type.value;
-    }
-
-    get clazz () {
-        return this.Type.value;
+    get typeName () {
+        return this.Type.isNormal() ? undefined : this.Type.value;
     }
 
     get scope () {
-        return this.Name.origin;
+        return this.Location.isAbnormal() ? this.Location.origin : undefined;
     }
 
-    get method () {
-        return this.Name.value;
+    get eventName () {
+        return this.Location.isNormal() ? undefined : this.Location.value;
+    }
+
+    get objectName () {
+        return this.Id.isNormal() ? undefined : this.Id.value;
     }
 
     get author () {
-        return this.Id.origin;
+        return this.Id.isNormal() ? this.Id.origin : undefined;
     }
 
     get birth () {
-        return this.Id.value;
+        return this.Id.isNormal() ? this.Id.value : undefined;
     }
 
     get time () {
         return this.Stamp.value;
     }
 
-    get type_params () {
-        return this.Type.origin;
+    get typeParameters () {
+        return this.Type.isAbnormal() ? this.Type.origin : undefined;
     }
 
-    get type_name () { // TODO rename
-        return this.Type.value;
-    }
-    
     isScoped () {
-        return this.scope !== Base64x64.ZERO;
+        return this.Location.isAbnormal() && !this.Location.isTranscendent();
     }
 
     get Object () {
-        return new Spec([this.Type, this.Id, Stamp.ZERO, Stamp.ZERO]);
+        return new Spec(this.Id, this.Type, Id.ZERO, Id.ZERO);
     }
 
     get object () {
@@ -160,53 +181,39 @@ class Spec {
     }
 
     get Event () {
-        return new Spec([Stamp.ZERO, Stamp.ZERO, this.Stamp, this.Name]);
+        return new Spec(Id.ZERO, Id.ZERO, this.Stamp, this.Location);
     }
 
     get event () {
         return this.Event.toString(Spec.ZERO);
     }
 
+    get name () {
+        return this.eventName;
+    }
+
     toString (defaults) {
+        const def = defaults || Spec.ZERO;
         var ret = '';
-        for(var i=0; i<4; i++) {
-            if (defaults && this._toks[i].eq(defaults._toks[i]) && (ret||i<3))
-                continue;
-            ret += Spec.quants[i] + this._toks[i].toString();
-        }
+        if (!this.Id.eq(def.Id))
+            ret += Spec.quants[0] + this.id;
+        if (!this.Type.eq(def.Type))
+            ret += Spec.quants[1] + this.type;
+        if (!this.Stamp.eq(def.Stamp))
+            ret += Spec.quants[2] + this.stamp;
+        if (!this.Loc.eq(def.Loc) || !ret)
+            ret += Spec.quants[3] + this.loc;
         return ret;
     }
 
-    /** replaces 0 tokens with values from the provided Spec */
-    fill (spec) {
-        var toks = this._toks.slice();
-        var new_toks = spec.constructor===Spec ? spec._toks : spec;
-        for(var i=0; i<4; i++) {
-            if (toks[i].isZero()) {
-                toks[i] = new_toks[i].constructor===Stamp ?
-                    new_toks[i] : new Stamp(new_toks[i]);
-            }
-        }
-        return new Spec(toks);
-    }
-
-    blank (except) {
-        if (!except) {
-            except = '';
-        }
-        var toks = this._toks.slice();
-        for(var i=0; i<4; i++) {
-            if (except.indexOf(Spec.quants[i])===-1) {
-                toks[i] = Stamp.ZERO;
-            }
-        }
-        return new Spec(toks);
-    }
-
     has (quant) {
-        let i = Spec.quants.indexOf(quant);
-        if (i===-1) { throw new Error("invalid quant"); }
-        return !this._toks[i].isZero();
+        switch (quant) {
+            case Spec.quants[0]:  return !this._id.isZero();
+            case Spec.quants[1]:  return !this._type.isZero();
+            case Spec.quants[2]:  return !this._stamp.isZero();
+            case Spec.quants[3]:  return !this._loc.isZero();
+            default: throw new Error('invalid quant');
+        }
     }
 
     static is (str) {
@@ -225,31 +232,84 @@ class Spec {
         return this._toks.every(t => t.isEmpty());
     }
 
+
+    isOn () { return this.eventName === Spec.ON_OP_NAME; }
+
+    isOff () { return this.eventName === Spec.OFF_OP_NAME; }
+
+    isOnOff () {
+        return this.isOn() || this.isOff();
+    }
+
+    isHandshake () {
+        return this.isOnOff() && this.clazz==='Swarm';
+    }
+
+    isMutation () { // FIXME abnormal vs normal
+        return !this.isOnOff() && !this.isError() && !this.isState();
+    }
+
+    isState () {
+        return this.eventName === Spec.STATE_OP_NAME;
+    }
+
+    isNoop () {
+        return this.eventName === Spec.NOOP_OP_NAME;
+    }
+
+    isError () {
+        return this.eventName === Spec.ERROR_OP_NAME;
+    }
+
+    isAbnormal () {
+        return this.Name.isAbnormal();
+    }
+
+    isNormal () {
+        return !this.isAbnormal();
+    }
+
     restamped (stamp, origin) {
         if (origin)
-            stamp = new Stamp(stamp, origin);
-        return new Spec([this.Type, this.Id, stamp, this.Name]);
+            stamp = new Id(stamp, origin);
+        return new Spec(this.Id, this.Type, stamp, this.Loc);
     }
 
     renamed (stamp, origin) {
         if (origin)
-            stamp = new Stamp(stamp, origin);
-        return new Spec([this.Type, this.Id, this.Stamp, stamp]);
+            stamp = new Id(stamp, origin);
+        return new Spec(this.Id, this.Type, this.Stamp, stamp);
     }
 
     /** @param {String|Base64x64} scope */
     rescoped (scope) {
-        return new Spec([this.Type, this.Id, this.Stamp, new Stamp(this.method, scope)]);
+        return new Spec(this.Id, this.Type, this.Stamp, new Id(this.eventName, scope));
+    }
+
+    static as (spec) {
+        if (!spec) return Spec.ZERO;
+        if (spec.constructor===Spec) return spec;
+        return Spec.fromString(spec.toString());
     }
 
 }
 
-Spec.quants = ['/', '#', '!', '.'];
-Spec.rsSpec = '/#!.'.replace(/./g, '(?:\\$&('+Stamp.rsTok+'))?');
+Spec.quants = "#.@:";
+Spec.rsSpec = Spec.quants.replace(/./g, '(?:\\$&('+Id.rsTok+'))?');
 Spec.reSpec = new RegExp('^'+Spec.rsSpec+'$', 'g');
 Spec.NON_SPECIFIC_NOOP = new Spec();
 Spec.ZERO = new Spec();
-Spec.ERROR = new Spec([Stamp.ERROR, Stamp.ERROR, Stamp.ERROR, Stamp.ERROR]);
+Spec.ERROR = new Spec([Id.ERROR, Id.ERROR, Id.ERROR, Id.ERROR]);
+
+Spec.ON_OP_NAME = "~on";
+Spec.OFF_OP_NAME = "~off";
+Spec.STATE_OP_NAME = Base64x64.INFINITY;
+Spec.NOOP_OP_NAME = Base64x64.ZERO;
+Spec.ERROR_OP_NAME = Base64x64.INCORRECT;
+Spec.ON_STAMP = new Id(Spec.ON_OP_NAME);
+Spec.OFF_STAMP = new Id(Spec.OFF_OP_NAME);
+Spec.STATE_STAMP = new Id(Spec.STATE_OP_NAME);
+Spec.NOOP_STAMP = new Id(Spec.NOOP_OP_NAME);
+Spec.ERROR_STAMP = new Id(Spec.ERROR_OP_NAME);
 
 module.exports = Spec;
-

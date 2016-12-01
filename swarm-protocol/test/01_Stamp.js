@@ -40,6 +40,8 @@ tap ('protocol.01.A Lamport timestamp', function(tap){
     tap.ok(new Id('0').isTranscendent());
     tap.equals(new Id("n0nN0","rmalizd00").toString(), "n0nN-rmalizd");
 
+    tap.ok(Id.as("#1").eq(Id.ERROR));
+
     tap.end();
 
 });
