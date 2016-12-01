@@ -7,7 +7,7 @@ var Spec = require('./Spec');
  *  Immutable Swarm op, see the specification at
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
  * */
-class Op extends Spec {
+class Op extends Spec { // FIXME EAT SPEC
 
     /** @param {Object|String|Number|Array} value - op value (parsed)
       */
@@ -99,11 +99,11 @@ class Op extends Spec {
         return ret;
     }
 
-    static serializeFrame (ops, prev_spec) {
+    static serializeFrame (ops, prev_op) {
         let frame = '';
         ops.forEach( op => {
-            frame += op.toString(prev_spec) + '\n';
-            prev_spec = op.spec;
+            frame += op.toString(prev_op) + '\n';
+            prev_op = op;
         });
         frame += '\n'; // frame terminator
         return frame;
@@ -114,56 +114,35 @@ class Op extends Spec {
      * @returns {Op} error op */
     error (message, scope) {
         const Name = new Id(Base64x64.INCORRECT, scope || '0');
-        return new Op([this.Type, this.Id, this.Stamp, Name], message);
-    }
-
-    /** @param {Base64x64|String} new_stamp */
-    overstamped (new_stamp) {
-        if (this.isScoped())
-            throw new Error('can not overstamp a scoped op');
-        return new Op([
-            this.Type,
-            this.Id,
-            new Id(new_stamp, this.origin),
-            new Id(this.method, this.time)
-        ], this._value);
-    }
-
-    clearstamped (new_scope) {
-        if (!this.isScoped() && !new_scope)
-            return this;
-        return new Op ([
-            this.Type,
-            this.Id,
-            new Id(this.isScoped() ? this.scope : this.time, this.origin),
-            new Id(this.method, new_scope||'0')
-        ], this._value);
+        return new Op(this.Id, this.Type, this.Stamp, Name, message);
     }
 
     stamped (stamp) {
-        return new Op([this.Type, this.Id, stamp, this.Name], this._value);
+        return new Op(this.Type, this.Id, stamp, this.Name, this._value);
     }
 
     scoped (scope) {
-        return new Op([
-            this.Type,
+        return new Op(
             this.Id,
+            this.Type,
             this.Stamp,
             new Id(this.method, scope)
-        ], this._value);
+        , this._value);
     }
 
     named (name, value) {
-        return new Op([
-            this.Type,
+        return new Op(
             this.Id,
+            this.Type,
             this.Stamp,
-            name
-        ], value || this._value);
+            name,
+            value || this._value
+        );
     }
 
     static zeroStateOp (spec) {
-        return new Op([spec.Type, spec.Id, Id.ZERO, Op.METHOD_STATE], '');
+        const s = Spec.as (spec);
+        return new Op(s.Id, s.Type, Id.ZERO, Spec.STATE_OP_NAME, null);
     }
 
 }

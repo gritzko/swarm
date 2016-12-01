@@ -3,6 +3,7 @@ const swarm = require('..');
 const tape = require('tape').test;
 const Op = swarm.Op;
 const Id = swarm.Id;
+const Spec = swarm.Spec;
 
 
 tape ('protocol.04.A parse ops', function (tap) {
@@ -16,12 +17,22 @@ tape ('protocol.04.A parse ops', function (tap) {
     var parsed = Op.parseFrame (
         '#test.db@timeX-author~ssn:on={"Key1":"value1","Key2":"value2"}\n'+
         '#id.json@timeY-author:X="Y"\n' +
-        '#other.json@timeY-author:~on\n'+
-        '#other.json@timeY-author:~state={}\n' +
-        '#other.json@timeY-author:0\n\n'
+        '#other.json@timeZ-author:~on\n'+
+        '#other.json@timeZ-author:~state={}\n' +
+        '#other.json@timeZ-author:0="invalid\n\n'
     );
 
     tap.equal(parsed.length, 5);
+
+    const serial = Op.serializeFrame(parsed);
+    tap.equal(serial,
+        '#test.db@timeX-author~ssn:on={"Key1":"value1","Key2":"value2"}\n'+
+        '#id.json@timeY-author:X="Y"\n' +
+        '#other@timeZ-author:~on\n'+
+        ':~state={}\n' +
+        ':0="invalid\n\n'
+    );
+
     var multi = parsed[0];
     var set = parsed[1];
     var short_on = parsed[2];
@@ -50,12 +61,31 @@ tape ('protocol.04.A parse ops', function (tap) {
         '#test.db@timeX-author~ssn:on={"Key1":"value1","Key2":"value2"}',
         'serialization');
 
-    tap.equal(short_on.toString(), '#other.json@timeY-author:~on');
+    tap.equal(short_on.toString(), '#other.json@timeZ-author:~on');
     tap.equal(short_on.value, null);
     tap.equal(short_on.name, '~on');
     tap.ok( short_on.spec.Type.isTranscendent() );
+
+    tap.equal(noop.value, null); // invalid value, ignored
 
     tap.end();
 
 });
 
+tape ('protocol.04.B ops - mutators', function (tap) {
+
+    const empty = new Op();
+    const scoped = empty.scoped('R');
+    tap.equal(scoped.toString(), ':0-R')
+    const stamped = empty.stamped('time-origin');
+    tap.equal(stamped.toString(), '@time-origin')
+    const named = stamped.named(Spec.ERROR_OP_NAME);
+    tap.equal(named.toString(), '@time-origin:~~~~~~~~~~')
+    const error = stamped.error('message', 'R');
+    tap.equal(error.toString(), "@time-origin:~~~~~~~~~~-R=\"message\"");
+    const zero = Op.zeroStateOp("#id.type");
+    tap.equal(zero.toString(), "#id.type:~state");
+
+    tap.end();
+
+});
