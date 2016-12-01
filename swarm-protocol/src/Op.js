@@ -1,6 +1,6 @@
 "use strict";
 var Base64x64 = require('./Base64x64');
-var Stamp = require('./Stamp');
+var Id = require('./Id');
 var Spec = require('./Spec');
 
 /**
@@ -9,9 +9,17 @@ var Spec = require('./Spec');
  * */
 class Op extends Spec {
 
-    constructor (spec, value) {
-        super(spec);
-        this._value = value || '';
+    /** @param {Object|String|Number|Array} value - op value (parsed)
+      */
+    constructor (id, type, stamp, loc, value, valstr) {
+        super(id, type, stamp, loc);
+        if (value===undefined) {
+            this._value = valstr===undefined ? null : undefined;
+            this._valstr = valstr;
+        } else {
+            this._value = value;
+            this._valstr = valstr || undefined;
+        }
     }
 
     get spec () {
@@ -23,23 +31,45 @@ class Op extends Spec {
     }
 
     get value () {
+        if (this._value===undefined) {
+            this._value = null;
+            if (this._valstr) try {
+                this._value = JSON.parse(this._valstr);
+            } catch (ex) {
+                console.warn('op parse error: '+ex.message);
+            }
+        }
         return this._value;
+    }
+
+    get valstr () {
+        if (this._valstr===undefined) {
+            // TODO strip objects
+            this._valstr = this._value===null ? '' : JSON.stringify(this._value);
+        }
+        return this._valstr;
     }
 
     toString (defaults) {
         let ret = super.toString(defaults);
-        if (this._value==='') {
-        } else if (this._value.indexOf('\n')===-1) {
-            ret += '\t' + this._value;
-        } else {
-            ret += '=\n' + this._value.replace(/^(.*)$/mg, "\t$1");
-        }
+        if (this.valstr!=='')
+            ret += '=' + this.valstr;
         return ret;
     }
 
-    /** whether this is not a state-mutating op */
-    isPseudo () {
-        return Op.PSEUDO_OP_NAMES.indexOf(this.method)!==-1;
+    static fromString (specstr, valstr, prevop) {
+        const def = prevop || Op.ZERO;
+        Spec.reSpec.lastIndex = 0;
+        const m = Spec.reSpec.exec(specstr);
+        if (!m) throw new Error('not a specifier');
+        return new Op(
+            m[1]||def._id,
+            m[2]||def._type,
+            m[3]||def._stamp,
+            m[4]||def._loc,
+            undefined,
+            valstr||''
+        );
     }
 
     /** parse a frame of several serialized concatenated newline-
@@ -48,34 +78,20 @@ class Op extends Spec {
     static parseFrame (text) {
         var ret = [];
         var m = null;
+        var prevop = Op.ZERO;
+        let at = 0;
         Op.reOp.lastIndex = 0;
-        let prev; // FIXME constructor
         while ( m = Op.reOp.exec(text) ) {
-            let spec_str = m[1],
-                empty = m[2],
-                line = m[3],
-                lines = m[4],
-                length = m[5],
-                value;
-            if (!spec_str)
+            if (m.index!==at)
+                throw new Error('garbage in the input: '+text.substring(at,m.index));
+            const specstr = m[1],
+                  valstr = m[2];
+            if (!specstr)
                 continue; // empty line
-            if (empty!==undefined) {
-                value = '';
-            } else if (line!==undefined) {
-                value = line;
-            } else if (lines!==undefined) {
-                value = lines.replace(/\n[ \t]/mg, '\n').substr(1);
-            } else { // explicit length
-                var char_length = Base64x64.classic.parse(length);
-                var start = Op.reOp.lastIndex;
-                value = text.substr(start, char_length);
-                if (text.charAt(start+char_length)!=='\n') {
-                    throw new Error('unterminated op body');
-                }                Op.reOp.lastIndex = start+char_length;
-            }
-            let spec = new Spec(spec_str, prev);
-            prev = spec;
-            ret.push(new Op(spec, value));
+            const op = Op.fromString(specstr, valstr, prevop);
+            ret.push(op);
+            prevop = op;
+            at = Op.reOp.lastIndex;
         }
         if (Op.reOp.lastIndex!==0) {
             throw new Error("mismatched content");
@@ -92,45 +108,12 @@ class Op extends Spec {
         frame += '\n'; // frame terminator
         return frame;
     }
-
-    isOn () { return this.method === Op.METHOD_ON; }
-
-    isOff () { return this.method === Op.METHOD_OFF; }
-
-    isOnOff () {
-        return this.isOn() || this.isOff();
-    }
-
-    isHandshake () {
-        return this.isOnOff() && this.clazz==='Swarm';
-    }
-
-    isMutation () { // FIXME abnormal vs normal
-        return !this.isOnOff() && !this.isError() && !this.isState();
-    }
-
-    isState () {
-        return this.method === Op.METHOD_STATE;
-    }
-
-    isNoop () {
-        return this.method === Op.METHOD_NOOP;
-    }
-
-    isError () {
-        return this.method === Op.METHOD_ERROR;
-    }
-
-    isNormal () {
-        return !this.Name.isAbnormal() && !this.isOnOff(); // TODO ~on?
-    }
-
     /**
      * @param {String} message
      * @param {String|Base64x64} scope - the receiver
      * @returns {Op} error op */
     error (message, scope) {
-        const Name = new Stamp(Base64x64.INCORRECT, scope || '0');
+        const Name = new Id(Base64x64.INCORRECT, scope || '0');
         return new Op([this.Type, this.Id, this.Stamp, Name], message);
     }
 
@@ -141,8 +124,8 @@ class Op extends Spec {
         return new Op([
             this.Type,
             this.Id,
-            new Stamp(new_stamp, this.origin),
-            new Stamp(this.method, this.time)
+            new Id(new_stamp, this.origin),
+            new Id(this.method, this.time)
         ], this._value);
     }
 
@@ -152,8 +135,8 @@ class Op extends Spec {
         return new Op ([
             this.Type,
             this.Id,
-            new Stamp(this.isScoped() ? this.scope : this.time, this.origin),
-            new Stamp(this.method, new_scope||'0')
+            new Id(this.isScoped() ? this.scope : this.time, this.origin),
+            new Id(this.method, new_scope||'0')
         ], this._value);
     }
 
@@ -166,7 +149,7 @@ class Op extends Spec {
             this.Type,
             this.Id,
             this.Stamp,
-            new Stamp(this.method, scope)
+            new Id(this.method, scope)
         ], this._value);
     }
 
@@ -180,7 +163,7 @@ class Op extends Spec {
     }
 
     static zeroStateOp (spec) {
-        return new Op([spec.Type, spec.Id, Stamp.ZERO, Op.METHOD_STATE], '');
+        return new Op([spec.Type, spec.Id, Id.ZERO, Op.METHOD_STATE], '');
     }
 
 }
@@ -191,21 +174,11 @@ Op.SERIALIZATION_MODES = {
     EXPLICIT: 2,
     EXPLICIT_ONLY: 3
 };
-Op.rsOp = '^\\n*(' + Spec.rsSpec.replace(/\((\?\:)?/mg, '(?:') + ')' +
-    '(?:(\\n)|[ \\t](.*)\\n|=$((?:\\n[ \\t].*)*)|=('+Base64x64.rs64x64+')\\n)';
+const rsSpecEsc = Spec.rsSpec.replace(/\((\?\:)?/mg, '(?:');
+Op.rsOp = '^\\n*(' + rsSpecEsc + ')' + '(?:\\=(.*))?\\n';
 Op.reOp = new RegExp(Op.rsOp, "mg");
-Op.METHOD_ON = "on";
-Op.METHOD_OFF = "off";
-Op.METHOD_STATE = Base64x64.INFINITY;
-Op.METHOD_NOOP = Base64x64.ZERO;
-Op.METHOD_ERROR = Base64x64.INCORRECT;
-Op.PSEUDO_OP_NAMES = [Op.METHOD_ON, Op.METHOD_OFF, Op.METHOD_ERROR, Op.METHOD_NOOP];
-Op.STAMP_ON = new Stamp(Op.METHOD_ON);
-Op.STAMP_OFF = new Stamp(Op.METHOD_OFF);
-Op.STAMP_STATE = new Stamp(Op.METHOD_STATE);
-Op.STAMP_NOOP = new Stamp(Op.METHOD_NOOP);
-Op.STAMP_ERROR = new Stamp(Op.METHOD_ERROR);
-Op.NOTHING = new Op(new Spec(), '');
+
+Op.ZERO = new Op(new Spec(), null);
 Op.CLASS_HANDSHAKE = "Swarm";
 
 module.exports = Op;

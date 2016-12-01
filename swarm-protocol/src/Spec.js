@@ -47,31 +47,6 @@ class Spec {
         this._type = type ? Id.as(type) : Id.ZERO;
         this._stamp = stamp ? Id.as(stamp) : Id.ZERO;
         this._loc = location ? Id.as(location) : Id.ZERO;
-        /*if (!spec) {
-            'nothing';
-        } else if (spec._toks && spec._toks.constructor===Array) {
-            this._toks = spec._toks;
-        } else if (spec.constructor===Array && spec.length===4) {
-            for (let i = 0; i < 4; i++) {
-                var s = spec[i] || Id.ZERO;
-                t[i] = s.constructor === Id ? s : new Id(s);
-            }
-        } else {
-            if (defaults && !defaults._toks)
-                throw new Error('defaults must be a Spec');
-            Spec.reSpec.lastIndex = 0;
-            let m = Spec.reSpec.exec(spec.toString());
-            if (m===null) {
-                throw new Error("not a specifier");
-            }
-            for(let i=1; i<=4; i++) {
-                if (m[i]) {
-                    t[i-1] = new Id(m[i]);
-                } else if (defaults) {
-                    t[i-1] = defaults._toks[i-1];
-                }
-            }
-        }*/
     }
 
     static fromString (str, defaults) {
@@ -222,10 +197,8 @@ class Spec {
     }
 
     isSameObject (spec) {
-        if (!spec._toks) {
-            spec = new Spec(spec);
-        }
-        return this.Type.eq(spec.Type) && this.Id.eq(spec.Id);
+        const s = Spec.as(spec);
+        return this.Type.eq(s.Type) && this.Id.eq(s.Id);
     }
 
     isEmpty () {
@@ -289,6 +262,7 @@ class Spec {
     static as (spec) {
         if (!spec) return Spec.ZERO;
         if (spec.constructor===Spec) return spec;
+        if (spec.Id && spec.Type && spec.Stamp && spec.Loc) return spec;
         return Spec.fromString(spec.toString());
     }
 
@@ -303,8 +277,8 @@ Spec.ERROR = new Spec([Id.ERROR, Id.ERROR, Id.ERROR, Id.ERROR]);
 
 Spec.ON_OP_NAME = "~on";
 Spec.OFF_OP_NAME = "~off";
-Spec.STATE_OP_NAME = Base64x64.INFINITY;
-Spec.NOOP_OP_NAME = Base64x64.ZERO;
+Spec.STATE_OP_NAME = "~state";
+Spec.NOOP_OP_NAME = Base64x64.zero;
 Spec.ERROR_OP_NAME = Base64x64.INCORRECT;
 Spec.ON_STAMP = new Id(Spec.ON_OP_NAME);
 Spec.OFF_STAMP = new Id(Spec.OFF_OP_NAME);

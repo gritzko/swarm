@@ -1,19 +1,24 @@
 "use strict";
-var swarm = require('..');
-var tape = require('tape').test;
-var Op = swarm.Op;
+const swarm = require('..');
+const tape = require('tape').test;
+const Op = swarm.Op;
+const Id = swarm.Id;
 
 
 tape ('protocol.04.A parse ops', function (tap) {
 
+    const empty = new Op();
+    tap.equal(empty.toString(), ':0');
+
+    const json_op = new Op(Id.ZERO, Id.ZERO, Id.ZERO, Id.ZERO, {a:1});
+    tap.equal(json_op.toString(), ':0={"a":1}');
+
     var parsed = Op.parseFrame (
-        '/Swarm#test!timeX+author~ssn.on=\n'+
-        '\tKey1: value1\n' +
-        ' Key2: value2\n' +
-        '/Model#id!stamp.set\t{"x":"y"}\n' +
-        '/Model#other!stamp.on\n'+
-        '/Model#other!stamp.~\n' +
-        '/Model#other!stamp.0\n'
+        '#test.db@timeX-author~ssn:on={"Key1":"value1","Key2":"value2"}\n'+
+        '#id.json@timeY-author:X="Y"\n' +
+        '#other.json@timeY-author:~on\n'+
+        '#other.json@timeY-author:~state={}\n' +
+        '#other.json@timeY-author:0\n\n'
     );
 
     tap.equal(parsed.length, 5);
@@ -23,17 +28,18 @@ tape ('protocol.04.A parse ops', function (tap) {
     var state = parsed[3];
     var noop = parsed[4];
 
-    tap.equal(set.name, 'set');
-    tap.equal(set.value, '{"x":"y"}');
+    tap.equal(set.eventName, 'X');
+    tap.equal(set.value, 'Y');
 
-    tap.equal(multi.spec.origin, 'author~ssn', 'originating session');
-    tap.equal(multi.spec.stamp, 'timeX+author~ssn', 'lamport tim.stamp');
-    tap.equal(multi.spec.id, 'test', '#id');
-    tap.equal(multi.spec.name, 'on', 'name');
-    tap.equal(''+multi.spec.Stamp, 'timeX+author~ssn', 'version');
-    tap.equals( multi.value.replace(/[^\n]/mg,'').length, 1 );
+    tap.equal(multi.origin, 'author~ssn', 'originating session');
+    tap.equal(multi.stamp, 'timeX-author~ssn', 'lamport tim.stamp');
+    tap.equal(multi.id, 'test', '#id');
+    tap.equal(multi.eventName, 'on', 'name');
+    tap.equal(''+multi.Stamp, 'timeX-author~ssn', 'version');
+    tap.equals( multi.value.Key1, "value1" );
+    tap.equals( multi.value.Key2, "value2" );
 
-    tap.ok ( state.isState() );
+    tap.ok ( state.isState(), "isState" );
     tap.ok ( state.isSameObject(short_on) );
     tap.ok ( noop.isNoop() );
     tap.notOk ( state.isNoop() );
@@ -41,14 +47,12 @@ tape ('protocol.04.A parse ops', function (tap) {
     tap.notOk ( noop.isSameObject(set) );
 
     tap.equal(multi.toString(),
-        '/Swarm#test!timeX+author~ssn.on=\n'+
-        '\tKey1: value1\n' +
-        '\tKey2: value2',
-    'multiline serialization');
+        '#test.db@timeX-author~ssn:on={"Key1":"value1","Key2":"value2"}',
+        'serialization');
 
-    tap.equal(short_on.toString(), '/Model#other!stamp.on');
-    tap.equal(short_on.value, '');
-    tap.equal(short_on.name, 'on');
+    tap.equal(short_on.toString(), '#other.json@timeY-author:~on');
+    tap.equal(short_on.value, null);
+    tap.equal(short_on.name, '~on');
     tap.ok( short_on.spec.Type.isTranscendent() );
 
     tap.end();
