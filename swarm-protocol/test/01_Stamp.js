@@ -71,5 +71,47 @@ tap ('protocol.01.B replica tree', function (t) {
 
     t.ok(peer_stamp.isSameOrigin("laterTime+Ppr"));
 
+    // assuming 0172 is the default
+    const rid = Id.as('123-RgritzkoSE').Origin;
+    t.equal(rid.primus, '0');
+    t.equal(rid.peer, 'R');
+    t.equal(rid.client, '0gritzko');
+    t.equal(rid.session, '00000000SE');
+
     t.end();
+});
+
+tap ('protocol.01.C order', function (tap) {
+
+    tap.ok(Id.as('12345-src').eq('123450-src'));
+    tap.ok(Id.as('12345-src').ge('123450-src'));
+    tap.notOk(Id.as('12345-src').gt('123450-src'));
+    tap.notOk(Id.as('12345-src').lt('123450-src'));
+    tap.ok(Id.as('12345-src').le('123450-src'));
+
+    tap.notOk(Id.as('12345-src').eq('12345-srd'));
+    tap.notOk(Id.as('12345-src').ge('12345-srd'));
+    tap.ok(Id.as('12345-src').le('12345-srd'));
+    tap.ok(Id.as('12345-src').lt('12345-srd'));
+    tap.notOk(Id.as('12345-src').gt('12345-srd'));
+    tap.ok(Id.as('12345-srd').gt('12345-src'));
+
+    tap.end();
+
+});
+
+
+tap ('protocol.01.D conversions and checks', function (tap) {
+
+    tap.ok( Id.is('12345ABCDE-originofop') );
+    tap.ok( Id.is('12345ABCDE') );
+    tap.ok( !Id.is('12345ABCDEF-originofop') );
+    tap.ok( !Id.is('12345ABCDE-') );
+    tap.ok( Id.is('12345ABCDE-0') );
+    tap.ok( Id.is('12345ABCDE-0000000000') );
+    tap.ok( Id.is('0') );
+    tap.ok( !Id.is('') );
+
+    tap.end();
+
 });

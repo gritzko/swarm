@@ -202,9 +202,9 @@ class Spec {
     }
 
     isEmpty () {
-        return this._toks.every(t => t.isEmpty());
+        return this.Id.isZero() && this.Type.isZero() &&
+            this.Stamp.isZero() && this.Location.isZero();
     }
-
 
     isOn () { return this.eventName === Spec.ON_OP_NAME; }
 
@@ -215,11 +215,11 @@ class Spec {
     }
 
     isHandshake () {
-        return this.isOnOff() && this.clazz==='Swarm';
+        return this.isOnOff() && this.Type.value==='db'; // TODO constant
     }
 
-    isMutation () { // FIXME abnormal vs normal
-        return !this.isOnOff() && !this.isError() && !this.isState();
+    isMutation () {
+        return ! Base64x64.isAbnormal(this.Location.value);
     }
 
     isState () {
@@ -235,28 +235,11 @@ class Spec {
     }
 
     isAbnormal () {
-        return this.Name.isAbnormal();
+        return this.Location.isAbnormal();
     }
 
     isNormal () {
         return !this.isAbnormal();
-    }
-
-    restamped (stamp, origin) {
-        if (origin)
-            stamp = new Id(stamp, origin);
-        return new Spec(this.Id, this.Type, stamp, this.Loc);
-    }
-
-    renamed (stamp, origin) {
-        if (origin)
-            stamp = new Id(stamp, origin);
-        return new Spec(this.Id, this.Type, this.Stamp, stamp);
-    }
-
-    /** @param {String|Base64x64} scope */
-    rescoped (scope) {
-        return new Spec(this.Id, this.Type, this.Stamp, new Id(this.eventName, scope));
     }
 
     static as (spec) {

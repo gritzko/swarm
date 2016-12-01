@@ -5,15 +5,16 @@ const Scheme = require('./ReplicaIdScheme');
 /** Replica id, immutable.
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/replica.html */
 class ReplicaId {
+    // FIXME as, is, all the immutable conventions PLEASE!!!
 
     /** @param {Base64x64|String|Array} id
      *  @param {ReplicaIdScheme} scheme */
     constructor(id, scheme) {
         this._id = null;
         if (!scheme) {
-            this.scheme = ReplicaId.DEFAULT_SCHEME;
+            this._scheme = ReplicaId.DEFAULT_SCHEME;
         } else if (scheme.constructor!==Scheme) {
-            this.scheme = new Scheme( scheme.toString() );
+            this._scheme = new Scheme( scheme.toString() );
         } else {
             this._scheme = scheme;
         }

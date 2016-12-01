@@ -17,8 +17,8 @@ class VV {
         var stamps = [];
         this.map.forEach((t, o) => stamps.push(Stamp.toString(t, o)));
         stamps.sort().reverse();
-        stamps.unshift(stamps.length?'':'!0');
-        return stamps.join('!');
+        stamps.unshift(stamps.length?'':'@0');
+        return stamps.join('@');
     }
 
     //
@@ -40,12 +40,6 @@ class VV {
             this._max = value;
     }
 
-    remove (origin) { // FIXME remove this op
-        console.warn('VV.remove() is deprecated');
-        origin = VV.norm_src(origin);
-        this.map.delete(origin);
-        return this;
-    }
 
     delete (origin) {
         this.remove(origin);
@@ -68,12 +62,12 @@ class VV {
     get (origin) {
         origin = VV.norm_src(origin);
         var time = this.map.get(origin);
-        return time ? time + '+' + origin : '0';
+        return time ? time + '-' + origin : '0';
     }
 
     has (origin) {
         origin = VV.norm_src(origin);
-        return this.map.hasOwnProperty(origin);
+        return this.map.has(origin);
     }
 
     covers (version) {
@@ -89,7 +83,7 @@ class VV {
             vv = new VV(vv);
         }
         for(var origin of vv.map.keys()) {
-            if ( this.get(origin) > this.get(origin) )
+            if ( vv.get(origin) > this.get(origin) )
                 return false;
         }
         return true;
@@ -100,7 +94,7 @@ class VV {
     }
 
     static norm_src (origin) {
-        if (origin.constructor===String && origin.indexOf('+')!==-1) {
+        if (origin.constructor===String && origin.indexOf('-')!==-1) {
             return new Stamp(origin).origin;
         } else {
             return origin;
@@ -109,7 +103,7 @@ class VV {
 
 }
 
-VV.rsVVTok = '!'+Stamp.rsTokExt;
+VV.rsVVTok = '@'+Stamp.rsTokExt;
 VV.reVVTok = new RegExp(VV.rsVVTok, 'g');
 
 module.exports = VV;

@@ -75,7 +75,7 @@ tap('protocol.00.A basic API', function (t) {
 
 tap ('protocol.00.B base64 conversions perf', function(tap){
     var ms1 = new Date().getTime();
-    var count = 1000000;
+    var count = 100000;
     for(var i=0; i<count; i++) {
         if (Base64x64.base2int(Base64x64.int2base(i)) !== i) {
             tap.fail('mismatch at '+i);
@@ -90,7 +90,7 @@ tap ('protocol.00.B base64 conversions perf', function(tap){
 
 tap ('protocol.00.C timestamping perf', function(tap){
     var ms1 = new Date().getTime();
-    var count = 1000000;
+    var count = 100000;
     var year = Base64x64.now().toString().substr(0,2);
     for(var i=0; i<count; i++) {
         var stamp = Base64x64.now(i&4095);
@@ -102,4 +102,25 @@ tap ('protocol.00.C timestamping perf', function(tap){
     console.warn('\nMade '+count+' timestamps in '+(ms2-ms1)+'ms');
     tap.end();
     // 700ms for me
+});
+
+tap ('protocol.00.D non-aligned base64', function(tap) {
+    const base = Base64x64.int2base(66, 3);
+    tap.equal(base, '012');
+    tap.equal(Base64x64.base2int('12'), 66);
+    tap.throws(function(){
+        Base64x64.int2base(-1);
+    });
+    tap.end();
+});
+
+tap ('protocol.00.E misc stuff', function(tap) {
+
+    const base = new Base64x64('0000100002');
+    tap.equal(base.highInt, 1);
+    tap.equal(base.lowInt, 2);
+
+    tap.equal(Base64x64.round('1234056789', 5), '1234');
+
+    tap.end();
 });

@@ -69,9 +69,39 @@ tape ('protocol.03.B corner cases', function (tap) {
 });
 
 
-tape ('protocol.03.f op regexes', function (t) {
+tape ('protocol.03.C op regexes', function (t) {
     var reSpec = new RegExp(Spec.rsSpec);
     t.ok(reSpec.test('#db.db@stamp+user~ssn:~on'), '.on spec');
     t.end();
 });
+
+tape ('protocol.03.D testers', function (t) {
+
+    t.ok(Spec.as(':~~~~~~~~~~').isError());
+    t.ok(Spec.as(':~state').isState());
+    t.ok(Spec.as(':~on').isOn());
+    t.ok(!Spec.as(':~on').isOff());
+    t.ok(Spec.as(':~on').isOnOff());
+    t.ok(Spec.as(':~off').isOnOff());
+    t.ok(Spec.as(':~off').isOff());
+    t.ok(Spec.as(':~off').isAbnormal());
+    t.notOk(Spec.as(':~off').isNormal());
+    t.ok(Spec.ZERO.isEmpty());
+    t.notOk(Spec.as(':1').isEmpty());
+    t.notOk(Spec.as(':1').isHandshake());
+    t.ok(Spec.as('#test.db:~on').isHandshake());
+    t.notOk(Spec.as('#test.db:~on').isMutation());
+    t.ok(Spec.as('#test.db:IdScheme').isMutation());
+
+    t.ok(Spec.as('#test.db:IdScheme').has('#'));
+    t.ok(Spec.as('#test.db:IdScheme').has('.'));
+    t.ok(Spec.as('#test.db:IdScheme').has(':'));
+    t.notOk(Spec.as('#test.db:IdScheme').has('@'));
+
+    t.ok(Spec.is('#test.db:IdScheme'));
+    t.notOk(Spec.is('#test.db:IdScheme?'));
+
+    t.end();
+});
+
 

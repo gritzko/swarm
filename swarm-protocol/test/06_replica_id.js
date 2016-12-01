@@ -36,6 +36,9 @@ tape ('protocol.06.B replica id', function (tap) {
     tap.equals(id1.peer, '0AB');
     tap.equals(id1.client, '000user');
     tap.equals(id1.session, '0000000003');
+    tap.notOk(id1.isPeer());
+    tap.ok(id1.isClient());
+    tap.ok(id1.isClientOf(new ReplicaId('1AB', scheme)));
     tap.ok(Base64x64.is(id1));
 
     const id2 = new ReplicaId('1ABuser', scheme);

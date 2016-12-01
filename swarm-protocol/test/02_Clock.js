@@ -13,8 +13,9 @@ tap ('protocol.02.A Logical clocks API', function(tap) {
     var ts1 = clock.issueTimestamp();
     tap.equal(ts1.value.substr(0,6), '000001');
     tap.equal(ts1.origin, 'leslie');
+    tap.equal(clock.origin, 'leslie');
 
-    var ts2 = clock.issueTimestamp();
+    var ts2 = clock.time();
     tap.ok(ts2.value>ts1.value)
     tap.equal(ts2.value.substr(0,6), '000002');
     tap.equal(ts2.origin, 'leslie');
