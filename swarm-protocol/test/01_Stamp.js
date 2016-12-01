@@ -42,6 +42,10 @@ tap ('protocol.01.A Lamport timestamp', function(tap){
 
     tap.ok(Id.as("#1").eq(Id.ERROR));
 
+    const one = Id.as('0000000010-one');
+    const two = one.next('two');
+    tap.ok(two.eq('0000000011-two'));
+
     tap.end();
 
 });
