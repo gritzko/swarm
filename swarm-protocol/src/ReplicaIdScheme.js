@@ -68,6 +68,12 @@ class ReplicaIdScheme {
         return rids.isCorrect();
     }
 
+    static as (scheme) {
+        if (!scheme) return ReplicaIdScheme.DEFAULT_SCHEME;
+        if (scheme.constructor===ReplicaIdScheme) return scheme;
+        return new ReplicaIdScheme(scheme);
+    }
+
     isCorrect () {
         const length = this.primuses+this.peers+this.clients+this.sessions;
         return length<=10 && length>0;
@@ -103,7 +109,7 @@ ReplicaIdScheme.CLIENT = 2;
 ReplicaIdScheme.SESSION = 3;
 ReplicaIdScheme.DB_OPTION_NAME = "DBIdScheme";
 ReplicaIdScheme.FORMAT_RE = /^(\d)(\d)(\d)(\d)$/;
-ReplicaIdScheme.DEFAULT_SCHEME = '0172';
+ReplicaIdScheme.DEFAULT_SCHEME = new ReplicaIdScheme('0172');
 
 
 module.exports = ReplicaIdScheme;

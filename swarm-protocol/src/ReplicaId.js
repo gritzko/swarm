@@ -5,73 +5,48 @@ const Scheme = require('./ReplicaIdScheme');
 /** Replica id, immutable.
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/replica.html */
 class ReplicaId {
+
     // FIXME as, is, all the immutable conventions PLEASE!!!
+    // 2. fromString
+    // 3. is
+    // 4. as (str)
+    // 5. forkPeer, forkClient, forkSession
 
-    /** @param {Base64x64|String|Array} id
-     *  @param {ReplicaIdScheme} scheme */
-    constructor(id, scheme) {
-        this._id = null;
-        if (!scheme) {
-            this._scheme = ReplicaId.DEFAULT_SCHEME;
-        } else if (scheme.constructor!==Scheme) {
-            this._scheme = new Scheme( scheme.toString() );
-        } else {
-            this._scheme = scheme;
-        }
-        this._parts = [null,null,null,null];
-        let base = null;
-        if (id.constructor===Array) {
-            if (id.length!==4)
-                throw new Error("need all 4 parts");
-            this._parts = id.map( (val, p) => this._scheme.slice(val, p) );
-            this._rebuild();
-        } else {
-            base = new Base64x64(id);
-            this._id = base.toString();
-            this._parts = this._scheme.split(this._id);
-        }
+    /**  */
+    constructor(primus, peer, client, ssn, scheme) {
+        this._scheme = scheme ? Scheme.as(scheme) : ReplicaId.SCHEME;
+        this._id = this._scheme.join([primus, peer, client, ssn]);
+        const parts = this._scheme.split(this._id);
+        this._primus = parts[0];
+        this._peer = parts[1];
+        this._client = parts[2];
+        this._ssn = parts[3];
     }
 
-    _rebuild () {
-        this._id = this._scheme.join(this._parts);
-        return this;
+    static fromString (id, scheme) {
+        const sch = scheme ? Scheme.as(scheme) : ReplicaId.SCHEME;
+        if (!ReplicaId.is(id))
+            throw new Error('not a replica id');
+        const parts = sch.split(id);
+        return new ReplicaId(parts[0], parts[1], parts[2], parts[3], sch);
     }
 
-    /** @param {Array} parts
-     *  @param {ReplicaIdScheme} scheme */
-    static createId (parts, scheme) {
-        let full = '';
-        for(let p=0, off=0; p<4; p++) {
-            const len = scheme.partLength(p);
-            if (len===0) continue;
-            let segment = parts[p].substr(off, len) || '0';
-            while (segment.length<len) segment = segment + '0';
-            full += segment;
-            off += len;
-        }
-        return new ReplicaId(full, scheme);
+    static as(rid) {
+        if (rid.constructor===ReplicaId) return rid;
+        return ReplicaId.fromString(rid);
     }
 
-    get primus () {return this._parts[0];}
-    get peer () {return this._parts[1];}
-    get client () {return this._parts[2];}
-    get session () {return this._parts[3];}
-    set primus (base) {
-        this._parts[0] = this._scheme.slice(base, 0).toString();
-        return this._rebuild();
+    static is (rid) {
+        return Base64x64.is(rid) &&
+            !Base64x64.isAbnormal(rid) &&
+                !Base64x64.isZero(rid);
     }
-    set peer (base) {
-        this._parts[1] = this._scheme.slice(base, 1).toString();
-        return this._rebuild();
-    }
-    set client (base) {
-        this._parts[2] = this._scheme.slice(base, 2).toString();
-        return this._rebuild();
-    }
-    set session (base) {
-        this._parts[3] = this._scheme.slice(base, 3).toString();
-        return this._rebuild();
-    }
+
+    get primus () {return this._primus;}
+    get peer () {return this._peer;}
+    get client () {return this._client;}
+    get session () {return this._ssn;}
+    get scheme () {return this._scheme;}
 
     isPeer () {
         return this.client === '0';
@@ -87,12 +62,24 @@ class ReplicaId {
             this.isClient() && rid.isPeer();
     }
 
-    clone () {
-        return new ReplicaId(this.toString(), this._scheme);
+    eq (rid) {
+        return this.toString()===rid.toString();
     }
 
     toString () {
         return this._id;
+    }
+
+    forkPeer (peer_id) {
+        return new ReplicaId(this.primus, peer_id, '0', '0', this.scheme);
+    }
+
+    forkClient (client_id) {
+        return new ReplicaId(this.primus, this.peer, client_id, '0', this.scheme);
+    }
+
+    forkSession (ssn_id) {
+        return new ReplicaId(this.primus, this.peer, this.client, ssn_id, this.scheme);
     }
 
 }
@@ -101,5 +88,6 @@ class ReplicaId {
     to the same pool, so the replica id scheme is the same.
     If you open dbs from multiple pools, you must know what you are doing. */
 ReplicaId.DEFAULT_SCHEME = new Scheme();
+ReplicaId.SCHEME = ReplicaId.DEFAULT_SCHEME;
 
 module.exports = ReplicaId;

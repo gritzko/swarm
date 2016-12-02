@@ -31,31 +31,33 @@ tape ('protocol.06.B replica id', function (tap) {
 
     const scheme = new ReplicaIdScheme(1261);
     
-    const id1 = new ReplicaId('1ABuser003', scheme);
+    const id1 = ReplicaId.fromString('1ABuser003', scheme);
     tap.equals(id1.primus, '1');
     tap.equals(id1.peer, '0AB');
     tap.equals(id1.client, '000user');
     tap.equals(id1.session, '0000000003');
     tap.notOk(id1.isPeer());
     tap.ok(id1.isClient());
-    tap.ok(id1.isClientOf(new ReplicaId('1AB', scheme)));
+    tap.ok(id1.isClientOf(ReplicaId.fromString('1AB', scheme)));
     tap.ok(Base64x64.is(id1));
 
-    const id2 = new ReplicaId('1ABuser', scheme);
+    const id2 = ReplicaId.fromString('1ABuser', scheme);
     tap.equals(id2.primus, '1');
     tap.equals(id2.peer, '0AB');
     tap.equals(id2.client, '000user');
     tap.equals(id2.session, '0');
     tap.ok(Base64x64.is(id2));
 
-    const id3 = ReplicaId.createId(['P', '0ee', '000client', '000000000S'], scheme);
+    const id3 = new ReplicaId('P', '0ee', '000client', '000000000S', scheme);
     tap.equals(id3.toString(), 'PeeclientS');
     tap.ok(Base64x64.is(id3));
 
-    const id4 = new ReplicaId("0client", "163");
-    id4.session = '0000000SSN';
-    id4.peer = 'R';
-    tap.equals( id4+'', 'RclientSSN' );
+    const id4 = ReplicaId.fromString("R", "163");
+    tap.equals( id4+'', 'R' );
+    const id5= id4.forkClient('0client');
+    tap.equals( id5+'', 'Rclient' );
+    const id6 = id5.forkSession('0000000123');
+    tap.equals( id6+'', 'Rclient123' );
 
     tap.end();
 });

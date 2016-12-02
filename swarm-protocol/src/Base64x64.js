@@ -346,6 +346,16 @@ class Base64x64 {
         return new Base64x64(Base64x64.FULL_ZERO.substr(0, offset)+this._base.substr(offset, length));
     }
 
+    static isZero (b) {
+        return Base64x64.as(b).isZero();
+    }
+
+    static as (b) {
+        if (!b) return Base64x64.ZERO;
+        if (b.constructor===Base64x64) return b;
+        return new Base64x64(b.toString());
+    }
+
 }
 
 Base64x64.INFINITY = "~";

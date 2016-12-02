@@ -98,7 +98,7 @@ class Id {
     /** ReplicaIdScheme.DEFAULT_SCHEME must be set correctly */
     get Origin () {
         if (this._rid === null)
-            this._rid = new ReplicaId(this._origin);
+            this._rid = ReplicaId.fromString(this._origin);
         return this._rid;
     }
 
