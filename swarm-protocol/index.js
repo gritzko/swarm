@@ -8,6 +8,7 @@ var Swarm = {
     Spec: require('./src/Spec'),
     Op: require('./src/Op'),
     VV: require('./src/VV'),
+    Ids: require('./src/Ids'),
     ReplicaId: require('./src/ReplicaId'),
     ReplicaIdScheme: require('./src/ReplicaIdScheme')
 };
