@@ -1,5 +1,6 @@
 "use strict";
 const Id = require('./Id');
+const Spec = require('./Spec');
 const Base64x64 = require('./Base64x64');
 
 /** immutable id array */
@@ -84,7 +85,7 @@ class Ids {
     }
 
     iterator ( ) {
-
+        return new Iterator(this);
     }
 
 }
@@ -196,46 +197,95 @@ Ids.INC_RUN = '"';
 
 
 class Iterator {
-    constructor (id) {
-        this.ids;
-        this.ids_offset;
-        this.head;
-        this.method;
-        this.body;
-        this.run_offset;
-        this.id;
+    /** @param {Ids} ids */
+    constructor (ids) {
+        this.ids = ids._body;
+        this._m = null;
+        this.nextRun();
     }
-    id () {
-
+    get id () {
+        return this._id;
+    }
+    _recover_id () {
+        switch (this._run_type) {
+            case Ids.UNI_RUN:
+                return this._id;
+            case Ids.LAST2_RUN:
+                const two = this._run_body.substr((this._run_offset-1)<<1, 2);
+                return this._id = new Id(this._prefix+two, this._origin);
+            default:
+        }
     }
     next () {
-
+        const ret = this._id;
+        if (this._run_offset<this._run_length) {
+            this._run_offset++;
+            this._recover_id();
+        } else if (this._id!==undefined) {
+            this.nextRun();
+        }
+        return ret;
     }
     nextRun () {
-
+        Ids.reRun.lastIndex = this._m ? this._m.index+this._m[0].length : 0;
+        const m = this._m = Ids.reRun.exec(this.ids);
+        if (m===null) {
+            this._id = undefined;
+            return;
+        }
+        this._value = m[1];
+        this._origin = m[2];
+        this._run_type = m[3];
+        this._run_body = m[4];
+        this._run_offset = 0;
+        this._run_length = -1;
+        this._id = new Id(this._value, this._origin);
+        switch (this._run_type) {
+            case Ids.LAST2_RUN:
+                this._prefix = m[1].substr(0, m[1].length-2);
+                this._run_length = this._run_body.length >> 1;
+                break;
+            case Ids.UNI_RUN:
+                this._prefix = m[1];
+                this._run_length = Base64x64.base2int(this._run_body)-1;
+                break;
+            case undefined:
+                this._run_length = 0;
+                break;
+            default:
+                throw new Error('not implemented yet');
+        }
     }
-    runHas (id) {
-
+    runMayHave (id) {
+        id = Id.as(id);
+        if (this._id===undefined) return false;
+        if (this._id.origin!==id.origin) return false;
+        if (this._run_type===Ids.UNI_RUN)
+            return this._id.value === id.value;
+        return this._prefix===id.value.substr(0,this._prefix.length);
+    }
+    end () {
+        return this._id === undefined;
     }
 
-    append (id) {
-
-    }
-    /** @returns {Id} -- id at the pos */
-    at (offset) {
-
-    }
-    toString () {
-
-    }
-    fromString (str, offset) {
-        const pos = offset || 0;
-
-    }
-    fromMatch (head, method, body) {
-
-    }
+    // /** @returns {Id} -- id at the pos */
+    // at (offset) {
+    //
+    // }
+    // toString () {
+    //
+    // }
+    // fromString (str, offset) {  TODO ToC
+    //     const pos = offset || 0;
+    //
+    // }
 }
+
+Ids.rsRun = Spec.rsQuant +
+            Id.rsTokExt +
+            '(?:([\,\'\"\;])' +
+            '(' + Base64x64.rs64 + '+))?';
+Ids.reRun = new RegExp(Ids.rsRun, 'g');
 
 Ids.Builder = Builder;
 Ids.Iterator = Iterator;
