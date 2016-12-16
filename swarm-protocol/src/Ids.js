@@ -6,11 +6,11 @@ const Base64x64 = require('./Base64x64');
 /** immutable id array */
 class Ids {
 
-    constructor (body) {
+    constructor(body) {
         this._body = body || '';
     }
 
-    static fromString (str) {
+    static fromString(str) {
         return new Ids(str);
     }
 
@@ -18,74 +18,79 @@ class Ids {
         return this._body;
     }
 
-    static as (ids) {
+    static as(ids) {
         if (!ids) return new ids();
         if (ids.constructor) return ids;
         return new Ids(ids);
     }
 
-    static is (ids) {
+    static is(ids) {
         return Ids.ids_re.test(ids);
     }
 
     // --- access/edit API ---
 
     /** @returns {Ids} -- new array */
-    splice (offset, del_count, inserts) {
+    splice(offset, del_count, inserts) {
         const b = new Builder();
-
         const i = this.iterator();
         // append runs
-        while (!i.end() && i.runEndOffset()<=offset) {
-            body += i.runString();
+        while (!i.end && i.runEndOffset < offset) {
+            b.appendRun(i.run);
             i.nextRun();
         }
         // open split run
         // add that many
-        while (!i.end() && i.offset<=offset) {
-            append(i.id());
-            i.next();
+        while (!i.end && i.offset < offset) {
+            b.append(i.id);
+            i.nextId();
         }
         // add new
-        inserts.forEach(append);
+        inserts.forEach(id => b.append(id));
         // skip the deleted
-        for(let i=0; i<del_count && !i.end(); i++)
-            i.next();
+        for (let j = 0; j < del_count && !i.end; j++)
+            i.nextId();
         // add the rest
-        while (!i.end() && i.runOffset<i.runLength) {
-            append(i.next());
+        while (!i.end && i.runOffset > 0) {
+            b.append(i.nextId());
         }
         // append remaining runs
-        while (!i.end()) {
-            body += i.runString();
+        while (!i.end) {
+            b.appendRun(i.run);
             i.nextRun();
         }
+
+        return new Ids(b.toString());
     }
 
-    at (pos) {
+    at(pos) {
         // use regex scan runs
         // parse, .length
     }
 
     /** @returns {Number} -- the first position the id was found at */
-    find (id) {
+    find(id) {
 
     }
 
-    append (id) {
+    append(id) {
 
     }
 
-    appendRun (run) {
+    appendRun(run) {
 
     }
 
-    insert (id, pos) {
+    insert(id, pos) {
 
     }
 
-    iterator ( ) {
+    iterator() {
         return new Iterator(this);
+    }
+
+    [Symbol.iterator]() {
+        return this.iterator();
     }
 
 }
@@ -201,6 +206,7 @@ class Iterator {
     constructor (ids) {
         this.ids = ids._body;
         this._m = null;
+        this._offset = 0;
         this.nextRun();
     }
     get id () {
@@ -217,9 +223,16 @@ class Iterator {
         }
     }
     next () {
+        return {
+            value: this.nextId(),
+            done:  this.end
+        };
+    }
+    nextId () {
         const ret = this._id;
         if (this._run_offset<this._run_length) {
             this._run_offset++;
+            this._offset++;
             this._recover_id();
         } else if (this._id!==undefined) {
             this.nextRun();
@@ -227,12 +240,15 @@ class Iterator {
         return ret;
     }
     nextRun () {
+        // FIXME +1
+        this._offset += this._run ? this._run_length - this._run_offset + 1 : 0;
         Ids.reRun.lastIndex = this._m ? this._m.index+this._m[0].length : 0;
         const m = this._m = Ids.reRun.exec(this.ids);
         if (m===null) {
             this._id = undefined;
             return;
         }
+        this._run = m[0];
         this._value = m[1];
         this._origin = m[2];
         this._run_type = m[3];
@@ -256,15 +272,31 @@ class Iterator {
                 throw new Error('not implemented yet');
         }
     }
+    get runEndOffset () {
+        return this._offset - this._run_offset + this._run_length;
+    }
+    get run () {
+        return this._run;
+    }
+    get runOffset () {
+        return this._run_offset;
+    }
+    get offset () {
+        return this._offset;
+    }
     runMayHave (id) {
         id = Id.as(id);
         if (this._id===undefined) return false;
         if (this._id.origin!==id.origin) return false;
         if (this._run_type===Ids.UNI_RUN)
             return this._id.value === id.value;
-        return this._prefix===id.value.substr(0,this._prefix.length);
+        if (this._prefix!==id.value.substr(0,this._prefix.length))
+            return false;
+        if (this._run_type===Ids.LAST2_RUN && this._prefix.length+2<id.value.length)
+            return false;
+        return true;
     }
-    end () {
+    get end () {
         return this._id === undefined;
     }
 
