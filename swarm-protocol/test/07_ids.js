@@ -20,7 +20,7 @@ const ids1ids = [
     Id.ZERO
 ].map(Id.as);
 
-const ids1str = "@ABCDEF-author'GHIJ@ABCDKLM-author'NON0NPQR@ABCDKQR-other@0;3";
+const ids1str = '@ABCDEF-author"GHIJ@ABCDKLM-author"NON0NPQR@ABCDKQR-other@0,3';
 
 // TODO weird cases:  @00'~000~0
 // TODO invalid inputs
@@ -31,7 +31,7 @@ tap ('protocol.07.A builder', function(tap) {
     b.append(Id.ZERO);
     b.append(Id.ZERO);
     b.append(Id.ZERO);
-    tap.equal(b.toString(), "@0;3");
+    tap.equal(b.toString(), "@0,3");
 
     const b2 = new Ids.Builder();
     ids1ids.forEach(i=>b2.append(i));
@@ -80,7 +80,7 @@ tap ('protocol.07.C splice', function(tap) {
     arr.splice(7, 3, [Id.NEVER]);
     const spliced = ids.splice(7, 3, [Id.NEVER]);
 
-    tap.equal(spliced.toString(), "@ABCDEF-author'GHIJ@ABCDKLM-author'NON0NP@~'0000");
+    tap.equal(spliced.toString(), '@ABCDEF-author"GHIJ@ABCDKLM-author"NON0NP@~"0000');
 
     let i = 0;
     for( var id of spliced ) {

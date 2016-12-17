@@ -95,6 +95,11 @@ class Ids {
 
 }
 
+Ids.UNI_RUN = ',';
+Ids.LAST_RUN = "'";
+Ids.LAST2_RUN = '"';
+Ids.INC_RUN = '`';
+
 
 class Builder {
 
@@ -194,11 +199,6 @@ class Builder {
         return this.body.join('');
     }
 }
-
-Ids.UNI_RUN = ';';
-Ids.LAST_RUN = ',';
-Ids.LAST2_RUN = "'";
-Ids.INC_RUN = '"';
 
 
 class Iterator {
@@ -300,17 +300,6 @@ class Iterator {
         return this._id === undefined;
     }
 
-    // /** @returns {Id} -- id at the pos */
-    // at (offset) {
-    //
-    // }
-    // toString () {
-    //
-    // }
-    // fromString (str, offset) {  TODO ToC
-    //     const pos = offset || 0;
-    //
-    // }
 }
 
 Ids.rsRun = Spec.rsQuant +
