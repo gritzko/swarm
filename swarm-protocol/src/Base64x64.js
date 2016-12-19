@@ -309,6 +309,15 @@ class Base64x64 {
         return new Base64x64(base).round(pos).toString();
     }
 
+    /** @returns {String} - not a valid Base64x64 number */
+    static commonPrefix (one, two) {
+        let common = '';
+        const v1 = one.toString(), v2 = two.toString();
+        for(let i=0; i<v1.length && i<v2.length && v1[i]===v2[i]; i++)
+            common += v1[i];
+        return common || '';
+    }
+
     get highInt () {
         if (this._high===-1) {
             this._base2pair();
@@ -364,6 +373,7 @@ Base64x64.MAX32 = (1<<30)-1;
 Base64x64.zero = "0";
 Base64x64.ZERO = new Base64x64(Base64x64.zero);
 Base64x64.rs64x64 = rs64x64;
+Base64x64.rs64 = rs64;
 Base64x64.FULL_ZERO = '0000000000';
 
 // convert int to a classic base64 number (left zeroes skipped)

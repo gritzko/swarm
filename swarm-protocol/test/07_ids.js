@@ -78,9 +78,13 @@ tap ('protocol.07.C splice', function(tap) {
     const ids = Ids.fromString(ids1str);
 
     arr.splice(7, 3, [Id.NEVER]);
+    tap.equal (ids.length, 12, 'length');
     const spliced = ids.splice(7, 3, [Id.NEVER]);
 
-    tap.equal(spliced.toString(), '@ABCDEF-author"GHIJ@ABCDKLM-author"NON0NP@~"0000');
+    tap.equal(spliced.toString(),
+        '@ABCDEF-author"GHIJ@ABCDKLM-author"NON0NP@~@0,2');
+
+    tap.equal (spliced.length, 10, 'spliced length');
 
     let i = 0;
     for( var id of spliced ) {
@@ -89,6 +93,15 @@ tap ('protocol.07.C splice', function(tap) {
             console.log(id + '?=' + idstr );
         tap.equals( id+'', idstr );
     }
+
+    for(let k=0; k<spliced.length; k++)
+        tap.ok(spliced.at(k).eq(arr[k]), 'at()');
+
+    for(let j=0; j<8; j++) {
+        tap.equal(spliced.find(arr[j]), j, 'find()');
+    }
+
+    tap.equal(spliced.find(Id.ZERO), arr.indexOf(Id.ZERO));
 
     tap.end();
 

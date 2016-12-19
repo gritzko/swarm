@@ -8,6 +8,7 @@ class Ids {
 
     constructor(body) {
         this._body = body || '';
+        this._length = -1;
     }
 
     static fromString(str) {
@@ -64,25 +65,32 @@ class Ids {
     }
 
     at(pos) {
-        // use regex scan runs
-        // parse, .length
+        // FIXME span skip
+        const i = this.iterator();
+        while (!i.end && i.offset<pos)
+            i.nextId();
+        return i.end ? undefined : i.id;
     }
 
     /** @returns {Number} -- the first position the id was found at */
     find(id) {
-
+        const seek = Id.as(id);
+        const i = this.iterator();
+        while (!i.end && !seek.eq(i.nextId())); // FIXME span skip
+        return i.end ? -1 : i.offset-1; // FIXME
     }
 
-    append(id) {
-
+    _runScan () {
+        const i = this.iterator();
+        while (!i.end)
+            i.nextRun();
+        this._length = i.offset;
     }
 
-    appendRun(run) {
-
-    }
-
-    insert(id, pos) {
-
+    get length () {
+        if (this._length===-1)
+            this._runScan();
+        return this._length;
     }
 
     iterator() {
@@ -164,7 +172,8 @@ class Builder {
             return this._appendToUniRun(id);
         }
         const prefix = Base64x64.commonPrefix(iv, liv);
-        if (iv.length<=prefix.length+2 && liv.length<=prefix.length+2) {
+        if (iv.length>1 && liv.length>1 &&
+            iv.length<=prefix.length+2 && liv.length<=prefix.length+2) {
             this.runtype = Ids.LAST2_RUN;
             this.prefixlen = prefix.length;
             this.runlen = 1;

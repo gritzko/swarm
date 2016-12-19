@@ -67,7 +67,7 @@ class Id {
                 Id.reTokExt.lastIndex = 0;
                 var m = Id.reTokExt.exec(stamp.toString());
                 if (m) {
-                    this._string = m[0];
+                    //this._string = m[0];
                     this._value = Base64x64.toString(m[1]);
                     this._origin = m[2] ? Base64x64.toString(m[2]) : '0';
                 } else {

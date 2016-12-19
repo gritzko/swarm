@@ -252,6 +252,7 @@ class Spec {
 }
 
 Spec.quants = "#.@:";
+Spec.rsQuant = '[' + Spec.quants.replace(/./g, '\\$&') +']';
 Spec.rsSpec = Spec.quants.replace(/./g, '(?:\\$&('+Id.rsTok+'))?');
 Spec.reSpec = new RegExp('^'+Spec.rsSpec+'$', 'g');
 Spec.NON_SPECIFIC_NOOP = new Spec();
