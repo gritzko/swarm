@@ -20,8 +20,10 @@ class Ids {
     }
 
     static as(ids) {
-        if (!ids) return new ids();
-        if (ids.constructor) return ids;
+        if (!ids)
+            return new Ids();
+        if (ids.constructor===Ids)
+            return ids;
         return new Ids(ids);
     }
 
@@ -76,8 +78,9 @@ class Ids {
     find(id) {
         const seek = Id.as(id);
         const i = this.iterator();
-        while (!i.end && !seek.eq(i.nextId())); // FIXME span skip
-        return i.end ? -1 : i.offset-1; // FIXME
+        while (!i.end && !seek.eq(i.id))
+            i.next(); // FIXME span skip
+        return i.end ? -1 : i.offset; // FIXME
     }
 
     _runScan () {
@@ -99,6 +102,19 @@ class Ids {
 
     [Symbol.iterator]() {
         return this.iterator();
+    }
+
+    static fromIdArray (id_array) {
+        const b = new Builder();
+        id_array.forEach( id => b.append(id) );
+        return new Ids(b.toString());
+    }
+
+    toArray () {
+        const ret = [];
+        for(let id of this)
+            ret.push(id);
+        return ret;
     }
 
 }
@@ -232,10 +248,12 @@ class Iterator {
         }
     }
     next () {
-        return {
-            value: this.nextId(),
+        const ret = {
+            value: this._id,
             done:  this.end
         };
+        this.nextId();
+        return ret;
     }
     nextId () {
         const ret = this._id;

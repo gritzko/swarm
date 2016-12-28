@@ -106,3 +106,17 @@ tap ('protocol.07.C splice', function(tap) {
     tap.end();
 
 });
+
+tap('protocol.08.D corner cases', function (tap) {
+
+    const tailing_zeros = '@stamp00-author"102003';
+    const tz_ids = Ids.fromString(tailing_zeros);
+    const tz_array = tz_ids.toArray();
+    tap.equal(tz_array[0]+'', 'stamp-author');
+    tap.equal(tz_array[1]+'', 'stamp1-author');
+    tap.equal(tz_array[2]+'', 'stamp2-author');
+    tap.equal(tz_array[3]+'', 'stamp03-author');
+
+    tap.end();
+
+});
