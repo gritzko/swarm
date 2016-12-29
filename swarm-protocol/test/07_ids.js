@@ -98,7 +98,7 @@ tap ('protocol.07.C splice', function(tap) {
         tap.equal(spliced.at(k)+'', arr[k]+'', 'at('+arr[k]+')');
 
     for(let j=0; j<8; j++) {
-        tap.equal(spliced.find(arr[j]), j, 'find()');
+        tap.equal(spliced.find(arr[j]), j, 'find('+arr[j]+')');
     }
 
     tap.equal(spliced.find(Id.ZERO), arr.indexOf(Id.ZERO));
@@ -117,7 +117,11 @@ tap('protocol.08.D shifts', function (tap) {        //   :)
         'stamp3-author',
         'stamp34-author',
         'last2-one',
-        'last2bb-one'
+        'last2bb-one',
+        'last2-one',
+        'last-one',
+        'last-one',
+        'last-one'
     ].map(Id.as);
 
     const b = new Ids.Builder();

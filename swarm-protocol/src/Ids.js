@@ -286,8 +286,9 @@ class Last2Run extends IdRun {
             return null;
         if (!this.prefix)
             this.prefix = Base64x64.commonPrefix(this.id.value, id.value);
+        const common = Base64x64.commonPrefix(this.prefix, id.value);
         const plen = this.prefix.length;
-        if (this.id.value.length <= plen+2 && id.value.length <= plen+2) {
+        if (common.length==plen && id.value.length <= plen+2) {
             let last2 = id.value.substr(this.prefix.length);
             while (last2.length<2) last2 += '0';
             this.tail += last2;
