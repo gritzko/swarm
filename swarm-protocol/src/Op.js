@@ -1,15 +1,16 @@
 "use strict";
-var Base64x64 = require('./Base64x64');
-var Id = require('./Id');
-var Spec = require('./Spec');
+const Base64x64 = require('./Base64x64');
+const Id = require('./Id');
+const Spec = require('./Spec');
+// const Ops = require('./Ops');
 
 /**
  *  Immutable Swarm op, see the specification at
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
  * */
-class Op extends Spec { // FIXME EAT SPEC
+class Op extends Spec {
 
-    /** @param {Object|String|Number|Array} value - op value (parsed)
+    /** @param {Object|String|Number|Array|Spec|Ops} value - op value (parsed)
       */
     constructor (id, type, stamp, loc, value, valstr) {
         super(id, type, stamp, loc);
@@ -20,6 +21,7 @@ class Op extends Spec { // FIXME EAT SPEC
             this._value = value;
             this._valstr = valstr || undefined;
         }
+        // this._ops = null;
     }
 
     get spec () {
@@ -30,7 +32,7 @@ class Op extends Spec { // FIXME EAT SPEC
         return this.spec;
     }
 
-    get value () {
+    get Value () {
         if (this._value===undefined) {
             this._value = null;
             if (this._valstr) try {
@@ -42,7 +44,7 @@ class Op extends Spec { // FIXME EAT SPEC
         return this._value;
     }
 
-    get valstr () {
+    get value () {
         if (this._valstr===undefined) {
             // TODO strip objects
             this._valstr = this._value===null ? '' : JSON.stringify(this._value);
@@ -50,10 +52,23 @@ class Op extends Spec { // FIXME EAT SPEC
         return this._valstr;
     }
 
+    // get ops () {
+    //     if (this._ops) {
+    //         return this._ops;
+    //     } else if (!this.value) {
+    //         return null;
+    //     } else if (!this.value.v || !this.value.s || !this.value.l) {
+    //         return undefined;
+    //     } else {
+    //         this._ops = new Ops(this.value.s, this.value.l, this.value.v, this);
+    //         return this._ops;
+    //     }
+    // }
+
     toString (defaults) {
         let ret = super.toString(defaults);
-        if (this.valstr!=='')
-            ret += '=' + this.valstr;
+        if (this.value)
+            ret += '=' + this.value;
         return ret;
     }
 
@@ -126,8 +141,8 @@ class Op extends Spec { // FIXME EAT SPEC
             this.Id,
             this.Type,
             this.Stamp,
-            new Id(this.method, scope)
-        , this._value);
+            new Id(this.method, scope),
+        this._value);
     }
 
     named (name, value) {
@@ -145,7 +160,16 @@ class Op extends Spec { // FIXME EAT SPEC
         return new Op(s.Id, s.Type, Id.ZERO, Spec.STATE_OP_NAME, null);
     }
 
+    static reduce (state, op) {
+        if (!state.isSameObject(op)) // TODO null => diff
+            throw new Error('wrong object');
+        const reducer = Op.REDUCERS[state.type] || log_reducer;
+        const value = reducer(state, op);
+        return new Op(op.Id, op.Type, op.Stamp, Spec.STATE_OP_NAME, value);
+    }
+
 }
+
 
 Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
 Op.SERIALIZATION_MODES = {
@@ -159,5 +183,24 @@ Op.reOp = new RegExp(Op.rsOp, "mg");
 
 Op.ZERO = new Op(new Spec(), null);
 Op.CLASS_HANDSHAKE = "Swarm";
+
+Op.DB_TYPE_NAME = 'db';
+Op.DB_TYPE_ID = new Id(Op.DB_TYPE_NAME);
+
+Op.REDUCERS = Object.create(null);
+
+function log_reducer (state, op) {
+    return null;
+}
+
+function lww_reducer (state, op) {
+    const ops = state.ops;
+    const i = ops.findLoc(op.Loc);
+    return ops.splice(i, 1, [op]);
+}
+
+Op.REDUCERS.json = lww_reducer;
+Op.REDUCERS.db = lww_reducer;
+Op.REDUCERS.log = log_reducer;
 
 module.exports = Op;

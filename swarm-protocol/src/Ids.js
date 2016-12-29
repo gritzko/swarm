@@ -104,8 +104,8 @@ class Ids {
         return this.iterator();
     }
 
-    static fromIdArray (id_array) {
-        const b = new Builder();
+    static fromIdArray (id_array, quant) {
+        const b = new Builder(quant);
         id_array.forEach( id => b.append(id) );
         return new Ids(b.toString());
     }
@@ -123,6 +123,9 @@ Ids.UNI_RUN = ',';
 Ids.LAST1_RUN = "'";
 Ids.LAST2_RUN = '"';
 Ids.INC_RUN = '`';
+
+
+
 
 /** A run of a single id. */
 class IdRun {
@@ -221,7 +224,7 @@ class Last1Run extends IdRun {
         this.prefix = null;
     }
     toString () {
-        return this.id.value + '-' + this.id.origin + Ids.LAST1_RUN + this.tail;
+        return this.id.toString() + Ids.LAST1_RUN + this.tail;
     }
     at (i) {
         if (i<0 || i>this.tail.length)
@@ -322,18 +325,18 @@ class Last2Run extends IdRun {
 
 class Builder {
 
-    constructor () {
-        this.runs = []; // FIXME toString em
+    constructor (quant) {
+        this.runs = [];
         this.open_run = null;
         this.str = null;
-        this.quant = '@';
+        this.quant = quant || '@';
     }
 
     appendRun (run_or_str) {
         const run = IdRun.as(run_or_str);
-        if (this.open_id) {
-            this.runs.push(new IdRun(this.open_id));
-            this.open_id = null;
+        if (this.open_run) {
+            this.runs.push(this.open_run.toString()); // TODO merge
+            this.open_run = null;
         }
         this.runs.push(run.toString());
         this.str = null;
@@ -416,6 +419,12 @@ class Iterator {
     }
     get end () {
         return !this.open_run;
+    }
+    to (new_offset) {
+        if (new_offset<this.offset)
+            throw new Error('can not go back');
+        while (!this.end && this.offset<new_offset) // TODO nextRun
+            this.nextId();
     }
 
 }

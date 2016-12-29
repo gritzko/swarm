@@ -262,6 +262,7 @@ Spec.ERROR = new Spec([Id.ERROR, Id.ERROR, Id.ERROR, Id.ERROR]);
 Spec.ON_OP_NAME = "~on";
 Spec.OFF_OP_NAME = "~off";
 Spec.STATE_OP_NAME = "~state";
+Spec.DIFF_OP_NAME = "~diff";
 Spec.NOOP_OP_NAME = Base64x64.zero;
 Spec.ERROR_OP_NAME = Base64x64.INCORRECT;
 Spec.ON_STAMP = new Id(Spec.ON_OP_NAME);
