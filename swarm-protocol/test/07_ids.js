@@ -95,7 +95,7 @@ tap ('protocol.07.C splice', function(tap) {
     }
 
     for(let k=0; k<spliced.length; k++)
-        tap.ok(spliced.at(k).eq(arr[k]), 'at()');
+        tap.equal(spliced.at(k)+'', arr[k]+'', 'at('+arr[k]+')');
 
     for(let j=0; j<8; j++) {
         tap.equal(spliced.find(arr[j]), j, 'find()');
@@ -107,15 +107,28 @@ tap ('protocol.07.C splice', function(tap) {
 
 });
 
-tap('protocol.08.D corner cases', function (tap) {
+tap('protocol.08.D shifts', function (tap) {        //   :)
 
-    const tailing_zeros = '@stamp00-author"102003';
-    const tz_ids = Ids.fromString(tailing_zeros);
-    const tz_array = tz_ids.toArray();
-    tap.equal(tz_array[0]+'', 'stamp-author');
-    tap.equal(tz_array[1]+'', 'stamp1-author');
-    tap.equal(tz_array[2]+'', 'stamp2-author');
-    tap.equal(tz_array[3]+'', 'stamp03-author');
+    const id_array = [
+        'stamp-author',
+        'stamp-author',
+        'stamp1-author',
+        'stamp12-author',
+        'stamp3-author',
+        'stamp34-author'
+    ].map(Id.as);
+
+    const b = new Ids.Builder();
+    id_array.forEach( id => {
+        b.append(id);
+        console.log(id+'\t'+b.toString());
+    });
+
+    const ids = Ids.fromIdArray(id_array);
+    const id_array2 = ids.toArray();
+
+    tap.equal(id_array2.length, id_array.length);
+    tap.equal(id_array2.toString(), id_array.toString());
 
     tap.end();
 

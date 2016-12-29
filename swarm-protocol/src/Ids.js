@@ -38,8 +38,8 @@ class Ids {
         const b = new Builder();
         const i = this.iterator();
         // append runs
-        while (!i.end && i.runEndOffset < offset) {
-            b.appendRun(i.run);
+        while (!i.end && i.run_end_offset < offset) {
+            b.appendRun(i.open_run);
             i.nextRun();
         }
         // open split run
@@ -54,12 +54,12 @@ class Ids {
         for (let j = 0; j < del_count && !i.end; j++)
             i.nextId();
         // add the rest
-        while (!i.end && i.runOffset > 0) {
+        while (!i.end && i.run_offset > 0) {
             b.append(i.nextId());
         }
         // append remaining runs
         while (!i.end) {
-            b.appendRun(i.run);
+            b.appendRun(i.open_run);
             i.nextRun();
         }
 
@@ -120,108 +120,245 @@ class Ids {
 }
 
 Ids.UNI_RUN = ',';
-Ids.LAST_RUN = "'";
+Ids.LAST1_RUN = "'";
 Ids.LAST2_RUN = '"';
 Ids.INC_RUN = '`';
+
+/** A run of a single id. */
+class IdRun {
+    constructor (id) {
+        this.id = Id.as(id);
+    }
+    append (new_id) {
+        const id = Id.as(new_id);
+        if (this.id.eq(id))
+            return new UniRun(this.id).append(id);
+        if (!this.id.isSameOrigin(id))
+            return null;
+        if (this.id.value.length===1)
+            return null;
+        const prefix = Base64x64.commonPrefix(this.id.value, id.value);
+        if (prefix.length+1>=this.id.value.length && prefix.length+1>=id.value.length)
+            return new Last1Run(this.id).append(id);
+        if (prefix.length+2>=this.id.value.length && prefix.length+2>=id.value.length)
+            return new Last2Run(this.id).append(id);
+        return null;
+    }
+    at (i) {
+        return i===0 ? this.id : undefined;
+    }
+    get length () {
+        return 1;
+    }
+    toString () {
+        return this.id.toString();
+    }
+    /** @returns {Boolean} */
+    mayHave (id) {
+        return this.id.eq(id);
+    }
+    static fromString (str) {
+        Ids.reRun.lastIndex = 0;
+        const m = Ids.reRun.exec(str);
+        return m ? IdRun.fromMatch(m) : null;
+    }
+    static fromMatch (m) {
+        const value = m[1], origin = m[2], run_type = m[3], tail = m[4];
+        const id = new Id(value, origin), len = value.length;
+        switch (run_type) {
+            case Ids.UNI_RUN: return new UniRun(id, tail);
+            case Ids.LAST1_RUN: return new Last1Run(id, value.substr(0,len-1), tail);
+            case Ids.LAST2_RUN: return new Last2Run(id, value.substr(0,len-2), tail);
+            case undefined: return new IdRun(id);
+            default: throw new Error('parsing fail');
+        }
+    }
+    static as (run_or_string) {
+        if (run_or_string instanceof IdRun)
+            return run_or_string;
+
+    }
+}
+
+
+class UniRun extends IdRun {
+    constructor (id, count) {
+        super(id);
+        this.count = count ? Base64x64.base2int(count) : 1;
+    }
+    toString () {
+        return this.id + Ids.UNI_RUN + Base64x64.int2base(this.count, 1);
+    }
+    at (i) {
+        return i>=0 && i<this.count ? this.id : undefined;
+    }
+    append (new_id) {
+        const id = Id.as(new_id);
+        if (this.id.eq(id)) {
+            this.count++;
+            return this;
+        }
+        if (this.id.value.length===1)
+            return null;
+        // const prefix = Base64x64.commonPrefix(id.value, this.id.value);
+        // FIXME encapsulate
+        // if (prefix.length+1>=this.id.value.length && prefix.length+1>=id.value.length)
+        //     return new Last1Run(this.id).append(id);
+        // if (prefix.length+2>=this.id.value.length && prefix.length+2>=id.value.length)
+        //     return new Last2Run(this.id).append(id);
+        return null;
+    }
+    get length () {
+        return this.count;
+    }
+}
+
+
+class Last1Run extends IdRun {
+    constructor (id, prefix, tail) {
+        super(id);
+        this.tail = tail || '';
+        this.prefix = null;
+    }
+    toString () {
+        return this.id.value + '-' + this.id.origin + Ids.LAST1_RUN + this.tail;
+    }
+    at (i) {
+        if (i<0 || i>this.tail.length)
+            return undefined;
+        if (i===0)
+            return this.id;
+        const val1 = this.id.value;
+        let value = val1.substr(0, val1.length-1) + this.tail.charAt(i-1);
+        return new Id(value, this.id.origin);
+    }
+    append (new_id) {
+        const id = Id.as(new_id);
+        if (id.origin!==this.id.origin)
+            return null;
+        const common = Base64x64.commonPrefix(this.id.value, id.value);
+        const tivl = this.id.value.length, ivl = id.value.length, cl = common.length;
+        if (ivl===tivl && cl===tivl-1) {
+            this.tail += id.value.substr(plen, 1) || '0';
+            return this;
+        } else if ( (cl===tivl-1 && ivl===tivl+1) ||
+                    (cl===tivl-2 && ivl===tivl) ) {
+            if (this.length>10) return null;
+            const last2 = new Last2Run(this.id);
+            for(let i=1; i<this.length; i++)
+                last2.append(this.at(i));
+            return last2;
+        } else {
+            return null;
+        }
+    }
+    mayHave (id_to_seek) {
+        const id = Id.as(id_to_seek);
+        if (this.id.origin!==id.origin) return false;
+        const prefix = Base64x64.commonPrefix(this.id.value, id.value);
+        if (prefix.length<this.id.value.length-1) return false;
+        if (id.value.length>prefix.length+1) return false;
+        return true;
+    }
+    get length () {
+        return 1 + this.tail.length;
+    }
+}
+
+
+class Last2Run extends IdRun {
+    constructor (id, prefix, tail) {
+        super(id);
+        this.prefix = prefix || null; // FIXME either-or
+        this.tail = tail || '';
+    }
+    static fromString (str) {
+        return Last2Run.fromMatch(m);
+    }
+    static fromMatch (m) {
+
+    }
+    /** @returns {IdRun} */
+    append (new_id) {
+        const id = Id.as(new_id);
+        if (id.origin!==this.id.origin)
+            return null;
+        if (!this.prefix)
+            this.prefix = Base64x64.commonPrefix(this.id.value, id.value);
+        const plen = this.prefix.length;
+        if (this.id.value.length <= plen+2 && id.value.length <= plen+2) {
+            let last2 = id.value.substr(this.prefix.length);
+            while (last2.length<2) last2 += '0';
+            this.tail += last2;
+            return this;
+        } else {
+            return null;
+        }
+    }
+    at (i) {
+        if (i===0) return this.id;
+        const last2 = this.tail.substr(i*2-2, 2);
+        return new Id(this.prefix+last2, this.id.origin);
+    }
+    toString() {
+        return this.id + Ids.LAST2_RUN + this.tail;
+    }
+    mayHave (id_to_seek) {
+        const id = Id.as(id_to_seek);
+        if (this.id.origin!==id.origin) return false;
+        const prefix = Base64x64.commonPrefix(this.id.value, id.value);
+        if (prefix.length<this.id.value.length-2) return false;
+        if (id.value.length>prefix.length+2) return false;
+        return true;
+    }
+    get length () {
+        return 1 + (this.tail.length>>1);
+    }
+}
 
 
 class Builder {
 
     constructor () {
-        this.body = [];
-        this.last_id = null;
-        this.runtype = ' ';
-        this.runlen = 0;
-        this.tail = '';
-        this.prefixlen = 0;
-        this.prefix = '';
+        this.runs = []; // FIXME toString em
+        this.open_run = null;
+        this.str = null;
+        this.quant = '@';
     }
 
-    _flushRun () {
-        if (!this.last_id) return;
-        this.body.push('@'+this.last_id.toString());
-        if (this.tail) {
-            this.body.push(this.runtype + this.tail);
+    appendRun (run_or_str) {
+        const run = IdRun.as(run_or_str);
+        if (this.open_id) {
+            this.runs.push(new IdRun(this.open_id));
+            this.open_id = null;
         }
-        this.last_id = null;
-        this.runtype = ' ';
-        this.runlen = 0;
-        this.tail = '';
-        this.prefixlen = 0;
-        this.prefix = '';
+        this.runs.push(run.toString());
+        this.str = null;
     }
 
-    appendRun (runstr) {
-        this._flushRun();
-        this.body.push(runstr);
-    }
-
-    _appendToUniRun (id) {
-        if (id.eq(this.last_id)) {
-            this.tail = Base64x64.int2base(++this.runlen, 1);
+    append (new_id) {
+        this.str = null;
+        const id = Id.as(new_id);
+        if (this.open_run) {
+            const next = this.open_run.append(id);
+            if (next===null) {
+                this.runs.push(this.open_run.toString());
+                this.open_run = new IdRun(id);
+            } else {
+                this.open_run = next;
+            }
         } else {
-            this._flushRun();
-            this.append(id);
-        }
-    }
-
-    _appendToLast2Run (id) {
-        const val = id.value;
-        if (val.substr(0, this.prefixlen)!==this.prefix ||
-            val.length>this.prefixlen+2) {
-            this._flushRun();
-            return this.append(id);
-        }
-        let two = val.substr(this.prefixlen, this.prefixlen+2);
-        while (two.length<2) two += '0';
-        this.tail += two;
-        this.runlen++; // vvv
-    }
-
-    _appendToEmptyRun (id) {
-        // try start a run
-        const iv = id.value;
-        const liv = this.last_id.value;
-        if (iv===liv) {
-            this.runtype = Ids.UNI_RUN;
-            this.runlen = 1;
-            return this._appendToUniRun(id);
-        }
-        const prefix = Base64x64.commonPrefix(iv, liv);
-        if (iv.length>1 && liv.length>1 &&
-            iv.length<=prefix.length+2 && liv.length<=prefix.length+2) {
-            this.runtype = Ids.LAST2_RUN;
-            this.prefixlen = prefix.length;
-            this.runlen = 1;
-            this.prefix = prefix;
-            return this._appendToLast2Run(id);
-        }
-        // if nothing worked
-        this._flushRun();
-        this.last_id = id;
-    }
-
-    append (id) {
-        id = Id.as(id);
-        if (!this.last_id) {
-            this.last_id = id;
-            this.runlen = 1;
-        } else if (id.origin!==this.last_id.origin) {
-            this._flushRun();
-            this.last_id = id;
-            this.runlen = 1;
-        } else if (this.runtype===Ids.LAST2_RUN) {
-            this._appendToLast2Run(id);
-        } else if (this.runtype===Ids.UNI_RUN) {
-            this._appendToUniRun(id);
-        } else {
-            this._appendToEmptyRun(id);
+            this.open_run = new IdRun(id);
         }
     }
 
     toString () {
-        this._flushRun();
-        return this.body.join('');
+        if (this.str)
+            return this.str;
+        this.str = this.runs.length ? this.quant + this.runs.join(this.quant) : '';
+        if (this.open_run)
+            this.str += this.quant + this.open_run.toString();
+        return this.str;
     }
 }
 
@@ -229,102 +366,53 @@ class Builder {
 class Iterator {
     /** @param {Ids} ids */
     constructor (ids) {
-        this.ids = ids._body;
-        this._m = null;
-        this._offset = 0;
+        this.body = ids._body;
+        this.body_offset = 0;
+        this.offset = 0;
+        this.run_offset = 0;
+        this.open_run = null;
         this.nextRun();
     }
     get id () {
-        return this._id;
-    }
-    _recover_id () {
-        switch (this._run_type) {
-            case Ids.UNI_RUN:
-                return this._id;
-            case Ids.LAST2_RUN:
-                const two = this._run_body.substr((this._run_offset-1)<<1, 2);
-                return this._id = new Id(this._prefix+two, this._origin);
-            default:
-        }
+        return this.open_run ? this.open_run.at(this.run_offset) : undefined;
     }
     next () {
         const ret = {
-            value: this._id,
+            value: this.id,
             done:  this.end
         };
         this.nextId();
         return ret;
     }
     nextId () {
-        const ret = this._id;
-        if (this._run_offset<this._run_length) {
-            this._run_offset++;
-            this._offset++;
-            this._recover_id();
-        } else if (this._id!==undefined) {
+        if (this.end)
+            return undefined;
+        const ret = this.id;
+        if (this.run_offset<this.open_run.length-1) {
+            this.run_offset++;
+            this.offset++;
+        } else {
             this.nextRun();
         }
         return ret;
     }
     nextRun () {
-        // FIXME +1
-        this._offset += this._run ? this._run_length - this._run_offset + 1 : 0;
-        Ids.reRun.lastIndex = this._m ? this._m.index+this._m[0].length : 0;
-        const m = this._m = Ids.reRun.exec(this.ids);
-        if (m===null) {
-            this._id = undefined;
-            return;
-        }
-        this._run = m[0];
-        this._value = m[1];
-        this._origin = m[2];
-        this._run_type = m[3];
-        this._run_body = m[4];
-        this._run_offset = 0;
-        this._run_length = -1;
-        this._id = new Id(this._value, this._origin);
-        switch (this._run_type) {
-            case Ids.LAST2_RUN:
-                this._prefix = m[1].substr(0, m[1].length-2);
-                this._run_length = this._run_body.length >> 1;
-                break;
-            case Ids.UNI_RUN:
-                this._prefix = m[1];
-                this._run_length = Base64x64.base2int(this._run_body)-1;
-                break;
-            case undefined:
-                this._run_length = 0;
-                break;
-            default:
-                throw new Error('not implemented yet');
-        }
+        Ids.reRun.lastIndex = this.body_offset;
+        const m = Ids.reRun.exec(this.body);
+        if (this.open_run)
+            this.offset += this.open_run.length - this.run_offset;
+        this.open_run = m ? IdRun.fromMatch(m) : null;
+        this.run_offset = 0;
+        this.body_offset = m ? m.index + m[0].length : -1;
     }
-    get runEndOffset () {
-        return this._offset - this._run_offset + this._run_length;
-    }
-    get run () {
-        return this._run;
-    }
-    get runOffset () {
-        return this._run_offset;
-    }
-    get offset () {
-        return this._offset;
+    get run_end_offset () {
+        return this.offset - this.run_offset + this.open_run.length;
     }
     runMayHave (id) {
-        id = Id.as(id);
-        if (this._id===undefined) return false;
-        if (this._id.origin!==id.origin) return false;
-        if (this._run_type===Ids.UNI_RUN)
-            return this._id.value === id.value;
-        if (this._prefix!==id.value.substr(0,this._prefix.length))
-            return false;
-        if (this._run_type===Ids.LAST2_RUN && this._prefix.length+2<id.value.length)
-            return false;
-        return true;
+        return this.open_run.mayHave(id);
     }
     get end () {
-        return this._id === undefined;
+        return !this.open_run;
     }
 
 }
