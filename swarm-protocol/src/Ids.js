@@ -239,7 +239,7 @@ class Last1Run extends IdRun {
         const common = Base64x64.commonPrefix(this.id.value, id.value);
         const tivl = this.id.value.length, ivl = id.value.length, cl = common.length;
         if (ivl===tivl && cl===tivl-1) {
-            this.tail += id.value.substr(plen, 1) || '0';
+            this.tail += id.value.substr(ivl-1, 1) || '0';
             return this;
         } else if ( (cl===tivl-1 && ivl===tivl+1) ||
                     (cl===tivl-2 && ivl===tivl) ) {
@@ -273,6 +273,7 @@ class Last2Run extends IdRun {
         this.tail = tail || '';
     }
     static fromString (str) {
+        const m=null;
         return Last2Run.fromMatch(m);
     }
     static fromMatch (m) {
@@ -301,7 +302,8 @@ class Last2Run extends IdRun {
         return new Id(this.prefix+last2, this.id.origin);
     }
     toString() {
-        return this.id + Ids.LAST2_RUN + this.tail;
+        return this.id.toPaddedString(this.prefix.length+2) +
+            Ids.LAST2_RUN + this.tail;
     }
     mayHave (id_to_seek) {
         const id = Id.as(id_to_seek);

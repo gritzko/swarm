@@ -121,6 +121,12 @@ class Id {
         return this._string;
     }
 
+    toPaddedString (length) {
+        let v = this._value;
+        while (v.length<length) v += '0';
+        return v + '-' + this._origin;
+    }
+
     static toString (time, origin) {
         return time + (origin==='0' ? '' : '-' + origin);
     }

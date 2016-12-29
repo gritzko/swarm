@@ -115,7 +115,9 @@ tap('protocol.08.D shifts', function (tap) {        //   :)
         'stamp1-author',
         'stamp12-author',
         'stamp3-author',
-        'stamp34-author'
+        'stamp34-author',
+        'last2-one',
+        'last2bb-one'
     ].map(Id.as);
 
     const b = new Ids.Builder();
