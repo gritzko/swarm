@@ -34,7 +34,7 @@ class OpStream {
     on (opstream) {
         if (opstream.constructor===Function)
             opstream = new CallbackOpStream(opstream);
-        if (!opstream._emitted || opstream._emitted.constructor!==Function)
+        if (! (opstream instanceof OpStream) )
             throw new Error('opstreams only');
         this._lstn.push(opstream);
         return opstream;
@@ -140,13 +140,21 @@ class OpStream {
         this.on( new FilterOpStream( o => o==null, new CallbackOpStream(callback) ) );
     }
 
+    /** Normalize opstream/callback to an opstream. */
+    static as (stream) {
+        if (stream && stream.constructor===Function)
+            return new CallbackOpStream(stream);
+        if (!stream || !stream._emitted || !stream._committed)
+            throw new Error('not an opstream');
+        return stream;
+    }
+
     static connect (url, options) {
         if (url.constructor!==URL)
             url = new URL(url.toString());
-        const top_proto = url.scheme[0];
-        const fn = OpStream._URL_HANDLERS[top_proto];
+        const fn = OpStream._URL_HANDLERS[url.protocol];
         if (!fn)
-            throw new Error('unknown protocol: '+top_proto);
+            throw new Error('unknown protocol: '+url.protocol);
         return new fn(url, options||Object.create(null));
     }
 
@@ -254,6 +262,6 @@ class FilterOpStream extends OpStream {
 
 }
 
-FilterOpStream.rsTok = '([/#!\\.])(' + swarm.Stamp.rsTok + ')';
-FilterOpStream.reTok = new RegExp(FilterOpStream.rsTok, 'g');
+// FilterOpStream.rsTok = '([/#!\\.])(' + swarm.Id.rsTok + ')';
+// FilterOpStream.reTok = new RegExp(FilterOpStream.rsTok, 'g');
 OpStream.Filter = FilterOpStream;

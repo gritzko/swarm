@@ -1,0 +1,33 @@
+{
+  "name": "swarm-json",
+  "version": "1.4.0",
+  "homepage": "http://github.com/gritzko/swarm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gritzko/swarm.git"
+  },
+  "author": {
+    "email": "victor.grishchenko@gmail.com",
+    "name": "Victor Grishchenko"
+  },
+  "email": "swarm.js@gmail.com",
+  "license": "MIT",
+  "files": [
+    "index.js",
+    "src/*.js",
+    "test/*.js",
+    "LICENSE",
+    "README.md"
+  ],
+  "main": "index.js",
+  "browser": "index.js",
+  "dependencies": {
+  },
+    "devDependencies": {
+        "tape": "4.6.2",
+        "tap-diff": "^0.1.1"
+    },
+  "scripts": {
+    "test": "make test"
+  }
+}
