@@ -84,7 +84,7 @@ tap ('protocol.00.B base64 conversions perf', function(tap){
     var ms2 = new Date().getTime();
     console.warn('\nDid '+count+' int-base64-int conversions in '+(ms2-ms1)+'ms');
     tap.end();
-    // 152ms for me
+    // 27ms for me, as of Node v7.10.0
 });
 
 
@@ -101,7 +101,7 @@ tap ('protocol.00.C timestamping perf', function(tap){
     var ms2 = new Date().getTime();
     console.warn('\nMade '+count+' timestamps in '+(ms2-ms1)+'ms');
     tap.end();
-    // 700ms for me
+    // 109ms for me, as of Node v7.10.0
 });
 
 tap ('protocol.00.D non-aligned base64', function(tap) {
