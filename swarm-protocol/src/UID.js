@@ -6,7 +6,7 @@ const ReplicaId = require('./ReplicaId');
  *
  * ![events](https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Vector_Clock.svg/750px-Vector_Clock.svg.png)
  *
- * Id implements Base64 string Lamport timestamps. First described in
+ * UID implements Base64 string Lamport timestamps. First described in
  * ["Time, clocks, and the ordering of events in a distributed system"][paper]
  * by Leslie Lamport these timestamps are designed to track events in
  * a distributed system.
@@ -41,43 +41,26 @@ const ReplicaId = require('./ReplicaId');
  * [paper]: http://amturing.acm.org/p558-lamport.pdf
  * @class
  */
-class Id {
+class UID {
 
     /**
      * Constructor valid parameters:
-     * * new Id("time","origin")
-     * * new Id("time-origin")
-     * * new Id("transcndnt")
-     * * new Id(stamp)
-     * * new Id() // zero
+     * * new UID("time","origin")
+     * * new UID("time-origin")
+     * * new UID("transcndnt")
+     * * new UID(stamp)
+     * * new UID() // zero
      */
     constructor (stamp, origin) {
-        this._parsed = null;
-        this._rid = null;
         this._string = null;
-        if (origin) {
-            this._value = Base64x64.toString(stamp);
-            this._origin = Base64x64.toString(origin);
-        } else if (stamp) {
-            if (stamp.constructor===Id) {
-                this._value = stamp._value;
-                this._origin = stamp._origin;
-                this._string = stamp._string;
-            } else {
-                Id.reTokExt.lastIndex = 0;
-                var m = Id.reTokExt.exec(stamp.toString());
-                if (m) {
-                    //this._string = m[0];
-                    this._value = Base64x64.toString(m[1]);
-                    this._origin = m[2] ? Base64x64.toString(m[2]) : '0';
-                } else {
-                    this._value = Base64x64.INCORRECT;
-                    this._origin = '0';
-                }
-            }
-        } else {
-            this._value = this._origin = '0';
-        }
+        this._value = Base64x64.toString(stamp||'0');
+        this._origin = Base64x64.toString(origin||'0');
+    }
+
+    static fromString (string) {
+        UID.reTokExt.lastIndex = 0;
+        const m = UID.reTokExt.exec(string.toString());
+        return m ? new UID(m[1], m[2]) : null;
     }
 
     get origin () {
@@ -89,17 +72,12 @@ class Id {
     }
 
     get Value () {
-        if (this._parsed===null) {
-            this._parsed = new Base64x64(this._value);
-        }
-        return this._parsed;
+        return new Base64x64(this._value);
     }
 
     /** ReplicaIdScheme.DEFAULT_SCHEME must be set correctly */
     get Origin () {
-        if (this._rid === null)
-            this._rid = ReplicaId.fromString(this._origin);
-        return this._rid;
+        return ReplicaId.fromString(this._origin);
     }
 
     get date () {
@@ -111,56 +89,51 @@ class Id {
     }
 
     static now (origin, offset) {
-        return new Id( Base64x64.now(offset), origin );
+        return new UID( Base64x64.now(offset), origin );
     }
 
     toString () {
         if (this._string===null) {
-            this._string = Id.toString(this._value, this._origin);
+            this._string = UID.toString(this._value, this._origin);
         }
         return this._string;
     }
 
-    toPaddedString (length) {
-        let v = this._value;
-        while (v.length<length) v += '0';
-        return v + '-' + this._origin;
-    }
-
     static toString (time, origin) {
-        return time + (origin==='0' ? '' : '-' + origin);
+        return time + (origin==='0' ? '' : UID.TIMESTAMP_SEPARATOR + origin);
     }
 
     static is (str) {
-        Id.reTokExt.lastIndex = 0;
-        return Id.reTokExt.test(str);
+        UID.reTokExt.lastIndex = 0;
+        return UID.reTokExt.test(str);
     }
 
     // Is greater than the other stamp, according to the the lexicographic order
     gt (stamp) {
-        var s = stamp.constructor===Id ? stamp : new Id(stamp);
-        return this._value > s._value ||
-            (this._value===s._value && this._origin>s._origin);
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        return this._value > stamp._value ||
+            (this._value===stamp._value && this._origin>stamp._origin);
     }
 
     lt (stamp) {
-        var s = stamp.constructor===Id ? stamp : new Id(stamp);
-        return this._value < s._value ||
-            (this._value===s._value && this._origin<s._origin);
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        return !this.gt(stamp) && !this.eq(stamp);
     }
 
     le (stamp) {
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
         return !this.gt(stamp);
     }
 
     ge (stamp) {
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
         return !this.lt(stamp);
     }
 
     eq (stamp) {
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
         if (!stamp) return false;
-        const id = Id.as(stamp);
-        return this._value===id._value && this._origin===id._origin;
+        return this._value===stamp._value && this._origin===stamp._origin;
     }
 
     isTranscendent () {
@@ -193,38 +166,35 @@ class Id {
         return this._value===Base64x64.zero && this._origin===Base64x64.zero;
     }
 
-    static to (value) {
-        return value && value.constructor===Id ?
-            value : new Id(value);
-    }
-
     isUpstreamOf (stamp) {
-        let s = Id.to(stamp);
-        return s._origin.length > this._origin.length &&
-            s._origin.substr(0, this._origin.length) === this._origin;
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        return stamp._origin.length > this._origin.length &&
+            stamp._origin.substr(0, this._origin.length) === this._origin;
     }
 
     isDownstreamOf (stamp) {
-        let s = Id.to(stamp);
-        return this._origin.length > s._origin.length &&
-            this._origin.substr(0, s._origin.length) === s._origin;
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        return this._origin.length > stamp._origin.length &&
+            this._origin.substr(0, stamp._origin.length) === stamp._origin;
     }
 
     isSameOrigin (stamp) {
-        let s = Id.to(stamp);
-        return this._origin === s._origin;
+        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        return this._origin === stamp._origin;
     }
 
     next (origin) {
         let val = this.Value;
-        return new Id(val.inc().toString(), origin||this._origin);
+        return new UID(val.inc().toString(), origin||this._origin);
     }
 
     static as (val) {
-        if (val && val.constructor===Id) {
+        if (val && val.constructor===UID) {
             return val;
+        } else if (!val) {
+            return null;
         } else {
-            return new Id(val.toString());
+            return UID.fromString(val.toString());
         }
     }
 
@@ -234,14 +204,18 @@ class Id {
 
 }
 
-Id.rsTok = '=(?:[\\+\\-]=)?'.replace(/=/g, Base64x64.rs64x64);
-Id.rsTokExt = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.rs64x64);
-Id.reTokExt = new RegExp('^'+Id.rsTokExt+'$');
+UID.SEPARATORS = "-+%*";
+UID.TIMESTAMP_SEPARATOR = "-";
+// TODO waterfall derivation
+UID.rsTok = '=(?:[\\+\\-]=)?'.replace(/=/g, Base64x64.rs64x64);
+UID.rsTokExt = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.rs64x64);
+UID.reTokExt = new RegExp('^'+UID.rsTokExt+'$');
 
-Id.zero = Base64x64.zero;
-Id.ZERO = new Id(Id.zero);
-Id.never = '~';
-Id.NEVER = new Id(Id.never);
-Id.ERROR = new Id(Base64x64.INCORRECT, '0');
+UID.zero = Base64x64.zero;
+UID.ZERO = new UID(UID.zero);
+UID.never = '~';
+UID.NEVER = new UID(UID.never);
+UID.ERROR = new UID(Base64x64.INCORRECT, '0');
 
-module.exports = Id;
+
+module.exports = UID;

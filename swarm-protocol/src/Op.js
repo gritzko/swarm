@@ -1,206 +1,107 @@
 "use strict";
-const Base64x64 = require('./Base64x64');
-const Id = require('./Id');
-const Spec = require('./Spec');
-// const Ops = require('./Ops');
+var Base64x64 = require('./Base64x64');
+var Stamp = require('./Stamp');
+var Spec = require('./Spec');
 
 /**
  *  Immutable Swarm op, see the specification at
  *  https://gritzko.gitbooks.io/swarm-the-protocol/content/op.html
  * */
-class Op extends Spec {
+export default class Op {
 
-    /** @param {Object|String|Number|Array|Spec|Ops} value - op value (parsed)
-      */
-    constructor (id, type, stamp, loc, value, valstr) {
-        super(id, type, stamp, loc);
-        if (value===undefined) {
-            this._value = valstr===undefined ? null : undefined;
-            this._valstr = valstr;
-        } else {
-            this._value = value;
-            this._valstr = valstr || undefined;
+    constructor(int_strings, value_strings) {
+        if (int_strings.length!==8)
+            throw new Error("not an array of 8 Base64x64 ints");
+        this._ints = int_strings;
+        this._values = value_strings;
+        // values should be passed around *verbatim*, so the
+        // serialized form is the canonic form; parsed
+        // values are platform/environment dependent.
+        this._parsed_values = null;
+    }
+
+    fromString(op_string, default_ints) {
+        // read in the tokens
+        let int = null, val = null;
+        const ints = this._ints;
+        let int_at = 0;
+        while (int = this.eat(Frame.re_uid)) {
+            const quant = m[1], redef = m[2], prefix = m[3], tail = m[4];
+            if (quant) {
+                if (Frame.HALF_QUANTS.indexOf(quant) !== -1) {
+                    int_at |= 1;
+                } else {
+                    const at = Frame.QUANTS.indexOf(quant) << 1;
+                    if (at < int_at)
+                        return this._terminate("uid order violation");
+                    else
+                        int_at = at;
+                }
+            }
+            let def = ints[int_at];
+            if (redef && int_at > 1) {
+                let new_at = int_at;
+                if (redef === '/')
+                    new_at += 2;
+                else if (redef === '\\')
+                    new_at -= 2;
+                if (new_at < 2) // wrap
+                    new_at += 6;
+                else if (new_at >= 8)
+                    new_at -= 6;
+                def = ints[new_at];
+            }
+            if (prefix) {
+                const len = Frame.PREFIX_BRACKETS.indexOf(prefix) + 4;
+                if (def.length > len)
+                    def = def.substr(0, len);
+                else while (def.length < len)
+                    def += '0';
+            }
+            if (tail) {
+                if (prefix)
+                    ints[int_at] = (def + tail).substr(0, 10);
+                else
+                    ints[int_at] = tail;
+            }
+            int_at++;
         }
-        // this._ops = null;
-    }
 
-    get spec () {
-        return new Spec (this);
-    }
+        if (!int_at)
+            return this._terminate("trailing garbage");
 
-    get specifier () {
-        return this.spec;
-    }
+        this._values.length = 0;
+        const values = this._values;
 
-    get Value () {
-        if (this._value===undefined) {
-            this._value = null;
-            if (this._valstr) try {
-                this._value = JSON.parse(this._valstr);
-            } catch (ex) {
-                console.warn('op parse error: '+ex.message);
+        while (val = this.eat(Frame.re_value)) { // FIXME on-demand parsing
+            const value = val[0];
+            switch (value.charAt(0)) {
+                case Frame.INT_SEP:
+                    values.push(parseInt(value.substr(1)));
+                    break;
+                case Frame.STRING_SEP:
+                    values.push(JSON.parse(value));
+                    break;
+                case Frame.REF_SEP:
+                    values.push(null);
+                    break;
+                case Frame.FLOAT_SEP:
+                    values.push(parseFloat(value.substr(1)));
+                    break;
             }
         }
-        return this._value;
+
+        if (!values.length)
+            return this._terminate("no values");
+
+        return new Op(int_strings, value_strings);
+
     }
 
-    get value () {
-        if (this._valstr===undefined) {
-            // TODO strip objects
-            this._valstr = this._value===null ? '' : JSON.stringify(this._value);
-        }
-        return this._valstr;
-    }
+    fromUIDs(uids, values) {
 
-    // get ops () {
-    //     if (this._ops) {
-    //         return this._ops;
-    //     } else if (!this.value) {
-    //         return null;
-    //     } else if (!this.value.v || !this.value.s || !this.value.l) {
-    //         return undefined;
-    //     } else {
-    //         this._ops = new Ops(this.value.s, this.value.l, this.value.v, this);
-    //         return this._ops;
-    //     }
-    // }
-
-    toString (defaults) {
-        let ret = super.toString(defaults);
-        if (this.value)
-            ret += '=' + this.value;
-        return ret;
-    }
-
-    static fromString (specstr, valstr, prevop) {
-        const def = prevop || Op.ZERO;
-        Spec.reSpec.lastIndex = 0;
-        const m = Spec.reSpec.exec(specstr);
-        if (!m) throw new Error('not a specifier');
-        return new Op(
-            m[1]||def._id,
-            m[2]||def._type,
-            m[3]||def._stamp,
-            m[4]||def._loc,
-            undefined,
-            valstr||''
-        );
-    }
-
-    /** parse a frame of several serialized concatenated newline-
-     * terminated ops. Does not parse buffers (because partial ops,
-     * partial Unicode chars). */
-    static parseFrame (text) {
-        var ret = [];
-        var m = null;
-        var prevop = Op.ZERO;
-        let at = 0;
-        Op.reOp.lastIndex = 0;
-        while ( m = Op.reOp.exec(text) ) {
-            if (m.index!==at)
-                throw new Error('garbage in the input: '+text.substring(at,m.index));
-            const specstr = m[1],
-                  valstr = m[2];
-            if (!specstr)
-                continue; // empty line
-            const op = Op.fromString(specstr, valstr, prevop);
-            ret.push(op);
-            prevop = op;
-            at = Op.reOp.lastIndex;
-        }
-        if (Op.reOp.lastIndex!==0) {
-            throw new Error("mismatched content");
-        }
-        return ret;
-    }
-
-    static serializeFrame (ops, prev_op) {
-        let frame = '';
-        ops.forEach( op => {
-            frame += op.toString(prev_op) + '\n';
-            prev_op = op;
-        });
-        frame += '\n'; // frame terminator
-        return frame;
-    }
-    /**
-     * @param {String} message
-     * @param {String|Base64x64} scope - the receiver
-     * @returns {Op} error op */
-    error (message, scope) {
-        const Name = new Id(Base64x64.INCORRECT, scope || '0');
-        return new Op(this.Id, this.Type, this.Stamp, Name, message);
-    }
-
-    stamped (stamp) {
-        return new Op(this.Type, this.Id, stamp, this.Name, this._value);
-    }
-
-    scoped (scope) {
-        return new Op(
-            this.Id,
-            this.Type,
-            this.Stamp,
-            new Id(this.method, scope),
-        this._value);
-    }
-
-    named (name, value) {
-        return new Op(
-            this.Id,
-            this.Type,
-            this.Stamp,
-            name,
-            value || this._value
-        );
-    }
-
-    static zeroStateOp (spec) {
-        const s = Spec.as (spec);
-        return new Op(s.Id, s.Type, Id.ZERO, Spec.STATE_OP_NAME, null);
-    }
-
-    static reduce (state, op) {
-        if (!state.isSameObject(op)) // TODO null => diff
-            throw new Error('wrong object');
-        const reducer = Op.REDUCERS[state.type] || log_reducer;
-        const value = reducer(state, op);
-        return new Op(op.Id, op.Type, op.Stamp, Spec.STATE_OP_NAME, value);
     }
 
 }
-
-
-Op.NON_SPECIFIC_NOOP = new Op(Spec.NON_SPECIFIC_NOOP, "");
-Op.SERIALIZATION_MODES = {
-    LINE_BASED: 1,
-    EXPLICIT: 2,
-    EXPLICIT_ONLY: 3
-};
-const rsSpecEsc = Spec.rsSpec.replace(/\((\?\:)?/mg, '(?:');
-Op.rsOp = '^\\n*(' + rsSpecEsc + ')' + '(?:\\=(.*))?\\n';
-Op.reOp = new RegExp(Op.rsOp, "mg");
-
-Op.ZERO = new Op(new Spec(), null);
-Op.CLASS_HANDSHAKE = "Swarm";
-
-Op.DB_TYPE_NAME = 'db';
-Op.DB_TYPE_ID = new Id(Op.DB_TYPE_NAME);
-
-Op.REDUCERS = Object.create(null);
-
-function log_reducer (state, op) {
-    return null;
-}
-
-function lww_reducer (state, op) {
-    const ops = state.ops;
-    const i = ops.findLoc(op.Loc);
-    return ops.splice(i, 1, [op]);
-}
-
-Op.REDUCERS.json = lww_reducer;
-Op.REDUCERS.db = lww_reducer;
-Op.REDUCERS.log = log_reducer;
 
 module.exports = Op;

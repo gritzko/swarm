@@ -309,15 +309,9 @@ class Base64x64 {
         return new Base64x64(base).round(pos).toString();
     }
 
-    /** @returns {String} - not a valid Base64x64 number */
-    static commonPrefix (one, two) {
-        let common = '';
-        return common || '';
-    }
-
     static prefix (a, b) {
         const len = Base64x64.prefix_length(a,b);
-        return len ? Base64x64.toString(a.substr(0, len)) : Base64x64.ZERO;
+        return len ? Base64x64.toString(a.substr(0, len)) : Base64x64.zero;
     }
 
     static prefix_length (a, b) {
