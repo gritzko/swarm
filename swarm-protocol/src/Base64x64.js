@@ -378,7 +378,7 @@ Base64x64.INCORRECT = "~~~~~~~~~~";
 Base64x64.MAX32 = (1<<30)-1;
 Base64x64.zero = "0";
 Base64x64.ZERO = new Base64x64(Base64x64.zero);
-Base64x64.rs64x64 = rs64x64;
+Base64x64.RS_INT = rs64x64;
 Base64x64.rs64 = rs64;
 Base64x64.FULL_ZERO = '0000000000';
 

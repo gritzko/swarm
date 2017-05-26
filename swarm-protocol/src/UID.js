@@ -58,13 +58,21 @@ class UID {
     }
 
     static fromString (string) {
-        UID.reTokExt.lastIndex = 0;
-        const m = UID.reTokExt.exec(string.toString());
+        UID.RE_UID.lastIndex = 0;
+        const m = UID.RE_UID.exec(string.toString());
         return m ? new UID(m[1], m[2]) : null;
     }
 
     get origin () {
         return this._origin;
+    }
+
+    get time () {
+        return this._value;
+    }
+
+    get Time () {
+        return new Base64x64(this._value);
     }
 
     get value () {
@@ -104,8 +112,8 @@ class UID {
     }
 
     static is (str) {
-        UID.reTokExt.lastIndex = 0;
-        return UID.reTokExt.test(str);
+        UID.RE_UID.lastIndex = 0;
+        return UID.RE_UID.test(str);
     }
 
     // Is greater than the other stamp, according to the the lexicographic order
@@ -135,6 +143,8 @@ class UID {
         if (!stamp) return false;
         return this._value===stamp._value && this._origin===stamp._origin;
     }
+
+    equals (stamp) { return this.eq(stamp); }
 
     isTranscendent () {
         return this._origin==='0';
@@ -198,6 +208,10 @@ class UID {
         }
     }
 
+    static is (val) {
+        return val && (val.constructor===UID || UID.RE_UID.test(val.toString()));
+    }
+
     get ms () {
         return this.Value.ms;
     }
@@ -207,9 +221,9 @@ class UID {
 UID.SEPARATORS = "-+%*";
 UID.TIMESTAMP_SEPARATOR = "-";
 // TODO waterfall derivation
-UID.rsTok = '=(?:[\\+\\-]=)?'.replace(/=/g, Base64x64.rs64x64);
-UID.rsTokExt = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.rs64x64);
-UID.reTokExt = new RegExp('^'+UID.rsTokExt+'$');
+UID.RS_UID = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.RS_INT);
+UID.RE_UID = new RegExp('^'+UID.RS_UID+'$');
+UID.RE_UID_G = new RegExp(UID.RS_UID, 'g');
 
 UID.zero = Base64x64.zero;
 UID.ZERO = new UID(UID.zero);
