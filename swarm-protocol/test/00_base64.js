@@ -124,3 +124,12 @@ tap ('protocol.00.E misc stuff', function(tap) {
 
     tap.end();
 });
+
+tap('protocol.00.F prefixes', function(tap){
+    tap.equal(Base64x64.prefix_length('0', '123'), 0);
+    tap.equal(Base64x64.prefix_length('0', '0123'), 1);
+    tap.equal(Base64x64.prefix_length('1230', '123'), 10);
+    tap.equal(Base64x64.prefix('0123010', '0123010abc'), '012301');
+    tap.equal(Base64x64.prefix('0123010', '0123010'), '012301');
+    tap.end();
+});

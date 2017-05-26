@@ -312,10 +312,21 @@ class Base64x64 {
     /** @returns {String} - not a valid Base64x64 number */
     static commonPrefix (one, two) {
         let common = '';
-        const v1 = one.toString(), v2 = two.toString();
-        for(let i=0; i<v1.length && i<v2.length && v1[i]===v2[i]; i++)
-            common += v1[i];
         return common || '';
+    }
+
+    static prefix (a, b) {
+        const len = Base64x64.prefix_length(a,b);
+        return len ? Base64x64.toString(a.substr(0, len)) : Base64x64.ZERO;
+    }
+
+    static prefix_length (a, b) {
+        const v1 = Base64x64.toString(a), v2 = Base64x64.toString(b);
+        let i=0;
+        while (i<v1.length && i<v2.length && v1[i]===v2[i]) i++;
+        if (i===v1.length && i===v2.length)
+            return 10;
+        return i;
     }
 
     get highInt () {
@@ -364,6 +375,7 @@ class Base64x64 {
         if (b.constructor===Base64x64) return b;
         return new Base64x64(b.toString());
     }
+
 
 }
 
