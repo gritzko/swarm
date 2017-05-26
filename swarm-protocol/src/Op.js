@@ -37,6 +37,10 @@ class Op {
         return this._raw_values[i];
     }
 
+    raw_values () {
+        return this._raw_values;
+    }
+
     int (i) {
         return this._ints[i];
     }
@@ -152,6 +156,10 @@ class Op {
         return this.value(0)===Op.QUERY_VALUE;
     }
 
+    isError () {
+        return this.int(4) === Base64x64.INCORRECT;
+    }
+
     toString () {
         let ret = '';
         for(let u=0; u<4; u++) {
@@ -230,6 +238,8 @@ Op.RS_FRAME_VALUE = '\\' + Op.FRAME_SEP;
 Op.RS_VALUE = '(' + [Op.RS_INT_VALUE, Op.RS_STRING_VALUE, Op.RS_REF_VALUE,
         Op.RS_FLOAT_VALUE, Op.RS_FRAME_VALUE, ''].join(')|(') + ')';
 Op.RE_VALUE_G = new RegExp(Op.RS_VALUE, 'g');
+Op.RS_OP = '(' + Op.RS_ZIP_INT + ')+(' + Op.RS_VALUE + ')+';
 Op.RE_ZIP_INT_G = new RegExp(Op.RS_ZIP_INT, 'g');
+Op.RE_OP_G = new RegExp(Op.RS_OP, 'g');
 
 module.exports = Op;
