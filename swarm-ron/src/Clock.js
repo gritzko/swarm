@@ -1,6 +1,6 @@
 "use strict";
 var Base64x64 = require('./Base64x64');
-var Id = require('./Id');
+var UUID = require('./UUID');
 
 /**  Swarm is based on the Lamport model of time and events in a
  * distributed system, so Lamport logical timestamps are essential
@@ -47,7 +47,7 @@ var Id = require('./Id');
 class Clock {
 
     constructor (origin, meta_options) {
-        this._last = Id.ZERO;
+        this._last = UUID.ZERO;
         if (!Base64x64.is(origin))
             throw new Error('invalid origin');
         this._origin = origin.toString();
@@ -65,7 +65,7 @@ class Clock {
             this._offset = parseInt(options.ClockOffst);
         }
         if (options.ClockLast) {
-            this._last = new Id(options.ClockLast);
+            this._last = new UUID(options.ClockLast);
         }
         if (options.ClockNow) {
             let now = parseInt(options.ClockNow);
@@ -80,13 +80,13 @@ class Clock {
 
     issueTimestamp () {
         var next = this._logical ?
-            new Id(this._last.Value.next(this._minlen), this._origin) :
-            Id.now(this._origin, this._offset);
+            new UUID(this._last.Value.next(this._minlen), this._origin) :
+            UUID.now(this._origin, this._offset);
         var last = this._last;
         if (!next.gt(last)) {// either seq++ or stuck-ahead :(
             next = last.next(this._origin);
         } else if (this._minlen<8) { // shorten?
-            next = new Id (
+            next = new UUID (
                 next.Value.relax(last.value, this._minlen),
                 this._origin
             );
@@ -104,7 +104,7 @@ class Clock {
     }
 
     seeTimestamp (stamp) {
-        stamp = Id.as(stamp);
+        stamp = UUID.as(stamp);
         if (stamp.gt(this._last)) {
             this._last = stamp;
         }

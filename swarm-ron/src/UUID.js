@@ -62,7 +62,8 @@ class UUID {
         UUID.RE_ZIP_UUID.lastIndex = 0;
         const m = UUID.RE_ZIP_UUID.exec(string.toString());
         if (!m)
-            throw new Error("invalid UUID syntax");
+	        return null; // ???
+            //throw new Error("invalid UUID syntax");
         return new UUID(
             m[1] ? Base64x64.fromString(m[1],def.time) : def.time,
             m[5] ? Base64x64.fromString(m[5],def.origin) : def.origin
@@ -226,7 +227,7 @@ UUID.SEPARATORS = "-+%*";
 UUID.TIMESTAMP_SEPARATOR = "-";
 // TODO waterfall derivation
 UUID.RS_SEPS = "[-+%*]";
-UUID.RS_UID = '(=)(?:'+UUID.RS_SEPS+'(=))?'.replace(/=/g, Base64x64.RS_INT);
+UUID.RS_UID = ('(=)(?:'+UUID.RS_SEPS+'(=))?').replace(/=/g, Base64x64.RS_INT);
 UUID.RE_UID = new RegExp('^'+UUID.RS_UID+'$');
 UUID.RE_UID_G = new RegExp(UUID.RS_UID, 'g');
 UUID.RS_ZIP_UUID = '(' + Base64x64.RS_ZIP_INT + ')?(?:('+UUID.RS_SEPS+')?(' +

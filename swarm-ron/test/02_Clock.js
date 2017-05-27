@@ -1,8 +1,7 @@
 "use strict";
 var tap = require('tape').test;
-var swarm = require('..');
-var Stamp = swarm.Stamp;
-var Clock = swarm.Clock;
+var Stamp = require('../src/UUID');
+var Clock = require('../src/Clock');
 
 
 tap ('protocol.02.A Logical clocks API', function(tap) {
