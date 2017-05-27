@@ -6,7 +6,7 @@ const ReplicaId = require('./ReplicaId');
  *
  * ![events](https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Vector_Clock.svg/750px-Vector_Clock.svg.png)
  *
- * UID implements Base64 string Lamport timestamps. First described in
+ * UUID implements Base64 string Lamport timestamps. First described in
  * ["Time, clocks, and the ordering of events in a distributed system"][paper]
  * by Leslie Lamport these timestamps are designed to track events in
  * a distributed system.
@@ -41,15 +41,15 @@ const ReplicaId = require('./ReplicaId');
  * [paper]: http://amturing.acm.org/p558-lamport.pdf
  * @class
  */
-class UID {
+class UUID {
 
     /**
      * Constructor valid parameters:
-     * * new UID("time","origin")
-     * * new UID("time-origin")
-     * * new UID("transcndnt")
-     * * new UID(stamp)
-     * * new UID() // zero
+     * * new UUID("time","origin")
+     * * new UUID("time-origin")
+     * * new UUID("transcndnt")
+     * * new UUID(stamp)
+     * * new UUID() // zero
      */
     constructor (stamp, origin) {
         this._string = null;
@@ -57,10 +57,16 @@ class UID {
         this._origin = Base64x64.toString(origin||'0');
     }
 
-    static fromString (string) {
-        UID.RE_UID.lastIndex = 0;
-        const m = UID.RE_UID.exec(string.toString());
-        return m ? new UID(m[1], m[2]) : null;
+    static fromString (string, default_uuid) {
+        const def = default_uuid ? UUID.as(default_uuid) : UUID.ZERO;
+        UUID.RE_ZIP_UUID.lastIndex = 0;
+        const m = UUID.RE_ZIP_UUID.exec(string.toString());
+        if (!m)
+            throw new Error("invalid UUID syntax");
+        return new UUID(
+            m[1] ? Base64x64.fromString(m[1],def.time) : def.time,
+            m[5] ? Base64x64.fromString(m[5],def.origin) : def.origin
+        );
     }
 
     get origin () {
@@ -97,49 +103,44 @@ class UID {
     }
 
     static now (origin, offset) {
-        return new UID( Base64x64.now(offset), origin );
+        return new UUID( Base64x64.now(offset), origin );
     }
 
     toString () {
         if (this._string===null) {
-            this._string = UID.toString(this._value, this._origin);
+            this._string = UUID.toString(this._value, this._origin);
         }
         return this._string;
     }
 
     static toString (time, origin) {
-        return time + (origin==='0' ? '' : UID.TIMESTAMP_SEPARATOR + origin);
-    }
-
-    static is (str) {
-        UID.RE_UID.lastIndex = 0;
-        return UID.RE_UID.test(str);
+        return time + (origin==='0' ? '' : UUID.TIMESTAMP_SEPARATOR + origin);
     }
 
     // Is greater than the other stamp, according to the the lexicographic order
     gt (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return this._value > stamp._value ||
             (this._value===stamp._value && this._origin>stamp._origin);
     }
 
     lt (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return !this.gt(stamp) && !this.eq(stamp);
     }
 
     le (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return !this.gt(stamp);
     }
 
     ge (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return !this.lt(stamp);
     }
 
     eq (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         if (!stamp) return false;
         return this._value===stamp._value && this._origin===stamp._origin;
     }
@@ -177,39 +178,42 @@ class UID {
     }
 
     isUpstreamOf (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return stamp._origin.length > this._origin.length &&
             stamp._origin.substr(0, this._origin.length) === this._origin;
     }
 
     isDownstreamOf (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return this._origin.length > stamp._origin.length &&
             this._origin.substr(0, stamp._origin.length) === stamp._origin;
     }
 
     isSameOrigin (stamp) {
-        if (stamp.constructor!==UID) stamp = UID.as(stamp);
+        if (stamp.constructor!==UUID) stamp = UUID.as(stamp);
         return this._origin === stamp._origin;
     }
 
     next (origin) {
         let val = this.Value;
-        return new UID(val.inc().toString(), origin||this._origin);
+        return new UUID(val.inc().toString(), origin||this._origin);
     }
 
     static as (val) {
-        if (val && val.constructor===UID) {
+        if (val && val.constructor===UUID) {
             return val;
         } else if (!val) {
             return null;
         } else {
-            return UID.fromString(val.toString());
+            return UUID.fromString(val.toString());
         }
     }
 
     static is (val) {
-        return val && (val.constructor===UID || UID.RE_UID.test(val.toString()));
+        if (!val) return false;
+        if (val.constructor===UUID) return true;
+        UUID.RE_UID.lastIndex = 0;
+        return UUID.RE_UID.test(val.toString());
     }
 
     get ms () {
@@ -218,18 +222,21 @@ class UID {
 
 }
 
-UID.SEPARATORS = "-+%*";
-UID.TIMESTAMP_SEPARATOR = "-";
+UUID.SEPARATORS = "-+%*";
+UUID.TIMESTAMP_SEPARATOR = "-";
 // TODO waterfall derivation
-UID.RS_UID = '(=)(?:[\\+\\-](=))?'.replace(/=/g, Base64x64.RS_INT);
-UID.RE_UID = new RegExp('^'+UID.RS_UID+'$');
-UID.RE_UID_G = new RegExp(UID.RS_UID, 'g');
+UUID.RS_SEPS = "[-+%*]";
+UUID.RS_UID = '(=)(?:'+UUID.RS_SEPS+'(=))?'.replace(/=/g, Base64x64.RS_INT);
+UUID.RE_UID = new RegExp('^'+UUID.RS_UID+'$');
+UUID.RE_UID_G = new RegExp(UUID.RS_UID, 'g');
+UUID.RS_ZIP_UUID = '(' + Base64x64.RS_ZIP_INT + ')?(?:('+UUID.RS_SEPS+')?(' +
+    Base64x64.RS_ZIP_INT + '))?';
+UUID.RE_ZIP_UUID = new RegExp('^'+UUID.RS_ZIP_UUID+'$');
 
-UID.zero = Base64x64.zero;
-UID.ZERO = new UID(UID.zero);
-UID.never = '~';
-UID.NEVER = new UID(UID.never);
-UID.ERROR = new UID(Base64x64.INCORRECT, '0');
+UUID.zero = Base64x64.zero;
+UUID.ZERO = new UUID(UUID.zero);
+UUID.never = '~';
+UUID.NEVER = new UUID(UUID.never);
+UUID.ERROR = new UUID(Base64x64.INCORRECT, '0');
 
-
-module.exports = UID;
+module.exports = UUID;

@@ -1,5 +1,5 @@
 "use strict";
-const UID = require("../src/UID");
+const UID = require("../src/UUID");
 const tap = require('tape').test;
 
 

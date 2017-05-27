@@ -1,7 +1,7 @@
 "use strict";
 const tape = require('tape').test;
 const Op = require("../src/Op");
-const UID = require("../src/UID");
+const UID = require("../src/UUID");
 
 
 tape ('protocol.04.A parse ops', function (tap) {

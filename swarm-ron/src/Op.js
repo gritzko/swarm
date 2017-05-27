@@ -1,6 +1,6 @@
 "use strict";
 const Base64x64 = require('./Base64x64');
-const UID = require('./UID');
+const UID = require('./UUID');
 
 /**
  *  Immutable Swarm op, see the specification at
@@ -229,7 +229,7 @@ Op.RIGHT_REDEF_SEP = '/';
 Op.NO_REDEF_SEP = '|';
 Op.REDEF_SEPS = Op.LEFT_REDEF_SEP + Op.NO_REDEF_SEP + Op.RIGHT_REDEF_SEP;
 Op.PREFIX_SEPS = "([{}])";
-Op.RS_ZIP_INT = "([.#@:\\-])?([\\\\/])?([([{}\\])])?([0-9A-Za-z_~]{0,10})";
+Op.RS_ZIP_INT = "([.#@:\\-])?([\\\\/])?("+Base64x64.RS_PREFIX_SEP+")?("+Base64x64.RS_INT+")";
 Op.RS_INT_VALUE = Op.INT_SEP + '\\d+';
 Op.RS_FLOAT_VALUE = '\\'+Op.FLOAT_SEP + '\\d+(?:\\.\\d+)?([eE][-+]?\\d+)?'
 Op.RS_STRING_VALUE = '"(?:[^"]|\\\\")*"'.replace(/"/g, Op.STRING_SEP);

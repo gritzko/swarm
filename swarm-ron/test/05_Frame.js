@@ -1,7 +1,7 @@
 "use strict";
 const tape = require('tape').test;
 const Op = require("../src/Op");
-const UID = require("../src/UID");
+const UID = require("../src/UUID");
 const Frame = require("../src/Frame");
 
 tape ('protocol.05.A parse/iterate a frame', function (tap) {

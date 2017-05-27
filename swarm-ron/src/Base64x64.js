@@ -359,7 +359,17 @@ class Base64x64 {
     slice (offset, length) {
         return new Base64x64(Base64x64.FULL_ZERO.substr(0, offset)+this._base.substr(offset, length));
     }
+    
+    static full (num) {
+        return num + Base64x64.FULL_ZERO.substr(0, 10-num.length);
+    }
 
+    static full_slice (num, from, till) {
+        if (num.length>=till)
+            return num.substring(from, till);
+        return Base64x64.full(num).substring(from, till);
+    }
+    
     static isZero (b) {
         return Base64x64.as(b).isZero();
     }
@@ -368,6 +378,31 @@ class Base64x64 {
         if (!b) return Base64x64.ZERO;
         if (b.constructor===Base64x64) return b;
         return new Base64x64(b.toString());
+    }
+
+    static compress (val, def) {
+        const len = Base64x64.prefix_length(val, def);
+        if (len<4) return null;
+        if (len===10) {
+            if (val.length<10) {
+                return val.length < 4 ? '(' : Base64x64.PREFIX_SEPS[val.length-4];
+            } else {
+                return ')' + val[9];
+            }
+        }
+        return Base64x64.PREFIX_SEPS[len-4] + val.substr(len);
+    }
+    
+    static fromString (str, default_value) {
+        const def = default_value || Base64x64.FULL_ZERO;
+        Base64x64.RE_ZIP_INT.lastIndex = 0;
+        const m = Base64x64.RE_ZIP_INT.exec(str);
+        if (!m || m[0].length!==str.length)
+            throw new Error("invalid int");
+        const bracket = m[1], tail = m[2]||'';
+        if (!bracket) return tail;
+        const pref = Base64x64.PREFIX_SEPS.indexOf(bracket)+4;
+        return Base64x64.normalize( Base64x64.full_slice(def, 0, pref) + tail );
     }
 
 
@@ -381,6 +416,10 @@ Base64x64.ZERO = new Base64x64(Base64x64.zero);
 Base64x64.RS_INT = rs64x64;
 Base64x64.rs64 = rs64;
 Base64x64.FULL_ZERO = '0000000000';
+Base64x64.PREFIX_SEPS = "([{}])";
+Base64x64.RS_PREFIX_SEP = "[([{}\\])]";
+Base64x64.RS_ZIP_INT = '(' + Base64x64.RS_PREFIX_SEP + ')?(' + Base64x64.RS_INT + ')?';
+Base64x64.RE_ZIP_INT = new RegExp(Base64x64.RS_ZIP_INT);
 
 // convert int to a classic base64 number (left zeroes skipped)
 Base64x64.int2base = function (i, padlen) {
