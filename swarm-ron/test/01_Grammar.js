@@ -19,7 +19,14 @@ const RON_GRAMMAR = new Grammar({
     STRING_ATOM:/"(\\"|[^"])*"/,
     FLOAT_ATOM: /[+-]?\d{1,19}(\.\d{1,19})?([Ee][+-]?\d{1,3})?/,
     UUID_ATOM:  "ZIP_UUID+",
-    ATOM:       "=INT_ATOM| STRING_ATOM| ^FLOAT_ATOM| >UUID_ATOM",
+    FRAME_ATOM: "!",
+    QUERY_ATOM: "?",
+    ATOM:       "=INT_ATOM| STRING_ATOM| ^FLOAT_ATOM| >UUID_ATOM| FRAME_ATOM| QUERY_ATOM",
+
+    OP:         "SPEC ATOM+",
+    ZIP_OP:     "ZIP_SPEC ATOM+",
+    FRAME:      "OP+",
+    ZIP_FRAME:  "ZIP_OP+",
 
 });
 
@@ -98,6 +105,30 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.ok( RON_GRAMMAR.is( "123-orig\n", "UUID_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "#0", "UUID_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "'", "UUID_ATOM" ) );
+
+    tap.ok( RON_GRAMMAR.is( "!", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "?", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "?", "QUERY_ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "!", "FRAME_ATOM" ) );
+
+    tap.ok( RON_GRAMMAR.is( "=1", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( ">", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( ">0", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( ">1-2{}", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "^3.1415", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "^1", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( '"string"', "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( ">3.1415", "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( "=3.1415", "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( '>"abc"', "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( "=", "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( "^", "ATOM" ) );
+    tap.notOk( RON_GRAMMAR.is( "==", "ATOM" ) );
+
+    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@\\{E\\:keyA"value\\u0041"', "ZIP_FRAME" ) );
+    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@1D4ICCE\\! @{2:keyA"valueA" @{E:keyB"valueB"', "ZIP_FRAME" ) );
+    tap.ok( RON_GRAMMAR.is( "@1D4ICC-XU5eRJ?", "ZIP_FRAME" ) );
+    tap.notOk( RON_GRAMMAR.is( "", "ZIP_FRAME" ) );
 
     /*
     tap.ok( RON_GRAMMAR.is( "", "" ) );
