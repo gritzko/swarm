@@ -1,34 +1,6 @@
 "use strict";
 const tape = require('tape').test;
-const Grammar = require('regular-grammar');
-
-const RON_GRAMMAR = new Grammar({
-
-    BASE64:     /[0-9A-Za-z_~]/,
-    INT:        'BASE64{1,10}',
-    TAIL:       'BASE64{0,10}',
-    BRACKET:    /[([{}\])]/,
-    REDEFAULT:  /[\\\|\/]/,
-    ZIP_INT:    "REDEFAULT? BRACKET? TAIL?",
-    UUID:       "INT -INT?",
-    ZIP_UUID:   "ZIP_INT /-?/ZIP_INT?",
-    SPEC:       ".UUID? #UUID? @UUID :UUID?",
-    ZIP_SPEC:   "/[.]?/ZIP_UUID? /#?/ZIP_UUID? /@?/ZIP_UUID? /:?/ZIP_UUID?",
-
-    INT_ATOM:   /[+-]?\d{1,17}/,
-    STRING_ATOM:/"(\\"|[^"])*"/,
-    FLOAT_ATOM: /[+-]?\d{1,19}(\.\d{1,19})?([Ee][+-]?\d{1,3})?/,
-    UUID_ATOM:  "ZIP_UUID+",
-    FRAME_ATOM: "!",
-    QUERY_ATOM: "?",
-    ATOM:       "=INT_ATOM| STRING_ATOM| ^FLOAT_ATOM| >UUID_ATOM| FRAME_ATOM| QUERY_ATOM",
-
-    OP:         "SPEC ATOM+",
-    ZIP_OP:     "ZIP_SPEC ATOM+",
-    FRAME:      "OP+",
-    ZIP_FRAME:  "ZIP_OP+",
-
-});
+const RON_GRAMMAR = require('../src/Grammar');
 
 
 tape ('protocol.01.A parse RON', function (tap) {
@@ -40,7 +12,7 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.ok( RON_GRAMMAR.is( "0", "UUID" ) );
     tap.ok( RON_GRAMMAR.is( "time0123-origin", "UUID" ) );
     tap.ok( RON_GRAMMAR.is( "lww", "UUID" ) );
-    tap.ok( RON_GRAMMAR.is( "(0123-origin", "ZIP_UUID" ) );
+    tap.ok( RON_GRAMMAR.is( "(0123-origin", "ZIP_UUID" ), "prefix-compressed UUID" );
     tap.ok( RON_GRAMMAR.is( "[]A", "ZIP_UUID" ) );
     tap.ok( RON_GRAMMAR.is( "[-", "ZIP_UUID" ) );
     tap.ok( RON_GRAMMAR.is( "-", "ZIP_UUID" ) );
@@ -106,14 +78,14 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.notOk( RON_GRAMMAR.is( "#0", "UUID_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "'", "UUID_ATOM" ) );
 
-    tap.ok( RON_GRAMMAR.is( "!", "ATOM" ) );
-    tap.ok( RON_GRAMMAR.is( "?", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "!", "ATOM" ), "reducer marker" );
+    tap.ok( RON_GRAMMAR.is( "?", "ATOM" ), "query marker" );
     tap.ok( RON_GRAMMAR.is( "?", "QUERY_ATOM" ) );
     tap.ok( RON_GRAMMAR.is( "!", "FRAME_ATOM" ) );
 
     tap.ok( RON_GRAMMAR.is( "=1", "ATOM" ) );
     tap.ok( RON_GRAMMAR.is( ">", "ATOM" ) );
-    tap.ok( RON_GRAMMAR.is( ">0", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( ">0", "ATOM" ), "null pointer" );
     tap.ok( RON_GRAMMAR.is( ">1-2{}", "ATOM" ) );
     tap.ok( RON_GRAMMAR.is( "^3.1415", "ATOM" ) );
     tap.ok( RON_GRAMMAR.is( "^1", "ATOM" ) );
@@ -125,10 +97,17 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.notOk( RON_GRAMMAR.is( "^", "ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "==", "ATOM" ) );
 
-    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@\\{E\\:keyA"value\\u0041"', "ZIP_FRAME" ) );
-    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@1D4ICCE\\! @{2:keyA"valueA" @{E:keyB"valueB"', "ZIP_FRAME" ) );
+    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@|{E|:keyA"value\\u0041"', "ZIP_FRAME" ) );
+    tap.ok( RON_GRAMMAR.is(
+        ' .lww#1D4ICC-XU5eRJ @||{E!\n:keyA "value\\u0041"\n\n', "ZIP_FRAME"
+    ), "well-compressed frame" );
+    tap.ok( RON_GRAMMAR.is( '.lww#1D4ICC-XU5eRJ@1D4ICCE|! @{2:keyA"valueA" @{E:keyB"valueB"', "ZIP_FRAME" ) );
     tap.ok( RON_GRAMMAR.is( "@1D4ICC-XU5eRJ?", "ZIP_FRAME" ) );
+    tap.ok( RON_GRAMMAR.is( "?", "ZIP_FRAME" ) );
     tap.notOk( RON_GRAMMAR.is( "", "ZIP_FRAME" ) );
+    tap.notOk( RON_GRAMMAR.is(
+        ' .lww#1D4ICC-XU5eRJ @||{E!\n:keyA "value\\u0041"\n\n', "ZIP_OP"
+    ), "a frame of two ops is not an op" );
 
     /*
     tap.ok( RON_GRAMMAR.is( "", "" ) );
