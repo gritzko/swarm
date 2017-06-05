@@ -4,7 +4,7 @@ var tap = require('tape').test;
 var swarm = require('swarm-protocol');
 var Spec = swarm.Spec;
 var Op = swarm.Op;
-var Syncable = require('../src/Syncable');
+var Syncable = require('../src/RDT');
 var Stamp = swarm.Stamp;
 
 

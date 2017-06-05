@@ -47,7 +47,7 @@ var UUID = require('./UUID');
 class Clock {
 
     constructor (origin, meta_options) {
-        this._last = UUID.ZERO;
+        this.op = UUID.ZERO;
         if (!Base64x64.is(origin))
             throw new Error('invalid origin');
         this._origin = origin.toString();
@@ -65,7 +65,7 @@ class Clock {
             this._offset = parseInt(options.ClockOffst);
         }
         if (options.ClockLast) {
-            this._last = new UUID(options.ClockLast);
+            this.op = new UUID(options.ClockLast);
         }
         if (options.ClockNow) {
             let now = parseInt(options.ClockNow);
@@ -80,9 +80,9 @@ class Clock {
 
     issueTimestamp () {
         var next = this._logical ?
-            new UUID(this._last.Value.next(this._minlen), this._origin) :
+            new UUID(this.op.Value.next(this._minlen), this._origin) :
             UUID.now(this._origin, this._offset);
-        var last = this._last;
+        var last = this.op;
         if (!next.gt(last)) {// either seq++ or stuck-ahead :(
             next = last.next(this._origin);
         } else if (this._minlen<8) { // shorten?
@@ -91,7 +91,7 @@ class Clock {
                 this._origin
             );
         }
-        this._last = next;
+        this.op = next;
         return next;
     }
 
@@ -100,13 +100,13 @@ class Clock {
     }
 
     get lastId () {
-        return this._last;
+        return this.op;
     }
 
     seeTimestamp (stamp) {
         stamp = UUID.as(stamp);
-        if (stamp.gt(this._last)) {
-            this._last = stamp;
+        if (stamp.gt(this.op)) {
+            this.op = stamp;
         }
     }
 

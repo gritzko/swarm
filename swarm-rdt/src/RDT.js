@@ -224,6 +224,13 @@ class Syncable extends OpStream {
  */
 class RDT extends OpStream {
 
+    // 1 reduce (op)
+    // 2 reset (state)
+    // 3 update (op)
+    // 4 host    .submit(0-stamped op)
+    // 5 this._state_frame (String)
+    // 6 EventEmitter
+
     /**
      * @param {Op} state - the serialized state
      * @param {Client} host

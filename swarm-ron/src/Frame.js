@@ -1,15 +1,14 @@
-/**
- * Created by gritzko on 5/25/17.
- */
 "use strict";
 const Base =require("./Base64x64");
+const RON_GRAMMAR = require("./Grammar");
+const UUID = require("./UUID");
 const Op = require("./Op");
 
 class Frame {
 
     constructor (body, mode) {
         this._body = body || '';
-        this._last = ['0','0','0','0','0','0','0','0'];
+        this._last_op = Op.ZERO;
         mode = mode || (Frame.ZIP_OPTIONS.VARLEN|Frame.ZIP_OPTIONS.SKIPTOK|Frame.ZIP_OPTIONS.PREFIX);
         this._options = {
             varlen: 0!==(mode & Frame.ZIP_OPTIONS.VARLEN),
@@ -21,12 +20,8 @@ class Frame {
         };
     }
 
-    push_raw (ints, string_values) {
-
-        if (!string_values || string_values.constructor!==Array || !string_values.length)
-            throw new Error("invalid values");
-        if (!ints || ints.constructor!==Array || ints.length!==8)
-            throw new Error("invalid ints");
+    push (new_op) {
+        const op = Op.as(new_op);
 
         let buf = '';
         const opts = this._options;
@@ -34,91 +29,39 @@ class Frame {
         if (opts.spaceops && this._body.length) {
             buf += ' ';
         }
+        let need_uid_sep = true;
 
-        // nothing 0  quant 1  redef 2  prefix 3  tail 4  done 5
-        let prev_at = 0;
-
-        for(let int_at=0; int_at<8; int_at++) {
-
-            const uid_at = int_at >> 1;
-            const cur_int = ints[int_at];
-            let last_int = this._last[int_at];
-            const is_origin = int_at&1;
-            let at = 0;
-
-            if (opts.skiptok && cur_int===last_int) {
-                prev_at = 0;
+        for(let u=0; u<4; u++) {
+            const uid = op.uuid(u);
+            let last_uid = this._last_op.uuid(u);
+            if (uid.eq(last_uid)) {
+                need_uid_sep = true;
                 continue;
             }
 
-            const quant = is_origin ? '-' : Op.UID_SEPS[uid_at];
+            let zip = uid.toZipString(last_uid);
+            if (need_uid_sep)
+                buf += Op.UID_SEPS[u];
+            need_uid_sep = last_uid.origin===uid.origin;
 
-            if ( !opts.skipquant ) {
-                if (is_origin && prev_at===0)
-                    buf += Op.UID_SEPS[uid_at];
-                buf += quant;
-                at = 1;
-            }
-
-            let prefix = Base.prefix_length(last_int, cur_int);
-
-            if (opts.redefault && uid_at>0 && prefix<7) {
-                let redef = '|';
-                for(let re=1; re<4; re++) {
-                    if (re===uid_at) continue;
-                    const re_int = (re<uid_at ? ints : this._last)[(re<<1)|is_origin];
-                    const re_prefix = Base.prefix_length(cur_int, re_int);
-                    if (re_prefix>prefix+2) {
-                        const signs = "/\\|/\\";
-                        const off = 2 - uid_at + re;
-                        redef = signs[off];
-                        prefix = re_prefix;
-                        last_int = re_int;
-                    }
-                }
-                if (redef!=='|' && (prefix===10 || opts.prefix)) {
-                    if (at===0 && prev_at<2)
-                        buf += quant;
-                    buf += redef;
-                    at = 2;
+            for(let l=0; l<4; l++) if (l!==u) {
+                const redef = "`\\|/"[l];
+                const def = l>0 ? this._last_op.uuid(l) : (u>0?op.uuid(u-1):UUID.ZERO);
+                const rezip = redef + uid.toZipString(def);
+                if (rezip.length<zip.length) {
+                    zip = rezip;
+                    need_uid_sep = uid.origin===def.origin;
                 }
             }
 
-            if (opts.skiptok && prefix===10) {
-                prev_at = at;
-                continue;
-            }
-
-            if (!opts.prefix || prefix<4) {
-
-                if (at===0 && prev_at!==5)
-                    buf += quant;
-
-                buf += cur_int;
-                at = opts.varlen ? 4 : 5;
-
-            } else if (prefix<10) {
-
-                if (at===0 && prev_at<3)
-                    buf += quant;
-                buf += Op.PREFIX_SEPS[prefix-4];
-                buf += cur_int.substr(prefix); // FIXME !varlen
-                at = opts.varlen ? 4 : 5;
-
-            }
-
-            prev_at = at;
+            buf += zip;
 
         }
 
         this._body += buf;
-        this._body += string_values.join('');
+        this._body += op.raw_values().join('');
 
-        this._last = ints;
-    }
-
-    push (op) {
-        this.push_raw(op.ints(), op.raw_values());
+        this._last_op = op;
     }
 
     [Symbol.iterator]() {
@@ -127,6 +70,12 @@ class Frame {
 
     static fromString (body) {
         return new Frame(body);
+    }
+
+    static as (frame) {
+        if (!frame) return new Frame();
+        if (frame.constructor===Frame) return frame;
+        return Frame.fromString(frame.toString());
     }
 
     toString () {
@@ -151,58 +100,78 @@ Frame.ZIP_OPTIONS = {
 class Iterator {
 
     constructor (body) {
-        this._body = body;
-        this._last = null;
+        this._body = body.toString();
+        this.op = Op.ZERO;
         this._offset = 0;
         this._index = -1;
+        this.nextOp();
     }
 
-    skip (re) {
-
+    static as (something) {
+        if (!something) return new Iterator('');
+        if (something.constructor===Iterator) return something;
+        return new Iterator(something.toString());
     }
 
-    /** greedy regex allowing for a zero match */
-    eat (re) {
+    nextOp () {
+
+        if ( this._offset===this._body.length ) {
+            this.op = Iterator.ERROR_END_OP;
+            return;
+        }
+
+        const re = Iterator.RE_OP;
         re.lastIndex = this._offset;
         const m = re.exec(this._body);
-        if (!m || !m[0] || m.index!==this._offset)
-            return null;
+        if (!m || !m[0] || m.index!==this._offset) {
+            this.op = Iterator.ERROR_BAD_OP;
+            return;
+        }
         this._offset += m[0].length;
-        return m;
-    }
 
-    _terminate (error) {
-        this._ints[5] = "~~~~~~~~~~";
-        this._ints[6] = "0";
-        this._values = [error];
-        this._offset = -1;
-        return {done: true, value: null};
+        const seps = "`\\|/";
+        const defaults = [this.op.type, this.op.object, this.op.event, this.op.location];
+        const uids = [];
+        let prev_uid = UUID.ZERO;
+        for(let u=0; u<4; u++) {
+            const uid = m[u+1];
+            let def = defaults[u];
+            if (!uid) {
+                uids.push(def);
+                continue;
+            }
+            const s = seps.indexOf(uid[0]);
+            if (s!==-1) {
+                def = s ? defaults[s] : prev_uid;
+            }
+            prev_uid = UUID.fromString(uid, def);
+            uids.push(prev_uid);
+        }
+
+        const values = [m[5]];  // FIXME !!!!!!!! WRONG!!!!
+
+        this.op = new Op(uids[0], uids[1], uids[2], uids[3], values);
+
+        this._index++;
+        // FIXME sanity checks
+        return this.op;
     }
 
     next () {
-
-        this.eat(Frame.RE_WSP);
-
-        if ( this._offset===this._body.length )
-            return { done: true, value: null };
-
-        const m = this.eat(Op.RE_OP_G);
-
-        if ( !m )
-            return { done: true, value: Op.error("syntax violation") };
-
-        this._last = Op.fromString(m, this._last ? this._last.ints() : undefined);
-        this._index++;
-        // FIXME sanity checks
-
-        return {
-            done: this._last.isError(),
-            value: this._last
+        const ret = {
+            done: this.op.isError(),
+            value: this.op
         };
+        if (!ret.done)
+            this.nextOp();
+        return ret;
     }
 
 }
 Frame.Iterator = Frame.Iterator = Iterator;
+Iterator.RE_OP = new RegExp("\\s*"+RON_GRAMMAR.pattern("ZIP_OP"), "mg");
+Iterator.ERROR_END_OP = new Op(UUID.ERROR, UUID.ERROR, UUID.ERROR, UUID.ERROR, "END");
+Iterator.ERROR_BAD_OP = new Op(UUID.ERROR, UUID.ERROR, UUID.ERROR, UUID.ERROR, "BAD SYNTAX");
 
 
 module.exports = Frame;

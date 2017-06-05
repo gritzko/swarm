@@ -1,6 +1,7 @@
 "use strict";
+const RON_GRAMMAR = require("./Grammar");
 const Base64x64 = require('./Base64x64');
-const UID = require('./UUID');
+const UUID = require('./UUID');
 
 /**
  *  Immutable Swarm op, see the specification at
@@ -8,11 +9,12 @@ const UID = require('./UUID');
  * */
 class Op {
 
-    constructor(int_strings, value_strings) {
-        if (int_strings.length!==8)
-            throw new Error("not an array of 8 Base64x64 ints");
-        this._ints = int_strings;
-        this._raw_values = value_strings;
+    constructor(type, object, event, location, value_strings) {
+        this.type = UUID.as(type);
+        this.object = UUID.as(object);
+        this.event = UUID.as(event);
+        this.location = UUID.as(location);
+        this._raw_values = value_strings || ['?'];
         // values should be passed around *verbatim*, so the
         // serialized form is the canonic form; parsed
         // values are platform/environment dependent.
@@ -33,6 +35,13 @@ class Op {
         return this._values[i];
     }
 
+    ints () {
+        const ret = [];
+        for(let i=0; i<8; i++)
+            ret.push(this.int(i));
+        return ret; // FIXME
+    }
+
     raw_value (i) {
         return this._raw_values[i];
     }
@@ -42,110 +51,47 @@ class Op {
     }
 
     int (i) {
-        return this._ints[i];
-    }
-
-    ints () {
-        return this._ints;
-    }
-
-    TypeUID() {
-        return new UID(this.int(0), this.int(1));
-    }
-
-    ObjectUID() {
-        return new UID(this.int(2), this.int(3));
-    }
-
-    EventUID() {
-        return new UID(this.int(4), this.int(5));
-    }
-
-    LocationUID() {
-        return new UID(this.int(6), this.int(7));
-    }
-
-    static fromUIDs (uids, values) {
-        if (uids.length!==4)
-            throw new Error("not an array of 4 uids");
-        const ints = [];
-        uids.map(UID.as).forEach(uid=>ints.push(uid.time, uid.origin));
-        const vals = values.map(Op.js2ron);
-        return new Op(ints, vals);
-    }
-
-    static fromString(op_string, default_ints) {
-        if (default_ints===undefined)
-            default_ints = ["0","0","0","0","0","0","0","0"];
-        const int_strings = default_ints.slice();
-        const value_strings = [];
-
-        let m = null;
-        let int_at = 0;
-        let offset = 0;
-        Op.RE_ZIP_INT_G.lastIndex = offset;
-        while (int_at < 8 && (m = Op.RE_ZIP_INT_G.exec(op_string))) {
-            if (m[0].length===0) break;
-            offset += m[0].length;
-            const quant = m[1], redef = m[2], prefix = m[3], tail = m[4];
-            if (quant) {
-                if (UID.SEPARATORS.indexOf(quant) !== -1) {
-                    int_at |= 1;
-                } else {
-                    const at = Op.UID_SEPS.indexOf(quant) << 1;
-                    if (at < int_at)
-                        return Op.error("uid order violation");
-                    int_at = at;
-                }
-            }
-            let def = default_ints[int_at];
-            if (redef && int_at > 1) {
-                let new_at = int_at;
-                if (redef === Op.RIGHT_REDEF_SEP) {
-                    new_at += 2;
-                } else if (redef === Op.LEFT_REDEF_SEP) {
-                    new_at -= 2;
-                }
-                if (new_at < 2) { // wrap
-                    new_at += 6;
-                } else if (new_at >= 8) {
-                    new_at -= 6;
-                }
-                def = new_at < int_at ? int_strings[new_at] : default_ints[new_at];
-            }
-            if (prefix) {
-                const len = Op.PREFIX_SEPS.indexOf(prefix) + 4;
-                if (def.length > len)
-                    def = def.substr(0, len);
-                else while (def.length < len)
-                    def += '0';
-            }
-            if (tail) {
-                if (prefix)
-                    int_strings[int_at] = (def + tail).substr(0, 10);
-                else
-                    int_strings[int_at] = tail;
-            } else {
-                int_strings[int_at] = def;
-            }
-            int_at++;
+        switch (i) {
+            case 0: return this.type.time;
+            case 1: return this.type.origin;
+            case 2: return this.object.time;
+            case 3: return this.object.origin;
+            case 4: return this.event.time;
+            case 5: return this.event.origin;
+            case 6: return this.location.time;
+            case 7: return this.location.origin;
         }
+    }
 
-        if (!int_at)
-            return Op.error("trailing garbage");
-
-        Op.RE_VALUE_G.lastIndex = offset;
-        while (m = Op.RE_VALUE_G.exec(op_string)) {
-            if (m[0].length===0) break;
-            if (value_strings.length===8) break;
-            value_strings.push(m[0]);
+    uuid (u) {
+        switch(u) {
+            case 0: return this.type;
+            case 1: return this.object;
+            case 2: return this.event;
+            case 3: return this.location;
+            default: throw new Error('no such uuid index');
         }
+    }
 
-        if (!value_strings.length)
-            return Op.error("no values");
+    static fromString(op_string) {
 
-        return new Op(int_strings, value_strings);
+        if (!op_string) return Op.ZERO;
 
+        const parts = RON_GRAMMAR.split(op_string, "ZIP_OP");
+        let prev = UUID.ZERO;
+        return parts ? new Op(
+            prev = parts[0] ? UUID.fromString(parts[0], parts[0][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
+            prev = parts[1] ? UUID.fromString(parts[1], parts[1][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
+            prev = parts[2] ? UUID.fromString(parts[2], parts[2][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
+            prev = parts[3] ? UUID.fromString(parts[3], parts[3][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
+            parts[4]
+        ) : null;
+    }
+
+    static as (something) {
+        if (!something) return Op.ZERO;
+        if (something.constructor===Op) return something;
+        return Op.fromString(something);
     }
 
     isState () {
@@ -157,7 +103,7 @@ class Op {
     }
 
     isError () {
-        return this.int(4) === Base64x64.INCORRECT;
+        return this.event.eq(UUID.ERROR);
     }
 
     toString () {
@@ -169,7 +115,7 @@ class Op {
             ret += Op.UID_SEPS[u];
             ret += this.int(i);
             if (this.int(i+1)!=='0') {
-                ret += UID.TIMESTAMP_SEPARATOR;
+                ret += UUID.TIMESTAMP_SEPARATOR;
                 ret += this.int(i+1);
             }
         }
@@ -182,7 +128,7 @@ class Op {
         switch (val.constructor) {
             case String: return JSON.stringify(val);
             case Number: return Number.isInteger(val) ? Op.INT_SEP+val : Op.FLOAT_SEP+val;
-            case UID:    return Op.REF_SEP+val.toString();
+            case UUID:    return Op.REF_SEP+val.toString();
             default:
                 if (val===Op.FRAME_VALUE) return Op.FRAME_SEP;
                 if (val===Op.QUERY_VALUE) return Op.QUERY_SEP;
@@ -195,7 +141,7 @@ class Op {
         switch (mark) {
             case Op.INT_SEP:        return parseInt(body);
             case Op.STRING_SEP:     return JSON.parse(str);
-            case Op.REF_SEP:        return UID.fromString(body); // FIXME VV
+            case Op.REF_SEP:        return UUID.fromString(body); // FIXME VV
             case Op.FLOAT_SEP:      return parseFloat(body);
             case Op.FRAME_SEP:      return Op.FRAME_VALUE;
             case Op.QUERY_SEP:      return Op.QUERY_VALUE;
@@ -204,7 +150,7 @@ class Op {
     }
 
     static error (message) {
-        return Op.fromUIDs([UID.ERROR, UID.ERROR, UID.ERROR, UID.ERROR], [message]);
+        return Op.fromUIDs([UUID.ERROR, UUID.ERROR, UUID.ERROR, UUID.ERROR], [message]);
     }
 
 }
@@ -233,7 +179,7 @@ Op.RS_ZIP_INT = "([.#@:\\-])?([\\\\/])?([([{}\\])])?([0-9A-Za-z_~]{0,10})";
 Op.RS_INT_VALUE = Op.INT_SEP + '\\d+';
 Op.RS_FLOAT_VALUE = '\\'+Op.FLOAT_SEP + '\\d+(?:\\.\\d+)?([eE][-+]?\\d+)?';
 Op.RS_STRING_VALUE = '"(?:[^"]|\\\\")*"'.replace(/"/g, Op.STRING_SEP);
-Op.RS_REF_VALUE = Op.REF_SEP + UID.RS_UID;
+Op.RS_REF_VALUE = Op.REF_SEP + UUID.RS_UID;
 Op.RS_FRAME_VALUE = '\\' + Op.FRAME_SEP;
 Op.RS_VALUE = '(' + [Op.RS_INT_VALUE, Op.RS_STRING_VALUE, Op.RS_REF_VALUE,
         Op.RS_FLOAT_VALUE, Op.RS_FRAME_VALUE, ''].join(')|(') + ')';
@@ -241,5 +187,7 @@ Op.RE_VALUE_G = new RegExp(Op.RS_VALUE, 'g');
 Op.RS_OP = '(' + Op.RS_ZIP_INT + ')+(' + Op.RS_VALUE + ')+';
 Op.RE_ZIP_INT_G = new RegExp(Op.RS_ZIP_INT, 'g');
 Op.RE_OP_G = new RegExp(Op.RS_OP, 'g');
+
+Op.ZERO = new Op(UUID.ZERO, UUID.ZERO, UUID.ZERO, UUID.ZERO, Op.FRAME_VALUE);
 
 module.exports = Op;

@@ -10,6 +10,7 @@ class UUIDVector {
         this._last = body ? null : UUID.ZERO;
         this._array = null; // TODO
         this._map = null;
+        //this._need_sep = body ? true : false; // TODO
     }
 
     push (uid) {
@@ -27,11 +28,9 @@ class UUIDVector {
         if (uuid.eq(last)) {
             this._body += ',';
         } else {
-            let t = Base.compress(uuid.time, last.time);
-            const c = (this._body && this._body[this._body.length-1]===',') ? ',':'';
-            this._body += t ? c+t : ',' + uuid.time;
-            let o = Base.compress(uuid.origin, last.origin);
-            this._body += o ? o : UUID.TIMESTAMP_SEPARATOR + uuid.origin;
+            this._body += ',';
+            this._body += uuid.toZipString(last);
+            //this._need_sep = uuid.origin===last.origin;
         }
     }
 
@@ -137,7 +136,7 @@ class UUIDVector {
 
 }
 
-class Iterator {
+class Iterator { // FIXME use grammar
     constructor (body) {
         this._body = body.toString();
         this._offset = 0;

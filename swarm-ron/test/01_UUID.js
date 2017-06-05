@@ -1,4 +1,5 @@
 "use strict";
+const Base = require("../src/Base64x64");
 const UID = require("../src/UUID");
 const tap = require('tape').test;
 
@@ -39,7 +40,7 @@ tap ('protocol.01.A Lamport timestamp', function(tap){
     tap.ok(new UID('0').isTranscendent());
     tap.equals(new UID("n0nN0","rmalizd00").toString(), "n0nN-rmalizd");
 
-    tap.ok(UID.as("#1")===null);
+    tap.ok(UID.as("#1").eq(UID.ERROR));
 
     const one = UID.as('0000000010-one');
     const two = one.next('two');
@@ -111,6 +112,22 @@ tap ('protocol.01.D conversions and checks', function (tap) {
     tap.ok( UID.is('0') );
     tap.ok( !UID.is('') );
 
+    const uuid = new UID(Base.fromString("1P17Ba3R"), "replica");
+    const rfc = uuid.toRFC4122();
+    tap.equal(rfc, 'b7af8530-4762-11e7-8000-d30b67940000');
+
+    tap.end();
+
+});
+
+tap ('protocol.01.E zip', function (tap) {
+
+    const one = UID.fromString("0000000001-origin");
+    const two = UID.fromString("0000000002-origin");
+    const three = UID.fromString("0000000003-orig");
+    tap.equal(one.toZipString(two), ")1");
+    tap.equal(one.toZipString(one), "");
+    tap.equal(three.toZipString(two), ")3(");
     tap.end();
 
 });

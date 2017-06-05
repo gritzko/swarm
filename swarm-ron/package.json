@@ -1,6 +1,6 @@
 {
   "name": "swarm-ron",
-  "version": "2.0.2",
+  "version": "2.0.4",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -22,7 +22,8 @@
   "main": "index.js",
   "browser": "index.js",
   "dependencies": {
-    "regular-grammar": "0.1.2"
+    "regular-grammar": "^0.1.6",
+    "uuid": "3.0.1"
   },
   "devDependencies": {
       "tape": "4.6.2",

@@ -2,7 +2,7 @@
 var tap = require('tape').test;
 var Base64x64 = require("../src/Base64x64");
 
-tap('protocol.00.A basic API', function (t) {
+tap('ron.00.A basic API', function (t) {
 
     // date constructor
     var epoch = new Date("January 1, 2010 00:00:00 UTC");
@@ -73,7 +73,7 @@ tap('protocol.00.A basic API', function (t) {
     t.end();
 });
 
-tap ('protocol.00.B base64 conversions perf', function(tap){
+tap ('ron.00.B base64 conversions perf', function(tap){
     var ms1 = new Date().getTime();
     var count = 100000;
     for(var i=0; i<count; i++) {
@@ -88,7 +88,7 @@ tap ('protocol.00.B base64 conversions perf', function(tap){
 });
 
 
-tap ('protocol.00.C timestamping perf', function(tap){
+tap ('ron.00.C timestamping perf', function(tap){
     var ms1 = new Date().getTime();
     var count = 100000;
     var year = Base64x64.now().toString().substr(0,2);
@@ -104,7 +104,7 @@ tap ('protocol.00.C timestamping perf', function(tap){
     // 109ms for me, as of Node v7.10.0
 });
 
-tap ('protocol.00.D non-aligned base64', function(tap) {
+tap ('ron.00.D non-aligned base64', function(tap) {
     const base = Base64x64.int2base(66, 3);
     tap.equal(base, '012');
     tap.equal(Base64x64.base2int('12'), 66);
@@ -114,7 +114,7 @@ tap ('protocol.00.D non-aligned base64', function(tap) {
     tap.end();
 });
 
-tap ('protocol.00.E misc stuff', function(tap) {
+tap ('ron.00.E misc stuff', function(tap) {
 
     const base = new Base64x64('0000100002');
     tap.equal(base.highInt, 1);
@@ -125,11 +125,36 @@ tap ('protocol.00.E misc stuff', function(tap) {
     tap.end();
 });
 
-tap('protocol.00.F prefixes', function(tap){
+tap('ron.00.F prefixes', function(tap){
     tap.equal(Base64x64.prefix_length('0', '123'), 0);
     tap.equal(Base64x64.prefix_length('0', '0123'), 1);
     tap.equal(Base64x64.prefix_length('1230', '123'), 10);
     tap.equal(Base64x64.prefix('0123010', '0123010abc'), '012301');
     tap.equal(Base64x64.prefix('0123010', '0123010'), '012301');
     tap.end();
+});
+
+tap('ron.00.G unzip', function (tap) {
+    tap.equal(Base64x64.fromString(")1"), "0000000001");
+    tap.equal(Base64x64.fromString("(1"), "00001");
+    tap.equal(Base64x64.fromString("(A", "12345678"), "1234A");
+    tap.equal(Base64x64.fromString("(A", "1234"), "1234A");
+    tap.equal(Base64x64.fromString("(A", "567"), "5670A");
+    tap.equal(Base64x64.fromString("{A", "0abcdefgh"), "0abcdeA");
+    tap.equal(Base64x64.fromString("", "z"), "z");
+    tap.end();
+});
+
+
+tap ('ron.00.H zip', function (tap) {
+
+    tap.equal(Base64x64.toZipString("0", "0"), "");
+    tap.equal(Base64x64.toZipString("010", "01"), "");
+    tap.equal(Base64x64.toZipString("time01", "time02"), "[1");
+    tap.equal(Base64x64.toZipString("more0zeros", "more0beer0"), "[zeros");
+    tap.equal(Base64x64.toZipString("even_m0re", "even_m"), "}re");
+    tap.equal(Base64x64.toZipString("0000000001", "0"), ")1");
+
+    tap.end();
+
 });

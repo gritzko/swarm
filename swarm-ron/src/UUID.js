@@ -1,6 +1,8 @@
 "use strict";
 const Base64x64 = require('./Base64x64');
 const ReplicaId = require('./ReplicaId');
+const RON_GRAMMAR = require('./Grammar');
+const uuid = require('uuid');
 
 /**
  *
@@ -58,15 +60,15 @@ class UUID {
     }
 
     static fromString (string, default_uuid) {
-        const def = default_uuid ? UUID.as(default_uuid) : UUID.ZERO;
-        UUID.RE_ZIP_UUID.lastIndex = 0;
-        const m = UUID.RE_ZIP_UUID.exec(string.toString());
-        if (!m)
-	        return null; // ???
-            //throw new Error("invalid UUID syntax");
+        const def = UUID.as(default_uuid) || UUID.ZERO;
+        if (!string) return def || UUID.ERROR;
+        const parts = RON_GRAMMAR.split(string, "ZIP_UUID");
+        if (!parts) return UUID.ERROR;
+        if (parts[0] && '`\\|/'.indexOf(parts[0][0])!==-1)
+            parts[0] = parts[0].substr(1); // FIXME separate capture group
         return new UUID(
-            m[1] ? Base64x64.fromString(m[1],def.time) : def.time,
-            m[5] ? Base64x64.fromString(m[5],def.origin) : def.origin
+            Base64x64.fromString(parts[0], def.time),
+            Base64x64.fromString(parts[1], def.origin)
         );
     }
 
@@ -204,7 +206,7 @@ class UUID {
         if (val && val.constructor===UUID) {
             return val;
         } else if (!val) {
-            return null;
+            return UUID.ZERO; //?
         } else {
             return UUID.fromString(val.toString());
         }
@@ -219,6 +221,46 @@ class UUID {
 
     get ms () {
         return this.Value.ms;
+    }
+
+    toRFC4122() {
+        const date = this.Value.toDate();
+        const pid = [0,0,0,0,0,0]; // 8*6=48 bit
+        if (this._origin.length>8)
+            return null;
+        const orig = new Base64x64(this._origin);
+        let i = orig.lowInt;
+        pid[5] = i&255;
+        i>>=8;
+        pid[4] = i&255;
+        i>>=8;
+        pid[3] = i&255;
+        i>>=8;
+        i |= orig.highInt << 6;
+        pid[2] = i&255;
+        i>>=8;
+        pid[1] = i&255;
+        i>>=8;
+        pid[0] = i&255;
+        return uuid.v1({
+            node: pid,
+            clockseq: 0,
+            msecs: date.getTime()
+        });
+    }
+
+    toZipString (default_uuid) {
+        const uuid = UUID.as(default_uuid);
+        if (this.origin===uuid.origin) {
+            if (this.time===uuid.time)
+                return '';
+            return Base64x64.toZipString(this.time, uuid.time);
+        } else {
+            const t = Base64x64.toZipString(this.time, uuid.time);
+            const o = Base64x64.toZipString(this.origin, uuid.origin);
+            const s = Base64x64.RS_PREFIX_SEP.indexOf(o[0])===-1 ? '-' : '';
+            return t+s+o;
+        }
     }
 
 }

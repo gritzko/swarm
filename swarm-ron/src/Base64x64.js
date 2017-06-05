@@ -1,4 +1,5 @@
 "use strict";
+const RON_GRAMMAR = require('./Grammar');
 
 const base64 =
    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
@@ -314,12 +315,20 @@ class Base64x64 {
         return len ? Base64x64.toString(a.substr(0, len)) : Base64x64.zero;
     }
 
-    static prefix_length (a, b) {
-        const v1 = Base64x64.toString(a), v2 = Base64x64.toString(b);
+    static pad (base) {
+        if (base.length<=5) base += '00000';
+        if (base.length<=7) base += '000';
+        if (base.length<=8) base += '00';
+        if (base.length<=9) base += '0';
+        return base;
+    }
+
+    static prefix_length (base_a, base_b) {
+        if (base_a===base_b) return 10;
+        const a = Base64x64.pad(base_a);
+        const b = Base64x64.pad(base_b);
         let i=0;
-        while (i<v1.length && i<v2.length && v1[i]===v2[i]) i++;
-        if (i===v1.length && i===v2.length)
-            return 10;
+        while (i<10 && a[i]===b[i]) i++;
         return i;
     }
 
@@ -380,29 +389,28 @@ class Base64x64 {
         return new Base64x64(b.toString());
     }
 
-    static compress (val, def) {
+    static toZipString (val, def) {
         const len = Base64x64.prefix_length(val, def);
-        if (len<4) return null;
-        if (len===10) {
-            if (val.length<10) {
-                return val.length < 4 ? '(' : Base64x64.PREFIX_SEPS[val.length-4];
-            } else {
-                return ')' + val[9];
-            }
-        }
+        if (len<4) return val;
+        if (len===10) return "";
         return Base64x64.PREFIX_SEPS[len-4] + val.substr(len);
     }
     
-    static fromString (str, default_value) {
-        const def = default_value || Base64x64.FULL_ZERO;
-        Base64x64.RE_ZIP_INT.lastIndex = 0;
-        const m = Base64x64.RE_ZIP_INT.exec(str);
-        if (!m || m[0].length!==str.length)
-            throw new Error("invalid int");
-        const bracket = m[1], tail = m[2]||'';
-        if (!bracket) return tail;
-        const pref = Base64x64.PREFIX_SEPS.indexOf(bracket)+4;
-        return Base64x64.normalize( Base64x64.full_slice(def, 0, pref) + tail );
+    static fromString (zip_base64_string, def) {
+        const str = zip_base64_string || '';
+        const parts = RON_GRAMMAR.split(str, "ZIP_INT");
+        if (!parts) return Base64x64.INCORRECT;
+        let int = def || '0';
+        if (parts[0]) {
+            const prefix = "([{}])".indexOf(parts[0])+4;
+            int = int.substr(0, prefix);
+            while (int.length<prefix)
+                int += '0';
+        }
+        if (parts[1]) {
+            int = parts[0] ? int + parts[1] : parts[1];
+        }
+        return Base64x64.normalize(int);
     }
 
 
