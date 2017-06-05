@@ -60,10 +60,16 @@ class GCounter extends RDT {
         ));
     }
 
+    inc (i) {
+        this.submit("inc", i);
+    }
+
     static create (value) {
         const i = Number.isInteger(value) ? value : 0;
         const template = new Frame();
-        template.push( GCounter.TYPE_UUID, "1", "1", GCounter.LOC_SUM_UUID, i );
+        const stamp = UUID.as("1-~");
+        template.push( new Op(GCounter.TYPE_UUID, stamp, stamp, UUID.ZERO, Op.atoms(Op.FRAME_VALUE)) );
+        template.push( new Op(GCounter.TYPE_UUID, stamp, stamp, GCounter.LOC_SUM_UUID, Op.atoms(i)) );
         return template;
     }
 

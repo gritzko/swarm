@@ -64,12 +64,23 @@ class Frame {
         this._last_op = op;
     }
 
+    pushAll (i) {
+        for(let op of i)
+            this.push(Op.as(op));
+    }
+
     [Symbol.iterator]() {
         return new Frame.Iterator (this._body);
     }
 
     static fromString (body) {
         return new Frame(body);
+    }
+
+    static fromArray (arr) {
+        const ret = new Frame();
+        arr.forEach( f => ret.pushAll(Frame.as(f)) );
+        return ret;
     }
 
     static as (frame) {

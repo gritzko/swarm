@@ -25,7 +25,7 @@ class RDT extends EventEmitter {
     }
 
     Type () {
-        return this.constructor.TYPE;
+        return this.constructor.TYPE_UUID;
     }
 
     update (new_state_frame, change_frame) {
@@ -38,6 +38,7 @@ class RDT extends EventEmitter {
         }
         if (this._id.isZero())
             this._id = state_i.op.object;
+        state_i.nextOp();
 
         this._update(state_i, change_i);
 
@@ -51,7 +52,13 @@ class RDT extends EventEmitter {
         if (this._id.isZero())
             throw new Error("no state - not writeable");
         const changes = [];
-        changes.push(this.Type(), this.Id(), UUID.ZERO, UUID.fromString(loc), value);
+        changes.push( new Op(
+            this.Type(),
+            this.Id(),
+            UUID.as('1-~'),
+            UUID.fromString(loc),
+            Op.js2ron(value)
+        ));
         this._host.sendFrame (changes);
     }
 
@@ -73,7 +80,7 @@ class RDT extends EventEmitter {
         } else if (old.op.isQuery() || add.op.isQuery()) {
             error = "misplaced query";
         } else if (0===(feat&RDT.FLAGS.OMNIVOROUS) && !old.op.type.eq(add.op.type)) {
-            error = "mismatching type"
+            error = "mismatching type";
         } else if (0===(feat&RDT.FLAGS.OP_BASED) && (old.op.isPlain() || add.op.isPlain())) {
             error = "no op-based";
         } else if (0===(feat&RDT.FLAGS.STATE_BASED) && add.op.isState()) {
@@ -82,7 +89,7 @@ class RDT extends EventEmitter {
             error = "error: " + add.op.value(0);
         }
         if (error) {
-            neu.push(new Op(old.op.type, old.op.object, UUID.ERROR, add.op.event, error));
+            neu.push(new Op(old.op.type, old.op.object, UUID.ERROR, [add.op.event, error]));
             return neu;
         }
         // deal with headers
@@ -100,7 +107,7 @@ class RDT extends EventEmitter {
         if (!add.op.isPlain())
             add.nextOp();
 
-        type._reduce(old, add, neu);
+        type._reduce(old, add, neu); // FIXME errors!!!!!!!!!!
 
         return neu;
     }
@@ -168,7 +175,7 @@ class RDT extends EventEmitter {
 }
 
 
-RDT.TYPE = UUID.ZERO;
+RDT.TYPE_UUID = UUID.ZERO;
 RDT.FLAGS = {
     OP_BASED: 1,
     STATE_BASED: 2,
@@ -181,7 +188,7 @@ RDT.REDUCER_FEATURES =
     RDT.FLAGS.PATCH_BASED |
     RDT.FLAGS.OMNIVOROUS;
 RDT.TYPES = Object.create(null);
-RDT.TYPES[RDT.TYPE] = RDT;
+RDT.TYPES[RDT.TYPE_UUID] = RDT;
 
 module.exports = RDT;
 

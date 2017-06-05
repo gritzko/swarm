@@ -1,10 +1,12 @@
 "use strict";
 const tap = require('tape').test;
+const RON = require('swarm-ron');
 const RDT = require('../src/RDT');
 const GCounter = require('../src/GCounter');
+const Host = require('../src/Host');
 
 
-tap ('rdt.02.A counter', function (t) {
+tap ('rdt.02.A counter - ingress', function (t) {
 
     const i = new GCounter(null);
 
@@ -37,6 +39,23 @@ tap ('rdt.02.A counter', function (t) {
     // TODO close
 
     // TODO create, inc, API
+
+    t.end();
+});
+
+
+tap ('rdt.02.B counter - egress', function (t) {
+
+    const host = new Host(new RON.Clock('test02B', {ClockMode: 'Logical'}));
+
+    const j = host.create(GCounter, 4);
+    t.ok( j.hasState() );
+    t.ok( j.hasIdentity() );
+    j.inc(38);
+
+    t.equal(j.value(), 42);
+    // unreduced frame queue  TODO prereduced
+    t.equal(host.unacked_queue().toString(), '.inc#[1-test02B`!:sum=4@[2:inc=38');
 
     t.end();
 });

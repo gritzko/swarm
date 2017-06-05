@@ -59,10 +59,6 @@ class Op {
         return ret; // FIXME
     }
 
-    raw_value (i) {
-        return this._raw_values[i];
-    }
-
     raw_values () {
         return this._raw_values;
     }

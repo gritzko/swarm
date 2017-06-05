@@ -54,12 +54,10 @@ class Clock {
         this._offset = 0;
         this._minlen = 6;
         this._logical = false;
-        let options = this._options = meta_options || Object.create(null);
-        if (options.Clock) {
-            this._logical = options[Clock.OPTION_CLOCK_MODE]==='Logical';
-        }
+        const options = this._options = meta_options || Object.create(null);
+        this._logical = options[Clock.OPTION_CLOCK_MODE]==='Logical';
         if (options.ClockLen) {
-            this._minlen = options[Clock.OPTION_CLOCK_LENGTH];
+            this._minlen = options[Clock.OPTION_CLOCK_LENGTH]; // TODO refac
         }
         if (options.ClockOffst) {
             this._offset = parseInt(options.ClockOffst);
@@ -113,6 +111,6 @@ class Clock {
 }
 
 Clock.OPTION_CLOCK_LENGTH = "ClockLen";
-Clock.OPTION_CLOCK_MODE = "Clock";
+Clock.OPTION_CLOCK_MODE = "ClockMode";
 
 module.exports = Clock;
