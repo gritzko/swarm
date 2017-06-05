@@ -12,7 +12,7 @@ const RON_GRAMMAR = new Grammar({
 
     INT_ATOM:   /[+-]?\d{1,17}/,
     STRING_ATOM:/"(\\"|[^"])*"/,
-    FLOAT_ATOM: /[+-]?\d{1,19}(\.\d{1,19})?([Ee][+-]?\d{1,3})?/,
+    FLOAT_ATOM: /[+-]?\d{0,19}\.\d{1,19}([Ee][+-]?\d{1,3})?/,
     UUID_ATOM:  ",?ZIP_UUID+",
     FRAME_ATOM: "!",
     QUERY_ATOM: "?",

@@ -4,7 +4,7 @@ const UID = require("../src/UUID");
 const tap = require('tape').test;
 
 
-tap ('protocol.01.A Lamport timestamp', function(tap){
+tap ('ron.01.A Lamport timestamp', function(tap){
 
     var stamp1 = new UID('0');
     tap.equal(stamp1.isZero(), true, 'zero OK');
@@ -51,7 +51,7 @@ tap ('protocol.01.A Lamport timestamp', function(tap){
 });
 
 
-tap ('protocol.01.B replica tree', function (t) {
+tap ('ron.01.B replica tree', function (t) {
 
     // assuming 1243 formula for replica UIDs
     // https://gritzko.gitbooks.io/swarm-the-protocol/content/replica.html
@@ -81,7 +81,7 @@ tap ('protocol.01.B replica tree', function (t) {
     t.end();
 });
 
-tap ('protocol.01.C order', function (tap) {
+tap ('ron.01.C order', function (tap) {
 
     tap.ok(UID.as('12345-src').eq('123450-src'));
     tap.ok(UID.as('12345-src').ge('123450-src'));
@@ -101,7 +101,7 @@ tap ('protocol.01.C order', function (tap) {
 });
 
 
-tap ('protocol.01.D conversions and checks', function (tap) {
+tap ('ron.01.D conversions and checks', function (tap) {
 
     tap.ok( UID.is('12345ABCDE-originofop') );
     tap.ok( UID.is('12345ABCDE') );
@@ -120,7 +120,7 @@ tap ('protocol.01.D conversions and checks', function (tap) {
 
 });
 
-tap ('protocol.01.E zip', function (tap) {
+tap ('ron.01.E zip', function (tap) {
 
     const one = UID.fromString("0000000001-origin");
     const two = UID.fromString("0000000002-origin");

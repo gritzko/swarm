@@ -3,7 +3,7 @@ const tape = require('tape').test;
 const RON_GRAMMAR = require('../src/Grammar');
 
 
-tape ('protocol.01.A parse RON', function (tap) {
+tape ('ron.01.A parse RON', function (tap) {
 
     tap.ok( RON_GRAMMAR.is( "time01", "INT" ) );
     tap.ok( RON_GRAMMAR.is( "{1", "ZIP_INT" ) );
@@ -60,9 +60,9 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.notOk( RON_GRAMMAR.is( '"open', 'STRING_ATOM' ) );
 
     tap.ok( RON_GRAMMAR.is( "3.141592", "FLOAT_ATOM" ) );
-    tap.ok( RON_GRAMMAR.is( "-1", "FLOAT_ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "-.1", "FLOAT_ATOM" ) );
     tap.ok( RON_GRAMMAR.is( "1.024e+3", "FLOAT_ATOM" ) );
-    tap.ok( RON_GRAMMAR.is( "1e6", "FLOAT_ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "1.0e6", "FLOAT_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "1e", "FLOAT_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "e1", "FLOAT_ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "-e", "FLOAT_ATOM" ) );
@@ -88,7 +88,7 @@ tape ('protocol.01.A parse RON', function (tap) {
     tap.ok( RON_GRAMMAR.is( ">0", "ATOM" ), "null pointer" );
     tap.ok( RON_GRAMMAR.is( ">1-2{}", "ATOM" ) );
     tap.ok( RON_GRAMMAR.is( "^3.1415", "ATOM" ) );
-    tap.ok( RON_GRAMMAR.is( "^1", "ATOM" ) );
+    tap.ok( RON_GRAMMAR.is( "^.00000001", "ATOM" ) );
     tap.ok( RON_GRAMMAR.is( '"string"', "ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( ">3.1415", "ATOM" ) );
     tap.notOk( RON_GRAMMAR.is( "=3.1415", "ATOM" ) );

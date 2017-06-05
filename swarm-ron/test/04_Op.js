@@ -1,7 +1,7 @@
 "use strict";
 const tape = require('tape').test;
 const Op = require("../src/Op");
-const UID = require("../src/UUID");
+const UUID = require("../src/UUID");
 
 
 tape ('protocol.04.A parse ops', function (tap) {
@@ -16,7 +16,7 @@ tape ('protocol.04.A parse ops', function (tap) {
     tap.equals(first.int(0), "lww");
     tap.equals(first.int(1), "0");
     tap.equals(first.int(2), "1D4ICC");
-    tap.ok(first.object.equals(UID.as("1D4ICC-XU5eRJ")));
+    tap.ok(first.object.equals(UUID.as("1D4ICC-XU5eRJ")));
     tap.equals(first.toString(), ".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ!");
 
     const second = Op.fromString('.lww#1D4ICC-XU5eRJ@`{E:keyA"value\\u0041"');
@@ -37,6 +37,32 @@ tape ('protocol.04.A parse ops', function (tap) {
         ['"value\\u0041"']
     );
     tap.equals(second.toString(), direct.toString());
+
+    tap.end();
+
+});
+
+
+tape ('protocol.04.B parse values', function (tap) {
+
+    const op = Op.as(".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ=1^1.2>3");
+
+    tap.equal(op.values().length, 3);
+    tap.equal(op.value(0), 1);
+    tap.equal(op.value(1), 1.2);
+    tap.equal(op.value(2)+'', '3');
+
+    const clone = new Op(
+        op.type, op.object, op.event, op.location,
+        null, 1, 1.2, UUID.as('3')
+    );
+    const zip = clone.toString();
+    tap.equal(zip, ".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ=1^1.2>3");
+    const unparsed = new Op(
+        op.type, op.object, op.event, op.location,
+        "=1^1.2000>3" // values are forwarded verbatim
+    );
+    tap.equal(unparsed.toString(), zip.replace("1.2", "1.2000"));
 
     tap.end();
 

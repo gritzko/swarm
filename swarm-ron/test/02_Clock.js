@@ -4,7 +4,7 @@ var Stamp = require('../src/UUID');
 var Clock = require('../src/Clock');
 
 
-tap ('protocol.02.A Logical clocks API', function(tap) {
+tap ('ron.02.A Logical clocks API', function(tap) {
 
     // set clock to around epoch (1 Jan 2010)
     var clock = new Clock('leslie', {Clock: 'Logical', ClockLen: 6});
@@ -39,7 +39,7 @@ tap ('protocol.02.A Logical clocks API', function(tap) {
 
 
 
-tap ('protocol.02.B SecondPreciseClock sequence test', function (tap) {
+tap ('ron.02.B SecondPreciseClock sequence test', function (tap) {
     var clock = new Clock('gritzko');
     tap.plan(100);
     var ts1 = clock.issueTimestamp(), ts2, i=0;

@@ -9,20 +9,37 @@ const UUID = require('./UUID');
  * */
 class Op {
 
-    constructor(type, object, event, location, value_strings) {
+    constructor(type, object, event, location, value_string, ...values) {
         this.type = UUID.as(type);
         this.object = UUID.as(object);
         this.event = UUID.as(event);
         this.location = UUID.as(location);
-        this._raw_values = value_strings || ['?'];
+        this._raw_values = value_string || values.map(Op.js2ron).join('') || '?';
         // values should be passed around *verbatim*, so the
         // serialized form is the canonic form; parsed
         // values are platform/environment dependent.
-        this._values = null;
+        this._values = values && values.length ? values : null;
     }
 
     _parse_values () {
-        this._values = this._raw_values.map(Op.ron2js);
+        Op.RE_ATOM_G.lastIndex = 0;
+        const v = this._values = [];
+        let m = 0;
+        while ( m = Op.RE_ATOM_G.exec(this._raw_values) ) {
+            if (m[1]) {
+                v.push(parseInt(m[1]));
+            } else if (m[2]) {
+                v.push(JSON.parse(m[2]));
+            } else if (m[3]) {
+                v.push(parseFloat(m[3]));
+            } else if (m[4]) {
+                v.push(UUID.fromString(m[4])); // FIXME Vector
+            } else if (m[5]) {
+                v.push(Op.FRAME_VALUE);
+            } else if (m[6]) {
+                v.push(Op.QUERY_VALUE);
+            }
+        }
     }
 
     values () {
@@ -123,7 +140,7 @@ class Op {
                 ret += this.int(i+1);
             }
         }
-        ret += this._raw_values.join('');
+        ret += this._raw_values;
         return ret;
     }
 
@@ -193,5 +210,6 @@ Op.RE_ZIP_INT_G = new RegExp(Op.RS_ZIP_INT, 'g');
 Op.RE_OP_G = new RegExp(Op.RS_OP, 'g');
 
 Op.ZERO = new Op(UUID.ZERO, UUID.ZERO, UUID.ZERO, UUID.ZERO, Op.FRAME_VALUE);
+Op.RE_ATOM_G = new RegExp("\\s*"+RON_GRAMMAR.pattern("ATOM"), "mg");
 
 module.exports = Op;

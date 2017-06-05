@@ -6,7 +6,7 @@ const UUIDVector = require('../src/UUIDVector');
 
 // TODO invalid inputs
 
-tap ('protocol.07.A builder', function(tap) {
+tap ('ron.07.A builder', function(tap) {
 
     const b = new UUIDVector();
     b.push(UUID.ZERO);
@@ -20,7 +20,7 @@ tap ('protocol.07.A builder', function(tap) {
     tap.end();
 });
 
-tap ('protocol.07.B to/from an array 1', function(tap) {
+tap ('ron.07.B to/from an array 1', function(tap) {
 
     const id_array = [
         "ABCDEF-author",
@@ -46,11 +46,11 @@ tap ('protocol.07.B to/from an array 1', function(tap) {
 
 });
 
-// tap ('protocol.07.C splice', function(tap) {
+// tap ('ron.07.C splice', function(tap) {
 //
 // });
 
-tap('protocol.08.D to/from an array 2', function (tap) {        //   :)
+tap('ron.08.D to/from an array 2', function (tap) {        //   :)
 
     const id_array = [
         'stamp-author',
@@ -76,7 +76,7 @@ tap('protocol.08.D to/from an array 2', function (tap) {        //   :)
 });
 
 
-tap ('protocol.07.E VV basics', function (tap) {
+tap ('ron.07.E VV basics', function (tap) {
 
     // This test is so old! Nikita Kardakov is still on the list :)
     var old = '7AM0f-gritzko,0longago-krdkv,7AMTc-aleksisha,some-garbage';
@@ -112,7 +112,7 @@ tap ('protocol.07.E VV basics', function (tap) {
 });
 
 
-tap ('protocol.07.F zero vector', function (tap) {
+tap ('ron.07.F zero vector', function (tap) {
     var empty = new UUIDVector();
     tap.equal(empty.toString(), '', 'empty vector is ""');
     tap.ok(empty.covers('0'), '@0 covers 0');

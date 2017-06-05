@@ -4,7 +4,7 @@ const Op = require("../src/Op");
 const UID = require("../src/UUID");
 const Frame = require("../src/Frame");
 
-tape ('protocol.05.A parse/iterate a frame', function (tap) {
+tape ('ron.05.A parse/iterate a frame', function (tap) {
     const frame = Frame.fromString(
         '.lww#1D4ICC-XU5eRJ@`{E! :keyA"valueA" @{1:keyB"valueB"'
     );
@@ -23,7 +23,7 @@ tape ('protocol.05.A parse/iterate a frame', function (tap) {
 });
 
 
-tape ('protocol.05.B append to a frame', function (tap) {
+tape ('ron.05.B append to a frame', function (tap) {
     const frame = new Frame("", Frame.ZIP_OPTIONS.ALLSET);
     frame.push('.lww#1D4ICC-XU5eRJ@`{E!');
     frame.push('.lww#1D4ICC-XU5eRJ@`{E:keyA"valueA"');
@@ -33,5 +33,5 @@ tape ('protocol.05.B append to a frame', function (tap) {
 });
 
 
-// tape ('protocol.05.C compression modes', function (tap) {
+// tape ('ron.05.C compression modes', function (tap) {
 // });
