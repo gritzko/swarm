@@ -1,8 +1,8 @@
-BIN = ../node_modules/.bin
+export PATH := ./node_modules/.bin:../node_modules/.bin:$(PATH)
 .PHONY: install test clean
 
 test:
-	@if [ -d "test" ]; then $(BIN)/tape --harmony $(TAP_PARAMS) test/??_*.js | tap-diff else true; fi;
+	@if [ -d "test" ]; then tape --harmony $(TAP_PARAMS) test/??_*.js | tap-diff else true; fi;
 
 release:
 	npm version patch
