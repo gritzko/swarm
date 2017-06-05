@@ -179,6 +179,18 @@ class Iterator {
         return this.op;
     }
 
+    nextFrame () {
+        const at = this.op;
+        const from = this._offset;
+        let till = from;
+        do {
+            till = this._offset;
+            this.nextOp();
+        } while(this.op.object.eq(at.object));
+        const ret = at.toString() + this._body.substring(from, till);
+        return ret;
+    }
+
     next () {
         const ret = {
             done: this.op.isError(),

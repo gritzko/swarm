@@ -62,20 +62,6 @@ class Host {
         }
     }
 
-    _reduce_frame (state_frame, change_frame) {
-        const state = Frame.as(new_state_frame);
-        const change = Frame.as(change_frame); // could be null
-
-        // TODO other frame sanity checks
-        const reduced = new Frame();
-        // check headers <<< copy
-        const error = type.reduce(state, changes, new_state);
-        if (error) {
-        }
-        rdt.update(new_state, changes);
-        return reduced;
-    }
-
     fill (template_uuid, uuids) {
         if (template_uuid.origin!==RON.UUID.never)
             return template_uuid;

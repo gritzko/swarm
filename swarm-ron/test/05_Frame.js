@@ -3,6 +3,7 @@ const tape = require('tape').test;
 const Op = require("../src/Op");
 const UID = require("../src/UUID");
 const Frame = require("../src/Frame");
+const Iterator = Frame.Iterator;
 
 tape ('ron.05.A parse/iterate a frame', function (tap) {
     const frame = Frame.fromString(
@@ -32,6 +33,23 @@ tape ('ron.05.B append to a frame', function (tap) {
     tap.end();
 });
 
+tape ('ron.05.C frame splitting', function (tap) {
+
+    const multiframe = Iterator.as(".lww#A@2:3!:4=5#B@b:6>7");
+
+    tap.ok(!multiframe.end());
+
+    const frame1 = multiframe.nextFrame();
+    tap.equal(frame1.toString(), ".lww#A@2:3!:4=5");
+    tap.ok(!multiframe.end());
+
+    const frame2 = multiframe.nextFrame();
+    tap.equal(frame2+'', ".lww#B@b:6>7");
+    tap.ok(multiframe.end());
+
+    tap.end();
+
+});
 
 // tape ('ron.05.C compression modes', function (tap) {
 // });
