@@ -27,7 +27,7 @@ tape ('ron.05.B append to a frame', function (tap) {
     const frame = new Frame("", Frame.ZIP_OPTIONS.ALLSET);
     frame.push('.lww#1D4ICC-XU5eRJ@`{E!');
     frame.push('.lww#1D4ICC-XU5eRJ@`{E:keyA"valueA"');
-    frame.push('.lww#1D4ICC-XU5eRJ@`{1:keyB"valueB"');
+    frame.push(new Op('lww', '1D4ICC-XU5eRJ', '1D4ICC1-XU5eRJ', 'keyB', null, "valueB"));
     tap.equals(frame.toString(), '.lww#1D4ICC-XU5eRJ`{E!:keyA"valueA"@{1:keyB"valueB"');
     tap.end();
 });

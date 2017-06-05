@@ -59,7 +59,7 @@ class Frame {
         }
 
         this._body += buf;
-        this._body += op.raw_values().join('');
+        this._body += op.raw_values();
 
         this._last_op = op;
     }
@@ -152,9 +152,7 @@ class Iterator {
             uids.push(prev_uid);
         }
 
-        const values = [m[5]];  // FIXME !!!!!!!! WRONG!!!!
-
-        this.op = new Op(uids[0], uids[1], uids[2], uids[3], values);
+        this.op = new Op(uids[0], uids[1], uids[2], uids[3], m[5]);
 
         this._index++;
         // FIXME sanity checks
