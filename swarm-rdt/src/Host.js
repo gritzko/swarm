@@ -14,6 +14,7 @@ class Host {
         this._states = Object.create(null); // { id : frame_string }
         this._rdts = Object.create(null);
         this._log = [];
+        this._upstream = null;
     }
 
 
@@ -26,8 +27,15 @@ class Host {
         return rdt;
     }
 
-    get (uuid) {
-        return this._rdts[uuid];
+    get (class_fn, uuid) {
+        if (uuid in this._rdts)
+            return this._rdts[uuid];
+        if (uuid in this._states) {
+            const rdt = this._rdts[uuid] = new class_fn(this);
+            rdt.update(this._states[uuid], null);
+            return rdt;
+        }
+        // else subscribe
     }
 
     getState (uuid) {
@@ -40,7 +48,8 @@ class Host {
             const op = c.op;
             const uuid = op.object;
             if (op.isState()) {
-                this._states[uuid] = op; // FIXME overwrite? merge?
+                const state_frame = c.nextFrame();
+                this._states[uuid] = state_frame; // FIXME overwrite? merge?
                 c.nextOp();
             } else if (op.isPlain()) {
                 const old = this._states[uuid];
@@ -52,7 +61,7 @@ class Host {
                     c.nextOp();
                 }
             } else {
-                console.warn("unlear: "+op);
+                console.warn("unclear: "+op);
                 c.nextOp();
             }
             const rdt = this._rdts[uuid];
@@ -87,11 +96,21 @@ class Host {
         }
         this._log.push(changes);
         this.receiveFrame (changes);
+        if (this._upstream)
+            this._upstream.write(changes.toString()+'\n\n');
         return changes;
     }
 
     unacked_queue () {
         return  Frame.fromArray(this._log);
+    }
+
+    connect (upstream) {
+        // TODO unsub/ sub, sub modes
+        this._upstream = upstream;
+        upstream.on('data',
+            data => this.receiveFrame(Frame.as(data)));
+        // TODO err/ disconn/ reconn
     }
 
 }
