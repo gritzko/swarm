@@ -106,6 +106,10 @@ class Op {
         return this.event.eq(UUID.ERROR);
     }
 
+    isPlain () {
+        return !this.isQuery() && !this.isState();
+    }
+
     toString () {
         let ret = '';
         for(let u=0; u<4; u++) {

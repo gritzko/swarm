@@ -25,16 +25,16 @@ class Frame {
 
         let buf = '';
         const opts = this._options;
-
-        if (opts.spaceops && this._body.length) {
-            buf += ' ';
-        }
+        //
+        // if (opts.spaceops && this._body.length) {
+        //     buf += ' ';
+        // }
         let need_uid_sep = true;
 
         for(let u=0; u<4; u++) {
             const uid = op.uuid(u);
             let last_uid = this._last_op.uuid(u);
-            if (uid.eq(last_uid)) {
+            if (uid.eq(last_uid) && !(!buf && u===3)) {
                 need_uid_sep = true;
                 continue;
             }
@@ -111,6 +111,10 @@ class Iterator {
         if (!something) return new Iterator('');
         if (something.constructor===Iterator) return something;
         return new Iterator(something.toString());
+    }
+
+    end () {
+        return this.op.isError();
     }
 
     nextOp () {
