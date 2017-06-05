@@ -9,16 +9,16 @@ const UUID = require('./UUID');
  * */
 class Op {
 
-    constructor(type, object, event, location, value_string, ...values) {
+    constructor(type, object, event, location, value_string) {
         this.type = UUID.as(type);
         this.object = UUID.as(object);
         this.event = UUID.as(event);
         this.location = UUID.as(location);
-        this._raw_values = value_string || values.map(Op.js2ron).join('') || '?';
+        this._raw_values = value_string || '?';
         // values should be passed around *verbatim*, so the
         // serialized form is the canonic form; parsed
         // values are platform/environment dependent.
-        this._values = values && values.length ? values : null;
+        this._values = null;
     }
 
     _parse_values () {
@@ -155,6 +155,18 @@ class Op {
                 if (val===Op.QUERY_VALUE) return Op.QUERY_SEP;
                 throw new Error("unsupported value type");
         }
+    }
+    
+    static atoms (v1,v2,v3,v4,v5,v6,v7,v8) {
+        let ret = Op.js2ron(v1);
+        if (v2!==undefined) ret += Op.js2ron(v2); else return ret;
+        if (v3!==undefined) ret += Op.js2ron(v3); else return ret;
+        if (v4!==undefined) ret += Op.js2ron(v4); else return ret;
+        if (v5!==undefined) ret += Op.js2ron(v5); else return ret;
+        if (v6!==undefined) ret += Op.js2ron(v6); else return ret;
+        if (v7!==undefined) ret += Op.js2ron(v7); else return ret;
+        if (v8!==undefined) ret += Op.js2ron(v8);
+        return ret;
     }
     
     static ron2js (str) {

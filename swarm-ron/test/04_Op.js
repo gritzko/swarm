@@ -34,7 +34,7 @@ tape ('protocol.04.A parse ops', function (tap) {
 
     const direct = new Op(
         "lww", "1D4ICC-XU5eRJ", "1D4ICCE-XU5eRJ", "keyA",
-        ['"value\\u0041"']
+        '"value\\u0041"'
     );
     tap.equals(second.toString(), direct.toString());
 
@@ -54,7 +54,7 @@ tape ('protocol.04.B parse values', function (tap) {
 
     const clone = new Op(
         op.type, op.object, op.event, op.location,
-        null, 1, 1.2, UUID.as('3')
+        Op.atoms(1, 1.2, UUID.as('3'))
     );
     const zip = clone.toString();
     tap.equal(zip, ".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ=1^1.2>3");
