@@ -49,6 +49,7 @@ class Host {
                     this._states[uuid] = neu;
                 } else {
                     console.warn("unknown: " + op);
+                    c.nextOp();
                 }
             } else {
                 console.warn("unlear: "+op);

@@ -51,7 +51,7 @@ class RDT extends EventEmitter {
             throw new Error("no host - not writable");
         if (this._id.isZero())
             throw new Error("no state - not writeable");
-        const changes = [];
+        const changes = new Frame();
         changes.push( new Op(
             this.Type(),
             this.Id(),

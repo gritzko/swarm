@@ -97,7 +97,7 @@ class Op {
             prev = parts[1] ? UUID.fromString(parts[1], parts[1][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
             prev = parts[2] ? UUID.fromString(parts[2], parts[2][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
             prev = parts[3] ? UUID.fromString(parts[3], parts[3][0]==='`'?prev:UUID.ZERO) : UUID.ZERO,
-            parts[4]
+            parts[4].join('')
         ) : null;
     }
 

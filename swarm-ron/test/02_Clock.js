@@ -7,7 +7,7 @@ var Clock = require('../src/Clock');
 tap ('ron.02.A Logical clocks API', function(tap) {
 
     // set clock to around epoch (1 Jan 2010)
-    var clock = new Clock('leslie', {Clock: 'Logical', ClockLen: 6});
+    var clock = new Clock('leslie', {ClockMode: 'Logical', ClockLen: 6});
 
     var ts1 = clock.issueTimestamp();
     tap.equal(ts1.value.substr(0,6), '000001');

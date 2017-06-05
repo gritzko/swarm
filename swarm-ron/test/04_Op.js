@@ -4,7 +4,7 @@ const Op = require("../src/Op");
 const UUID = require("../src/UUID");
 
 
-tape ('protocol.04.A parse ops', function (tap) {
+tape ('ron.04.A parse ops', function (tap) {
 
     const frame = '.lww#1D4ICC-XU5eRJ@`{E!';
 
@@ -23,13 +23,13 @@ tape ('protocol.04.A parse ops', function (tap) {
     tap.ok(first.object.eq(second.object));
     tap.ok(first.event.eq(second.event));
     tap.deepEqual(second.values(), ["valueA"]);
-    tap.equal(second.raw_value(0), '"value\\u0041"');
+    tap.equal(second.raw_values(), '"value\\u0041"');
     tap.equal(second.int(6), "keyA");
 
     const third = Op.fromString('#1D4ICC1@`{2:keyB^3.141592e0');
     tap.deepEqual(third.int(4), "1D4ICC2");
     tap.deepEqual(third.values(), [3.141592]);
-    tap.equal(third.raw_value(0), '^3.141592e0');
+    tap.equal(third.raw_values(), '^3.141592e0');
     tap.equal(third.int(6), "keyB");
 
     const direct = new Op(
@@ -43,7 +43,7 @@ tape ('protocol.04.A parse ops', function (tap) {
 });
 
 
-tape ('protocol.04.B parse values', function (tap) {
+tape ('ron.04.B parse values', function (tap) {
 
     const op = Op.as(".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ=1^1.2>3");
 
