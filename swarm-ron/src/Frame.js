@@ -23,51 +23,12 @@ class Frame {
     push (new_op) {
         const op = Op.as(new_op);
 
-        let buf = '';
-        const opts = this._options;
         //
         // if (opts.spaceops && this._body.length) {
         //     buf += ' ';
         // }
-        let last=-2, had_origin=false;
 
-        for(let u=0; u<4; u++) {
-            const uid = op.uuid(u);
-            let last_uid = this._last_op.uuid(u);
-            if (uid.eq(last_uid) && !(!buf && u===3)) {
-                continue;
-            }
-
-            let zip, def, have_prefix=false;
-
-            for(let l=0; l<4; l++) {
-                const redef = l===u ? '' : "`\\|/"[l];
-                def = l>0 ? this._last_op.uuid(l) : (u>0?op.uuid(u-1):UUID.ZERO);
-                const rezip = redef + uid.toZipString(def);
-                if (zip===undefined || rezip.length<zip.length) {
-                    zip = rezip;
-                    have_prefix = redef.length>0 ||
-                        (zip.length>0 && Base.PREFIX_SEPS.indexOf(zip[0])!==-1);
-                }
-            }
-
-            // reasons to add separator:
-            // 1. uuid is long anyway
-            // 2. skipped uuid
-            // 3. skipped origin
-            // 4. non-zipped value
-            if (last<u-1 || !had_origin || !have_prefix || zip.length>=10)
-                buf += Op.UID_SEPS[u];
-
-            buf += zip;
-
-            last = u;
-            had_origin = uid.origin!==def.origin;
-
-        }
-
-        this._body += buf;
-        this._body += op.raw_values();
+        this._body += op.toZipString(this._last_op);
 
         this._last_op = op;
     }

@@ -127,9 +127,13 @@ class Op {
         let ret = '';
         for(let u=0; u<4; u++) {
             const i = u<<1;
-            if (this.int(i)==='0' && this.int(i+1)==='0')
+            if (this.int(i)==='0' && this.int(i+1)==='0') // FIXME unify with Frame?
                 continue;
             ret += Op.UID_SEPS[u];
+            if (u && this.uuid(u).eq(this.uuid(u-1))) {
+                ret += '`';
+                continue;
+            }
             ret += this.int(i);
             if (this.int(i+1)!=='0') {
                 ret += UUID.TIMESTAMP_SEPARATOR;
@@ -138,6 +142,50 @@ class Op {
         }
         ret += this._raw_values;
         return ret;
+    }
+
+    toZipString (last_op) {
+        const last = last_op ? Op.as(last_op) : Op.ZERO;
+        let buf = '';
+        let last_uuid=-2, had_origin=false;
+
+        for(let u=0; u<4; u++) {
+            const uid = this.uuid(u);
+            let last_uid = last.uuid(u);
+            if (uid.eq(last_uid) && !(!buf && u===3)) {
+                continue;
+            }
+
+            let zip, def, have_prefix=false;
+
+            for(let l=0; l<4; l++) {
+                const redef = l===u ? '' : "`\\|/"[l];
+                def = l>0 ? last.uuid(l) : (u>0?this.uuid(u-1):UUID.ZERO);
+                const rezip = redef + uid.toZipString(def);
+                if (zip===undefined || rezip.length<zip.length) {
+                    zip = rezip;
+                    have_prefix = redef.length>0 ||
+                        (zip.length>0 && Base64x64.PREFIX_SEPS.indexOf(zip[0])!==-1);
+                }
+            }
+
+            // reasons to add separator:
+            // 1. uuid is long anyway
+            // 2. skipped uuid
+            // 3. skipped origin
+            // 4. non-zipped value
+            if (last_uuid<u-1 || !had_origin || !have_prefix || zip.length>=10)
+                buf += Op.UID_SEPS[u];
+
+            buf += zip;
+
+            last_uuid = u;
+            had_origin = uid.origin!==def.origin;
+
+        }
+
+        return buf + this.raw_values();
+
     }
 
     static js2ron (val) {
