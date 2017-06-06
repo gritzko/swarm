@@ -17,9 +17,9 @@ tape ('ron.04.A parse ops', function (tap) {
     tap.equals(first.int(1), "0");
     tap.equals(first.int(2), "1D4ICC");
     tap.ok(first.object.equals(UUID.as("1D4ICC-XU5eRJ")));
-    tap.equals(first.toString(), ".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ!");
+    tap.equals(first.toString(), ".lww#1D4ICC-XU5eRJ`{E!");
 
-    const second = Op.fromString('.lww#1D4ICC-XU5eRJ@`{E:keyA"value\\u0041"');
+    const second = Op.fromString('.lww#1D4ICC-XU5eRJ`{E:keyA"value\\u0041"');
     tap.ok(first.object.eq(second.object));
     tap.ok(first.event.eq(second.event));
     tap.deepEqual(second.values(), ["valueA"]);
@@ -57,7 +57,7 @@ tape ('ron.04.B parse values', function (tap) {
         Op.atoms(1, 1.2, UUID.as('3'))
     );
     const zip = clone.toString();
-    tap.equal(zip, ".lww#1D4ICC-XU5eRJ@1D4ICCE-XU5eRJ=1^1.2>3");
+    tap.equal(zip, ".lww#1D4ICC-XU5eRJ`{E=1^1.2>3");
     const unparsed = new Op(
         op.type, op.object, op.event, op.location,
         "=1^1.2000>3" // values are forwarded verbatim

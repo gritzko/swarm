@@ -124,24 +124,7 @@ class Op {
     }
 
     toString () {
-        let ret = '';
-        for(let u=0; u<4; u++) {
-            const i = u<<1;
-            if (this.int(i)==='0' && this.int(i+1)==='0') // FIXME unify with Frame?
-                continue;
-            ret += Op.UID_SEPS[u];
-            if (u && this.uuid(u).eq(this.uuid(u-1))) {
-                ret += '`';
-                continue;
-            }
-            ret += this.int(i);
-            if (this.int(i+1)!=='0') {
-                ret += UUID.TIMESTAMP_SEPARATOR;
-                ret += this.int(i+1);
-            }
-        }
-        ret += this._raw_values;
-        return ret;
+        return this.toZipString(Op.ZERO);
     }
 
     toZipString (last_op) {
