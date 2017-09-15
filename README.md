@@ -56,25 +56,26 @@ Open console, start playing:
 ## Code examples
 
 
-    var sync = require('swarm-syncable');
-    var Model = sync.Model;
-    var Host = sync.Host;
+```js
+var sync = require('swarm-syncable');
+var Model = sync.Model;
+var Host = sync.Host;
 
-    // var replica = new Replica({upstream: 'ws://localhost:8000'});
-    // a replica manages logs and synchronizes to the upstream replica
-    // in this example, we'll create a replica implicitly through Host
+// var replica = new Replica({upstream: 'ws://localhost:8000'});
+// a replica manages logs and synchronizes to the upstream replica
+// in this example, we'll create a replica implicitly through Host
 
-    // manages objects
-    new Host({
-        replica: true,
-        upstream: 'ws://localhost:8000'
-    });
-    var mouse = new swarm.Model({x:1, y:2});
-    mouse.on('change', function() {
-        console.log('mouse x:', mouse.x, 'y:', mouse.y);
-    });
-    mouse.set({x:3, y:4});
-
+// manages objects
+new Host({
+    replica: true,
+    upstream: 'ws://localhost:8000'
+});
+var mouse = new swarm.Model({x:1, y:2});
+mouse.on('change', function() {
+    console.log('mouse x:', mouse.x, 'y:', mouse.y);
+});
+mouse.set({x:3, y:4});
+```
 
 ## How it works
 
