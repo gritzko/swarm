@@ -125,9 +125,12 @@ tap ('ron.01.E zip', function (tap) {
     const one = UID.fromString("0000000001-origin");
     const two = UID.fromString("0000000002-origin");
     const three = UID.fromString("0000000003-orig");
+    const four = UID.fromString("0000000001-original");
     tap.equal(one.toZipString(two), ")1");
     tap.equal(one.toZipString(one), "");
     tap.equal(three.toZipString(two), ")3(");
+    tap.equal(four.toZipString(one), "-{al"); // REGRESSION: "{al"
+
     tap.end();
 
 });
