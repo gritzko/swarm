@@ -140,6 +140,7 @@ class Op {
             }
 
             let zip, def, have_prefix=false;
+	    let have_origin=false;
 
             for(let l=0; l<4; l++) {
                 const redef = l===u ? '' : "`\\|/"[l];
@@ -149,6 +150,7 @@ class Op {
                     zip = rezip;
                     have_prefix = redef.length>0 ||
                         (zip.length>0 && Base64x64.PREFIX_SEPS.indexOf(zip[0])!==-1);
+		    have_origin = uid.origin!==def.origin;
                 }
             }
 
@@ -163,7 +165,7 @@ class Op {
             buf += zip;
 
             last_uuid = u;
-            had_origin = uid.origin!==def.origin;
+            had_origin = have_origin;
 
         }
 

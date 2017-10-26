@@ -67,3 +67,28 @@ tape ('ron.04.B parse values', function (tap) {
     tap.end();
 
 });
+
+
+tape ('ron.04.A compress ops', function (tap) {
+
+    const op = new Op("lww", "a-1", "cdefgh-3", "g-8", "=5");
+    const lop1 = new Op("lww", "b-1", "cdef-3", "g-1", "=10");
+    const lop2 = new Op("lww", "b-1", "cdef-3", "g-9", "=10");
+
+    const op1 = op.toZipString(lop1);
+    tap.equal(op1, '#a@(gh:-8=5');
+
+    const op2 = op.toZipString(lop2);
+    // BUG: '#a(gh:-8=5'
+    tap.equal(op2, '#a@(gh:-8=5');
+
+    const dec_op1 = Op.fromZipString(op1, lop1).toString()
+    tap.equal(dec_op1, '.lww#a-1@cdefgh-3:g-8=5');
+
+    const dec_op2 = Op.fromZipString(op2, lop2).toString()
+    // BUG: '.lww#a-1000gh@cdef-3:g-8=5'
+    tap.equal(dec_op1, dec_op2);  // Invariant.
+
+    tap.end();
+
+});
