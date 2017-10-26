@@ -105,36 +105,14 @@ class Iterator {
             return;
         }
 
-        const re = Iterator.RE_OP;
-        re.lastIndex = this._offset;
-        const m = re.exec(this._body);
-        if (!m || !m[0] || m.index!==this._offset) {
-            this.op = Iterator.ERROR_BAD_OP;
+	let off = { offset: this._offset }
+	let op = Op.fromZipString(this._body, this.op, off);
+	if (!op) {
+	    this.op = Iterator.ERROR_BAD_OP;
             return;
         }
-        this._offset += m[0].length;
-
-        const seps = "`\\|/";
-        const defaults = [this.op.type, this.op.object, this.op.event, this.op.location];
-        const uids = [];
-        let prev_uid = UUID.ZERO;
-        for(let u=0; u<4; u++) {
-            const uid = m[u+1];
-            let def = defaults[u];
-            if (!uid) {
-                uids.push(def);
-                continue;
-            }
-            const s = seps.indexOf(uid[0]);
-            if (s!==-1) {
-                def = s ? defaults[s] : prev_uid;
-            }
-            prev_uid = UUID.fromString(uid, def);
-            uids.push(prev_uid);
-        }
-
-        this.op = new Op(uids[0], uids[1], uids[2], uids[3], m[5]);
-
+	this._offset = off.offset;
+	this.op = op;
         this._index++;
         // FIXME sanity checks
         return this.op;
@@ -164,7 +142,6 @@ class Iterator {
 
 }
 Frame.Iterator = Frame.Iterator = Iterator;
-Iterator.RE_OP = new RegExp("\\s*"+RON_GRAMMAR.pattern("ZIP_OP"), "mg");
 Iterator.ERROR_END_OP = new Op(UUID.ERROR, UUID.ERROR, UUID.ERROR, UUID.ERROR, "END");
 Iterator.ERROR_BAD_OP = new Op(UUID.ERROR, UUID.ERROR, UUID.ERROR, UUID.ERROR, "BAD SYNTAX");
 
