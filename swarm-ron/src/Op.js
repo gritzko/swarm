@@ -140,6 +140,7 @@ class Op {
             }
 
             let zip, def, have_prefix=false;
+	    let have_origin=false;
 
             for(let l=0; l<4; l++) {
                 const redef = l===u ? '' : "`\\|/"[l];
@@ -149,6 +150,7 @@ class Op {
                     zip = rezip;
                     have_prefix = redef.length>0 ||
                         (zip.length>0 && Base64x64.PREFIX_SEPS.indexOf(zip[0])!==-1);
+		    have_origin = uid.origin!==def.origin;
                 }
             }
 
@@ -163,12 +165,46 @@ class Op {
             buf += zip;
 
             last_uuid = u;
-            had_origin = uid.origin!==def.origin;
+            had_origin = have_origin;
 
         }
 
         return buf + this.raw_values();
 
+    }
+
+    static fromZipString (op_string, last_op, offset) {
+        const last = last_op ? Op.as(last_op) : Op.ZERO;
+	const off = offset ? offset : { offset: 0 };
+        const seps = "`\\|/";
+        const defaults = [last.type, last.object, last.event, last.location];
+        const uids = [];
+
+        const re = Op.RE_OP;
+        re.lastIndex = off.offset;
+        const m = re.exec(op_string);
+        if (!m || !m[0] || m.index!==off.offset) {
+	    return undefined;
+        }
+
+	let prev_uid = UUID.ZERO;
+        for(let u=0; u<4; u++) {
+            const uid = m[u+1];
+            let def = defaults[u];
+            if (!uid) {
+                uids.push(def);
+                continue;
+            }
+            const s = seps.indexOf(uid[0]);
+            if (s!==-1) {
+                def = s ? defaults[s] : prev_uid;
+            }
+            prev_uid = UUID.fromString(uid, def);
+            uids.push(prev_uid);
+        }
+
+	off.offset += m[0].length;
+        return new Op(uids[0], uids[1], uids[2], uids[3], m[5]);
     }
 
     static js2ron (val) {
@@ -247,6 +283,7 @@ Op.RE_VALUE_G = new RegExp(Op.RS_VALUE, 'g');
 Op.RS_OP = '(' + Op.RS_ZIP_INT + ')+(' + Op.RS_VALUE + ')+';
 Op.RE_ZIP_INT_G = new RegExp(Op.RS_ZIP_INT, 'g');
 Op.RE_OP_G = new RegExp(Op.RS_OP, 'g');
+Op.RE_OP = new RegExp("\\s*"+RON_GRAMMAR.pattern("ZIP_OP"), "mg");
 
 Op.ZERO = new Op(UUID.ZERO, UUID.ZERO, UUID.ZERO, UUID.ZERO, Op.FRAME_VALUE);
 Op.RE_ATOM_G = new RegExp("\\s*"+RON_GRAMMAR.pattern("ATOM"), "mg");
