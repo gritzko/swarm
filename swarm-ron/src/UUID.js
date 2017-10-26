@@ -258,7 +258,7 @@ class UUID {
         } else {
             const t = Base64x64.toZipString(this.time, uuid.time);
             const o = Base64x64.toZipString(this.origin, uuid.origin);
-            const s = Base64x64.RS_PREFIX_SEP.indexOf(o[0])===-1 ? '-' : '';
+            const s = (!t || Base64x64.RS_PREFIX_SEP.indexOf(o[0])===-1) ? '-' : '';
             return t+s+o;
         }
     }
