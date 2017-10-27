@@ -1,0 +1,30 @@
+{
+    "name": "swarm-ron-uuid",
+    "version": "2.0.8",
+    "description": "A Swarm Replicated Object Notation UUID variant",
+    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "swarm-ron-grammar": "^2.0.0"
+    },
+    "files": [
+        "index.js",
+        "test.js",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node ./test.js && echo OK"
+    },
+    "keywords": [
+        "swarm",
+        "replicated",
+        "ron",
+        "grammar",
+        "protocol"
+    ],
+    "license": "MIT"
+}

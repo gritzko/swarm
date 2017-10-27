@@ -1,0 +1,29 @@
+{
+    "name": "swarm-clock",
+    "version": "2.0.0",
+    "description": "A simple logical clock generating RON UUIDs",
+    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "swarm-ron-uuid": "^2.0.0"
+    },
+    "files": [
+        "*.js",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node ./test.js && echo OK"
+    },
+    "keywords": [
+        "swarm",
+        "replicated",
+        "ron",
+        "logical clock",
+        "protocol"
+    ],
+    "license": "MIT"
+}

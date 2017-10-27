@@ -1,0 +1,12 @@
+This parser is ~15 times slower than Ragel/Go.
+We don't need a nice API for ops. We need a faster parser for ops.
+We need a nice object API on top of ops.
+
+## Arch: TypeArray Spec + regex + freeze ##
+
+[ ] objects[uuid], ron[uuid]
+[ ] immutable version graph - merge callback, atom reuse, .freeze()
+[ ] backref[uuid] -> uuids
+
+[ ] alloc-free parser/iterator
+[ ] serializer - by the standard API

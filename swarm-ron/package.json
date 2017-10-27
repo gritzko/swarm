@@ -1,0 +1,29 @@
+{
+    "name": "swarm-ron",
+    "version": "2.0.21",
+    "description": "Swarm Replicated Object Notation (RON)",
+    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "swarm-ron-uuid": "^2.0.6"
+    },
+    "files": [
+        "*.js",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node ./test.js && echo OK"
+    },
+    "keywords": [
+        "swarm",
+        "replicated",
+        "ron",
+        "grammar",
+        "protocol"
+    ],
+    "license": "MIT"
+}

@@ -1,0 +1,29 @@
+{
+    "name": "swarm-rdt",
+    "version": "2.0.20",
+    "description": "Swarm Replicated Data Types - Basic",
+    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "swarm-ron-uuid": "^2.0.7",
+        "swarm-ron": "^2.0.20"
+    },
+    "files": [
+        "*.js",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node ./test.js && echo OK"
+    },
+    "keywords": [
+        "swarm",
+        "replicated",
+        "RON",
+        "CRDT"
+    ],
+    "license": "MIT"
+}

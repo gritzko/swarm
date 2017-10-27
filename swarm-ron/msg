@@ -1,0 +1,8 @@
+    API cleanup
+    
+    * Iterator -> Cursor
+    * Stream recv(), write() functions
+    * Stream on(), off(), update(), push() expect Cursors (expl typed)
+    * pure function depot RON.FN
+    * migrate to a conventional export structure
+    * omnivorous Cursor constructor

@@ -1,0 +1,53 @@
+/*{
+  "id": "peerAB",
+  "store": "rocks",
+  "connect": {
+    "peerA": "tcp://localhost:1111"
+  },
+  "listen": [
+    "ws://localhost:2222/dbname"
+  ],
+  "sub": {
+    "peerA": {
+      "lww" : "#test",
+      "log": "dbname",
+      "json": "#root?:depth=3"
+    }
+  },
+  "pub": {
+    "asm": {
+      "graph": {
+        "root": ".lww#test",
+        "access": "*"
+      }
+    }
+  },
+  "type": ["lww"],
+  "mount": {
+    "test.json": ".json#test?:depth=3"
+  },
+  "logging": "debug"
+}*/
+
+{
+  "id": "peerAB",
+  "connect": {
+    "peerA": "tcp://localhost:1111"
+  },
+  "listen": [
+    "ws://localhost:2222/dbname"
+  ],
+  "pub": [
+    ".lww?depth=3",
+    "rga",
+    ".txt",
+    ".json"
+  ],
+  "sub": {
+    "peerA": ".lww#root?depth=3"
+  },
+  "mount": {
+    "root.json": ".json#root?depth=2",
+    "rga.txt": ".txt#rga"
+  }
+}

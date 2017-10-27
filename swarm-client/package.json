@@ -1,0 +1,34 @@
+{
+    "name": "swarm-client",
+    "version": "2.0.0",
+    "description": "Swarm Bare-Bones Client",
+    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "main": "index.js",
+    "repository": {
+        "type": "git",
+        "url": ""
+    },
+    "dependencies": {
+        "swarm-ron-uuid": "^2.0.6",
+        "swarm-rdt": "^2.0.1",
+        "swarm-ron": "^2.0.17"
+    },
+    "devDependencies": {
+        "swarm-rdt-lww": "^2.0.2",
+        "swarm-clock": "^2.0.0"
+    },
+    "files": [
+        "*.js",
+        "README.md"
+    ],
+    "scripts": {
+        "test": "node ./test.js && echo OK"
+    },
+    "keywords": [
+        "swarm",
+        "replicated",
+        "RON",
+        "CRDT"
+    ],
+    "license": "MIT"
+}
