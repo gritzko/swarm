@@ -1,10 +1,11 @@
 BIN = ./node_modules/.bin
-PACKAGES = swarm-bat \
-		   swarm-protocol \
-		   swarm-syncable \
-		   swarm-cli \
-		   swarm-peer \
-		   swarm-server \
+PACKAGES = \
+		   swarm-ron \
+		   swarm-rdt
+#		   swarm-bat
+#		   swarm-cli \
+#		   swarm-peer \
+#		   swarm-server \
 #		   swarm-browser \
 #		   swarm-gw
 

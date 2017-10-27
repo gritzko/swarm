@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 NODE=`which node`
 echo $NODE && $NODE -v
 cd "$( dirname "${BASH_SOURCE[0]}" )"
