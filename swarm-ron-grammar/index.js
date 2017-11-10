@@ -6,20 +6,19 @@ const RON_GRAMMAR = {
     BASE64:     /[0-9A-Za-z_~]/,
     UNICODE:    /\\u[0-9a-fA-F]{4}/,
     INT:        /([\([{}\])])?($BASE64{0,10})/,
-    UUID:       /([`\\|\/])?($INT)([-+$%])?($INT)/,
+    UUID:       /($INT)?([-+$%])?($INT)?/,
 
     INT_ATOM:   /[+-]?\d{1,17}/,
-    STRING_ATOM:/"($UNICODE|\\.|[^"\\])*"|'($UNICODE|\\.|[^'\\])*'/,
+    UUID_ATOM:  /[`]?$UUID/,
+    STRING_ATOM:/($UNICODE|\\[^\n\r]|[^'\\\n\r])*/,
     FLOAT_ATOM: /[+-]?\d{0,19}\.\d{1,19}([Ee][+-]?\d{1,3})?/,
-    UUID_ATOM:  /(?:($UUID),?)+/,
-    FRAME_ATOM: /!/,
-    QUERY_ATOM: /\?/,
+    OPTERM:     /[!?,;]/,
 
-    ATOM:       /=($INT_ATOM)|($STRING_ATOM)|\^($FLOAT_ATOM)|>($UUID_ATOM)|($FRAME_ATOM)|($QUERY_ATOM)/,
-    OP:         /\s*\.?($UUID)\s*#?($UUID)\s*@?($UUID)\s*:?($UUID)\s*((?:$ATOM){1,8})/,
-    FRAME:      /($OP)+/,
+    ATOM:       /=($INT_ATOM)|'($STRING_ATOM)'|\^($FLOAT_ATOM)|>($UUID)/,
+    OP:         /(?:\s*\*\s*($UUID_ATOM))?(?:\s*#\s*($UUID_ATOM))?(?:\s*@\s*($UUID_ATOM))?(?:\s*:\s*($UUID_ATOM))?\s*((?:\s*$ATOM)*)\s*($OPTERM)?/,
+    FRAME:      /($OP)+[.]?/,
 
-}
+};
 
 resolve("FRAME", RON_GRAMMAR);
 

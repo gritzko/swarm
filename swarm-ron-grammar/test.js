@@ -18,11 +18,11 @@ ok(!UUID.test("--"));
 const ATOM = tester(RON.ATOM);
 ok(ATOM.test("=1"));
 ok(!ATOM.test("=1="));
-ok(!ATOM.test('"""'));
-ok(ATOM.test('"\\""'));
-ok(ATOM.test('"\\\\\\""'));
-ok(!ATOM.test('"\\\\\\"'));
-ok(ATOM.test('"\\u000a"'));
+ok(!ATOM.test("'''"));
+ok(ATOM.test("'\\''"));
+ok(ATOM.test("'\\\\\\''"));
+ok(!ATOM.test("'\\\\\\'"));
+ok(ATOM.test("'\\u000a'"));
 
 ok(ATOM.test("'\"single-quoted \\'\"'"));
 ok(ATOM.test('\'{"json":"not terrible"}\''));
@@ -38,9 +38,10 @@ ok(ATOM.test(">true"));
 ok(ATOM.test(">false"));
 
 const FRAME = tester(RON.FRAME);
-ok(FRAME.test("````>end"));
+ok(FRAME.test("*lww#`@`:`>end"));
 ok(FRAME.test("#$name?"));
-ok(FRAME.test(".lww#time-orig`:key=1"));
-ok(FRAME.test('.lww#name@time-orig!:key=1:string"str"'));
+ok(FRAME.test("*lww#time-orig@`:key=1"));
+ok(FRAME.test("*lww#name@time-orig!:key=1:string'str'"));
 
-ok(FRAME.test('.lww#test@time-orig:ref>>another'));
+ok(FRAME.test('*lww#test@time-orig:ref>>another.'));
+ok(FRAME.test("*lww#test@time-orig:A=1,"));

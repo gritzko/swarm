@@ -1,7 +1,7 @@
 # Regex parsers for the Replicated Object Notation
 
 see protocol docs at
-    https://github.com/gritzko/swarm-ron-docs/tree/2.0
+    https://github.com/gritzko/ron
 
 use:
 ```
