@@ -17,6 +17,17 @@ class UUID {
         return this.sep; // TODO swap, phase out
     }
 
+    /*
+    static read_uuid (ints, at, value, sign, origin) {
+
+    }
+
+    /** @returns {String} *
+    static write_uuid (ints, at, context, ctxat) {
+
+    }
+    */
+
     /**
      *
      * @param context_uuid {UUID}
@@ -98,14 +109,14 @@ class UUID {
             return UUID.ERROR;
         if (offset===undefined && m[0]!==string)
             return UUID.ERROR;
-        const time = UUID.unzip64(m[2], ctx.value);
-        if (!m[3] && !m[4] && m[2]===time && !(time in UUID.TIME_CONST)) {
+        const time = UUID.unzip64(m[1], ctx.value);
+        if (!m[2] && !m[3] && m[1]===time && !(time in UUID.TIME_CONST)) {
             return new UUID(time, '0', '$'); // nice shortcut
-        } else if (!m[2] && !m[3] && !m[4]) {
+        } else if (!m[1] && !m[2] && !m[3]) {
             return ctx;
         } else {
-            const orig = UUID.unzip64(m[4], ctx.origin);
-            return new UUID(time, orig, m[3]||'-');
+            const orig = UUID.unzip64(m[3], ctx.origin);
+            return new UUID(time, orig, m[2]||'-');
         }
     }
 /* TODO swarm-clock-gregorian

@@ -65,7 +65,7 @@ eq(lww2.value, "lww");
 eq(lww2.sep, '$');
 eq(lww2.origin, '0');
 
-const clone = UUID.fromString("`", "$A");
+const clone = UUID.fromString("", "$A");
 eq(clone+'', '$A');
 
 const vec = new UUID.Vector();

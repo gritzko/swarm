@@ -1,6 +1,6 @@
 {
     "name": "swarm-ron-uuid",
-    "version": "2.0.8",
+    "version": "2.0.9",
     "description": "A Swarm Replicated Object Notation UUID variant",
     "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
     "main": "index.js",
@@ -9,7 +9,7 @@
         "url": ""
     },
     "dependencies": {
-        "swarm-ron-grammar": "^2.0.0"
+        "swarm-ron-grammar": "^2.0.5"
     },
     "files": [
         "index.js",
