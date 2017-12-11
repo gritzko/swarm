@@ -15,7 +15,7 @@ class Op {
      * @param location {UUID}
      * @param values {String}
      */
-    constructor (type, object, event, location, values) {
+    constructor (type, object, event, location, values, term) {
         /** @type {UUID} */
         this.type = type;
         /** @type {UUID} */
@@ -28,6 +28,8 @@ class Op {
         this.values = values;
         // @type {Array}
         this.parsed_values = undefined;
+
+        this.term = term || ';';
         // @type {String}
         this.source = null; // FIXME remove
     }
@@ -68,22 +70,14 @@ class Op {
         const m = Op.RE.exec(body);
         if (!m || m.index!==off)
             return null;
-        const defs = [ctx.type, ctx.object, ctx.event, ctx.location];
-        for(let u=0; u<4; u++) {
-            let redef = Op.REDEF_SEPS.indexOf(m[u+1][0]);
-            if (redef>0) {
-                defs[u] = ctx.uuid(redef);
-            } else if (redef===0) {
-                defs[u] = null;
-            }
-        }
         let prev = UUID.ZERO;
         const ret = new Op(
-            prev=UUID.fromString(m[1], defs[0]||prev),
-            prev=UUID.fromString(m[2], defs[1]||prev),
-            prev=UUID.fromString(m[3], defs[2]||prev),
-            prev=UUID.fromString(m[4], defs[3]||prev),
-            m[5]
+            UUID.fromString(m[1], ctx.type),
+            UUID.fromString(m[2], ctx.object),
+            UUID.fromString(m[3], ctx.event),
+            UUID.fromString(m[4], ctx.location),
+            m[5],
+            m[6]
         );
         ret.source = m[0];
         return ret;
@@ -102,7 +96,7 @@ class Op {
     }
 
     key () {
-        return '.'+this.type+'#'+this.object;
+        return '*'+this.type+'#'+this.object;
     }
 
     /**
@@ -117,16 +111,19 @@ class Op {
             const same = ctx.uuid(u);
             if (uuid.eq(same)) continue;
             let str = uuid.toString(same);
-            if (u) for(let d=0; d<4 && str.length>1; d++) if (d!==u) {
+            /*if (u) for(let d=0; d<4 && str.length>1; d++) if (d!==u) {
                 const def = d ? ctx.uuid(d) : this.uuid(u-1);
                 const restr = Op.REDEF_SEPS[d] + uuid.toString(def);
                 if (restr.length<str.length)
                     str = restr;
-            }
+            }*/
             ret += Op.UUID_SEPS[u];
             ret += str;
         }
         ret += this.values;
+        if (this.term!=';') {
+            ret += this.term;
+        }
         return ret;
     }
 
@@ -187,8 +184,8 @@ Op.ZERO = new Op(UUID.ZERO,UUID.ZERO,UUID.ZERO,UUID.ZERO,">0");
 Op.END = new Op(UUID.ERROR,UUID.ERROR,UUID.ERROR,UUID.ERROR,'>~');
 Op.PARSE_ERROR = new Op
     (UUID.ERROR,UUID.ERROR,UUID.ERROR,UUID.ERROR,'>parseerror');
-Op.REDEF_SEPS = "`\\|/";
-Op.UUID_SEPS = ".#@:";
+Op.REDEF_SEPS = "`";
+Op.UUID_SEPS = "*#@:";
 Op.FRAME_ATOM = Symbol("FRAME");
 Op.QUERY_ATOM = Symbol("QUERY");
 Op.INT_ATOM_SEP = '=';

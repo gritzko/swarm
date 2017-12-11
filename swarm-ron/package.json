@@ -1,6 +1,6 @@
 {
     "name": "swarm-ron",
-    "version": "2.0.21",
+    "version": "2.0.22",
     "description": "Swarm Replicated Object Notation (RON)",
     "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
     "main": "index.js",
@@ -9,7 +9,7 @@
         "url": ""
     },
     "dependencies": {
-        "swarm-ron-uuid": "^2.0.6"
+        "swarm-ron-uuid": "^2.0.9"
     },
     "files": [
         "*.js",
