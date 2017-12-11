@@ -44,4 +44,4 @@ ok(FRAME.test("*lww#time-orig@`:key=1"));
 ok(FRAME.test("*lww#name@time-orig!:key=1:string'str'"));
 
 ok(FRAME.test('*lww#test@time-orig:ref>>another.'));
-ok(FRAME.test("*lww#test@time-orig:A=1,"));
+ok(FRAME.test("*lww#test@time-orig!:A=1,:B'2':C>3."));

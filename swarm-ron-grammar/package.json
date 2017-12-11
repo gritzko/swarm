@@ -1,6 +1,6 @@
 {
     "name": "swarm-ron-grammar",
-    "version": "2.0.4",
+    "version": "2.0.5",
     "description": "A regular grammar for the Swarm Replicated Object Notation",
     "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
     "main": "index.js",
