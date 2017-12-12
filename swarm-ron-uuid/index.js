@@ -187,7 +187,24 @@ class UUID {
         return this.sep === '$';
     }
 
+    // overflows js ints!
+    static base2int (base) {
+        var ret = 0;
+        var i = 0;
+        while (i<base.length) {
+            ret <<= 6;
+            ret |= codes[base.charCodeAt(i)];
+            i++;
+        }
+        while (i<10) {
+            ret <<= 6;
+            i++;
+        }
+        return ret;
+    }
+
 }
+
 
 UUID.ZERO = new UUID("0", "0");
 UUID.NEVER = new UUID("~", "0");

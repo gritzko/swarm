@@ -86,3 +86,7 @@ zeros.nextUUID();
 ok(zeros.uuid.isZero());
 zeros.nextUUID();
 ok(zeros.uuid===null);
+
+var num = UUID.base2int("0000000011");
+eq(num, 65);
+
