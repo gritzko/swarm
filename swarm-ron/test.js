@@ -76,7 +76,9 @@ console.log(lr, '==', repeat*4, 'in', tlong, 'ms', tlong*1e6/(repeat*4), 'ns/op'
 
 var arrit = new Iterator("*lww#array@2!@1:%=0@2:%1'1':1%0=1:%1=2");
 var ao = 0;
+eq(arrit.op.isHeader(), true)
 while (arrit.nextOp()) {
+    eq(arrit.op.isHeader(), false)
     ao++;
 }
 eq(ao, 4);

@@ -41,11 +41,11 @@ class Op {
     }
 
     isHeader () {
-        return this.values===Op.FRAME_SEP || this.value(0)===Op.FRAME_ATOM;
+        return this.term==='!';
     }
 
     isQuery () {
-        return this.values===Op.QUERY_SEP || this.value(0)===Op.QUERY_ATOM;
+        return this.term==='?';
     }
 
     isRegular () {
