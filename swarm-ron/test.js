@@ -73,3 +73,10 @@ while (rit.nextOp()!=null)
 var tend = new Date().getTime()
 var tlong = tend-tstart
 console.log(lr, '==', repeat*4, 'in', tlong, 'ms', tlong*1e6/(repeat*4), 'ns/op');
+
+var arrit = new Iterator("*lww#array@2!@1:%=0@2:%1'1':1%0=1:%1=2");
+var ao = 0;
+while (arrit.nextOp()) {
+    ao++;
+}
+eq(ao, 4);
