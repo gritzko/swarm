@@ -1,8 +1,11 @@
 {
-    "name": "swarm-map-json",
+    "name": "swarm-map-js",
     "version": "2.0.0",
     "description": "JSON mappers for swarm-rdt-basic",
     "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+    "contributors": [
+      "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"
+    ],
     "main": "index.js",
     "repository": {
         "type": "git",
@@ -21,7 +24,6 @@
     },
     "keywords": [
         "swarm",
-        "JSON",
         "RON",
         "CRDT"
     ],

@@ -2,6 +2,10 @@
 const Grammar = require('swarm-ron-grammar');
 const UUID = require('swarm-ron-uuid');
 
+const TRUE_UUID = UUID.fromString("true");
+const FALSE_UUID = UUID.fromString("false");
+const NULL_UUID = UUID.fromString("0");
+
 /** A RON op object. Typically, an Op is hosted in a frame.
  *  Frames are strings, so Op is sort of a Frame iterator.
  *  */
@@ -54,7 +58,7 @@ class Op {
 
     isError () {
         return this.event.value===UUID.ERROR.value;
-    } 
+    }
 
     /**
      *
@@ -68,7 +72,7 @@ class Op {
         const off = offset || 0;
         Op.RE.lastIndex = off;
         const m = Op.RE.exec(body);
-        if (!m || m.index!==off)
+        if (!m || m[0] === '' || m.index!==off)
             return null;
         let prev = UUID.ZERO;
         const ret = new Op(
@@ -127,6 +131,25 @@ class Op {
         return ret;
     }
 
+    /**
+     * Flip quotes.
+     * @param v {String} -- value
+     * @return {String}
+     */
+    static flipQuotes (v) {
+      if (!v) return v
+      if (typeof v !== 'string') {
+          throw new Error('unexpected type: ' + typeof v)
+      }
+
+      if (v[0] === '"') {
+        return "'" + v.slice(1, -1) + "'"
+      } else if (v[0] === "'") {
+        return '"' + v.slice(1, -1) + '"'
+      } else {
+          throw new Error('malformed input')
+      }
+    }
 
     /**
      * Parse RON value atoms.
@@ -140,15 +163,23 @@ class Op {
             if (m[1]) {
                 ret.push(parseInt(m[1]));
             } else if (m[2]) {
-                ret.push(JSON.parse(m[2]));
+              ret.push(JSON.parse('"' + m[2] + '"')); // VALUE_RE returns match w/o single quotes
             } else if (m[3]) {
                 ret.push(parseFloat(m[3]));
             } else if (m[4]) {
-                ret.push(UUID.fromString(m[4]));
-            } else if (m[5]) {
-                ret.push(Op.FRAME_ATOM);
-            } else if (m[6]) {
-                ret.push(Op.QUERY_ATOM);
+                switch (m[4]) {
+                  case TRUE_UUID.value:
+                      ret.push(true);
+                      break;
+                  case FALSE_UUID.value:
+                      ret.push(false);
+                      break;
+                  case NULL_UUID.value:
+                      ret.push(null);
+                      break;
+                  default:
+                      ret.push(UUID.fromString(m[4]));
+                }
             }
         }
         return ret;
@@ -161,12 +192,15 @@ class Op {
      */
     static js2ron (values) {
         const ret = values.map( v => {
-            if (!v) return Op.UUID_ATOM_SEP + UUID.ZERO.toString();
+            if (v === undefined) return Op.UUID_ATOM_SEP + UUID.ZERO.toString();
+            if (v === null) return Op.UUID_ATOM_SEP + NULL_UUID.toString();
+
             switch (v.constructor) {
-                case String: return JSON.stringify(v);
+                case String: return Op.flipQuotes(JSON.stringify(v));
                 case Number: return Number.isInteger(v) ?
                     Op.INT_ATOM_SEP + v : Op.FLOAT_ATOM_SEP + v;
                 case UUID: return Op.UUID_ATOM_SEP + v.toString();
+                case Boolean: return Op.UUID_ATOM_SEP + (v ? TRUE_UUID : FALSE_UUID).toString();
                 default:
                     if (v===Op.FRAME_ATOM) return Op.FRAME_SEP;
                     if (v===Op.QUERY_ATOM) return Op.QUERY_SEP;
@@ -195,7 +229,7 @@ Op.FRAME_SEP = '!';
 Op.QUERY_SEP = '?';
 
 class Frame {
-    
+
     constructor (string) {
         this.body = string ? string.toString() : '';
         /** @type {Op} */
@@ -214,7 +248,7 @@ class Frame {
     [Symbol.iterator]() {
         return new Cursor (this.body);
     }
-    
+
     toString () {
         return this.body;
     }
@@ -255,7 +289,7 @@ class Frame {
         );
         return ret;
     }
-    
+
 }
 
 class Cursor {
@@ -311,7 +345,7 @@ class Cursor {
         if (i&&i.constructor===Cursor) return i;
         return new Cursor(i.toString());
     }
-    
+
 }
 
 /** A stream of frames. It is always a subset or a projection of

@@ -82,3 +82,11 @@ while (arrit.nextOp()) {
     ao++;
 }
 eq(ao, 4);
+
+de(Op.ron2js("'1'"), ['1']);
+de(Op.ron2js("=1'x\\\"y\\\"z'^3.1>ref>true>false>0"),
+    [ 1, 'x"y"z', 3.1, UUID.fromString('ref'), true, false, null ],
+);
+de(Op.js2ron([ 1, 'x"y"z', 3.1, UUID.fromString('ref'), true, false, null ]),
+  "=1'x\\\"y\\\"z'^3.1>ref>true>false>0"
+);
