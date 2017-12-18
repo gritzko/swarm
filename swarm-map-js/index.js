@@ -17,12 +17,13 @@ function lwwFrame2js (raw_frame) {
     if (!lww.op) return 'null';
 
     while (lww.op) {
-        rootID = rootID || lww.op.object.toString();
+        const id = lww.op.object.toString();
+        rootID = rootID || id;
         if (lww.op.isHeader() || lww.op.isQuery()) {
             lww.nextOp();
             continue
         }
-        const ref = refs[lww.op.object.toString()] || (refs[lww.op.object.toString()] = lww.op.location.isHash() ? [] : {});
+        const ref = refs[id] || (refs[id] = lww.op.location.isHash() ? [] : {});
         let value = Op.ron2js(lww.op.values).pop();
         if (value instanceof UUID) {
           value = {$ref: value.toString()};
@@ -40,8 +41,10 @@ function lwwFrame2js (raw_frame) {
         }
 
         ref[key] = value;
+        ref._id = id;
         lww.nextOp()
     }
+
 
     Object.keys(refs).forEach(key => {
         const value = refs[key];
@@ -53,6 +56,7 @@ function lwwFrame2js (raw_frame) {
                     return v
                 }
             })
+          refs[key]._id = value._id
         } else if (isObject(value)) {
             Object.keys(value).forEach(k => {
                 if (isObject(value[k]) && !!value[k]['$ref']) {
