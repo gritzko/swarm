@@ -1,31 +1,31 @@
 {
-    "name": "swarm-ron-grammar",
-    "version": "2.0.5",
-    "description": "A regular grammar for the Swarm Replicated Object Notation",
-    "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
-    "main": "index.js",
-    "repository": {
-        "type": "git",
-        "url": ""
-    },
-    "dependencies": {
-        "regular-grammar": "^1.0.0"
-    },
-    "files": [
-        "*.js",
-        "README.md"
-    ],
-    "scripts": {
-        "test": "node ./test.js && echo OK"
-    },
-    "keywords": [
-        "swarm",
-        "replicated",
-        "ron",
-        "grammar",
-        "protocol",
-        "parser",
-        "regex"
-    ],
-    "license": "MIT"
+  "name": "swarm-ron-grammar",
+  "version": "2.0.5",
+  "description": "A regular grammar for the Swarm Replicated Object Notation",
+  "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "regular-grammar": "^1.0.0"
+  },
+  "files": [
+    "*.js",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node ./test.js && echo OK"
+  },
+  "keywords": [
+    "swarm",
+    "replicated",
+    "ron",
+    "grammar",
+    "protocol",
+    "parser",
+    "regex"
+  ],
+  "license": "MIT"
 }

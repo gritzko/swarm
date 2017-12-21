@@ -1,4 +1,4 @@
-const UUID = require('.');
+const UUID = require('./lib');
 const assert = require('assert');
 const eq = assert.equal;
 const ok = assert.ok;

@@ -1,5 +1,5 @@
 "use strict";
-const Clock = require('./index');
+const Clock = require('./lib/index').default;
 const UUID = require('swarm-ron-uuid');
 const assert = require('assert');
 const eq = assert.equal;

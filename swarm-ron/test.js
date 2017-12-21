@@ -1,5 +1,5 @@
 "use strict";
-const Op = require('./index');
+const Op = require('./lib/index');
 const Frame = Op.Frame;
 const Iterator = Frame.Iterator;
 const UUID = require('swarm-ron-uuid');
@@ -37,7 +37,7 @@ for(let op of f) {
 eq(nf.toString(), frame);
 
 const subs = {"$A":"1","$B":"2"};
-const mapd = Op.Frame.map_uuids("@$A>0:$B>~", uuid => {
+const mapd = Op.Frame.mapUUIDs("@$A>0:$B>~", uuid => {
     return uuid in subs ? UUID.fromString(subs[uuid]) : uuid;
 });
 eq(mapd, "@1>0:2>~");

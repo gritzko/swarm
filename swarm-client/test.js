@@ -4,7 +4,7 @@ const eq = assert.equal;
 const ok = assert.ok;
 const de = assert.deepEqual;
 const Clock = require('swarm-clock');
-const Client = require('.');
+const Client = require('./lib');
 const LWW = require('swarm-rdt-lww');
 
 const clock = new Clock("test");
