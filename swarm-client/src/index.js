@@ -23,7 +23,7 @@ class Client extends Stream {
   log: Frame;
   upstream: ?Stream;
 
-  constructor(clock: Clock, options?: {}) {
+  constructor(clock: Clock, options: ?{}) {
     super();
     /** @type {Clock} */
     this.clock = clock;

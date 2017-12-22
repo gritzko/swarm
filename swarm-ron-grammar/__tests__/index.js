@@ -1,7 +1,6 @@
-const RON = require('.');
-const assert = require('assert');
-const eq = assert.equal;
-const ok = assert.ok;
+// @flow
+import RON from '../src';
+import { equal as eq, ok} from 'assert';
 
 function tester (re) {
     return new RegExp('^(?:'+re.source+')$', '');
@@ -45,3 +44,5 @@ ok(FRAME.test("*lww#name@time-orig!:key=1:string'str'"));
 
 ok(FRAME.test('*lww#test@time-orig:ref>>another.'));
 ok(FRAME.test("*lww#test@time-orig!:A=1,:B'2':C>3."));
+
+test('~', () => { expect('~').toBe('~'); });
