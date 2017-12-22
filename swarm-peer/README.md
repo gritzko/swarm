@@ -1,1 +1,0 @@
-# Simple Swarm server
