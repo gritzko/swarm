@@ -12,6 +12,8 @@
     "swarm-rdt": "file:../swarm-rdt",
     "swarm-ron": "file:../swarm-ron",
     "swarm-ron-grammar": "file:../swarm-ron-grammar",
+    "swarm-clock": "file:../swarm-clock",
+    "swarm-rdt-lww": "file:../swarm-rdt-lww",
     "swarm-ron-uuid": "file:../swarm-ron-uuid"
   },
   "devDependencies": {
@@ -21,9 +23,7 @@
     "babel-preset-env": "^1.6.1",
     "flow-bin": "^0.61.0",
     "flow-copy-source": "^1.2.1",
-    "rimraf": "^2.6.2",
-    "swarm-clock": "file:../swarm-clock",
-    "swarm-rdt-lww": "file:../swarm-rdt-lww"
+    "rimraf": "^2.6.2"
   },
   "files": [
     "*.js",
