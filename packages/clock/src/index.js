@@ -3,8 +3,14 @@
 
 import UUID, {ERROR, ZERO, BASE64, CODES} from 'swarm-ron-uuid';
 
+export interface Clock {
+  time(): UUID;
+  see(UUID): void;
+  origin: string;
+}
+
 /** Pure logical clock. */
-class Clock {
+export class Logical {
   origin: string;
   last: UUID;
   length: number;
@@ -48,5 +54,3 @@ class Clock {
     if (uuid.ge(this.last)) this.last = uuid;
   }
 }
-
-export default Clock;
