@@ -28,7 +28,6 @@
     "README.md"
   ],
   "scripts": {
-    "test": "npm run build:lib && node ./test.js && echo OK",
     "build": "npm run build:clean && npm run build:lib && npm run build:flow",
     "build:clean": "rimraf lib",
     "build:lib": "babel -d lib src --ignore '**/__tests__/**'",

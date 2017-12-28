@@ -9,9 +9,9 @@ export default class UUID {
   sep: string;
 
   /** trusted constructor */
-  constructor(time: string, origin: string, sep: ?string) {
+  constructor(value: string, origin: string, sep: ?string) {
     /** @type {String} */
-    this.value = time;
+    this.value = value;
     /** @type {String} */
     this.origin = origin;
     /** @type {String} */
@@ -22,19 +22,7 @@ export default class UUID {
     return this.sep; // TODO swap, phase out
   }
 
-  /*
-    static read_uuid (ints, at, value, sign, origin) {
-
-    }
-
-    /** @returns {String} *
-    static write_uuid (ints, at, context, ctxat) {
-
-    }
-    */
-
   /**
-   *
    * @param ctxUUID {UUID}
    * @returns {String}
    */
@@ -98,7 +86,6 @@ export default class UUID {
   }
 
   /**
-   *
    * @param string {String} - serialized UUID
    * @param ctxUUID {UUID=} - default UUID
    * @param offset {Number=}
@@ -210,6 +197,7 @@ export default class UUID {
 
 export const ZERO = new UUID('0', '0');
 export const NEVER = new UUID('~', '0');
+export const COMMENT = NEVER;
 export const ERROR = new UUID('~~~~~~~~~~', '0');
 export const RE = new RegExp(RON.UUID.source, 'g');
 export const PREFIXES = '([{}])';
@@ -233,7 +221,6 @@ export class Vector {
    */
   constructor(uuids: string = '', defaultUUID?: UUID = ZERO) {
     this.body = uuids;
-    /** @type {UUID} */
     this.defaultUUID = defaultUUID || ZERO;
     this.last = this.defaultUUID;
   }
@@ -251,10 +238,6 @@ export class Vector {
   push(newUUID: UUID | string) {
     const uuid = UUID.as(newUUID);
     const str = uuid.toString(this.last);
-    // if (this.body && this.body[this.body.length-1]!==',' &&
-    //     (!str||UUID.CODES[str.charCodeAt(0)]!==-1))
-    // TODO optimize
-    //     this.body += ',';
     if (this.body) this.body += ',';
     this.body += str;
     this.last = uuid;

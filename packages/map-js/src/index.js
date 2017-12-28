@@ -1,37 +1,28 @@
 // @flow
 'use strict';
 
-import Op, {UUID, Cursor, ron2js} from 'swarm-ron';
-
-type Ref = {|$ref: string|};
-export type LWWGraph = {_id: string, [string]: LWWGraph} | LWWArray | Ref;
-
-class LWWArray extends Array<LWWGraph> {
-  _id: string;
-}
+import Op, {UUID, Frame, ron2js} from 'swarm-ron';
 
 /**
- *
- * @param rawFrame {Cursor|String}
+ * lwwFrame2js
+ * @param rawFrame {String}
  * @returns {Object|Array|null}
  */
-export default function lwwFrame2js(
-  rawFrame: Cursor | string,
-): LWWGraph | null {
+export default function lwwFrame2js(rawFrame: string): Object | Array<any> | any {
   let rootID = null;
   const refs = {};
-  const lww = Cursor.as(rawFrame);
-
-  if (!lww.op) return null;
+  const lww = new Frame(rawFrame);
+  let hasValue = false;
 
   for (const op of lww) {
+    hasValue = true;
     const id = op.object.toString();
     rootID = rootID || id;
     if (op.isHeader() || op.isQuery()) continue;
     const ref = refs[id] || (refs[id] = op.location.isHash() ? [] : {});
     let value = ron2js(op.values).pop();
     if (value instanceof UUID) {
-      value = ({$ref: value.toString()}: Ref);
+      value = {$ref: value.toString()};
     }
 
     let key = op.location.toString();
@@ -49,6 +40,8 @@ export default function lwwFrame2js(
     // $FlowFixMe
     ref._id = id;
   }
+
+  if (!hasValue) return null;
 
   Object.keys(refs).forEach(key => {
     const value = refs[key];

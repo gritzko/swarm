@@ -2,8 +2,7 @@
 'use strict';
 
 import Grammar from 'swarm-ron-grammar';
-import UUID, {ZERO as ZERO_UUID, ERROR, NEVER} from 'swarm-ron-uuid';
-import type Stringer from './types';
+import UUID, {ZERO as ZERO_UUID, ERROR, COMMENT} from 'swarm-ron-uuid';
 
 export type JSON_VALUE_TYPE = string | number | boolean | null;
 
@@ -11,7 +10,8 @@ const TRUE_UUID = UUID.fromString('true');
 const FALSE_UUID = UUID.fromString('false');
 const NULL_UUID = UUID.fromString('0');
 
-/** A RON op object. Typically, an Op is hosted in a frame.
+/**
+ * A RON op object. Typically, an Op is hosted in a frame.
  *  Frames are strings, so Op is sort of a Frame iterator.
  *  */
 export default class Op {
@@ -34,14 +34,7 @@ export default class Op {
    * @param location {UUID}
    * @param values {String}
    */
-  constructor(
-    type: UUID,
-    object: UUID,
-    event: UUID,
-    location: UUID,
-    values: ?string,
-    term: ?string,
-  ) {
+  constructor(type: UUID, object: UUID, event: UUID, location: UUID, values: ?string, term: ?string) {
     /** @type {UUID} */
     this.type = type;
     /** @type {UUID} */
@@ -81,6 +74,10 @@ export default class Op {
     return this.event.value === ERROR.value;
   }
 
+  isComment(): boolean {
+    return this.type.eq(COMMENT);
+  }
+
   /** Get op UUID by index (0-3)
    * @return {UUID} */
   uuid(i: number): UUID {
@@ -114,12 +111,6 @@ export default class Op {
       const same = ctx.uuid(u);
       if (uuid.eq(same)) continue;
       let str = uuid.toString(same);
-      /*if (u) for(let d=0; d<4 && str.length>1; d++) if (d!==u) {
-                const def = d ? ctx.uuid(d) : this.uuid(u-1);
-                const restr = Op.REDEF_SEPS[d] + uuid.toString(def);
-                if (restr.length<str.length)
-                    str = restr;
-            }*/
       ret += UUID_SEPS[u];
       ret += str;
     }
@@ -130,39 +121,6 @@ export default class Op {
     return ret;
   }
 
-  // static RE: RegExp;
-  // static VALUE_RE: RegExp;
-  // static END: Op;
-  // static PARSE_ERROR: Op;
-  // static REDEF_SEPS: string;
-  // static UUID_SEPS: string;
-  // static INT_ATOM_SEP: string;
-  // static FLOAT_ATOM_SEP: string;
-  // static UUID_ATOM_SEP: string;
-  // static FRAME_SEP: string;
-  // static QUERY_SEP: string;
-  // static FRAME_ATOM: Symbol;
-  // static QUERY_ATOM: Symbol;
-  //
-  // static Frame: typeof Frame;
-  // static Op: typeof Op;
-  // static UUID: typeof UUID;
-  // static reduce: (string, string) => string;
-  // static FN: {
-  //   // FIXME add type annotations
-  //   RDT: {}, // reducers
-  //   MAP: {}, // mappers
-  //   API: {}, // API/assemblers
-  //   IS: {|
-  //     OP_BASED: 1,
-  //     STATE_BASED: 2,
-  //     PATCH_BASED: 4,
-  //     VV_DIFF: 8,
-  //     OMNIVOROUS: 16,
-  //     IDEMPOTENT: 32,
-  //   |},
-  // };
-
   /**
    *
    * @param body {String} -- serialized frame
@@ -171,12 +129,13 @@ export default class Op {
    * @return {Op}
    */
   static fromString(body: string, context: ?Op, offset: ?number): ?Op {
-    const ctx = context || ZERO;
+    let ctx = context || ZERO;
     const off = offset || 0;
     RE.lastIndex = off;
     const m = RE.exec(body);
     if (!m || m[0] === '' || m.index !== off) return null;
-    let prev = ZERO_UUID;
+    if (m[1] === COMMENT.value) ctx = ZERO;
+    // console.log('mq', m[1], COMMENT)
     const ret = new Op(
       UUID.fromString(m[1], ctx.type),
       UUID.fromString(m[2], ctx.object),
@@ -260,9 +219,7 @@ export function js2ron(values: Array<JSON_VALUE_TYPE | UUID>): string {
       case String:
         return flipQuotes(JSON.stringify(v));
       case Number:
-        return Number.isInteger(v)
-          ? INT_ATOM_SEP + v.toString()
-          : FLOAT_ATOM_SEP + v.toString();
+        return Number.isInteger(v) ? INT_ATOM_SEP + v.toString() : FLOAT_ATOM_SEP + v.toString();
       case UUID:
         return UUID_ATOM_SEP + v.toString();
       case Boolean:
@@ -296,7 +253,7 @@ export class Frame {
   body: string;
   last: Op;
 
-  constructor(str: ?Stringer) {
+  constructor(str: ?string) {
     this.body = str ? str.toString() : '';
     /** @type {Op} */
     this.last = ZERO;
@@ -307,6 +264,9 @@ export class Frame {
    * @param op {Op}
    */
   push(op: Op) {
+    if (this.last.isComment()) {
+      this.last = ZERO;
+    }
     this.body += op.toString(this.last);
     this.last = op;
   }
@@ -322,24 +282,34 @@ export class Frame {
     return this.body;
   }
 
+  mapUUIDs(fn: (UUID, number, number, Op) => UUID) {
+    this.body = mapUUIDs(this.body, fn);
+    for (const op of this) {
+      this.last = op;
+    }
+  }
 }
+
 /**
  * Substitute UUIDs in all of the frame's ops.
  * Typically used for macro expansion.
  * @param rawFrame - {String}
  * @param fn {Function} - the substituting function
  */
-export function mapUUIDs(rawFrame: string, fn: (UUID, number) => UUID): string {
+export function mapUUIDs(rawFrame: string, fn: (UUID, number, number, Op) => UUID): string {
   const ret = new Frame();
+  let index = -1;
   for (const i = new Cursor(rawFrame); i.op; i.nextOp()) {
+    index++;
     const op = i.op;
     ret.push(
       new Op(
-        fn(op.type, 0) || op.type,
-        fn(op.object, 1) || op.object,
-        fn(op.event, 2) || op.event,
-        fn(op.location, 3) || op.location,
+        fn(op.type, 0, index, op) || op.type,
+        fn(op.object, 1, index, op) || op.object,
+        fn(op.event, 2, index, op) || op.event,
+        fn(op.location, 3, index, op) || op.location,
         op.values,
+        op.term,
       ),
     );
   }
@@ -354,13 +324,9 @@ export function mapUUIDs(rawFrame: string, fn: (UUID, number) => UUID): string {
  */
 export function slice(from: Cursor, till: Cursor): string {
   if (!from.op) return '';
-  if (from.body !== till.body)
-    throw new Error('iterators of different frames');
+  if (from.body !== till.body) throw new Error('iterators of different frames');
   let ret = from.op.toString();
-  ret += from.body.substring(
-    from.offset + from.length,
-    till.op ? till.offset : undefined,
-  );
+  ret += from.body.substring(from.offset + from.length, till.op ? till.offset : undefined);
   return ret;
 }
 
@@ -369,8 +335,9 @@ export class Cursor {
   offset: number;
   length: number;
   op: ?Op;
+  ctx: ?Op;
 
-  constructor(body: ?Stringer) {
+  constructor(body: ?string) {
     this.body = body ? body.toString() : '';
     this.offset = 0;
     this.length = 0;
@@ -399,15 +366,18 @@ export class Cursor {
       this.op = null;
       this.length = 1;
     } else {
-      this.op = Op.fromString(this.body, this.op, this.offset);
-      if (this.op !== null && this.op && this.op.source) {
-        this.length = this.op.source.length;
+      const op = Op.fromString(this.body, this.ctx, this.offset);
+      this.ctx = op;
+      if (op) {
+        if (op.isComment()) this.ctx = ZERO;
+        if (op.source) this.length = op.source.length;
       }
+      this.op = op;
     }
     return this.op;
   }
 
-  /*::  @@iterator(): Iterator<Op> { return ({}: any); } */
+  //*::  @@iterator(): Iterator<Op> { return ({}: any); } */
 
   // $FlowFixMe - computed property
   [Symbol.iterator](): Iterator<Op> {
@@ -418,9 +388,9 @@ export class Cursor {
     const ret = this.op;
     if (ret) {
       this.nextOp();
-      return { done: false, value: ret }
+      return {done: false, value: ret};
     } else {
-      return { done: true }
+      return {done: true};
     }
   }
 
@@ -432,81 +402,5 @@ export class Cursor {
   }
 }
 
-/** A stream of frames. It is always a subset or a projection of
- * the log. The "upstream" direction goes to the full op log.
- * "Downstream" means "towards the clients".
- * Writes are pushed upstream, updates are forwarded downstream. */
-export class Stream {
-  upstream: ?Stream;
-
-  constructor(upstream: ?Stream) {
-    this.upstream = null;
-    if (upstream) this.connect(upstream);
-  }
-
-  /**
-   * Set the upstream.
-   * @param upstream {Stream}
-   */
-  connect(upstream: ?Stream) {
-    this.upstream = upstream || null;
-  }
-
-  /**
-   * @returns {boolean}
-   */
-  isConnected(): boolean {
-    return this.upstream !== null;
-  }
-
-  /**
-   * Subscribe to updates.
-   * @param query {Cursor}
-   * @param stream {Stream}
-   */
-  on(query: Cursor, stream: ?Stream) {}
-
-  /**
-   * Unsubscribe
-   * @param query {Cursor}
-   * @param stream {Stream}
-   */
-  off(query: Cursor, stream: ?Stream) {}
-
-  /**
-   * Push a new op/frame to the log.
-   * @param frame {Cursor}
-   */
-  push(frame: Cursor) {}
-
-  /** @param frame {String} */
-  write(frame: Stringer) {
-    const i = Cursor.as(frame);
-    const op = i.op;
-    if (!op) {
-    } else if (op.isQuery()) {
-      // FIXME
-      op.event.eq(NEVER) ? this.off(i) : this.on(i);
-    } else {
-      this.push(i);
-    }
-  }
-
-  /**
-   * Receive a new update (frame)
-   * @param frame {Cursor}
-   * @param source {Stream}
-   */
-  update(frame: Cursor, source: ?Cursor): Stream {
-    // TODO
-    return new Stream();
-  }
-
-  /** @param frame {String} */
-  recv(frame: Stringer) {
-    this.update(Cursor.as(frame));
-  }
-}
-
 export {default as UUID} from 'swarm-ron-uuid';
-export { ERROR as UUID_ERROR } from 'swarm-ron-uuid';
+export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
