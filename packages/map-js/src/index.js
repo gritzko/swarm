@@ -8,7 +8,7 @@ import Op, {UUID, Frame, ron2js} from 'swarm-ron';
  * @param rawFrame {String}
  * @returns {Object|Array|null}
  */
-export default function lwwFrame2js(rawFrame: string): Object | Array<any> | any {
+export default function lwwFrame2js(rawFrame: string): mixed {
   let rootID = null;
   const refs = {};
   const lww = new Frame(rawFrame);

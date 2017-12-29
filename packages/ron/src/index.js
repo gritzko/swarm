@@ -330,7 +330,7 @@ export function slice(from: Cursor, till: Cursor): string {
   return ret;
 }
 
-export class Cursor {
+export class Cursor implements Iterator<Op> {
   body: string;
   offset: number;
   length: number;
@@ -341,7 +341,6 @@ export class Cursor {
     this.body = body ? body.toString() : '';
     this.offset = 0;
     this.length = 0;
-    /** @type {Op} */
     this.op = this.nextOp();
   }
 
@@ -377,7 +376,7 @@ export class Cursor {
     return this.op;
   }
 
-  //*::  @@iterator(): Iterator<Op> { return ({}: any); } */
+  /*:: @@iterator(): Iterator<Op> { return ({}: any); } */
 
   // $FlowFixMe - computed property
   [Symbol.iterator](): Iterator<Op> {
@@ -392,13 +391,6 @@ export class Cursor {
     } else {
       return {done: true};
     }
-  }
-
-  /** @param i {Frame|Cursor|String}
-   *  @return {Cursor} */
-  static as(i: Frame | Cursor | string): Cursor {
-    if (i instanceof Cursor) return i;
-    return i ? new Cursor(i.toString()) : new Cursor('');
   }
 }
 

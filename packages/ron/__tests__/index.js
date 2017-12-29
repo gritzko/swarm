@@ -78,9 +78,9 @@ test('main section', () => {
 
   var arrit = new Cursor("*lww#array@2!@1:%=0@2:%1'1':1%0=1:%1=2");
   var ao = 0;
-  eq(arrit.op.isHeader(), true);
+  eq(arrit.op && arrit.op.isHeader(), true);
   while (arrit.nextOp()) {
-    eq(arrit.op.isHeader(), false);
+    eq(arrit.op && arrit.op.isHeader(), false);
     ao++;
   }
   eq(ao, 4);
