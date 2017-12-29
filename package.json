@@ -2,6 +2,9 @@
   "private": true,
   "name": "swarm",
   "devDependencies": {
+    "babel-eslint": "^8.1.2",
+    "eslint": "^4.14.0",
+    "eslint-plugin-flowtype": "^2.40.1",
     "lerna": "^2.5.1"
   },
   "workspaces": [
