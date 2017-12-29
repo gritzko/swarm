@@ -80,7 +80,7 @@ export default class Op {
 
   /** Get op UUID by index (0-3)
    * @return {UUID} */
-  uuid(i: number): UUID {
+  uuid(i: 0 | 1 | 2 | 3): UUID {
     switch (i) {
       case 0:
         return this.type;
@@ -106,7 +106,7 @@ export default class Op {
   toString(ctxOp: ?Op): string {
     let ret = '';
     const ctx = ctxOp || ZERO;
-    for (let u = 0; u < 4; u++) {
+    for (const u of [0, 1, 2, 3]) {
       const uuid = this.uuid(u);
       const same = ctx.uuid(u);
       if (uuid.eq(same)) continue;
