@@ -11,7 +11,7 @@ import {reduce} from 'swarm-rdt';
 import type {Storage} from './storage';
 import {InMemory} from './storage';
 
-interface Connection {
+export interface Connection {
   onmessage: (ev: MessageEvent) => any;
   send(data: string): void;
 }
@@ -37,7 +37,7 @@ class Client {
   lstn: {[key: string]: (frame: string, state: string) => void}; // ?
   upstream: Connection;
   storage: Storage;
-  _queue: Array<() => void> | false;
+  queue: Array<() => void> | false;
 
   constructor(options: Options) {
     this.clock = options.clock;
@@ -66,7 +66,7 @@ class Client {
    * First initialization requires online.
    */
   ensure(): Promise<void> {
-    const q = this._queue;
+    const q = this.queue;
     if (q === false) {
       return Promise.resolve();
     } else {

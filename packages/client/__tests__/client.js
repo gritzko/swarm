@@ -1,4 +1,8 @@
-// "use strict";
+// @flow
+
+import { Connection } from './fixtures';
+
+test('~', () => { expect('~').toBe('~') })
 // const assert = require('assert');
 // const eq = assert.equal;
 // const ok = assert.ok;
