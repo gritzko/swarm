@@ -18,13 +18,13 @@ eq(
 // array, op+op
 eq(
   reduce('*lww#id@time1-a:1=2', '*lww#id@time2-b:0=1'),
-  '*lww#id@time2-b:time1-a!:0=1@(1-a:1=2',
+  '*lww#id@time2-b:time1-a!=1@(1-a:1=2',
 );
 
 // array, op+op, sorting
 eq(
   reduce('*lww#id@time1-a:)1=2', '*lww#id@time2-b:0=1'),
-  '*lww#id@time2-b:time1-a!:0=1@(1-a:)1=2',
+  '*lww#id@time2-b:time1-a!=1@(1-a:)1=2',
 );
 
 eq(

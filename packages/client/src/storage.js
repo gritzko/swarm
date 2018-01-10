@@ -1,29 +1,34 @@
 // @flow
 
 export interface Storage {
-  setItem(key: string, value: string): Promise<void>;
-  getItem(key: string): Promise<string | void>;
-  removeItem(key: string): Promise<void>;
+  set(key: string, value: string): Promise<void>;
+  get(key: string): Promise<string | void>;
+  remove(key: string): Promise<void>;
+  keys(): Promise<Array<string>>;
 }
 
-export class InMemory implements Storage{
+export class InMemory implements Storage {
   storage: {[string]: string};
 
-  constrictor() {
+  constructor() {
     this.storage = {};
   }
 
-  setItem(key: string, value: string): Promise<void> {
+  set(key: string, value: string): Promise<void> {
     this.storage[key] = value;
     return Promise.resolve();
   }
 
-  getItem(key: string): Promise<string | void> {
-    return Promise.resolve(this.storage[key])
+  get(key: string): Promise<string | void> {
+    return Promise.resolve(this.storage[key]);
   }
 
-  removeItem(key: string): Promise<void> {
-    delete this.storage[key]
+  remove(key: string): Promise<void> {
+    delete this.storage[key];
     return Promise.resolve();
+  }
+
+  keys(): Promise<Array<string>> {
+    return Promise.resolve(Object.keys(this.storage));
   }
 }

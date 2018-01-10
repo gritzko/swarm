@@ -1,4 +1,11 @@
 {
-  "presets": ["es2015"],
-  "plugins": ["transform-flow-strip-types", "async-to-promises"]
+  "presets": [
+    "es2015"
+  ],
+  "plugins": [
+    "transform-flow-strip-types",
+    "async-to-promises",
+    "transform-es2015-spread",
+    "transform-object-rest-spread"
+  ]
 }

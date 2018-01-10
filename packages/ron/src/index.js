@@ -109,7 +109,7 @@ export default class Op {
     for (const u of [0, 1, 2, 3]) {
       const uuid = this.uuid(u);
       const same = ctx.uuid(u);
-      if (uuid.eq(same)) continue;
+      if (uuid.eq(same) || ZERO_UUID.eq(uuid)) continue;
       let str = uuid.toString(same);
       ret += UUID_SEPS[u];
       ret += str;
