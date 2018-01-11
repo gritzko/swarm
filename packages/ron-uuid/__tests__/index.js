@@ -68,7 +68,7 @@ const clone = UUID.fromString('', UUID.fromString('$A'));
 eq(clone.toString() + '', '$A');
 
 const vec = new Vector();
-const uuids = ['time-origin', 'time01-origin', 'time2-origin2'].map(UUID.as);
+const uuids = ['time-origin', 'time01-origin', 'time2-origin2'].map(v => UUID.fromString(v));
 vec.push(uuids[0]);
 vec.push(uuids[1]);
 vec.push(uuids[2]);

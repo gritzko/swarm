@@ -44,20 +44,19 @@ export default class UUID {
     } else {
       const time = UUID.zip64(this.value, ctx.value);
       const orig = UUID.zip64(this.origin, ctx.origin);
-      if (this.sep !== '-' || orig === this.origin)
-        return time + this.sep + orig;
+      if (this.sep !== '-' || orig === this.origin) return time + this.sep + orig;
       else return time + orig;
     }
   }
 
   /** @param uuid {UUID} */
-  le(uuid: UUID) {
+  le(uuid: UUID): boolean {
     if (uuid.value === this.value) return uuid.origin > this.origin;
     return uuid.value > this.value;
   }
 
   /** @param uuid {UUID} */
-  ge(uuid: UUID) {
+  ge(uuid: UUID): boolean {
     if (uuid.value === this.value) return uuid.origin < this.origin;
     return uuid.value < this.value;
   }
@@ -74,14 +73,10 @@ export default class UUID {
 
   /** @param uuid {UUID} */
   eq(uuid: UUID): boolean {
-    return (
-      this.value === uuid.value &&
-      this.origin === uuid.origin &&
-      this.sep === uuid.sep
-    );
+    return this.value === uuid.value && this.origin === uuid.origin && this.sep === uuid.sep;
   }
 
-  isZero() {
+  isZero(): boolean {
     return this.value === '0';
   }
 
@@ -124,17 +119,6 @@ export default class UUID {
     }
   */
 
-  /**
-   * A normalizing function.
-   * @param smth {*}
-   * @returns {UUID}
-   */
-  static as(smth: UUID | string): UUID {
-    if (!smth) return ERROR;
-    if (smth instanceof UUID) return smth;
-    return UUID.fromString(smth.toString());
-  }
-
   static unzip64(zip: string, ctx: string): string {
     if (!zip) return ctx;
     let ret = zip;
@@ -144,8 +128,7 @@ export default class UUID {
       while (pre.length < prefix + 4) pre += '0';
       ret = pre + ret.substr(1);
     }
-    while (ret.length > 1 && ret[ret.length - 1] === '0')
-      ret = ret.substr(0, ret.length - 1);
+    while (ret.length > 1 && ret[ret.length - 1] === '0') ret = ret.substr(0, ret.length - 1);
     return ret;
   }
 
@@ -203,8 +186,7 @@ export const RE = new RegExp(RON.UUID.source, 'g');
 export const PREFIXES = '([{}])';
 export const TIME_CONST = {'0': 1, '~': 1, '~~~~~~~~~~': 1};
 
-export const BASE64 =
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
+export const BASE64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
 export const CODES: Int8Array = new Int8Array(128);
 CODES.fill(-1);
 for (let i = 0; i < BASE64.length; i++) CODES[BASE64.charCodeAt(i)] = i;
@@ -236,7 +218,7 @@ export class Vector {
    * @param newUUID {UUID|String}
    */
   push(newUUID: UUID | string) {
-    const uuid = UUID.as(newUUID);
+    const uuid = UUID.fromString(newUUID.toString());
     const str = uuid.toString(this.last);
     if (this.body) this.body += ',';
     this.body += str;
@@ -278,8 +260,7 @@ export class Iter {
       this.uuid = null;
     } else {
       this.uuid = UUID.fromString(this.body, this.uuid, this.offset);
-      if (RE.lastIndex === 0 && this.offset !== 0)
-        this.offset = this.body.length;
+      if (RE.lastIndex === 0 && this.offset !== 0) this.offset = this.body.length;
       else this.offset = RE.lastIndex;
       if (this.body[this.offset] === ',') this.offset++;
     }

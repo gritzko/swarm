@@ -47,17 +47,18 @@ const defaultMeta: Meta = {
 
 /**
  * A simple client, keeps data in memory.
- *  Consumes updates from the server, feeds resulting RON states
- *  back to the listeners.
+ * Consumes updates from the server, feeds resulting RON states
+ * back to the listeners.
  */
 export default class Client {
   log: Frame; // FIXME ??
+  updates: Array<string>;
 
   clock: ?Clock;
   lstn: {[key: string]: (frame: string, state: string) => void}; // ?
   upstream: Connection;
   storage: Storage;
-  queue: Array<() => void> | void;
+  queue: Array<[() => void, (err: Error) => void]> | void;
   db: Meta;
   id: string;
   options: {
@@ -74,46 +75,50 @@ export default class Client {
     this.lstn = {};
     this.log = new Frame();
     this.queue = [];
+    this.updates = [];
     this.options = {
-      hsTimeout: options.hsTimeout || 3e5 /* 5 5min */,
+      hsTimeout: options.hsTimeout || 3e5 /* 5min */,
     };
     this.init(options);
   }
 
   async init(options: Options) {
-    const meta = await this.storage.get('__meta__');
-    this.db = ({
-      ...this.db,
-      ...JSON.parse(meta || '{}'),
-    }: Meta);
+    try {
+      const meta = await this.storage.get('__meta__');
+      this.db = ({
+        ...this.db,
+        ...JSON.parse(meta || '{}'),
+      }: Meta);
 
-    switch (this.db.clockMode) {
-      case 'Logical':
-        this.clock = new Logical(this.id);
-        await this.storage.set('__meta__', JSON.stringify(this.db));
-        break;
-      case 'Calendar':
-      case 'Epoch':
-        throw new Error(`TODO: '${this.db.clockMode}' clock is not supported yet`);
+      if (this.db.clockMode) {
+        switch (this.db.clockMode) {
+          case 'Logical':
+            this.clock = new Logical(this.id);
+            await this.storage.set('__meta__', JSON.stringify(this.db));
+            break;
+          default:
+            throw new Error(`TODO: Clock mode '${this.db.clockMode}' is not supported yet`);
+        }
+      }
+
+      if (typeof options.upstream === 'string') {
+        this.upstream = RWS(options.upstream, undefined, {reconnectOnError: true});
+      } else if (options.upstream) {
+        this.upstream = options.upstream;
+      } else if (!options.upstream && this.db.clockMode) {
+        this.upstream = new DevNull();
+      } else if (!options.upstream && !this.db.clockMode) {
+        throw new Error('neither connection options nor clock options found');
+      }
+
+      await new Promise(r => {
+        this.upstream.onopen = r;
+      });
+      await this.handshake();
+      this.release(null);
+    } catch (e) {
+      this.release(e);
     }
-
-    if (typeof options.upstream === 'string') {
-      this.upstream = RWS(options.upstream, undefined, {reconnectOnError: true});
-    } else if (options.upstream) {
-      this.upstream = options.upstream;
-    } else if (!options.upstream && this.db.clockMode) {
-      this.upstream = new DevNull();
-    } else if (!options.upstream && !this.db.clockMode) {
-      throw new Error('neither connection options nor clock options found');
-    }
-
-    if (this.clock) this.release();
-
-    await new Promise(r => {
-      this.upstream.onopen = r;
-    });
-    await this.handshake();
-    this.release();
   }
 
   async handshake(): Promise<void> {
@@ -124,25 +129,22 @@ export default class Client {
       this.upstream.onmessage = (me: MessageEvent) => resolve(((me.data: any): string));
     });
 
-    // reset listener
     const hello = new Frame();
-    // new connection
     hello.push(
       new Op(
         new UUID('db', '0', '$'),
         new UUID(this.db.name, '0', '$'),
         new UUID(this.clock ? this.clock.last().value : '0', this.id, '+'),
         ZERO,
-        QUERY_SEP + FRAME_SEP, // FIXME illigal shortcut
+        QUERY_SEP,
       ),
     );
+    hello.push(new Op(ZERO, ZERO, ZERO, ZERO, FRAME_SEP));
 
     const creds = this.db.credentials || {};
     for (const cred of Object.keys(creds)) {
-      const op = Op.fromString(`:${cred}${js2ron([creds[cred]])}`); // FIXME ?
-      if (op) hello.push(op);
+      hello.push(new Op(ZERO, ZERO, ZERO, UUID.fromString(cred), js2ron([creds[cred]])));
     }
-
     this.upstream.send(hello.toString());
 
     const resp = await hs;
@@ -156,152 +158,176 @@ export default class Client {
     let seen: UUID = ZERO;
     for (const op of new Frame(resp)) {
       if (op.uuid(3).gt(seen)) seen = op.uuid(3);
-      if (op.value(0)) {
-        let key = op.uuid(2).toString();
+      const val = op.value(0);
+      if (val) {
+        let key = op.uuid(3).toString();
         key = key[0].toLowerCase() + key.slice(1);
-        dbOpts[key] = op.uuid(3).value;
+        dbOpts[key] = val instanceof UUID ? val.value : val;
       }
     }
 
-    // read the first operation
     if (this.clock) {
       if (this.db.clockMode !== dbOpts.clockMode)
         throw new Error(
-          `Different clock mode: '${this.db.clockMode || 'undefined'}' <-> '${dbOpts.clockMode || 'undefined'}'`,
+          `Different clock mode: '${this.db.clockMode || 'undefined'}' !== '${dbOpts.clockMode || 'undefined'}'`,
         );
     } else {
       switch (dbOpts.clockMode) {
         case 'Logical':
           this.clock = new Logical(this.id);
         default:
-          throw new Error(`Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
+          throw new Error(`TODO: Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
       }
     }
 
     this.clock.see(seen);
 
-    // save meta info
     this.db = {...this.db, ...dbOpts};
     await this.storage.set('__meta__', JSON.stringify(this.db));
-    this.upstream.onmessage = (me: MessageEvent) => this.onMessage(((me.data: any): string));
-    this.upstream.onopen = () => this.handshake();
+    this.upstream.onmessage = (me: MessageEvent) => this.onMessage(((me.data: any): string)).catch(panic);
+    this.upstream.onopen = () => this.handshake().catch(panic);
 
-    const query = new Frame();
-    for (const key of Object.keys(this.lstn)) {
-      const op = Op.fromString(key + '?!'); // FIXME: check forkmode
-      if (op) query.push(op);
+    // resend all the frames
+    for (const frame of this.updates) {
+      this.upstream.send(frame);
     }
-    this.upstream.send(query.toString());
+
+    // resubscribe
+    let query: string = '';
+    for (const key of Object.keys(this.lstn)) {
+      query += key;
+    }
+    await this.on(query);
   }
 
+  /**
+   * Ensure returns Promise which will be resolved after connection
+   * installed or rejected if an error occurred.
+   */
   async ensure(): Promise<void> {
     const {queue} = this;
     if (queue === undefined) {
       return Promise.resolve();
-    } else
-      return new Promise(r => {
-        queue.push(r);
+    } else {
+      return new Promise((release, reject) => {
+        queue.push([release, reject]);
       });
+    }
   }
 
-  release() {
+  release(err: Error | null) {
     if (!this.queue) return;
     for (const cbk of this.queue) {
-      cbk();
+      if (err) {
+        cbk[1](err);
+      } else {
+        cbk[0]();
+      }
     }
     delete this.queue;
   }
 
-  onMessage(message: string) {
-    // TODO
+  async onMessage(message: string): Promise<void> {
+    if (!this.clock) throw new Error('Have no clock');
+    for (const op of new Frame(message)) {
+      if (op.event.origin === this.clock.origin()) {
+        for (let i = this.updates.length - 1; i >= 0; i--) {
+          const update = Op.fromString(this.updates[i]);
+          if (update && op.event.lt(update.event)) continue;
+          this.updates = this.updates.slice(i);
+          i = -1;
+        }
+      }
+    }
+    await this.update(message);
   }
 
   /**
-   * Install subscriptions.
-   * @param query {String} - uuid/query/query frame
-   * @param callback {Function}
+   * On installs subscriptions.
    */
-  async on(query: string, callback: (string, string) => void) {
+  async on(query: string, callback: ?(frame: string, state: string) => void): Promise<void> {
     const fwd = new Frame();
-
     for (const op of new Frame(query)) {
       const key = op.key();
       let base = ZERO;
-
       const stored = await this.storage.get(key);
       if (stored) {
-        callback('', stored);
         for (const op of new Frame(stored)) {
           base = op.event;
           break;
         }
       }
-      if (this.lstn[key]) throw new Error('TODO: many listeners per obj');
       fwd.push(new Op(op.type, op.object, base, ZERO, QUERY_SEP));
-      this.lstn[key] = callback;
+      if (callback) {
+        if (this.lstn[key]) throw new Error('TODO: many listeners per obj');
+        this.lstn[key] = callback;
+      }
     }
 
     this.upstream.send(fwd.toString());
+    if (callback) await this.update(fwd.toString(), true);
   }
 
-  async off(query: string, callback: ?(string, string) => void) {
+  /**
+   * Off removes subscriptions.
+   */
+  off(query: string, callback: ?(frame: string, state: string) => void) {
     const fwd = new Frame();
     for (const op of new Frame(query)) {
       delete this.lstn[op.key()];
-      this.upstream.send(new Op(op.type, op.object, NEVER, ZERO, '').toString()); // FIXME map?!
+      fwd.push(new Op(op.type, op.object, NEVER, ZERO));
     }
+    this.upstream.send(fwd.toString());
   }
 
+  /**
+   * Push sends updates to remote and local storages.
+   * Waits for connection installed. Thus, the client works in
+   * read-only mode until installed connection.
+   */
   async push(rawFrame: string) {
+    await this.ensure();
     const stamps: {[string]: UUID} = {};
 
     // replace
     const frame = mapUUIDs(rawFrame, (uuid, position, index, op): UUID => {
-      if ([1, 2].indexOf(position) !== 1) return uuid;
+      if ([1, 2].indexOf(position) === -1) return uuid;
       if (!uuid.isName() || !uuid.isZero()) return uuid;
 
-      // const key = `${index}/${uuid.toString()}`
-      // if (stamps[uuid]) return stamps[uuid];
-      // return (stamps[uuid] = this.clock.time());
-      // TODO
-      return ZERO;
+      const key = `${index}/${op.key()}`;
+      if (stamps[key]) return stamps[key];
+      // $FlowFixMe this.clock
+      return (stamps[key] = this.clock.time());
     });
 
-    // update
-    this.update(frame);
+    this.updates.push(frame);
+
     // save
     const op = Op.fromString(frame);
-    if (op) this.log.push(op);
-    // if (this.upstream) this.upstream.push(new Op.Cursor(frame));
+    if (op) this.log.push(op); // TODO ?
+    this.upstream.send(frame);
+    await this.update(frame);
   }
 
   /**
-   *
-   * @param frame {String} -- a single RON frame
+   * Update updates local states and notifies listeners.
    */
-  async update(frame: string) {
-    // ALLOWED INPUTS:
-    // - op
-    // - ack op
-    // - state frame
-    // - batch frame (split, repeat) TODO
-    if (!this.clock) throw new Error('have no clock yet');
+  async update(frame: string, skipMerge: ?true): Promise<void> {
     for (const op of new Frame(frame)) {
-      if (op.event.origin === this.clock.origin) {
-        // ack
-      }
-
       const key = op.key();
-      const state = await this.storage.get(key);
-      const new_state = state ? reduce(state, frame) : frame;
-      await this.storage.set(key, new_state);
+      let state = await this.storage.get(key);
+      if (!skipMerge) {
+        state = state ? reduce(state.toString(), frame) : frame;
+        await this.storage.set(key, state);
+      }
       const l = this.lstn[key];
-      if (l) l(frame, new_state);
-      break;
+      if (l) l(frame, state.toString());
+      break; // read only first operation of given frame
     }
   }
 }
 
+// DevNull connection is used for permanent offline-mode
 class DevNull implements Connection {
   onmessage: (ev: MessageEvent) => any;
   onopen: (ev: Event) => any;
@@ -310,4 +336,8 @@ class DevNull implements Connection {
     this.readyState = 3;
   }
   send(data: string): void {}
+}
+
+function panic(err: any) {
+  throw err;
 }

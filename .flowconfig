@@ -8,6 +8,7 @@
 
 [options]
 module.name_mapper='^\(.*\)swarm\-\(.*\)$' -> '<PROJECT_ROOT>/packages/\2/src'
+munge_underscores=true
 
 [version]
 0.63.1

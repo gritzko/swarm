@@ -43,3 +43,52 @@ test('Client: reconnect - init before connnection', async () => {
 
   await client.ensure();
 });
+
+test('Client: w/o clock/url/connection', async () => {
+  const storage = new InMemory();
+  const client = new Client({
+    id: 'user',
+    storage,
+  });
+
+  try {
+    await client.ensure();
+  } catch (e) {
+    expect(e).toEqual(new Error('neither connection options nor clock options found'));
+  }
+});
+
+test('Client: not supported clock', async () => {
+  const client = new Client({
+    id: 'user',
+    storage: new InMemory(),
+    db: {
+      name: 'test',
+      clockMode: 'Epoch',
+    },
+  });
+
+  try {
+    await client.ensure();
+  } catch (e) {
+    expect(e).toEqual(new Error("TODO: Clock mode 'Epoch' is not supported yet"));
+  }
+});
+
+test('Client: not supported clock from peer', async () => {
+  const conn = new Connection('003-calendar-clock.ron');
+  const client = new Client({
+    id: 'user',
+    storage: new InMemory(),
+    upstream: conn,
+    db: {
+      name: 'test',
+    },
+  });
+
+  try {
+    await client.ensure();
+  } catch (e) {
+    expect(e).toEqual(new Error("TODO: Clock mode 'Calendar' is not supported yet"));
+  }
+});
