@@ -1,13 +1,7 @@
 // @flow
 'use strict';
 
-import Op, {
-  UUID_ERROR as ERROR,
-  Cursor,
-  Frame,
-  FRAME_SEP,
-  UUID,
-} from 'swarm-ron';
+import Op, {UUID_ERROR as ERROR, Cursor, Frame, FRAME_SEP, UUID} from 'swarm-ron';
 
 import {IS_OP_BASED, IS_STATE_BASED, IS_OMNIVOROUS} from './is';
 import * as log from './log';
@@ -33,15 +27,15 @@ export default rdt;
  * @return {String}
  */
 export function reduce(oldStateFrame: string, changeFrame: string): string {
-  const oi = new Cursor(oldStateFrame);
-  const ai = new Cursor(changeFrame);
+  const oi = new Cursor(oldStateFrame).op;
+  const ai = new Cursor(changeFrame).op;
 
   let features: number = 0;
   let _reduce;
   let error;
 
-  if (oi.op != null) {
-    const _rdt = rdt[oi.op.type];
+  if (oi != null) {
+    const _rdt = rdt[oi.type.toString()];
     if (_rdt) {
       _reduce = _rdt.default;
       features = _rdt.IS;
@@ -50,46 +44,24 @@ export function reduce(oldStateFrame: string, changeFrame: string): string {
 
   if (!_reduce) {
     error = '>NOTYPE';
-  } else if ((oi.op && oi.op.isQuery()) || (ai.op && ai.op.isQuery())) {
+  } else if ((oi && oi.isQuery()) || (ai && ai.isQuery())) {
     error = '>NOQUERY';
-  } else if (
-    0 === (features & IS_OP_BASED) &&
-    (oi.op.isRegular() || ai.op.isRegular())
-  ) {
+  } else if (0 === (features & IS_OP_BASED) && ((oi && oi.isRegular()) || (ai && ai.isRegular()))) {
     error = '>NOOPBASED';
-  } else if (0 === (features & IS_STATE_BASED) && ai.op && ai.op.isHeader()) {
+  } else if (0 === (features & IS_STATE_BASED) && ai && ai.isHeader()) {
     error = '>NOSTATBASD';
-  } else if (
-    0 === (features & IS_OMNIVOROUS) &&
-    ai.op &&
-    oi.op &&
-    !oi.op.type.eq(ai.op.type)
-  ) {
+  } else if (0 === (features & IS_OMNIVOROUS) && ai && oi && !oi.type.eq(ai.type)) {
     error = '>NOOMNIVORS';
-  } else if (ai.op && ai.op.isError()) {
+  } else if (ai && ai.isError()) {
     error = '>ERROR'; // TODO fetch msg
   }
   const newFrame = new Frame();
-  if (!error && oi.op && ai.op) {
-    newFrame.push(
-      new Op(
-        oi.op.type,
-        oi.op.object,
-        ai.op.event,
-        oi.op.isHeader() ? oi.op.location : oi.op.event,
-        FRAME_SEP,
-      ),
-    );
-    if (_reduce) _reduce(oi, ai, newFrame);
+  if (!error && oi && ai) {
+    newFrame.push(new Op(oi.type, oi.object, ai.event, oi.isHeader() ? oi.location : oi.event, FRAME_SEP));
+    if (_reduce) _reduce(new Cursor(oldStateFrame), new Cursor(changeFrame), newFrame);
   }
-  if (error && oi.op && ai.op) {
-    return new Op(
-      oi.op.type,
-      oi.op.object,
-      ERROR,
-      ai.op.event,
-      error,
-    ).toString();
+  if (error && oi && ai) {
+    return new Op(oi.type, oi.object, ERROR, ai.event, error).toString();
   } else {
     return newFrame.toString();
   }

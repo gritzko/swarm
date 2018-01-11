@@ -7,5 +7,7 @@
 [libs]
 
 [options]
-unsafe.enable_getters_and_setters=true
 module.name_mapper='^\(.*\)swarm\-\(.*\)$' -> '<PROJECT_ROOT>/packages/\2/src'
+
+[version]
+0.63.1
