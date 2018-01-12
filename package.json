@@ -5,13 +5,12 @@
     "babel-eslint": "^8.1.2",
     "eslint": "^4.14.0",
     "eslint-plugin-flowtype": "^2.40.1",
+    "jest": "22.0.3",
     "lerna": "^2.5.1"
   },
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
-    "test": "npm run build && lerna run test",
+    "test": "jest",
     "build": "lerna run build",
     "build:clean": "lerna run build:clean",
     "build:lib": "lerna run build:lib",

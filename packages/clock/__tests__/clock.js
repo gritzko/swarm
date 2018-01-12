@@ -1,8 +1,8 @@
 // @flow
 'use strict';
 
-import { Logical } from '../src';
-import UUID from 'swarm-ron-uuid';
+import {Logical} from '../src';
+import UUID from '../../ron-uuid/src';
 
 import {equal as eq} from 'assert';
 

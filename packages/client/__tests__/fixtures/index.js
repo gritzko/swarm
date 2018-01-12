@@ -73,7 +73,9 @@ test('connection', () => {
   const conn = new Connection('001-conn.ron');
   const dump = conn.dump();
   expect(JSON.stringify(dump.fixtures)).toBe(
-    '[{"body":"*db #test @0+user :0 ?  :password\'12345\'","direction":">"},{"body":"*db #test$server @1ABC+user :1ABC+server !","direction":"<"},{"body":"#object?","direction":">"},{"body":"*lww #object @time+author !  :key \' value\'","direction":"<"}]',
+    '[{"body":"*db#test@0+user?!:password\'12345\'","direction":">"},{"body":' +
+      '"*db#test$server@1ABC+user:1ABC+server!","direction":"<"},{"body":' +
+      '"#object?","direction":">"},{"body":"*lww#object@time+author!:key\'value\'","direction":"<"}]',
   );
   expect(dump.fixtures[0].direction).toBe('>');
 });

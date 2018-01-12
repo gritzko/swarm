@@ -1,6 +1,6 @@
 // @flow
 
-import {Frame} from 'swarm-ron';
+import {Frame, UUID} from '../../ron/src';
 import {Connection} from './fixtures';
 import Client from '../src';
 import {InMemory} from '../src/storage';
@@ -26,6 +26,8 @@ test('Client: new', async () => {
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
       '"credentials":{"password":"12345"},"clockMode":"Logical"}',
   });
+  expect(client.clock && client.clock.last().eq(UUID.fromString('1ABC+server'))).toBeTruthy();
+  expect(client.clock && client.clock.time().toString()).toBe('1ABC1-user');
 });
 
 test('Client: reconnect - init before connnection', async () => {
@@ -45,12 +47,7 @@ test('Client: reconnect - init before connnection', async () => {
 });
 
 test('Client: w/o clock/url/connection', async () => {
-  const storage = new InMemory();
-  const client = new Client({
-    id: 'user',
-    storage,
-  });
-
+  const client = new Client({id: 'user', storage: new InMemory()});
   try {
     await client.ensure();
   } catch (e) {
@@ -62,10 +59,7 @@ test('Client: not supported clock', async () => {
   const client = new Client({
     id: 'user',
     storage: new InMemory(),
-    db: {
-      name: 'test',
-      clockMode: 'Epoch',
-    },
+    db: {name: 'test', clockMode: 'Epoch'},
   });
 
   try {
@@ -81,9 +75,7 @@ test('Client: not supported clock from peer', async () => {
     id: 'user',
     storage: new InMemory(),
     upstream: conn,
-    db: {
-      name: 'test',
-    },
+    db: {name: 'test'},
   });
 
   try {

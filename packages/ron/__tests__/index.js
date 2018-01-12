@@ -5,18 +5,13 @@ import {equal as eq, ok, deepEqual as de} from 'assert';
 
 test('ron comments', () => {
   const frame = "*lww#test@time-orig! *~ 'comment'! *lww :int=1:str'2'";
-  const ops = [
-    '*lww#test@time-orig!',
-    "*~'comment'!",
-    '*lww:int=1',
-    "*lww:str'2'",
-  ];
+  const ops = ['*lww#test@time-orig!', "*~'comment'!", '*lww:int=1', "*lww:str'2'"];
 
   const f = new Frame(frame);
   for (let op of f) {
-    expect(op.toString()).toBe(ops.shift())
+    expect(op.toString()).toBe(ops.shift());
   }
-})
+});
 
 test('main section', () => {
   const a = Op.fromString('#id=1');

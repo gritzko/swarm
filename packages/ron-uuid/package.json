@@ -3,9 +3,7 @@
   "version": "2.0.9",
   "description": "A Swarm Replicated Object Notation UUID variant",
   "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
-  "contributors": [
-    "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"
-  ],
+  "contributors": ["Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"],
   "main": "lib/index.js",
   "repository": {
     "type": "git",
@@ -21,27 +19,15 @@
     "babel-preset-es2015": "^6.24.1",
     "flow-bin": "^0.63.1",
     "flow-copy-source": "^1.2.1",
-    "jest": "^22.0.3",
     "rimraf": "^2.6.2"
   },
-  "files": [
-    "index.js",
-    "test.js",
-    "README.md"
-  ],
+  "files": ["index.js", "test.js", "README.md"],
   "scripts": {
-    "test": "jest",
     "build": "yarn run build:clean && yarn run build:lib && yarn run build:flow",
     "build:clean": "rimraf lib",
     "build:lib": "babel -d lib src --ignore '**/__tests__/**'",
     "build:flow": "flow-copy-source -v -i '**/__tests__/**' src lib"
   },
-  "keywords": [
-    "swarm",
-    "replicated",
-    "ron",
-    "grammar",
-    "protocol"
-  ],
+  "keywords": ["swarm", "replicated", "ron", "grammar", "protocol"],
   "license": "MIT"
 }
