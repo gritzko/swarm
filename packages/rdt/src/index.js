@@ -4,8 +4,8 @@
 import Op, {UUID_ERROR as ERROR, Cursor, Frame, FRAME_SEP, UUID} from 'swarm-ron';
 
 import {IS_OP_BASED, IS_STATE_BASED, IS_OMNIVOROUS} from './is';
-import * as log from './log';
-import * as lww from './lww';
+import * as _log from './log';
+import * as _lww from './lww';
 
 const rdt: {
   [string]: {|
@@ -14,8 +14,8 @@ const rdt: {
     default: (Cursor, Cursor, Frame) => void,
   |},
 } = {
-  lww,
-  log,
+  lww: _lww,
+  log: _log,
 };
 
 export default rdt;
@@ -66,3 +66,13 @@ export function reduce(oldStateFrame: string, changeFrame: string): string {
     return newFrame.toString();
   }
 }
+
+export const lww = {
+  reduce: _lww.default,
+  uuid: _lww.TYPE_UUID,
+};
+
+export const log = {
+  reduce: _log.default,
+  uuid: _log.TYPE_UUID,
+};

@@ -40,7 +40,7 @@ export class Logical implements Clock {
     while (t[i] === '~' && i >= 0) i--;
     if (i < 0) return ERROR;
     const value = t.substr(0, i) + BASE64[CODES[t.charCodeAt(i)] + 1];
-    this._last = new UUID(value, this._origin);
+    this._last = new UUID(value, this._origin, '+');
     return this._last;
   }
 

@@ -7,6 +7,7 @@ import Op, {Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 's
 import type {Clock} from 'swarm-clock';
 import {Logical} from 'swarm-clock';
 import {ZERO, NEVER} from 'swarm-ron-uuid';
+import {lww} from 'swarm-rdt';
 import {reduce} from 'swarm-rdt';
 import type {Storage} from './storage';
 import {InMemory} from './storage';
@@ -51,7 +52,6 @@ const defaultMeta: Meta = {
  * back to the listeners.
  */
 export default class Client {
-  log: Frame; // FIXME ??
   updates: Array<string>;
 
   clock: ?Clock;
@@ -73,7 +73,6 @@ export default class Client {
     };
     this.storage = options.storage;
     this.lstn = {};
-    this.log = new Frame();
     this.queue = [];
     this.updates = [];
     this.options = {
@@ -197,7 +196,7 @@ export default class Client {
     for (const key of Object.keys(this.lstn)) {
       query += key;
     }
-    await this.on(query);
+    if (query) await this.on(query);
   }
 
   /**
@@ -247,25 +246,27 @@ export default class Client {
    */
   async on(query: string, callback: ?(frame: string, state: string) => void): Promise<void> {
     const fwd = new Frame();
-    for (const op of new Frame(query)) {
-      const key = op.key();
+    const self = this;
+    for (let op of new Frame(query)) {
+      if (op.uuid(1).eq(ZERO)) throw new Error(`ID is not specified: "${op.toString()}"`);
+      const key = op.uuid(1).toString();
       let base = ZERO;
-      const stored = await this.storage.get(key);
+      const stored = await self.storage.get(key);
       if (stored) {
         for (const op of new Frame(stored)) {
           base = op.event;
           break;
         }
       }
-      fwd.push(new Op(op.type, op.object, base, ZERO, QUERY_SEP));
+      fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
       if (callback) {
-        if (this.lstn[key]) throw new Error('TODO: many listeners per obj');
-        this.lstn[key] = callback;
+        if (self.lstn[key]) throw new Error('TODO: many listeners per obj');
+        self.lstn[key] = callback;
       }
     }
 
-    this.upstream.send(fwd.toString());
-    if (callback) await this.update(fwd.toString(), true);
+    self.upstream.send(fwd.toString());
+    if (callback && fwd.toString()) await self.update(fwd.toString(), true);
   }
 
   /**
@@ -274,7 +275,7 @@ export default class Client {
   off(query: string, callback: ?(frame: string, state: string) => void) {
     const fwd = new Frame();
     for (const op of new Frame(query)) {
-      delete this.lstn[op.key()];
+      delete this.lstn[op.uuid(1).toString()];
       fwd.push(new Op(op.type, op.object, NEVER, ZERO));
     }
     this.upstream.send(fwd.toString());
@@ -287,41 +288,38 @@ export default class Client {
    */
   async push(rawFrame: string) {
     await this.ensure();
-    const stamps: {[string]: UUID} = {};
+    let stamps: {[string]: UUID | void} = {};
 
-    // replace
-    const frame = mapUUIDs(rawFrame, (uuid, position, index, op): UUID => {
-      if ([1, 2].indexOf(position) === -1) return uuid;
-      if (!uuid.isName() || !uuid.isZero()) return uuid;
-
-      const key = `${index}/${op.key()}`;
-      if (stamps[key]) return stamps[key];
-      // $FlowFixMe this.clock
-      return (stamps[key] = this.clock.time());
+    const frame = mapUUIDs(rawFrame, (uuid, position, _, op): UUID => {
+      if (position === 0) return uuid.eq(ZERO) ? lww.uuid : uuid;
+      if (position > 2 || !uuid.eq(ZERO)) return uuid;
+      const exists = stamps[uuid.toString()];
+      // $FlowFixMe
+      return exists ? exists : (stamps[uuid.toString()] = this.clock.time());
     });
 
-    this.updates.push(frame);
-
     // save
-    const op = Op.fromString(frame);
-    if (op) this.log.push(op); // TODO ?
-    this.upstream.send(frame);
+    this.updates.push(frame);
     await this.update(frame);
+    this.upstream.send(frame);
   }
 
   /**
    * Update updates local states and notifies listeners.
    */
   async update(frame: string, skipMerge: ?true): Promise<void> {
+    const self = this;
     for (const op of new Frame(frame)) {
-      const key = op.key();
-      let state = await this.storage.get(key);
+      const key = op.uuid(1).toString();
+      let state = await self.storage.get(key);
       if (!skipMerge) {
         state = state ? reduce(state.toString(), frame) : frame;
-        await this.storage.set(key, state);
+        await self.storage.set(key, state);
       }
-      const l = this.lstn[key];
-      if (l) l(frame, state.toString());
+      const l = self.lstn[key];
+      if (l && state) {
+        l(!skipMerge ? frame : '', state.toString());
+      }
       break; // read only first operation of given frame
     }
   }
@@ -334,6 +332,7 @@ class DevNull implements Connection {
   readyState: number;
   constructor() {
     this.readyState = 3;
+    setTimeout(() => this.onopen(new Event('')), 0);
   }
   send(data: string): void {}
 }

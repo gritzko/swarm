@@ -47,7 +47,7 @@ export class Connection implements IConn {
 
   send(payload: string): void {
     setTimeout(() => {
-      // console.log(`conn.send('${payload}')`);
+      // console.log(`#2 conn.send('${payload}')`);
       this.session.push(new RawFrame(payload, '>'));
       this.pushPending();
     }, 0);
@@ -60,8 +60,10 @@ export class Connection implements IConn {
       if (raw.direction === '<') {
         (raw => {
           setTimeout(() => {
+            // console.log(`session.push('${raw.toString()}')`);
             this.session.push(raw);
             this.onmessage((({data: raw.body}: any): MessageEvent));
+            // console.log('message was sent');
           }, 100 << i);
         })(raw);
       } else break;
@@ -73,9 +75,10 @@ test('connection', () => {
   const conn = new Connection('001-conn.ron');
   const dump = conn.dump();
   expect(JSON.stringify(dump.fixtures)).toBe(
-    '[{"body":"*db#test@0+user?!:password\'12345\'","direction":">"},{"body":' +
-      '"*db#test$server@1ABC+user:1ABC+server!","direction":"<"},{"body":' +
-      '"#object?","direction":">"},{"body":"*lww#object@time+author!:key\'value\'","direction":"<"}]',
+    "[\"*~ '>' *db#test@0+user?!:password'12345'.\"," +
+      '"*~ \'<\' *db#test$server@1ABC+user:1ABC+server!.",' +
+      '"*~ \'>\' #object?.",' +
+      "\"*~ '<' *lww#object@time+author!:key'value'.\"]",
   );
   expect(dump.fixtures[0].direction).toBe('>');
 });
@@ -90,6 +93,10 @@ class RawFrame {
   }
 
   toString(): string {
-    return this.body;
+    return `*~ '${this.direction}' ${this.body}.`;
+  }
+
+  toJSON(): string {
+    return this.toString();
   }
 }

@@ -2,3 +2,6 @@
 *~ '<' *db#test$server@1ABC+user:1ABC+server!.
 *~ '>' #object?!.
 *~ '<' *lww#object@time+author!:key'value'.
+*~ '>' #object@~.
+*~ '>' *lww#object@1ABC1+user!:bar'biz'.
+*~ '>' *lww#object@1ABC2+user!:foo>object.

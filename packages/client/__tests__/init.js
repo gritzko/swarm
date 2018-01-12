@@ -27,7 +27,7 @@ test('Client: new', async () => {
       '"credentials":{"password":"12345"},"clockMode":"Logical"}',
   });
   expect(client.clock && client.clock.last().eq(UUID.fromString('1ABC+server'))).toBeTruthy();
-  expect(client.clock && client.clock.time().toString()).toBe('1ABC1-user');
+  expect(client.clock && client.clock.time().toString()).toBe('1ABC1+user');
 });
 
 test('Client: reconnect - init before connnection', async () => {

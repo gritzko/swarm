@@ -299,9 +299,8 @@ export class Frame {
 export function mapUUIDs(rawFrame: string, fn: (UUID, number, number, Op) => UUID): string {
   const ret = new Frame();
   let index = -1;
-  for (const i = new Cursor(rawFrame); i.op; i.nextOp()) {
+  for (const op of new Frame(rawFrame)) {
     index++;
-    const op = i.op;
     ret.push(
       new Op(
         fn(op.type, 0, index, op) || op.type,
