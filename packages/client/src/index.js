@@ -52,8 +52,6 @@ const defaultMeta: Meta = {
  * back to the listeners.
  */
 export default class Client {
-  updates: Array<string>;
-
   clock: ?Clock;
   lstn: {[key: string]: (frame: string, state: string) => void}; // ?
   upstream: Connection;
@@ -74,7 +72,6 @@ export default class Client {
     this.storage = options.storage;
     this.lstn = {};
     this.queue = [];
-    this.updates = [];
     this.options = {
       hsTimeout: options.hsTimeout || 3e5 /* 5min */,
     };
@@ -187,7 +184,8 @@ export default class Client {
     this.upstream.onopen = () => this.handshake().catch(panic);
 
     // resend all the frames
-    for (const frame of this.updates) {
+    const pending = await this.storage.get('__pending__');
+    for (const frame of JSON.parse(pending || '[]')) {
       this.upstream.send(frame);
     }
 
@@ -227,17 +225,23 @@ export default class Client {
   }
 
   async onMessage(message: string): Promise<void> {
-    if (!this.clock) throw new Error('Have no clock');
+    const clock = this.clock;
+    if (!clock) throw new Error('Have no clock');
+
+    const pending = await this.storage.get('__pending__');
+    let updates: Array<string> = JSON.parse(pending || '[]');
+
     for (const op of new Frame(message)) {
-      if (op.event.origin === this.clock.origin()) {
-        for (let i = this.updates.length - 1; i >= 0; i--) {
-          const update = Op.fromString(this.updates[i]);
+      if (op.event.origin === clock.origin()) {
+        for (let i = updates.length - 1; i >= 0; i--) {
+          const update = Op.fromString(updates[i]);
           if (update && op.event.lt(update.event)) continue;
-          this.updates = this.updates.slice(i);
+          updates = updates.slice(i);
           i = -1;
         }
       }
     }
+    await this.storage.set('__pending__', JSON.stringify(updates));
     await this.update(message);
   }
 
@@ -299,7 +303,8 @@ export default class Client {
     });
 
     // save
-    this.updates.push(frame);
+    const pending = await this.storage.get('__pending__');
+    await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
     await this.update(frame);
     this.upstream.send(frame);
   }

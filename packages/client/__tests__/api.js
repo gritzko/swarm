@@ -31,6 +31,7 @@ test('client.on(...)', async () => {
   // $FlowFixMe
   expect(client.storage.storage).toEqual({
     object: "*lww#object@time+author!:key'value'",
+    __pending__: '[]',
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
       '"clockMode":"Logical","credentials":{}}',
@@ -124,6 +125,7 @@ test('client.push(...)', async () => {
   // $FlowFixMe
   expect(client.storage.storage).toEqual({
     object: "*lww#object@1ABC2+user!@(1+:bar'biz'@(2+:foo>object@time+author:key'value'",
+    __pending__: '["*lww#object@1ABC1+user!:bar\'biz\'","*lww#object@1ABC2+user!:foo>object"]',
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
       '"clockMode":"Logical","credentials":{}}',
