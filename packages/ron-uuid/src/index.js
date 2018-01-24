@@ -37,15 +37,18 @@ export default class UUID {
       }
     }
     if (this.origin === ctx.origin) {
-      if (this.value === ctx.value) return '';
+      if (this.value === ctx.value) return this.sep === ctx.sep ? '' : this.sep;
       let zip = UUID.zip64(this.value, ctx.value);
       const expSep = zip === this.value ? '$' : '-';
       return expSep === this.sep ? zip : zip + this.sep;
     } else {
       const time = UUID.zip64(this.value, ctx.value);
       const orig = UUID.zip64(this.origin, ctx.origin);
-      if (this.sep !== '-' || orig === this.origin) return time + this.sep + orig;
-      else return time + orig;
+      if (this.sep !== '-' || orig === this.origin) {
+        return time + this.sep + orig;
+      } else {
+        return time ? time + this.sep + orig : this.sep + orig;
+      }
     }
   }
 
@@ -101,7 +104,7 @@ export default class UUID {
       return ctx;
     } else {
       const orig = UUID.unzip64(m[3], ctx.origin);
-      return new UUID(time, orig, m[2] || '-');
+      return new UUID(time, orig, m[2] || ctx.sep);
     }
   }
 

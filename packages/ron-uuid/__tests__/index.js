@@ -72,7 +72,7 @@ const uuids = ['time-origin', 'time01-origin', 'time2-origin2'].map(v => UUID.fr
 vec.push(uuids[0]);
 vec.push(uuids[1]);
 vec.push(uuids[2]);
-eq(vec.toString(), 'time-origin,[1,(2{2');
+eq(vec.toString(), 'time-origin,[1,(2-{2');
 for (let u of vec) ok(u.eq(uuids.shift()));
 eq(uuids.length, 0);
 
