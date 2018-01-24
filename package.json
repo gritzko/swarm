@@ -1,6 +1,7 @@
 {
+  "private": true,
+  "version": "2.0.0",
   "name": "swarm",
-  "version": "1.0.16",
   "homepage": "http://github.com/gritzko/swarm",
   "repository": {
     "type": "git",
@@ -18,30 +19,26 @@
     {
       "name": "Andrey Popp",
       "email": "8mayday@gmail.com"
+    },
+    {
+      "name": "Oleg Lebedev",
+      "email": "ole6edev@gmail.com"
     }
   ],
-  "email": "swarm.js@gmail.com",
   "license": "MIT",
-  "files": [
-    "*/src/*.js",
-    "*/test/*.js",
-    "*/README.md",
-    "*/package.json",
-    "README.md",
-    "LICENSE"
-  ],
-  "main": "",
-  "browser": "",
-  "dependencies": {},
   "devDependencies": {
-    "marked": "^0.3.5",
-    "async": "^1.5.0",
-    "mkdirp": "^0.5.1",
-    "rimraf": "^2.4.4",
-    "tap": "^2.3.1",
-    "jsdoc": "^3.4.0"
+    "babel-eslint": "^8.1.2",
+    "eslint": "^4.14.0",
+    "eslint-plugin-flowtype": "^2.40.1",
+    "jest": "22.0.3",
+    "lerna": "^2.5.1"
   },
+  "workspaces": ["packages/*"],
   "scripts": {
-    "test": "make bootstrap test"
+    "test": "lerna run build && jest",
+    "build": "lerna run build",
+    "build:clean": "lerna run build:clean",
+    "build:lib": "lerna run build:lib",
+    "build:flow": "lerna run build:flow"
   }
 }
