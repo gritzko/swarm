@@ -13,6 +13,7 @@ dist/*
 # dev stuff
 .idea
 node_modules
+lib
 # OS generated files #
 ######################
 .DS_Store
@@ -20,5 +21,3 @@ node_modules
 ._*
 .Spotlight-V100
 .Trashes
-ehthumbs.db
-Thumbs.db

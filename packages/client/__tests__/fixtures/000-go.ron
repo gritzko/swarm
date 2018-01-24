@@ -1,0 +1,72 @@
+*~ >A 'empty rw handshake, clock sync'?
+'RON database has an arbitrary 60-bit identifier (like #test).'
+'A metadata object (type *db) is non-versioned, immutable key-value dict.'
+'These parameters are global; e.g. any db replica must use the same type of clock.'
+'Replica id granting scheme is also global; replica ids are unique (scoped to db).'
+'Consequently, clocks only maintain their properties in the scope of their db.'
+'Same-db objects/events can reference each other, can be compared.'
+    *db #test @+ClientA ?!
+*~ >A 'response has timestamp, db metadata'!
+'The metadata object is global and immutable, must match for all replicas.'
+'We use event id for a fresh timestamp which becomes the connection id.'
+'Ref is used for the peer\'s last known event id (0 for no past handshakes).'
+    *db#test@)2+peer?!
+        @)1:ClockMode>Logical
+        :ClockLen=5
+
+*~ >A 'unknown type'?
+'the general sanity check detects unknown data types'
+    *weird#type?
+*~ >A 'error; no sub'!
+'responds with a closing subscription, error code'
+    *weird#type@~:WrongType$~~~~~~~~~~!
+
+*~ >A 'state push'?
+'a client creates an object, pushes the state to the server, subscribes to updates'
+	*lww#obj@)4+ClientA?!
+        :one=1
+*~ >A 'server acknowledges the write'!
+'the server responds with a query and an ack (the object is readable/writable)'
+'an ack is simply an empty state (header only)'
+'note that the server acknowledges the state it received in the same frame as the query'
+    *lww#obj?!
+    @)4+ClientA!
+
+*~ >B 'new ro handshake, object sub'?
+'this client makes no writes'
+    *db#test@)5+ClientB?
+    *lww#obj@)4+ClientA?
+*~ >B 'ro response hs, object state'!
+'note the server makes no ? queries'
+'FIXME no ?'
+    *db#test@)6+peer?!
+    *lww#obj@)4+ClientA!
+
+*~ >A 'update op'?
+    *lww#obj@)5+ClientA:two'2';
+*~ >A 'ack'!
+'strictly speaking, type and object ids are unnecessary here (c>p sync is log based)'
+    *lww#obj@)5+ClientA!
+*~ >B 'relayed op'!
+'there is an acknowledged subscription => the op is relayed'
+    *lww#obj@)5+ClientA:two'2';
+
+*~ >C 'hs, sub'?
+    *db#test@)A+ClientC?!
+    *lww#obj?!
+*~ >C 'merged state'!
+    *db#test@)B+peer?!
+    *lww#obj@)5+ClientA?! @)4:one=1, @)5:two'2'
+
+*~ >C 'unsub'?
+    *lww#obj@~?
+*~ >C 'unsub OK'!
+    *lww#obj@~!
+
+*~ >A 'yet another update op'?
+    *lww#obj@)6+ClientA:three^3.0;
+*~ >A 'ack, time update'!
+    *lww#obj@)6+ClientA!
+*~ >C 'unsubd, no updates'
+
+.

@@ -1,8 +1,0 @@
-<html>
-<head>
-<meta charset="utf-8">
-<title>Swarm docs</title>
-<link rel="stylesheet" href="./gritzko.css">
-</head>
-<body>
-<div id='body'>

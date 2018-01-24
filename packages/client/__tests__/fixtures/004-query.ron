@@ -1,0 +1,4 @@
+*~ '>' *db#test@+user?!.
+*~ '<' *db#test$server@1ABC+user:1ABC+server!.
+*~ '>' #object?!.
+*~ '<' *lww#object@time+author!:key'value'.
