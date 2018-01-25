@@ -121,6 +121,17 @@ export default class Op {
     return ret;
   }
 
+  equal(other: Op): boolean {
+    return (
+      this.uuid(0).eq(other.uuid(0)) &&
+      this.uuid(1).eq(other.uuid(1)) &&
+      this.uuid(2).eq(other.uuid(2)) &&
+      this.uuid(3).eq(other.uuid(3)) &&
+      this.values === other.values &&
+      this.term === other.term
+    );
+  }
+
   /**
    *
    * @param body {String} -- serialized frame
@@ -287,6 +298,22 @@ export class Frame {
     for (const op of this) {
       this.last = op;
     }
+  }
+
+  equal(other: Frame): boolean {
+    if (this.toString() === other.toString()) return true;
+    const cursor = new Cursor(other.toString());
+    for (const op of this) {
+      const oop = cursor.op;
+      if (!oop || !op.equal(oop)) return false;
+      cursor.next();
+    }
+    return cursor.next().done;
+  }
+
+  isFullState(): boolean {
+    for (const op of this) return op.isHeader() && op.uuid(3).isZero();
+    return false;
   }
 }
 
