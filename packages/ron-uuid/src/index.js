@@ -179,6 +179,11 @@ export default class UUID {
     }
     return ret;
   }
+
+  compare(uuid: UUID): number {
+    if (this.eq(uuid)) return 0;
+    return this.lt(uuid) ? -1 : 1;
+  }
 }
 
 export const ZERO = new UUID('0', '0');
