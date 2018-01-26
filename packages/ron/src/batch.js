@@ -2,11 +2,40 @@
 
 import {Frame} from './index';
 
-export default class Batch {
+export default class Batch implements Iterator<Frame> {
   frames: Array<Frame>;
+  index: 0;
 
-  constructor(frames: Array<Frame>) {
+  constructor(...frames: Array<Frame>) {
     this.frames = frames;
+    this.index = 0;
+  }
+
+  /*:: @@iterator(): Iterator<Frame> { return ({}: any); } */
+
+  // $FlowFixMe - computed property
+  [Symbol.iterator](): Iterator<Frame> {
+    this.index = 0;
+    return this;
+  }
+
+  clone(): Batch {
+    return new Batch(...[...this.frames]);
+  }
+
+  push(f: Frame): Batch {
+    this.frames.push(f);
+    return this;
+  }
+
+  next(): IteratorResult<Frame, void> {
+    if (this.frames.length > this.index) {
+      return {
+        done: false,
+        value: this.frames[this.index++],
+      };
+    }
+    return {done: true};
   }
 
   toString(): string {
@@ -18,6 +47,10 @@ export default class Batch {
   }
 
   get length(): number {
+    return this.frames.length;
+  }
+
+  get long(): number {
     let ret = 0;
     for (const c of this.frames) {
       ret += c.body.length;
@@ -38,7 +71,7 @@ export default class Batch {
   }
 
   equal(other: Batch): boolean {
-    if (this.length !== other.length) {
+    if (this.long !== other.long) {
       return false;
     }
 
@@ -49,5 +82,9 @@ export default class Batch {
     }
 
     return true;
+  }
+
+  static fromStringArray(...input: Array<string>): Batch {
+    return new Batch(...input.map(i => new Frame(i)));
   }
 }

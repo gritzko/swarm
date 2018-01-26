@@ -99,13 +99,11 @@ export default class Op {
     return '*' + this.type.value + '#' + this.object.value;
   }
 
-  /**
-   * @param ctxOp {Op}
-   * @return {String}
-   */
   toString(ctxOp: ?Op): string {
     let ret = '';
     const ctx = ctxOp || ZERO;
+    let expComma = ctx.term !== ';';
+
     for (const u of [0, 1, 2, 3]) {
       const uuid = this.uuid(u);
       const same = ctx.uuid(u);
@@ -114,31 +112,29 @@ export default class Op {
       ret += UUID_SEPS[u];
       ret += str;
     }
+
     ret += this.values;
-    if (this.term != ';') {
+    if (!this.values || (expComma && this.term !== ',') || (!expComma && this.term !== ';')) {
       ret += this.term;
     }
     return ret;
   }
 
+  clone(): Op {
+    return new Op(this.type, this.object, this.event, this.location, this.values, this.term);
+  }
+
   equal(other: Op): boolean {
-    return (
+    const eq =
       this.uuid(0).eq(other.uuid(0)) &&
       this.uuid(1).eq(other.uuid(1)) &&
       this.uuid(2).eq(other.uuid(2)) &&
       this.uuid(3).eq(other.uuid(3)) &&
       this.values === other.values &&
-      this.term === other.term
-    );
+      this.term === other.term;
+    return eq;
   }
 
-  /**
-   *
-   * @param body {String} -- serialized frame
-   * @param context {Op=} -- previous/context op
-   * @param offset {Number=} -- frame body offset
-   * @return {Op}
-   */
   static fromString(body: string, context: ?Op, offset: ?number): ?Op {
     let ctx = context || ZERO;
     const off = offset || 0;
@@ -147,13 +143,22 @@ export default class Op {
     if (!m || m[0] === '' || m.index !== off) return null;
     if (m[1] === COMMENT.value) ctx = ZERO;
     // console.log('mq', m[1], COMMENT)
+    let term = m[6];
+    if (!term) {
+      if (ctx.term === '!') {
+        term = ',';
+      } else {
+        term = ctx.term;
+      }
+    }
+
     const ret = new Op(
       UUID.fromString(m[1], ctx.type),
       UUID.fromString(m[2], ctx.object),
       UUID.fromString(m[3], ctx.event),
       UUID.fromString(m[4], ctx.location),
       m[5],
-      m[6],
+      term,
     );
     ret.source = m[0];
     return ret;
@@ -266,20 +271,29 @@ export class Frame {
 
   constructor(str: ?string) {
     this.body = str ? str.toString() : '';
-    /** @type {Op} */
     this.last = ZERO;
   }
 
-  /**
-   * Append a new op to the frame
-   * @param op {Op}
-   */
-  push(op: Op) {
+  // Append a new op to the frame
+  push(op: Op, withTerm: ?string) {
     if (this.last.isComment()) {
       this.last = ZERO;
     }
+
     this.body += op.toString(this.last);
     this.last = op;
+  }
+
+  pushWithTerm(op: Op, term: ',' | '!' | '?' | ';') {
+    if (this.last.isComment()) {
+      this.last = ZERO;
+    }
+
+    const clone = op.clone();
+    clone.term = term;
+
+    this.body += clone.toString(this.last);
+    this.last = clone;
   }
 
   /*::  @@iterator(): Iterator<Op> { return ({}: any); } */
@@ -382,6 +396,7 @@ export class Cursor implements Iterator<Op> {
     ret.offset = this.offset;
     ret.length = this.length;
     ret.op = this.op;
+    ret.ctx = this.ctx;
     return ret;
   }
 
@@ -422,3 +437,4 @@ export class Cursor implements Iterator<Op> {
 
 export {default as UUID} from 'swarm-ron-uuid';
 export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
+export {default as Batch} from './batch';

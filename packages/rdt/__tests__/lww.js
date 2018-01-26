@@ -1,31 +1,51 @@
 // @flow
-'use strict';
 
-import {Cursor} from '../../ron/src';
+import {Batch, Cursor} from 'swarm-ron';
 
 import {reduce} from '../src';
-import {equal as eq} from 'assert';
 
-// state+op
-eq(reduce('*lww#id@time-origin!', '*lww#id@t-o:key=1'), '*lww#id@t-o!:key=1');
+test('lww reduce', () => {
+  const cases = [
+    [
+      // 0+o
+      '*lww#test!',
+      "*lww#test@time:a'A'",
+      "*lww#test@time!:a'A'",
+    ],
+    [
+      // s+o
+      "*lww#test@1!:a'A'",
+      "*lww#test@2:b'B'",
+      "*lww#test@2!@1:a'A'@2:b'B'",
+    ],
+    [
+      // o+o
+      "*lww#test@1:a'A1'",
+      "*lww#test@2:a'A2'",
+      "*lww#test@2:d!:a'A2'",
+    ],
+    [
+      // p+p
+      "*lww#test@1:d! :a'A1':b'B1':c'C1'",
+      "*lww#test@2:d! :a'A2':b'B2'",
+      "*lww#test@2:d!:a'A2':b'B2'@1:c'C1'",
+    ],
+    ["*lww#test@0ld!@new:key'new_value'", "*lww#test@new:key'new_value'", "*lww#test@new!:key'new_value'"],
+    // [
+    //   // lww array 2x2
+    //   //     0   1
+    //   //   +--------+
+    //   // 0 | 0  '1' |
+    //   // 1 | 1   2  |
+    //   //   +--------+
+    //   '*lww#array@1! :0%0 = 0,  :)1%0 = -1',
+    //   "*lww#array@2! :0%)1 '1',  :)1%0 = 1,  :)1%)1 = 2",
+    //   "*lww#array@2!@1:%=0@2:%)1'1':)1)=1:%)1=2",
+    // ],
+  ];
 
-// state+state
-eq(reduce('*lww#id@time-origin!:a=1', '*lww#id@time1-origin!:b=2'), '*lww#id@time1-origin!@(:a=1@(1:b=2');
-
-// array, op+op
-eq(reduce('*lww#id@time1-a:1=2', '*lww#id@time2-b:0=1'), '*lww#id@time2-b:time1-a!=1@(1-a:1=2');
-
-// array, op+op, sorting
-eq(reduce('*lww#id@time1-a:)1=2', '*lww#id@time2-b:0=1'), '*lww#id@time2-b:time1-a!=1@(1-a:)1=2');
-
-eq(reduce('*lww#test!', "*lww#test@time-orig:key'value'"), "*lww#test@time-orig!:key'value'");
-
-// eclipsed value
-eq(
-  reduce("*lww#test@time-orig!:key'value'", "*lww#test@0time-orig:key'eclipsed'"),
-  "*lww#test@0time-orig!@time-:key'value'",
-);
-
-test('~', () => {
-  expect('~').toBe('~');
+  for (const c of cases) {
+    const result = c.pop();
+    expect(reduce(Batch.fromStringArray(...c)).toString()).toBe(result);
+  }
 });

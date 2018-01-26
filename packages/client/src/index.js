@@ -3,7 +3,7 @@
 
 import RWS from 'reconnectable-websocket';
 
-import Op, {Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
+import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
 import type {Clock} from 'swarm-clock';
 import {Logical} from 'swarm-clock';
 import {ZERO, NEVER} from 'swarm-ron-uuid';
@@ -295,7 +295,7 @@ export default class Client {
     let stamps: {[string]: UUID | void} = {};
 
     const frame = mapUUIDs(rawFrame, (uuid, position, _, op): UUID => {
-      if (position === 0) return uuid.eq(ZERO) ? lww.uuid : uuid;
+      if (position === 0) return uuid.eq(ZERO) ? lww.type : uuid;
       if (position > 2 || !uuid.eq(ZERO)) return uuid;
       const exists = stamps[uuid.toString()];
       // $FlowFixMe
@@ -318,7 +318,7 @@ export default class Client {
       const key = op.uuid(1).toString();
       let state = await self.storage.get(key);
       if (!skipMerge) {
-        state = state ? reduce(state.toString(), frame) : frame;
+        state = state ? reduce(Batch.fromStringArray(state.toString(), frame)).toString() : frame;
         await self.storage.set(key, state);
       }
       const l = self.lstn[key];

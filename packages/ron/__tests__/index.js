@@ -24,14 +24,16 @@ test('main section', () => {
   eq(a && a.key(), '*0#id');
 
   const frame = "*lww#test@time-orig!:int=1:str'2'";
-  const ops = ['*lww#test@time-orig!', '*lww#test@time-orig:int=1', "*lww#test@time-orig:str'2'"];
+  const ops = ['*lww#test@time-orig!', '*lww#test@time-orig:int=1,', "*lww#test@time-orig:str'2',"];
   const vals = [undefined, 1, '2'];
   const f = new Frame(frame);
   const nf = new Frame();
+  let c = 0;
   for (let op of f) {
     eq(op.toString(), ops.shift());
     eq(op.value(0), vals.shift());
-    nf.push(op);
+    c === 0 ? nf.push(op) : nf.pushWithTerm(op, ',');
+    c++;
   }
   eq(nf.toString(), frame);
 
@@ -48,7 +50,7 @@ test('main section', () => {
   till.nextOp();
   till.nextOp();
   const crop = slice(from, till);
-  eq(crop, "*lww#test@time-orig:int=1@(1:str'2'");
+  eq(crop, "*lww#test@time-orig:int=1,@(1:str'2'");
 
   const redef = '*lww#(1-test@`!:\\=1';
   const ri = new Cursor(redef);

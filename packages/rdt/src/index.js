@@ -1,78 +1,60 @@
 // @flow
 'use strict';
 
-import Op, {UUID_ERROR as ERROR, Cursor, Frame, FRAME_SEP, UUID} from 'swarm-ron';
+import Op, {Batch, Frame, FRAME_SEP} from 'swarm-ron';
+import UUID, {ZERO} from 'swarm-ron-uuid';
 
-import {IS_OP_BASED, IS_STATE_BASED, IS_OMNIVOROUS} from './is';
-import * as _log from './log';
-import * as _lww from './lww';
+import lww from './lww';
+import log from './log';
+import set from './set';
 
-const rdt: {
-  [string]: {|
-    TYPE_UUID: UUID,
-    IS: number,
-    default: (Cursor, Cursor, Frame) => void,
-  |},
-} = {
-  lww: _lww,
-  log: _log,
+const rdt: {[string]: {|type: UUID, reduce: Batch => Frame|}} = {
+  lww,
+  log,
+  set,
 };
 
-export default rdt;
-
-/***
- *
- * @param oldStateFrame {String}
- * @param changeFrame {String}
- * @return {String}
- */
-export function reduce(oldStateFrame: string, changeFrame: string): string {
-  const oi = new Cursor(oldStateFrame).op;
-  const ai = new Cursor(changeFrame).op;
-
-  let features: number = 0;
-  let _reduce;
-  let error;
-
-  if (oi != null) {
-    const _rdt = rdt[oi.type.toString()];
-    if (_rdt) {
-      _reduce = _rdt.default;
-      features = _rdt.IS;
+function empty(batch: Batch): Frame {
+  const ret = new Frame();
+  for (const first of batch.frames) {
+    for (const op of first) {
+      let loc = op.uuid(3);
+      if (!op.isHeader()) loc = op.uuid(2);
+      ret.push(
+        new Op(
+          op.uuid(0),
+          op.uuid(1),
+          // $FlowFixMe
+          batch.frames[batch.length - 1][Symbol.iterator]().op.event,
+          loc,
+          undefined,
+          FRAME_SEP,
+        ),
+      );
+      return ret;
     }
   }
-
-  if (!_reduce) {
-    error = '>NOTYPE';
-  } else if ((oi && oi.isQuery()) || (ai && ai.isQuery())) {
-    error = '>NOQUERY';
-  } else if (0 === (features & IS_OP_BASED) && ((oi && oi.isRegular()) || (ai && ai.isRegular()))) {
-    error = '>NOOPBASED';
-  } else if (0 === (features & IS_STATE_BASED) && ai && ai.isHeader()) {
-    error = '>NOSTATBASD';
-  } else if (0 === (features & IS_OMNIVOROUS) && ai && oi && !oi.type.eq(ai.type)) {
-    error = '>NOOMNIVORS';
-  } else if (ai && ai.isError()) {
-    error = '>ERROR'; // TODO fetch msg
-  }
-  const newFrame = new Frame();
-  if (!error && oi && ai) {
-    newFrame.push(new Op(oi.type, oi.object, ai.event, oi.isHeader() ? oi.location : oi.event, FRAME_SEP));
-    if (_reduce) _reduce(new Cursor(oldStateFrame), new Cursor(changeFrame), newFrame);
-  }
-  if (error && oi && ai) {
-    return new Op(oi.type, oi.object, ERROR, ai.event, error).toString();
-  } else {
-    return newFrame.toString();
-  }
+  return ret;
 }
 
-export const lww = {
-  reduce: _lww.default,
-  uuid: _lww.TYPE_UUID,
-};
+// Reduce picks a reducer function, performs all the sanity checks,
+// invokes the reducer, returns the result
+export function reduce(batch: Batch): Frame {
+  let type = ZERO;
+  for (const first of batch.frames) {
+    for (const op of first) {
+      type = op.type;
+      break;
+    }
+    break;
+  }
 
-export const log = {
-  reduce: _log.default,
-  uuid: _log.TYPE_UUID,
-};
+  if (rdt[type.toString()]) {
+    return rdt[type.toString()].reduce(batch);
+  }
+  return empty(batch);
+}
+
+export {default as lww} from './lww';
+export {default as log} from './log';
+export {default as set} from './set';

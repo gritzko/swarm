@@ -1,6 +1,6 @@
 // @flow
 
-import Op, {UUID, Frame, Cursor, ZERO} from 'swarm-ron';
+import Op, {UUID, Frame, Batch, Cursor, ZERO} from 'swarm-ron';
 
 export default class IHeap {
   iters: Array<Cursor>;
@@ -61,23 +61,21 @@ export default class IHeap {
     return this.iters.length;
   }
 
-  putAll(b: Array<Frame>) {
-    for (const item of b) this.put(item);
-  }
-
-  put(item: Frame) {
-    // $FlowFixMe - computed property
-    const cursor = item[Symbol.iterator]();
-    if (cursor.op && cursor.op.isHeader()) cursor.next();
-    if (cursor.op && !cursor.op.isHeader()) {
-      const at = this.iters.length;
-      this.iters.push(cursor);
-      this._raise(at);
+  put(input: Frame | Batch) {
+    const batch = input instanceof Batch ? input : new Batch(input);
+    for (const item of batch) {
+      const cursor = new Cursor(item.body);
+      if (cursor.op && cursor.op.isHeader()) cursor.next();
+      if (cursor.op && !cursor.op.isHeader()) {
+        const at = this.iters.length;
+        this.iters.push(cursor);
+        this._raise(at);
+      }
     }
   }
 
-  current(): ?Cursor {
-    return this.iters.length > 1 ? this.iters[1] : null;
+  current(): ?Op {
+    return this.iters.length > 1 ? this.iters[1].op : null;
   }
 
   _remove(i: number) {
@@ -98,7 +96,7 @@ export default class IHeap {
     }
   }
 
-  next(): ?Cursor {
+  next(): ?Op {
     this._next(1);
     return this.current();
   }
@@ -114,8 +112,7 @@ export default class IHeap {
   frame(): Frame {
     const cur = new Frame();
     while (!this.eof()) {
-      const current = this.current();
-      const op = current ? current.op : null;
+      const op = this.current();
       if (op) {
         cur.push(op);
       }
@@ -124,7 +121,7 @@ export default class IHeap {
     return cur;
   }
 
-  nextPrim(): ?Cursor {
+  nextPrim(): ?Op {
     const eqs: Array<number> = [];
     this._listEqs(1, eqs);
     if (eqs.length > 1) {

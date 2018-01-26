@@ -1,7 +1,7 @@
 // @flow
 
 import IHeap, {eventComparator, eventComparatorDesc, refComparator} from '../src/iheap';
-import Op, {ZERO, Frame} from '../../ron/src';
+import Op, {Batch, ZERO, Frame} from 'swarm-ron';
 
 test('IHeap put frame', () => {
   const frameA = "*lww#test@time1-orig:number=1@(2:string'2'";
@@ -17,23 +17,23 @@ test('IHeap put frame', () => {
 });
 
 test('IHeap op', () => {
-  const frames = [
-    "*lww#test@time1-orig:number=1@(2:string'2'",
-    "*lww#test@time3-orig:number=3@(4:string'4'",
-    "*lww#test@time2-orig:number=2@(2:string'2'@(3:number=3@(4:string'4'",
-  ];
+  const frames = new Batch(
+    new Frame("*lww#test@time1-orig:number=1@(2:string'2'"),
+    new Frame("*lww#test@time3-orig:number=3@(4:string'4'"),
+    new Frame("*lww#test@time2-orig:number=2@(2:string'2'@(3:number=3@(4:string'4'"),
+  );
 
   const heap = new IHeap(refComparator);
-  heap.putAll(frames.map(i => new Frame(i)));
+  heap.put(frames);
   // $FlowFixMe
-  const loc = heap.current().op.uuid(3);
+  const loc = heap.current().uuid(3);
   let count = 0;
 
   while (
     // $FlowFixMe
     heap
       .current()
-      .op.uuid(3)
+      .uuid(3)
       .eq(loc)
   ) {
     count++;
@@ -53,9 +53,7 @@ test('IHeap merge', () => {
   heap.put(new Frame(frameC));
   const res = new Frame();
   while (!heap.eof()) {
-    const current = heap.current();
-    if (!current) break;
-    const op = current.op || ZERO;
+    const op = heap.current() || ZERO;
     res.push(op);
     heap.nextPrim();
   }
