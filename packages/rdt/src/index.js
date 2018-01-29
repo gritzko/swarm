@@ -8,7 +8,7 @@ import lww from './lww';
 import log from './log';
 import set from './set';
 
-const rdt: {[string]: {|type: UUID, reduce: Batch => Frame|}} = {
+const rdt: {[string]: {type: UUID, reduce: Batch => Frame}} = {
   lww,
   log,
   set,
