@@ -126,20 +126,23 @@ export default class Client {
     });
 
     const hello = new Frame();
-    hello.push(
-      new Op(
-        new UUID('db', '0', '$'),
-        new UUID(this.db.name, '0', '$'),
-        new UUID(this.clock ? this.clock.last().value : '0', this.id, '+'),
-        ZERO,
-        QUERY_SEP,
-      ),
+    const head = new Op(
+      new UUID('db', '0', '$'),
+      new UUID(this.db.name, '0', '$'),
+      new UUID(this.clock ? this.clock.last().value : '0', this.id, '+'),
+      ZERO,
+      undefined,
+      QUERY_SEP,
     );
-    hello.push(new Op(ZERO, ZERO, ZERO, ZERO, FRAME_SEP));
+    hello.push(head);
+    hello.push(new Op(head.uuid(0), head.uuid(1), head.uuid(2), head.uuid(3), undefined, FRAME_SEP));
 
     const creds = this.db.credentials || {};
     for (const cred of Object.keys(creds)) {
-      hello.push(new Op(ZERO, ZERO, ZERO, UUID.fromString(cred), js2ron([creds[cred]])));
+      hello.pushWithTerm(
+        new Op(head.uuid(0), head.uuid(1), head.uuid(2), UUID.fromString(cred), js2ron([creds[cred]])),
+        ',',
+      );
     }
     this.upstream.send(hello.toString());
 

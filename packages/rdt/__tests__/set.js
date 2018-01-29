@@ -10,7 +10,7 @@ test('Set reduce', () => {
     ['*set#test1@2!@=2@1=1', '*set#test1@5!@=5@3:2,@4:1,', '*set#test1@5!=5@3:2,@4:1,'],
     ['*set#test1@2!@=2@1=1', '*set#test1@3!@:2,@4:1,', '*set#test1@5!@=5', '*set#test1@5!=5@3:2,@4:1,'],
     ['*set#test1@3!@:2,@4:1,', '*set#test1@5!@=5', '*set#test1@2!@=2@1=1', '*set#test1@2!@5=5@3:2,@4:1,'],
-    // ['*set#test1@1=1', '*set#test1@2=2', '*set#test1@2:d!:0=2@1=1'],
+    ['*set#test1@1=1', '*set#test1@2=2', '*set#test1@2:d!:0=2@1=1'],
   ];
 
   let c = 0;

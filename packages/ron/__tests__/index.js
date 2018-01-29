@@ -88,3 +88,12 @@ test('main section', () => {
 
   expect('~').toBe('~');
 });
+
+test('Frame: uuid reset', () => {
+  const source = ['*set#test1@2:d!', '*set#test1@2=2,', '*set#test1@1=1,'];
+  const frame = new Frame();
+  for (const op of source) {
+    frame.push(Op.fromString(op));
+  }
+  expect(frame.toString()).toBe('*set#test1@2:d!:0=2@1=1');
+});
