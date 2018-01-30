@@ -10,18 +10,14 @@ export interface Clock {
   origin(): string;
 }
 
-/** Pure logical clock. */
+// Pure logical clock.
 export class Logical implements Clock {
   _origin: string;
   _last: UUID;
   length: number;
 
-  /**
-   * Create a new clock.
-   * @param origin {String} - Base64x64 clock/process/replica id
-   * @param options {Object} - various modes and options
-   */
-  constructor(origin: string, options: ?{|length: number, last: UUID | string|}) {
+  // Create a new clock.
+  constructor(origin: string, options: ?{|length: number, last: UUID | string|}): Logical {
     this._origin = origin;
     this._last = ZERO;
     this.length = 5;
@@ -29,10 +25,10 @@ export class Logical implements Clock {
       if (options.length) this.length = options.length;
       if (options.last) this._last = UUID.fromString(options.last.toString());
     }
+    return this;
   }
 
-  /** Generates a fresh globally unique monotonous UUID.
-   *  @return {UUID} */
+  // Generates a fresh globally unique monotonous UUID.
   time(): UUID {
     let t = this._last.value;
     while (t.length < this.length) t += '0';
@@ -44,10 +40,7 @@ export class Logical implements Clock {
     return this._last;
   }
 
-  /**
-   * See an UUID. Can only generate larger UUIDs afterwards.
-   * @param uuid {UUID}
-   */
+  // See an UUID. Can only generate larger UUIDs afterwards.
   see(uuid: UUID) {
     if (uuid.ge(this._last)) this._last = uuid;
   }
@@ -69,13 +62,14 @@ export class Calendar implements Clock {
   _offset: number;
   _minlen: number;
 
-  constructor(origin: string, options: {last?: UUID | string, offset?: number, minlen?: number} = {}) {
+  constructor(origin: string, options: {last?: UUID | string, offset?: number, minlen?: number} = {}): Calendar {
     this._offset = options.offset || 0;
     this._origin = origin;
     this._last = options.last ? UUID.fromString(options.last.toString()) : ZERO;
     this._lastPair = {high: -1, low: -1};
     this._lastBase = '0';
     this._minlen = options.minlen || 6;
+    return this;
   }
 
   time(): UUID {

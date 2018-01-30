@@ -6,9 +6,10 @@ export default class Batch implements Iterator<Frame> {
   frames: Array<Frame>;
   index: 0;
 
-  constructor(...frames: Array<Frame>) {
+  constructor(...frames: Array<Frame>): Batch {
     this.frames = frames;
     this.index = 0;
+    return this;
   }
 
   /*:: @@iterator(): Iterator<Frame> { return ({}: any); } */

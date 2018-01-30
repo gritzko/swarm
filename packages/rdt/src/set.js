@@ -1,10 +1,9 @@
 // @flow
 
 import Op, {ZERO as ZERO_OP, FRAME_SEP, Batch, Frame, Cursor, ron2js as RON2JS} from 'swarm-ron';
+import type {Atom} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 import IHeap, {refComparatorDesc} from './iheap';
-
-import type {Scalar} from './index';
 
 export const type = UUID.fromString('set');
 const heap = new IHeap(setComparator, refComparatorDesc);
@@ -56,10 +55,10 @@ export function setComparator(a: Op, b: Op): number {
   return -ae.compare(be);
 }
 
-export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
-  const set: Frame = new Frame(rawFrame);
+export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
+  const set = new Frame(rawFrame);
   const values: {[string]: boolean} = {};
-  const ret = {length: 0, _id: null};
+  const ret = {length: 0, _id: ''};
 
   for (const op of set) {
     if (!ret._id) ret._id = op.uuid(1).toString();

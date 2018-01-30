@@ -13,6 +13,7 @@ dist/*
 # dev stuff
 .idea
 node_modules
+coverage
 lib
 # OS generated files #
 ######################

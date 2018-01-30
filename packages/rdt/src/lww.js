@@ -1,10 +1,9 @@
 // @flow
 
 import Op, {Frame, Batch, FRAME_SEP, ron2js as RON2JS} from 'swarm-ron';
+import type {Atom} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 import IHeap, {refComparator, eventComparatorDesc} from './iheap';
-
-import type {Scalar} from './index';
 
 export const type = UUID.fromString('lww');
 const DELTA = UUID.fromString('d');
@@ -43,8 +42,8 @@ export function reduce(batch: Batch): Frame {
   return ret;
 }
 
-export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
-  const ret = {};
+export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
+  const ret = {_id: ''};
   const lww: Frame = new Frame(rawFrame);
   let length: number = 0;
 

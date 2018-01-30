@@ -3,6 +3,7 @@
 import RWS from 'reconnectable-websocket';
 
 import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
+import type {Atom} from 'swarm-ron';
 import type {Clock} from 'swarm-clock';
 import {Logical} from 'swarm-clock';
 import {ZERO, NEVER} from 'swarm-ron-uuid';
@@ -95,7 +96,7 @@ export default class Client {
       }
 
       if (typeof options.upstream === 'string') {
-        this.upstream = RWS(options.upstream, undefined, {reconnectOnError: true});
+        this.upstream = new RWS(options.upstream, undefined, {reconnectOnError: true});
       } else if (options.upstream) {
         this.upstream = options.upstream;
       } else if (!options.upstream && this.db.clockMode) {
@@ -110,7 +111,7 @@ export default class Client {
       await this.handshake();
       this.release(null);
     } catch (e) {
-      this.release(e);
+      this.release((e: Error));
     }
   }
 
@@ -185,7 +186,7 @@ export default class Client {
 
     // resend all the frames
     const pending = await this.storage.get('__pending__');
-    for (const frame of JSON.parse(pending || '[]')) {
+    for (const frame: string of JSON.parse(pending || '[]')) {
       this.upstream.send(frame);
     }
 

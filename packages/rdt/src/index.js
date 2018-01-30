@@ -2,13 +2,12 @@
 'use strict';
 
 import Op, {Batch, Frame, FRAME_SEP} from 'swarm-ron';
+import type {Atom} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 
 import lww from './lww';
 import log from './log';
 import set from './set';
-
-export type Scalar = string | number | boolean | null | UUID;
 
 const rdt: {[string]: {type: UUID, reduce: Batch => Frame}} = {
   lww,
@@ -57,7 +56,7 @@ export function reduce(batch: Batch): Frame {
   return empty(batch);
 }
 
-export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
+export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
   for (const op of new Frame(rawFrame)) {
     switch (true) {
       case lww.type.eq(op.type):

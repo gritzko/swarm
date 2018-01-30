@@ -8,16 +8,14 @@ export {default as UUID} from 'swarm-ron-uuid';
 export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
 export {default as Batch} from './batch';
 
-export type JSON_VALUE_TYPE = string | number | boolean | null;
+export type Atom = string | number | boolean | null | UUID;
 
 const TRUE_UUID = UUID.fromString('true');
 const FALSE_UUID = UUID.fromString('false');
 const NULL_UUID = UUID.fromString('0');
 
-/**
- * A RON op object. Typically, an Op is hosted in a frame.
- *  Frames are strings, so Op is sort of a Frame iterator.
- *  */
+// A RON op object. Typically, an Op is hosted in a frame.
+// Frames are strings, so Op is sort of a Frame iterator.
 export default class Op {
   type: UUID;
   object: UUID;
@@ -25,39 +23,25 @@ export default class Op {
   location: UUID;
 
   values: string;
-  parsed_values: Array<JSON_VALUE_TYPE | UUID> | void;
+  parsed_values: Array<Atom> | void;
 
   term: string;
   source: ?string;
 
-  /**
-   * A trusted Op constructor
-   * @param type {UUID}
-   * @param object {UUID}
-   * @param event {UUID}
-   * @param location {UUID}
-   * @param values {String}
-   */
-  constructor(type: UUID, object: UUID, event: UUID, location: UUID, values: ?string, term: ?string) {
-    /** @type {UUID} */
+  constructor(type: UUID, object: UUID, event: UUID, location: UUID, values: ?string, term: ?string): Op {
     this.type = type;
-    /** @type {UUID} */
     this.object = object;
-    /** @type {UUID} */
     this.event = event;
-    /** @type {UUID} */
     this.location = location;
-    /** @type {String} */
     this.values = values || '';
-    // @type {Array}
     this.parsed_values = undefined;
 
     this.term = term || ';';
-    // @type {String}
     this.source = null; // FIXME remove
+    return this;
   }
 
-  value(i: number) {
+  value(i: number): Atom {
     if (!this.parsed_values) this.parsed_values = ron2js(this.values);
     return this.parsed_values[i];
   }
@@ -82,8 +66,7 @@ export default class Op {
     return this.type.eq(COMMENT);
   }
 
-  /** Get op UUID by index (0-3)
-   * @return {UUID} */
+  // Get op UUID by index (0-3)
   uuid(i: 0 | 1 | 2 | 3): UUID {
     switch (i) {
       case 0:
@@ -143,10 +126,9 @@ export default class Op {
     let ctx = context || ZERO;
     const off = offset || 0;
     RE.lastIndex = off;
-    const m = RE.exec(body);
+    const m: string[] | void = RE.exec(body);
     if (!m || m[0] === '' || m.index !== off) return null;
     if (m[1] === COMMENT.value) ctx = ZERO;
-    // console.log('mq', m[1], COMMENT)
     let term = m[6];
     if (!term) {
       if (ctx.term === '!') {
@@ -186,12 +168,12 @@ export function flipQuotes(v: string): string {
 }
 
 // Parse RON value atoms.
-export function ron2js(values: string): Array<JSON_VALUE_TYPE | UUID> {
+export function ron2js(values: string): Array<Atom> {
   VALUE_RE.lastIndex = 0;
-  let m = null;
+  let m: string[] | void;
   const ret = [];
 
-  while ((m = VALUE_RE.exec(values))) {
+  while ((m = (VALUE_RE.exec(values): string[]))) {
     if (m[1]) {
       ret.push(parseInt(m[1]));
     } else if (m[2]) {
@@ -218,7 +200,7 @@ export function ron2js(values: string): Array<JSON_VALUE_TYPE | UUID> {
 }
 
 // Serialize JS primitives into RON atoms.
-export function js2ron(values: Array<JSON_VALUE_TYPE | UUID>): string {
+export function js2ron(values: Array<Atom>): string {
   const ret = values.map(v => {
     if (v === undefined) return UUID_ATOM_SEP + ZERO_UUID.toString();
     if (v === null) return UUID_ATOM_SEP + NULL_UUID.toString();
@@ -261,13 +243,14 @@ export class Frame {
   body: string;
   last: Op;
 
-  constructor(str: ?string) {
+  constructor(str: ?string): Frame {
     this.body = str ? str.toString() : '';
     this.last = ZERO;
+    return this;
   }
 
   // Append a new op to the frame
-  push(op: Op) {
+  push(op: Op): void {
     if (this.last.isComment()) {
       this.last = ZERO;
     }
@@ -276,7 +259,7 @@ export class Frame {
     this.last = op;
   }
 
-  pushWithTerm(op: Op, term: ',' | '!' | '?' | ';') {
+  pushWithTerm(op: Op, term: ',' | '!' | '?' | ';'): void {
     if (this.last.isComment()) {
       this.last = ZERO;
     }
@@ -288,14 +271,14 @@ export class Frame {
     this.last = clone;
   }
 
-  /*::  @@iterator(): Iterator<Op> { return ({}: any); } */
+  /*:: @@iterator(): Iterator<Op> { return ({}: any); } */
 
   // $FlowFixMe - computed property
   [Symbol.iterator](): Iterator<Op> {
     return new Cursor(this.body);
   }
 
-  toString() {
+  toString(): string {
     return this.body;
   }
 
@@ -360,14 +343,15 @@ export class Cursor implements Iterator<Op> {
   op: ?Op;
   ctx: ?Op;
 
-  constructor(body: ?string) {
+  constructor(body: ?string): Cursor {
     this.body = body ? body.toString() : '';
     this.offset = 0;
     this.length = 0;
     this.op = this.nextOp();
+    return this;
   }
 
-  toString() {
+  toString(): string {
     return this.body;
   }
 

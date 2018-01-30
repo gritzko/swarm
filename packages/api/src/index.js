@@ -4,18 +4,18 @@ import Client from 'swarm-client';
 import Op, {Frame, ZERO, UUID, FRAME_SEP, js2ron} from 'swarm-ron';
 import {ZERO as ZERO_UUID} from 'swarm-ron-uuid';
 import {lww, set, ron2js} from 'swarm-rdt';
-import type {Scalar} from 'swarm-rdt';
+import type {Atom} from 'swarm-ron';
 import type {Options as ClntOpts} from 'swarm-client';
 
 export type Options = ClntOpts;
 
-export type Value = {[string]: Scalar | Value} | null;
+export type Value = {[string]: Atom | Value} | null;
 
 export default class API {
   client: Client;
   options: Options;
   cbks: Array<[string, (string, string) => void, (Value) => void]>;
-  cache: {[string]: {[string]: Scalar, _id: string, length: number}};
+  cache: {[string]: {[string]: Atom, _id: string, length: number}};
 
   constructor(options: Options) {
     this.client = new Client(options);
@@ -37,7 +37,7 @@ export default class API {
     if (!id) throw new Error('id not found');
     for (const [_id, a, b] of this.cbks) {
       if (_id === id && b === cbk) {
-        const {frame} = buildTree(self.cache, id);
+        const {frame} = buildTree(this.cache, id);
         return this.client.off(frame.toString(), a);
       }
     }
@@ -57,7 +57,7 @@ export default class API {
       // $FlowFixMe ?
       self.cache[v._id] = v;
       const {frame, tree} = buildTree(self.cache, id);
-      this.client.on(frame, this);
+      self.client.on(frame.toString(), this);
       cbk(tree);
     }
 
@@ -67,10 +67,10 @@ export default class API {
     return a;
   }
 
-  async lwwSet(id: string, value: {[string]: Scalar | void}): Promise<boolean> {
+  async lwwSet(id: string, value: {[string]: Atom | void}): Promise<boolean> {
     if (!id) return false;
     const frame: Frame = new Frame();
-    const op = new Op(lww.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    const op: Op = new Op(lww.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
     frame.pushWithTerm(op, '!');
 
     for (const k of Object.keys(value)) {
@@ -85,10 +85,10 @@ export default class API {
     return !!frame.toString();
   }
 
-  async setAdd(id: string, value: Scalar): Promise<boolean> {
+  async setAdd(id: string, value: Atom): Promise<boolean> {
     if (!id) return false;
-    const frame: Frame = new Frame();
-    const op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID);
+    const frame = new Frame('');
+    const op: Op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID);
     frame.pushWithTerm(op, '!');
 
     op.location = this.uuid();
@@ -99,7 +99,7 @@ export default class API {
     return !!frame.toString();
   }
 
-  async setRemove(id: string, value: Scalar): Promise<boolean> {
+  async setRemove(id: string, value: Atom): Promise<boolean> {
     if (!id) return false;
     const frame: Frame = new Frame();
     let deleted = false;

@@ -8,25 +8,18 @@ export default class UUID {
   origin: string;
   sep: string;
 
-  /** trusted constructor */
-  constructor(value: string, origin: string, sep: ?string) {
-    /** @type {String} */
+  constructor(value: string, origin: string, sep: ?string): UUID {
     this.value = value;
-    /** @type {String} */
     this.origin = origin;
-    /** @type {String} */
     this.sep = sep || '-';
+    return this;
   }
 
   get type(): string {
     return this.sep; // TODO swap, phase out
   }
 
-  /**
-   * @param ctxUUID {UUID}
-   * @returns {String}
-   */
-  toString(ctxUUID?: UUID) {
+  toString(ctxUUID?: UUID): string {
     const ctx = ctxUUID || ZERO;
     if (this.origin === '0') {
       // nice shortcuts
@@ -52,29 +45,24 @@ export default class UUID {
     }
   }
 
-  /** @param uuid {UUID} */
   le(uuid: UUID): boolean {
     if (uuid.value === this.value) return uuid.origin > this.origin;
     return uuid.value > this.value;
   }
 
-  /** @param uuid {UUID} */
   ge(uuid: UUID): boolean {
     if (uuid.value === this.value) return uuid.origin < this.origin;
     return uuid.value < this.value;
   }
 
-  /** @param uuid {UUID} */
   gt(uuid: UUID): boolean {
     return !this.le(uuid);
   }
 
-  /** @param uuid {UUID} */
   lt(uuid: UUID): boolean {
     return !this.ge(uuid);
   }
 
-  /** @param uuid {UUID} */
   eq(uuid: UUID): boolean {
     return this.value === uuid.value && this.origin === uuid.origin && this.sep === uuid.sep;
   }
@@ -83,18 +71,12 @@ export default class UUID {
     return this.value === '0';
   }
 
-  /**
-   * @param string {String} - serialized UUID
-   * @param ctxUUID {UUID=} - default UUID
-   * @param offset {Number=}
-   * @returns {UUID}
-   */
   static fromString(string: string, ctxUUID?: ?UUID, offset?: number): UUID {
     const ctx = ctxUUID || ZERO;
     if (!string) return ctx;
     const off = offset === undefined ? 0 : offset;
     RE.lastIndex = off;
-    const m = RE.exec(string);
+    const m: string[] = RE.exec(string);
     if (!m || m.index !== off) return ERROR;
     if (offset === undefined && m[0] !== string) return ERROR;
     const time = UUID.unzip64(m[1], ctx.value);
@@ -107,20 +89,6 @@ export default class UUID {
       return new UUID(time, orig, m[2] || ctx.sep);
     }
   }
-
-  /* TODO swarm-clock-gregorian
-    static fromRFC4122 (uid) {
-
-    }
-
-    static fromMAC (mac) {
-
-    }
-
-    static fromDate (date, uuid) {
-
-    }
-  */
 
   static unzip64(zip: string, ctx: string): string {
     if (!zip) return ctx;
@@ -144,23 +112,23 @@ export default class UUID {
     return PREFIXES[p - 4] + int.substr(p);
   }
 
-  isTime() {
+  isTime(): boolean {
     return this.sep === '-' || this.sep === '+';
   }
 
-  isEvent() {
+  isEvent(): boolean {
     return this.sep === '-';
   }
 
-  isDerived() {
+  isDerived(): boolean {
     return this.sep === '+';
   }
 
-  isHash() {
+  isHash(): boolean {
     return this.sep === '%';
   }
 
-  isName() {
+  isName(): boolean {
     return this.sep === '$';
   }
 
@@ -204,15 +172,11 @@ export class Vector {
   defaultUUID: UUID;
   last: UUID;
 
-  /**
-   *
-   * @param uuids {String}
-   * @param defaultUUID {UUID?}
-   */
-  constructor(uuids: string = '', defaultUUID?: UUID = ZERO) {
+  constructor(uuids: string = '', defaultUUID?: UUID = ZERO): Vector {
     this.body = uuids;
     this.defaultUUID = defaultUUID || ZERO;
     this.last = this.defaultUUID;
+    return this;
   }
 
   /*:: @@iterator(): Iterator<UUID> { return ({}: any); } */
@@ -222,10 +186,7 @@ export class Vector {
     return new Iter(this.body, this.defaultUUID);
   }
 
-  /**
-   * @param newUUID {UUID|String}
-   */
-  push(newUUID: UUID | string) {
+  push(newUUID: UUID | string): void {
     const uuid = UUID.fromString(newUUID.toString());
     const str = uuid.toString(this.last);
     if (this.body) this.body += ',';
@@ -233,11 +194,9 @@ export class Vector {
     this.last = uuid;
   }
 
-  toString() {
+  toString(): string {
     return this.body;
   }
-
-  static is() {}
 }
 
 export class Iter {
@@ -245,25 +204,19 @@ export class Iter {
   offset: number;
   uuid: UUID | null;
 
-  /**
-   *
-   * @param body {String}
-   * @param defaultUUID {UUID=}
-   */
-  constructor(body: string = '', defaultUUID: UUID = ZERO) {
-    /** type {String} */
+  constructor(body: string = '', defaultUUID: UUID = ZERO): Iter {
     this.body = body;
     this.offset = 0;
-    /** @type {UUID} */
     this.uuid = defaultUUID;
     this.nextUUID();
+    return this;
   }
 
-  toString() {
+  toString(): string {
     return this.body.substr(this.offset);
   }
 
-  nextUUID() {
+  nextUUID(): void {
     if (this.offset === this.body.length) {
       this.uuid = null;
     } else {

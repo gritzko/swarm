@@ -1,9 +1,6 @@
 // @flow
-'use strict';
-const resolve: (
-  string,
-  {[string]: RegExp},
-) => void = require('regular-grammar');
+
+const resolve: (string, {[string]: RegExp}) => void = require('regular-grammar');
 
 const RON_GRAMMAR: {[string]: RegExp} = {
   BASE64: /[0-9A-Za-z_~]/,
