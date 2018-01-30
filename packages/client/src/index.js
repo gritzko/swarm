@@ -1,5 +1,4 @@
 /* @flow */
-'use strict';
 
 import RWS from 'reconnectable-websocket';
 
@@ -46,14 +45,12 @@ const defaultMeta: Meta = {
   horizont: 604800, // one week in seconds
 };
 
-/**
- * A simple client, keeps data in memory.
- * Consumes updates from the server, feeds resulting RON states
- * back to the listeners.
- */
+// A simple client, keeps data in memory.
+// Consumes updates from the server, feeds resulting RON states
+// back to the listeners.
 export default class Client {
   clock: ?Clock;
-  lstn: {[key: string]: (frame: string, state: string) => void}; // ?
+  lstn: {[key: string]: Array<(frame: string, state: string) => void>}; // ?
   upstream: Connection;
   storage: Storage;
   queue: Array<[() => void, (err: Error) => void]> | void;
@@ -200,10 +197,8 @@ export default class Client {
     if (query) await this.on(query);
   }
 
-  /**
-   * Ensure returns Promise which will be resolved after connection
-   * installed or rejected if an error occurred.
-   */
+  // Ensure returns Promise which will be resolved after connection
+  // installed or rejected if an error occurred.
   async ensure(): Promise<void> {
     const {queue} = this;
     if (queue === undefined) {
@@ -248,10 +243,8 @@ export default class Client {
     await this.update(message);
   }
 
-  /**
-   * On installs subscriptions.
-   */
-  async on(query: string, callback: ?(frame: string, state: string) => void): Promise<void> {
+  // On installs subscriptions.
+  async on(query: string, callback: ?(frame: string, state: string) => void): Promise<boolean> {
     const fwd = new Frame();
     const self = this;
     for (let op of new Frame(query)) {
@@ -265,34 +258,52 @@ export default class Client {
           break;
         }
       }
-      fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+      let found = false;
       if (callback) {
-        if (self.lstn[key]) throw new Error('TODO: many listeners per obj');
-        self.lstn[key] = callback;
+        for (const l of self.lstn[key] || []) {
+          found = found || l === callback;
+        }
+        if (!found) {
+          self.lstn[key] = (self.lstn[key] || []).concat(callback);
+        }
+      }
+      if (!found) {
+        fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
       }
     }
 
-    self.upstream.send(fwd.toString());
+    if (fwd.toString()) self.upstream.send(fwd.toString());
     if (callback && fwd.toString()) await self.update(fwd.toString(), true);
+    return !!fwd.toString();
   }
 
-  /**
-   * Off removes subscriptions.
-   */
-  off(query: string, callback: ?(frame: string, state: string) => void) {
+  // Off removes subscriptions.
+  off(query: string, callback: ?(frame: string, state: string) => void): boolean {
     const fwd = new Frame();
     for (const op of new Frame(query)) {
-      delete this.lstn[op.uuid(1).toString()];
-      fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+      const key = op.uuid(1).toString();
+      this.lstn[key] = this.lstn[key] || [];
+      if (callback) {
+        let i = -1;
+        for (const cbk of this.lstn[key]) {
+          i++;
+          if (cbk === callback) this.lstn[key].splice(i, 1);
+        }
+        if (!this.lstn[key].length) {
+          fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+        }
+      } else {
+        delete this.lstn[key];
+        fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+      }
     }
     this.upstream.send(fwd.toString());
+    return !!fwd.toString();
   }
 
-  /**
-   * Push sends updates to remote and local storages.
-   * Waits for connection installed. Thus, the client works in
-   * read-only mode until installed connection.
-   */
+  // Push sends updates to remote and local storages.
+  // Waits for connection installed. Thus, the client works in
+  // read-only mode until installed connection.
   async push(rawFrame: string) {
     await this.ensure();
     let stamps: {[string]: UUID | void} = {};
@@ -312,9 +323,7 @@ export default class Client {
     this.upstream.send(frame);
   }
 
-  /**
-   * Update updates local states and notifies listeners.
-   */
+  // Update updates local states and notifies listeners.
   async update(frame: string, skipMerge: ?true): Promise<void> {
     const self = this;
     for (const op of new Frame(frame)) {
@@ -324,9 +333,10 @@ export default class Client {
         state = state ? reduce(Batch.fromStringArray(state.toString(), frame)).toString() : frame;
         await self.storage.set(key, state);
       }
-      const l = self.lstn[key];
-      if (l && state) {
-        l(!skipMerge ? frame : '', state.toString());
+      if (state) {
+        for (const l of self.lstn[key] || []) {
+          l(!skipMerge ? frame : '', state.toString());
+        }
       }
       break; // read only first operation of given frame
     }

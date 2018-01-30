@@ -8,6 +8,8 @@ import lww from './lww';
 import log from './log';
 import set from './set';
 
+export type Scalar = string | number | boolean | null | UUID;
+
 const rdt: {[string]: {type: UUID, reduce: Batch => Frame}} = {
   lww,
   log,
@@ -53,6 +55,20 @@ export function reduce(batch: Batch): Frame {
     return rdt[type.toString()].reduce(batch);
   }
   return empty(batch);
+}
+
+export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
+  for (const op of new Frame(rawFrame)) {
+    switch (true) {
+      case lww.type.eq(op.type):
+        return lww.ron2js(rawFrame);
+      case set.type.eq(op.type):
+        return set.ron2js(rawFrame);
+      default:
+        throw new Error(`${op.type.toString()}.ron2js() is not implemented yet`);
+    }
+  }
+  return null;
 }
 
 export {default as lww} from './lww';

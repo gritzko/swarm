@@ -1,9 +1,12 @@
 // @flow
 
-import Op, {ZERO as ZERO_OP, FRAME_SEP, Batch, Frame, Cursor} from 'swarm-ron';
+import Op, {ZERO as ZERO_OP, FRAME_SEP, Batch, Frame, Cursor, ron2js as RON2JS} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 import IHeap, {refComparatorDesc} from './iheap';
 
+import type {Scalar} from './index';
+
+export const type = UUID.fromString('set');
 const heap = new IHeap(setComparator, refComparatorDesc);
 const DELTA = UUID.fromString('d');
 
@@ -45,7 +48,7 @@ export function reduce(batch: Batch): Frame {
   return ret;
 }
 
-function setComparator(a: Op, b: Op): number {
+export function setComparator(a: Op, b: Op): number {
   let ae = a.uuid(2);
   let be = b.uuid(2);
   if (!a.uuid(3).isZero()) ae = a.uuid(3);
@@ -53,5 +56,23 @@ function setComparator(a: Op, b: Op): number {
   return -ae.compare(be);
 }
 
-export const type = UUID.fromString('set');
-export default {reduce, type};
+export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
+  const set: Frame = new Frame(rawFrame);
+  const values: {[string]: boolean} = {};
+  const ret = {length: 0, _id: null};
+
+  for (const op of set) {
+    if (!ret._id) ret._id = op.uuid(1).toString();
+    if (ret._id !== op.uuid(1).toString() || !op.isRegular()) {
+      continue;
+    }
+    if (op.values && !values[op.values]) {
+      values[op.values] = true;
+      ret[ret.length++] = RON2JS(op.values).pop();
+    }
+  }
+
+  return ret.length ? Object.freeze(ret) : null;
+}
+
+export default {reduce, type, setComparator, ron2js};

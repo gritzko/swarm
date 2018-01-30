@@ -36,6 +36,19 @@ test('client.on(...)', async () => {
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
       '"clockMode":"Logical","credentials":{}}',
   });
+
+  function cbk(a: string, b: string) {}
+  function cbk2(a: string, b: string) {}
+  function cbk3(a: string, b: string) {}
+
+  await client.on('#testlength', cbk);
+  await client.on('#testlength', cbk2);
+  await client.on('#testlength', cbk2);
+  await client.on('#testlength', cbk3);
+  await client.on('#testlength', cbk3);
+  await client.on('#testlength', cbk);
+
+  expect(client.lstn['testlength']).toHaveLength(3);
 });
 
 test('client.update(...)', async () => {
@@ -88,9 +101,30 @@ test('client.off(...)', async () => {
   await client.ensure();
   const cbk = (frame: string, state: string): void => {};
   await client.on('*lww#object', cbk);
-  expect(client.lstn['object']).toBe(cbk);
+  expect(client.lstn['object']).toEqual([cbk]);
   client.off('#object');
   expect(client.lstn['object']).toBeUndefined();
+
+  function cbk2(a: string, b: string) {}
+
+  await client.on('#test1', cbk2);
+  await client.on('#test2', cbk2);
+  await client.on('#test3', cbk2);
+  await client.on('#batman', cbk2);
+
+  expect(client.lstn['test1']).toHaveLength(1);
+  expect(client.lstn['test2']).toHaveLength(1);
+  expect(client.lstn['test3']).toHaveLength(1);
+  expect(client.lstn['batman']).toHaveLength(1);
+
+  client.off('#test1#test2#test3', cbk2);
+
+  expect(client.lstn['test1']).toHaveLength(0);
+  expect(client.lstn['test2']).toHaveLength(0);
+  expect(client.lstn['test3']).toHaveLength(0);
+  expect(client.lstn['batman']).toHaveLength(1);
+  client.off('#batman');
+  expect(client.lstn['batman']).toBeUndefined();
 });
 
 test('client.push(...)', async () => {

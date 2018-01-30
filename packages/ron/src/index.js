@@ -4,6 +4,10 @@
 import Grammar from 'swarm-ron-grammar';
 import UUID, {ZERO as ZERO_UUID, ERROR, COMMENT} from 'swarm-ron-uuid';
 
+export {default as UUID} from 'swarm-ron-uuid';
+export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
+export {default as Batch} from './batch';
+
 export type JSON_VALUE_TYPE = string | number | boolean | null;
 
 const TRUE_UUID = UUID.fromString('true');
@@ -125,14 +129,14 @@ export default class Op {
   }
 
   equal(other: Op): boolean {
-    const eq =
+    return (
       this.uuid(0).eq(other.uuid(0)) &&
       this.uuid(1).eq(other.uuid(1)) &&
       this.uuid(2).eq(other.uuid(2)) &&
       this.uuid(3).eq(other.uuid(3)) &&
       this.values === other.values &&
-      this.term === other.term;
-    return eq;
+      this.term === other.term
+    );
   }
 
   static fromString(body: string, context: ?Op, offset: ?number): ?Op {
@@ -165,11 +169,7 @@ export default class Op {
   }
 }
 
-/**
- * Flip quotes.
- * @param v {String} -- value
- * @return {String}
- */
+// Flip quotes.
 export function flipQuotes(v: string): string {
   if (!v) return v;
   if (typeof v !== 'string') {
@@ -185,11 +185,7 @@ export function flipQuotes(v: string): string {
   }
 }
 
-/**
- * Parse RON value atoms.
- * @param values {String} -- RON atoms
- * @return {Array} -- parsed values
- */
+// Parse RON value atoms.
 export function ron2js(values: string): Array<JSON_VALUE_TYPE | UUID> {
   VALUE_RE.lastIndex = 0;
   let m = null;
@@ -221,11 +217,7 @@ export function ron2js(values: string): Array<JSON_VALUE_TYPE | UUID> {
   return ret;
 }
 
-/**
- * Serialize JS primitives into RON atoms.
- * @param values {Array} -- up to 8 js primitives
- * @return {String} -- RON atoms serialized
- */
+// Serialize JS primitives into RON atoms.
 export function js2ron(values: Array<JSON_VALUE_TYPE | UUID>): string {
   const ret = values.map(v => {
     if (v === undefined) return UUID_ATOM_SEP + ZERO_UUID.toString();
@@ -331,12 +323,8 @@ export class Frame {
   }
 }
 
-/**
- * Substitute UUIDs in all of the frame's ops.
- * Typically used for macro expansion.
- * @param rawFrame - {String}
- * @param fn {Function} - the substituting function
- */
+// Substitute UUIDs in all of the frame's ops.
+// Typically used for macro expansion.
 export function mapUUIDs(rawFrame: string, fn: (UUID, number, number, Op) => UUID): string {
   const ret = new Frame();
   let index = -1;
@@ -356,12 +344,7 @@ export function mapUUIDs(rawFrame: string, fn: (UUID, number, number, Op) => UUI
   return ret.toString();
 }
 
-/**
- * Crop a frame, i.e. make a new [from,till) frame
- * @param from {Cursor} -- first op of the new frame
- * @param till {Cursor} -- end the frame before this op
- * @return {String}
- */
+// Crop a frame, i.e. make a new [from,till) frame
 export function slice(from: Cursor, till: Cursor): string {
   if (!from.op) return '';
   if (from.body !== till.body) throw new Error('iterators of different frames');
@@ -388,9 +371,6 @@ export class Cursor implements Iterator<Op> {
     return this.body;
   }
 
-  /**
-   * @return {Cursor}
-   */
   clone(): Cursor {
     const ret = new Cursor(this.body);
     ret.offset = this.offset;
@@ -434,7 +414,3 @@ export class Cursor implements Iterator<Op> {
     }
   }
 }
-
-export {default as UUID} from 'swarm-ron-uuid';
-export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
-export {default as Batch} from './batch';

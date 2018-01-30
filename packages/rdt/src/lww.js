@@ -1,9 +1,10 @@
 // @flow
-'use strict';
 
 import Op, {Frame, Batch, FRAME_SEP, ron2js as RON2JS} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 import IHeap, {refComparator, eventComparatorDesc} from './iheap';
+
+import type {Scalar} from './index';
 
 export const type = UUID.fromString('lww');
 const DELTA = UUID.fromString('d');
@@ -42,69 +43,41 @@ export function reduce(batch: Batch): Frame {
   return ret;
 }
 
-export function ron2js(rawFrame: string): mixed {
-  let rootID = null;
-  const refs = {};
-  const lww = new Frame(rawFrame);
-  let hasValue = false;
+export function ron2js(rawFrame: string): {[string]: Scalar, _id: string, length: number | void} | null {
+  const ret = {};
+  const lww: Frame = new Frame(rawFrame);
+  let length: number = 0;
 
   for (const op of lww) {
-    hasValue = true;
     const id = op.object.toString();
-    rootID = rootID || id;
-    if (op.isHeader() || op.isQuery()) continue;
-    const ref = refs[id] || (refs[id] = op.location.isHash() ? [] : {});
+    ret._id = ret._id || id;
+    if (id !== ret._id || op.isHeader() || op.isQuery()) continue;
+
     let value = RON2JS(op.values).pop();
-    if (value instanceof UUID) {
-      value = {$ref: value.toString()};
-    }
 
     let key = op.location.toString();
     if (op.location.isHash()) {
       if (op.location.value !== '~') {
         throw new Error('only flatten arrays are beign supported');
       }
-      key = parseInt(op.location.origin);
-      if (isNaN(key)) {
-        throw new Error('malformed index value: ' + op.location.origin);
+      key = op.location.origin;
+    }
+    if (length > -1) {
+      const p = parseInt(key);
+      if (!isNaN(p)) {
+        length = Math.max(p + 1, length);
+      } else {
+        length = -1;
       }
     }
-
-    ref[key] = value;
-    // $FlowFixMe
-    ref._id = id;
+    ret[key] = value;
   }
 
-  if (!hasValue) return null;
+  if (Object.keys(ret).length > 1 && length > 0) {
+    ret.length = length;
+  }
 
-  Object.keys(refs).forEach(key => {
-    const value = refs[key];
-    if (Array.isArray(value)) {
-      refs[key] = value.map(v => {
-        if (isObject(v) && !!v['$ref']) {
-          return refs[v['$ref']] || v;
-        } else {
-          return v;
-        }
-      });
-      refs[key]._id = value._id;
-    } else if (isObject(value)) {
-      Object.keys(value).forEach(k => {
-        if (isObject(value[k]) && !!value[k]['$ref']) {
-          refs[key][k] = refs[value[k]['$ref']] || value[k];
-        }
-      });
-    } else {
-      throw new Error('unexpected value');
-    }
-  });
-
-  // $FlowFixMe
-  return Object.freeze(refs[rootID] || null);
-}
-
-function isObject(o) {
-  return !!o && o.constructor === Object;
+  return Object.freeze(Object.keys(ret) ? ret : null);
 }
 
 export default {reduce, type, ron2js};

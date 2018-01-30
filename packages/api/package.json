@@ -1,0 +1,38 @@
+{
+  "name": "swarm-api",
+  "version": "2.0.0",
+  "description": "Swarm API",
+  "contributors": ["Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"],
+  "main": "lib/index.js",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "dependencies": {
+    "swarm-client": "^2.0.0",
+    "swarm-rdt": "^2.0.20",
+    "swarm-ron": "^2.0.23",
+    "swarm-ron-uuid": "^2.0.9"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-plugin-async-to-promises": "^1.0.5",
+    "babel-plugin-transform-es2015-spread": "^6.22.0",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "flow-bin": "^0.63.1",
+    "flow-copy-source": "^1.2.1",
+    "rimraf": "^2.6.2"
+  },
+  "files": ["*.js", "README.md"],
+  "scripts": {
+    "build": "npm run build:clean && npm run build:lib && npm run build:flow",
+    "build:clean": "rimraf lib",
+    "build:lib": "babel -d lib src --ignore '**/__tests__/**'",
+    "build:flow": "flow-copy-source -v -i '**/__tests__/**' src lib"
+  },
+  "keywords": ["swarm", "replicated", "RON", "CRDT"],
+  "license": "MIT"
+}
