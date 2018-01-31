@@ -5,7 +5,7 @@ import {join} from 'path';
 
 import Op, {Frame} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
-import type {Connection as IConn} from '../../src';
+import type {Connection as IConn} from '../../client/src';
 
 export class Connection implements IConn {
   fixtures: Array<RawFrame>;
@@ -19,11 +19,12 @@ export class Connection implements IConn {
     this.session = [];
     if (fixtures) {
       const content = readFileSync(join(__dirname, fixtures), 'utf8');
-      for (const chunk of content.split('.')) {
+      for (const chunk of content.split('.\n')) {
         if (!chunk.trim()) continue;
         const frame = new Frame(chunk);
         for (const op of frame) {
           if (op.isComment() && op.source) {
+            // $FlowFixMe
             this.fixtures.push(new RawFrame(frame.body.slice(op.source.length), op.value(0)));
           } else {
             throw new Error('unexpected op');

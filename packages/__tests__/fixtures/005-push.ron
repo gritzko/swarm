@@ -1,0 +1,7 @@
+*~ '>' *db#test@+user?!.
+*~ '<' *db#test$server@1ABC+user:1ABC+server!.
+*~ '>' #object?!.
+*~ '<' *lww#object@1ABD+author!:key'value'.
+*~ '>' #object@~;.
+*~ '>' *lww#object@1ABD1+user!:bar'biz'.
+*~ '>' *lww#object@1ABD2+user!:foo>object.

@@ -231,6 +231,7 @@ export default class Client {
     let updates: Array<string> = JSON.parse(pending || '[]');
 
     for (const op of new Frame(message)) {
+      clock.see(op.event);
       if (op.event.origin === clock.origin()) {
         for (let i = updates.length - 1; i >= 0; i--) {
           const update = Op.fromString(updates[i]);
@@ -273,7 +274,9 @@ export default class Client {
       }
     }
 
-    if (fwd.toString()) self.upstream.send(fwd.toString());
+    if (fwd.toString()) {
+      self.upstream.send(fwd.toString());
+    }
     if (callback && fwd.toString()) await self.update(fwd.toString(), true);
     return !!fwd.toString();
   }
@@ -298,14 +301,17 @@ export default class Client {
         fwd.push(new Op(op.type, op.object, NEVER, ZERO));
       }
     }
-    this.upstream.send(fwd.toString());
-    return !!fwd.toString();
+    if (fwd.toString()) {
+      this.upstream.send(fwd.toString());
+      return true;
+    }
+    return false;
   }
 
   // Push sends updates to remote and local storages.
   // Waits for connection installed. Thus, the client works in
   // read-only mode until installed connection.
-  async push(rawFrame: string) {
+  async push(rawFrame: string): Promise<void> {
     await this.ensure();
     let stamps: {[string]: UUID | void} = {};
 
@@ -321,7 +327,7 @@ export default class Client {
     const pending = await this.storage.get('__pending__');
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
     await this.update(frame);
-    this.upstream.send(frame);
+    await this.upstream.send(frame);
   }
 
   // Update updates local states and notifies listeners.

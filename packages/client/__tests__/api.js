@@ -1,6 +1,6 @@
 // @flow
 
-import {Connection} from './fixtures';
+import {Connection} from '../../__tests__/fixtures';
 import Client from '../src';
 import {InMemory} from '../src/storage';
 
@@ -142,8 +142,8 @@ test('client.push(...)', async () => {
 
   expect(client.lstn['object']).toBeDefined();
   expect(resp).toEqual({
-    state: "*lww#object@time+author!:key'value'",
-    frame: "*lww#object@time+author!:key'value'",
+    state: "*lww#object@1ABD+author!:key'value'",
+    frame: "*lww#object@1ABD+author!:key'value'",
   });
 
   client.off('#object');
@@ -158,8 +158,8 @@ test('client.push(...)', async () => {
 
   // $FlowFixMe
   expect(client.storage.storage).toEqual({
-    object: "*lww#object@1ABC2+user!@(1+:bar'biz'@(2+:foo>object@time+author:key'value'",
-    __pending__: '["*lww#object@1ABC1+user!:bar\'biz\'","*lww#object@1ABC2+user!:foo>object"]',
+    object: "*lww#object@1ABD2+user!@(1+:bar'biz'@(2+:foo>object@(+author:key'value'",
+    __pending__: '["*lww#object@1ABD1+user!:bar\'biz\'","*lww#object@1ABD2+user!:foo>object"]',
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
       '"clockMode":"Logical","credentials":{}}',

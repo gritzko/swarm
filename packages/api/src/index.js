@@ -8,7 +8,6 @@ import type {Atom} from 'swarm-ron';
 import type {Options as ClntOpts} from 'swarm-client';
 
 export type Options = ClntOpts;
-
 export type Value = {[string]: Atom | Value} | null;
 
 export default class API {
@@ -19,7 +18,13 @@ export default class API {
 
   constructor(options: Options) {
     this.client = new Client(options);
+    this.options = options;
+    this.cbks = [];
     this.cache = {};
+  }
+
+  async ensure(): Promise<void> {
+    await this.client.ensure();
   }
 
   uuid(): UUID {
@@ -27,14 +32,17 @@ export default class API {
     return this.client.clock.time();
   }
 
-  async on(id: string, cbk?: (value: Value) => void): Promise<boolean> {
-    if (!id) return false;
-    const subscribed = await this.client.on(id, cbk ? this._wrap(id, cbk) : undefined);
-    return subscribed;
+  async on(id: string, cbk: (value: Value) => void): Promise<boolean> {
+    if (!id || !cbk) return false;
+    const sub = await this.client.on(
+      new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString(),
+      this._wrap(id, cbk),
+    );
+    return sub;
   }
 
   off(id: string, cbk: Value => void): boolean {
-    if (!id) throw new Error('id not found');
+    if (!id || !cbk) return false;
     for (const [_id, a, b] of this.cbks) {
       if (_id === id && b === cbk) {
         const {frame} = buildTree(this.cache, id);
@@ -49,31 +57,21 @@ export default class API {
       if (_id === id && b === cbk) return a;
     }
 
-    const self = this;
+    const wrap = new Wrapper(this, id, cbk, `#${id};`);
 
-    function a(_: string, s: string) {
-      const v = ron2js(s);
-      if (!v) return;
-      // $FlowFixMe ?
-      self.cache[v._id] = v;
-      const {frame, tree} = buildTree(self.cache, id);
-      self.client.on(frame.toString(), this);
-      cbk(tree);
-    }
-
-    a.bind(a);
-
-    this.cbks.push([id, a, cbk]);
-    return a;
+    this.cbks.push([id, wrap.callback, cbk]);
+    return wrap.callback;
   }
 
-  async lwwSet(id: string, value: {[string]: Atom | void}): Promise<boolean> {
+  async lset(id: string, value: {[string]: Atom | void}): Promise<boolean> {
     if (!id) return false;
-    const frame: Frame = new Frame();
-    const op: Op = new Op(lww.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
-    frame.pushWithTerm(op, '!');
+    await this.client.ensure();
+    const frame = new Frame();
+    let op = new Op(lww.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    frame.push(op);
 
     for (const k of Object.keys(value)) {
+      op = op.clone();
       op.location = UUID.fromString(k);
       if (value[k] !== undefined) {
         op.values = js2ron([value[k]]);
@@ -81,30 +79,37 @@ export default class API {
       frame.pushWithTerm(op, ',');
     }
 
-    if (frame.toString()) await this.client.push(frame.toString());
-    return !!frame.toString();
+    if (frame.toString()) {
+      // console.log('push to the client', frame.toString());
+      await this.client.push(frame.toString());
+      return true;
+    }
+    return false;
   }
 
-  async setAdd(id: string, value: Atom): Promise<boolean> {
+  async sadd(id: string, value: Atom): Promise<boolean> {
     if (!id) return false;
+    await this.client.ensure();
     const frame = new Frame('');
-    const op: Op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID);
-    frame.pushWithTerm(op, '!');
+    let op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    frame.push(op);
+    op = op.clone();
 
     op.location = this.uuid();
     op.values = js2ron([value]);
     frame.pushWithTerm(op, ',');
 
     await this.client.push(frame.toString());
-    return !!frame.toString();
+    return true;
   }
 
-  async setRemove(id: string, value: Atom): Promise<boolean> {
+  async srm(id: string, value: Atom): Promise<boolean> {
     if (!id) return false;
-    const frame: Frame = new Frame();
+    await this.client.ensure();
+    const frame = new Frame();
     let deleted = false;
-    const op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID);
-    frame.pushWithTerm(op, '!');
+    let op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    frame.push(op);
 
     const local = await this.client.storage.get(id);
     if (!local) return false;
@@ -113,6 +118,7 @@ export default class API {
     for (const v of new Frame(local)) {
       if (v.values === str) {
         deleted = true;
+        op = op.clone();
         op.location = op.event;
         op.values = '';
         frame.pushWithTerm(op, ',');
@@ -124,16 +130,71 @@ export default class API {
   }
 }
 
-function buildTree(cache: *, id: string, frame: Frame = new Frame()): {frame: Frame, tree: Value} {
+function buildTree(
+  cache: *,
+  id: string,
+  frame: Frame = new Frame(),
+  ids: {[string]: true} = {},
+): {frame: Frame, tree: Value, ids: {[string]: true}} {
+  ids[id] = true;
   frame.push(new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID));
   let root = cache[id];
-  if (!root) return {frame, tree: null};
+  if (!root) return {frame, tree: null, ids};
   root = {...root};
   for (const key of Object.keys(root)) {
     const v = root[key];
     if (v instanceof UUID) {
-      root[key] = buildTree(cache, v.toString(), frame).tree || Object.freeze({$ref: v.toString()});
+      root[key] = buildTree(cache, v.toString(), frame, ids).tree || Object.freeze(v);
     }
   }
-  return {frame, tree: Object.freeze(root)};
+  return {frame, tree: Object.freeze(root), ids};
+}
+
+function getOff(keys: {[string]: true}, ids: string): string {
+  const ret = new Frame();
+  for (const op of new Frame(ids)) {
+    const id = op.object.toString();
+    if (!keys[id]) ret.push(op);
+  }
+  return ret.toString();
+}
+
+class Wrapper {
+  self: API;
+  id: string;
+  prev: string;
+  cbk: Value => void;
+
+  constructor(self: API, id: string, cbk: Value => void, prev: string): Wrapper {
+    this.self = self;
+    this.id = id;
+    this.prev = '';
+    this.cbk = cbk;
+    // $FlowFixMe
+    this.callback = this.callback.bind(this);
+    return this;
+  }
+
+  callback(_: string, s: string): void {
+    if (!s) return;
+    const v = ron2js(s);
+    if (!v) return;
+
+    // $FlowFixMe ?
+    this.self.cache[v._id] = v;
+    const {ids, frame, tree} = buildTree(this.self.cache, this.id);
+
+    if (this.prev !== frame.toString()) {
+      this.self.client.on(frame.toString(), this.callback);
+    }
+
+    // get the difference and unsubscribe from lost refs
+    const off = getOff(ids, this.prev);
+    if (off) {
+      console.log('client.off', off, this.id, ids, this.prev, tree, v, s);
+      this.self.client.off(off, this.callback);
+    }
+    this.prev = frame.toString();
+    this.cbk(tree);
+  }
 }

@@ -1,5 +1,136 @@
 // @flow
 
-test('~', () => {
-  expect('~').toBe('~');
+import {Frame, UUID} from '../../ron/src';
+import {Connection} from '../../__tests__/fixtures';
+import API from '../src';
+import {InMemory} from '../../client/src/storage';
+
+test('API: new', async () => {
+  const api = new API({
+    id: 'user',
+    storage: new InMemory(),
+    upstream: new Connection('002-hs.ron'),
+    db: {
+      name: 'test',
+      credentials: {password: '12345'},
+    },
+  });
+
+  await api.ensure();
+  // $FlowFixMe
+  let dump = api.client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
+  // $FlowFixMe
+  expect(api.client.storage.storage).toEqual({
+    __meta__:
+      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
+      '"credentials":{"password":"12345"},"clockMode":"Logical"}',
+  });
+  expect(api.uuid().toString()).toBe('1ABC1+user');
+});
+
+test('API: lset', async () => {
+  const storage = new InMemory();
+  const api = new API({
+    id: 'user',
+    storage,
+    upstream: new Connection('006-lwwset.ron'),
+    db: {
+      name: 'test',
+      credentials: {password: '12345'},
+    },
+  });
+
+  await api.client.ensure();
+  let obj = {};
+  function cbk(v) {
+    obj = v;
+  }
+  await api.on('object', cbk);
+
+  let set = await api.lset('object', {username: 'olebedev'});
+  expect(storage.storage['object']).toBe("*lww#object@1ABC1+user!:username'olebedev'");
+  set = await api.lset('object', {email: 'ole6edev@gmail.com'});
+  expect(storage.storage['object']).toBe("*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'");
+  set = await api.lset('object', {email: undefined});
+  expect(storage.storage['object']).toBe("*lww#object@1ABC3+user!:email,@(1+:username'olebedev'");
+
+  expect(Object.keys(api.client.lstn)).toEqual(['object']);
+  expect(api.client.lstn['object']).toHaveLength(1);
+
+  const profileUUID = api.uuid();
+  set = await api.lset('object', {profile: profileUUID});
+
+  expect(storage.storage['object']).toBe(
+    "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+  );
+
+  expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
+
+  expect(obj).toEqual({
+    _id: 'object',
+    username: 'olebedev',
+    profile: profileUUID,
+  });
+
+  expect(api.cache['object']).toEqual({
+    _id: 'object',
+    profile: UUID.fromString('1ABC4+user'),
+    username: 'olebedev',
+  });
+
+  expect(api.cache['1ABC4+user']).toBeUndefined();
+
+  set = await api.lset(profileUUID.toString(), {active: true});
+  expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC6+user!:active>true');
+  expect(api.cache['object']).toEqual({
+    _id: 'object',
+    profile: UUID.fromString('1ABC4+user'),
+    username: 'olebedev',
+  });
+
+  expect(api.cache['1ABC4+user']).toEqual({
+    _id: '1ABC4+user',
+    active: true,
+  });
+
+  expect(obj).toEqual({
+    _id: 'object',
+    username: 'olebedev',
+    profile: {
+      _id: profileUUID.toString(),
+      active: true,
+    },
+  });
+
+  expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
+
+  set = await api.lset(profileUUID.toString(), {active: false});
+  expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC7+user!:active>false');
+
+  expect(obj).toEqual({
+    _id: 'object',
+    username: 'olebedev',
+    profile: {
+      _id: profileUUID.toString(),
+      active: false,
+    },
+  });
+
+  await new Promise(r => {
+    setTimeout(r, 1000);
+  });
+
+  // $FlowFixMe
+  const dump = api.client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
+  // $FlowFixMe
+  expect(api.client.storage.storage).toEqual({
+    '1ABC4+user': '*lww#1ABC4+user@1ABC7+user!:active>false',
+    __meta__:
+      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"credentials":{"password":"12345"},"clockMode":"Logical"}',
+    __pending__: '["*lww#1ABC4+user@1ABC6+user!:active>true","*lww#1ABC4+user@1ABC7+user!:active>false"]',
+    object: "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+  });
+  expect(api.uuid().toString()).toBe('1ABC8+user');
 });

@@ -84,4 +84,10 @@ test('lww map to js', () => {
    .
   `;
   expect(ron2js(with_refs)).toEqual({one: UUID.fromString('left'), two: UUID.fromString('right'), _id: 'root'});
+
+  expect(ron2js('*lww#1ABC4+user@1ABC7+user!:active>false')).toEqual({
+    _id: '1ABC4+user',
+    length: undefined,
+    active: false,
+  });
 });

@@ -1,6 +1,6 @@
 // @flow
 
-import Op, {Frame, Batch, FRAME_SEP, ron2js as RON2JS} from 'swarm-ron';
+import Op, {Frame, Batch, FRAME_SEP} from 'swarm-ron';
 import type {Atom} from 'swarm-ron';
 import UUID, {ZERO} from 'swarm-ron-uuid';
 import IHeap, {refComparator, eventComparatorDesc} from './iheap';
@@ -43,7 +43,7 @@ export function reduce(batch: Batch): Frame {
 }
 
 export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
-  const ret = {_id: ''};
+  const ret = {_id: '', length: undefined};
   const lww: Frame = new Frame(rawFrame);
   let length: number = 0;
 
@@ -52,7 +52,7 @@ export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: 
     ret._id = ret._id || id;
     if (id !== ret._id || op.isHeader() || op.isQuery()) continue;
 
-    let value = RON2JS(op.values).pop();
+    let value = op.value(0);
 
     let key = op.location.toString();
     if (op.location.isHash()) {
@@ -76,7 +76,7 @@ export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: 
     ret.length = length;
   }
 
-  return Object.freeze(Object.keys(ret) ? ret : null);
+  return Object.freeze(ret);
 }
 
 export default {reduce, type, ron2js};

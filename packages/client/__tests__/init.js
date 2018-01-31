@@ -1,7 +1,7 @@
 // @flow
 
 import {Frame, UUID} from '../../ron/src';
-import {Connection} from './fixtures';
+import {Connection} from '../../__tests__/fixtures';
 import Client from '../src';
 import {InMemory} from '../src/storage';
 
