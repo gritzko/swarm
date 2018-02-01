@@ -93,10 +93,8 @@ test('API lset', async () => {
     },
   });
 
-  await new Promise(r => {
-    // due to async nature of connection mock
-    setTimeout(r, 300);
-  });
+  // due to async nature of connection mock
+  await new Promise(r => setTimeout(r, 1000));
 
   // $FlowFixMe
   const dump = api.client.upstream.dump();
@@ -106,8 +104,13 @@ test('API lset', async () => {
     '1ABC4+user': '*lww#1ABC4+user@1ABC7+user!:active>false',
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"credentials":{"password":"12345"},"clockMode":"Logical"}',
-    __pending__: '["*lww#1ABC4+user@1ABC6+user!:active>true","*lww#1ABC4+user@1ABC7+user!:active>false"]',
-    object: "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+    __pending__: '[]',
+    object: "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
   });
-  expect(api.uuid().toString()).toBe('1ABC8+user');
+  expect(api.uuid().toString()).toBe('1ABD1+user');
+
+  expect(obj).toEqual({
+    _id: 'object',
+    username: 'olebedev',
+  });
 });

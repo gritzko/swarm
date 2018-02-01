@@ -227,22 +227,30 @@ export default class Client {
     const clock = this.clock;
     if (!clock) throw new Error('Have no clock');
 
-    const pending = await this.storage.get('__pending__');
-    let updates: Array<string> = JSON.parse(pending || '[]');
-
+    const self = this;
     for (const op of new Frame(message)) {
       clock.see(op.event);
       if (op.event.origin === clock.origin()) {
-        for (let i = updates.length - 1; i >= 0; i--) {
-          const update = Op.fromString(updates[i]);
-          if (update && op.event.lt(update.event)) continue;
-          updates = updates.slice(i);
-          i = -1;
+        const pending = await self.storage.get('__pending__');
+        let updates: Array<string> = JSON.parse(pending || '[]');
+
+        let i = -1;
+        for (const _old of updates) {
+          i++;
+          const old = Op.fromString(_old);
+          if (!old) throw new Error(`mailformed op: '${_old}'`);
+
+          if (old.event.gt(op.event)) {
+            updates = updates.slice(i + 1);
+            await self.storage.set('__pending__', JSON.stringify(updates));
+            break;
+          }
         }
+      } else {
+        await self.update(message);
       }
+      break;
     }
-    await this.storage.set('__pending__', JSON.stringify(updates));
-    await this.update(message);
   }
 
   // On installs subscriptions.
@@ -345,7 +353,8 @@ export default class Client {
           l(!skipMerge ? frame : '', state.toString());
         }
       }
-      break; // read only first operation of given frame
+      // read only first operation of the frame
+      break;
     }
   }
 }

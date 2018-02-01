@@ -1,13 +1,9 @@
 *~ '>' *db#test@+user?!:password'12345'.
 *~ '<' *db#test$server@1ABC+user:1ABC+server!.
-*~ '>' #object?!.
 *~ '>' *lww#object@1ABC1+user!:username'olebedev'.
 *~ '>' *lww#object@1ABC2+user!:email'ole6edev@gmail.com'.
 *~ '>' *lww#object@1ABC3+user!:email,.
 *~ '>' *lww#object@1ABC5+user!:profile>1ABC4+user.
-*~ '>' #1ABC4+user?!.
 *~ '>' *lww#1ABC4+user@1ABC6+user!:active>true.
 *~ '>' *lww#1ABC4+user@1ABC7+user!:active>false.
-*~ '<' @1ABC7+user!.
-*~ '<' *lww#object@1ABD+olebedev!:profile,.
-*~ '>' #1ABC4+user@~;.
+*~ '<' @1ABC6+user!.

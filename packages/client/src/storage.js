@@ -10,8 +10,8 @@ export interface Storage {
 export class InMemory implements Storage {
   storage: {[string]: string};
 
-  constructor() {
-    this.storage = {};
+  constructor(storage: {[string]: string} = {}) {
+    this.storage = storage;
   }
 
   set(key: string, value: string): Promise<void> {
