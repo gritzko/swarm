@@ -17,7 +17,7 @@ test('Set sadd', async () => {
     },
   });
 
-  await api.client.ensure();
+  await api.ensure();
 
   let obj = {};
   function cbk(v) {
@@ -80,6 +80,46 @@ test('Set sadd', async () => {
   expect(api.client.storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
 });
 
-test('Set srm', () => {
-  expect('~').toBe('~');
+test('Set srm', async () => {
+  const storage = new InMemory();
+  const api = new API({
+    id: 'user',
+    storage,
+    upstream: new Connection('010-setrm.ron'),
+    db: {
+      name: 'test',
+      credentials: {password: '12345'},
+    },
+  });
+
+  await api.ensure();
+
+  let obj = {};
+  function cbk(v) {
+    obj = v;
+  }
+  await api.on('object', cbk);
+
+  await api.sadd('object', 5);
+  expect(obj).toEqual({
+    '0': 5,
+  });
+
+  let rm = await api.srm('object', 4);
+  expect(rm).toBeFalsy();
+  expect(obj).toEqual({'0': 5});
+
+  // $FlowFixMe
+  expect(api.client.storage.storage.object).toBe('*set#object@1ABC1+user!=5');
+
+  await api.srm('object', 5);
+  // FIXME result must be true
+  expect(obj).toEqual({});
+
+  await new Promise(r => setTimeout(r, 300));
+  // $FlowFixMe
+  const dump = api.client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
+  // $FlowFixMe
+  expect(api.client.storage.storage.object).toBe('*set#object@1ABC3+user!:1ABC1+user,');
 });

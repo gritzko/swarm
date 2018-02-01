@@ -110,16 +110,19 @@ export default class API {
 
     const str = js2ron([value]);
     for (const v of new Frame(local)) {
+      if (!v.isRegular()) continue;
       if (v.values === str) {
         deleted = true;
         op = op.clone();
-        op.location = op.event;
+        op.location = v.event;
         op.values = '';
         frame.pushWithTerm(op, ',');
       }
     }
 
-    if (deleted) await this.client.push(frame.toString());
+    if (deleted) {
+      await this.client.push(frame.toString());
+    }
     return deleted;
   }
 }
