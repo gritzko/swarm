@@ -13,18 +13,18 @@ export type Value = {[string]: Atom | Value} | null;
 export default class API {
   client: Client;
   options: Options;
-  cbks: Array<[string, (string, string) => void, (Value) => void]>;
+  subs: Array<Subscription>;
   cache: {[string]: {[string]: Atom, _id: string, length: number}};
 
   constructor(options: Options) {
     this.client = new Client(options);
     this.options = options;
-    this.cbks = [];
+    this.subs = [];
     this.cache = {};
   }
 
-  async ensure(): Promise<void> {
-    await this.client.ensure();
+  ensure(): Promise<void> {
+    return this.client.ensure();
   }
 
   uuid(): UUID {
@@ -32,35 +32,29 @@ export default class API {
     return this.client.clock.time();
   }
 
-  async on(id: string, cbk: (value: Value) => void): Promise<boolean> {
-    if (!id || !cbk) return false;
-    const sub = await this.client.on(
-      new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString(),
-      this._wrap(id, cbk),
-    );
+  async on(id: string, cbk: (value: Value) => void): Promise<Subscription | void> {
+    if (!id || !cbk) return;
+    for (const sub of this.subs) {
+      if (sub.id === id && sub.cbk === cbk) return sub;
+    }
+
+    const sub = new Subscription(this, id, cbk);
+    this.subs.push(sub);
+    await sub.on();
     return sub;
   }
 
   off(id: string, cbk: Value => void): boolean {
     if (!id || !cbk) return false;
-    for (const [_id, a, b] of this.cbks) {
-      if (_id === id && b === cbk) {
-        const {frame} = buildTree(this.cache, id);
-        return this.client.off(frame.toString(), a);
+    let i = -1;
+    for (const sub of this.subs) {
+      i++;
+      if (sub.id === id && sub.cbk === cbk) {
+        this.subs.splice(i, 1);
+        return sub.off();
       }
     }
     return false;
-  }
-
-  _wrap(id: string, cbk: Value => void): (string, string) => void {
-    for (const [_id, a, b] of this.cbks) {
-      if (_id === id && b === cbk) return a;
-    }
-
-    const wrap = new Wrapper(this, id, cbk, `#${id};`);
-
-    this.cbks.push([id, wrap.callback, cbk]);
-    return wrap.callback;
   }
 
   async lset(id: string, value: {[string]: Atom | void}): Promise<boolean> {
@@ -80,7 +74,6 @@ export default class API {
     }
 
     if (frame.toString()) {
-      // console.log('push to the client', frame.toString());
       await this.client.push(frame.toString());
       return true;
     }
@@ -130,6 +123,67 @@ export default class API {
   }
 }
 
+class Subscription {
+  api: API;
+  id: string;
+  prev: string;
+  cbk: Value => void;
+  keys: {[string]: true};
+  active: boolean | void;
+
+  constructor(api: API, id: string, cbk: Value => void): Subscription {
+    this.api = api;
+    this.id = id;
+    this.cbk = cbk;
+    this.prev = new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString();
+    this.keys = {};
+    this.keys[this.id] = true;
+    // $FlowFixMe
+    this._invoke = this._invoke.bind(this);
+    return this;
+  }
+
+  off(): boolean {
+    if (this.active === true) {
+      return (this.active = this.api.client.off(this.prev, this._invoke));
+    }
+    return false;
+  }
+
+  async on(): Promise<boolean> {
+    if (this.active !== undefined) return false;
+    this.active = await this.api.client.on(this.prev, this._invoke);
+    return this.active || false;
+  }
+
+  _invoke(f: string, s: string): void {
+    // prevent unauthorized calls
+    if (this.active === false) {
+      this.api.client.off(f, this._invoke);
+      return;
+    }
+    if (!s) return;
+    const v = ron2js(s);
+    if (!v) return;
+
+    // $FlowFixMe ?
+    this.api.cache[v._id] = v;
+    const {ids, frame, tree} = buildTree(this.api.cache, this.id);
+
+    if (this.prev !== frame.toString()) {
+      this.keys = ids;
+      this.api.client.on(frame.toString(), this._invoke);
+
+      // get the difference and unsubscribe from lost refs
+      const off = getOff(ids, this.prev);
+      if (off) this.api.client.off(off, this._invoke);
+      this.prev = frame.toString();
+    }
+
+    this.cbk(tree);
+  }
+}
+
 function buildTree(
   cache: *,
   id: string,
@@ -157,44 +211,4 @@ function getOff(keys: {[string]: true}, ids: string): string {
     if (!keys[id]) ret.push(op);
   }
   return ret.toString();
-}
-
-class Wrapper {
-  self: API;
-  id: string;
-  prev: string;
-  cbk: Value => void;
-
-  constructor(self: API, id: string, cbk: Value => void, prev: string): Wrapper {
-    this.self = self;
-    this.id = id;
-    this.prev = '';
-    this.cbk = cbk;
-    // $FlowFixMe
-    this.callback = this.callback.bind(this);
-    return this;
-  }
-
-  callback(_: string, s: string): void {
-    if (!s) return;
-    const v = ron2js(s);
-    if (!v) return;
-
-    // $FlowFixMe ?
-    this.self.cache[v._id] = v;
-    const {ids, frame, tree} = buildTree(this.self.cache, this.id);
-
-    if (this.prev !== frame.toString()) {
-      this.self.client.on(frame.toString(), this.callback);
-    }
-
-    // get the difference and unsubscribe from lost refs
-    const off = getOff(ids, this.prev);
-    if (off) {
-      console.log('client.off', off, this.id, ids, this.prev, tree, v, s);
-      this.self.client.off(off, this.callback);
-    }
-    this.prev = frame.toString();
-    this.cbk(tree);
-  }
 }
