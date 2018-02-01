@@ -16,11 +16,12 @@ export default class API {
   subs: Array<Subscription>;
   cache: {[string]: {[string]: Atom, _id: string, length: number}};
 
-  constructor(options: Options) {
+  constructor(options: Options): API {
     this.client = new Client(options);
     this.options = options;
     this.subs = [];
     this.cache = {};
+    return this;
   }
 
   ensure(): Promise<void> {
@@ -83,12 +84,12 @@ export default class API {
   async sadd(id: string, value: Atom): Promise<boolean> {
     if (!id) return false;
     await this.client.ensure();
-    const frame = new Frame('');
-    let op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    const frame = new Frame();
+    const time = this.uuid();
+    let op = new Op(set.type, UUID.fromString(id), time, ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
     op = op.clone();
 
-    op.location = this.uuid();
     op.values = js2ron([value]);
     frame.pushWithTerm(op, ',');
 

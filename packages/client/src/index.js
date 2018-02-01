@@ -238,14 +238,15 @@ export default class Client {
         for (const _old of updates) {
           i++;
           const old = Op.fromString(_old);
-          if (!old) throw new Error(`mailformed op: '${_old}'`);
+          if (!old) throw new Error(`malformed op: '${_old}'`);
 
           if (old.event.gt(op.event)) {
             updates = updates.slice(i + 1);
-            await self.storage.set('__pending__', JSON.stringify(updates));
             break;
           }
         }
+        if (i === updates.length - 1) updates = [];
+        await self.storage.set('__pending__', JSON.stringify(updates));
       } else {
         await self.update(message);
       }

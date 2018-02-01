@@ -17,7 +17,7 @@ test('API lset', async () => {
     },
   });
 
-  await api.client.ensure();
+  await api.ensure();
   let obj = {};
   function cbk(v) {
     obj = v;

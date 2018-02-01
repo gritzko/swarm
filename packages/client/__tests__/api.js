@@ -166,14 +166,14 @@ test('client.push(...)', async () => {
 });
 
 test('client.storage.__pending__', async () => {
-  const storage = new InMemory({
+  let storage = new InMemory({
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"credentials":{"password":"12345"},"clockMode":"Logical"}',
     __pending__:
       '["*lww#object@1ABC1+user!:username\'olebedev\'","*lww#object@1ABC2+user!:email\'ole6edev@gmail.com\'","*lww#object@1ABC3+user!:email,","*lww#object@1ABC5+user!:profile>1ABC4+user","*lww#1ABC4+user@1ABC6+user!:active>true","*lww#1ABC4+user@1ABC7+user!:active>false"]',
   });
 
-  const client = new Client({
+  let client = new Client({
     id: 'user',
     storage,
     upstream: new Connection('007-pending.ron'),
@@ -189,4 +189,29 @@ test('client.storage.__pending__', async () => {
   let dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
   expect(storage.storage.__pending__).toBe('["*lww#1ABC4+user@1ABC7+user!:active>false"]');
+
+  // ----------------------- //
+  storage = new InMemory({
+    __meta__:
+      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"credentials":{"password":"12345"},"clockMode":"Logical"}',
+    __pending__:
+      '["*lww#object@1ABC1+user!:username\'olebedev\'","*lww#object@1ABC2+user!:email\'ole6edev@gmail.com\'","*lww#object@1ABC3+user!:email,","*lww#object@1ABC5+user!:profile>1ABC4+user","*lww#1ABC4+user@1ABC6+user!:active>true","*lww#1ABC4+user@1ABC7+user!:active>false"]',
+  });
+
+  client = new Client({
+    id: 'user',
+    storage,
+    upstream: new Connection('009-pending.ron'),
+    db: {
+      name: 'test',
+      credentials: {password: '12345'},
+    },
+  });
+
+  await new Promise(r => setTimeout(r, 1000));
+
+  // $FlowFixMe
+  dump = client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
+  expect(storage.storage.__pending__).toBe('[]');
 });
