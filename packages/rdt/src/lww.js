@@ -42,15 +42,17 @@ export function reduce(batch: Batch): Frame {
   return ret;
 }
 
-export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
-  const ret = {_id: '', length: undefined};
+export function ron2js(rawFrame: string): {[string]: Atom} {
+  const ret = {};
+  const proto = {};
+  proto.type = 'lww';
   const lww: Frame = new Frame(rawFrame);
   let length: number = 0;
 
   for (const op of lww) {
     const id = op.object.toString();
-    ret._id = ret._id || id;
-    if (id !== ret._id || op.isHeader() || op.isQuery()) continue;
+    proto.id = proto.id || id;
+    if (id !== proto.id || op.isHeader() || op.isQuery()) continue;
 
     let value = op.value(0);
 
@@ -69,14 +71,18 @@ export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: 
         length = -1;
       }
     }
-    ret[key] = value;
+    ret[key] = {
+      value: value,
+      writable: false,
+      enumerable: true,
+    };
   }
 
   if (Object.keys(ret).length > 1 && length > 0) {
-    ret.length = length;
+    proto.length = length;
   }
 
-  return Object.freeze(ret);
+  return Object.create(proto, ret);
 }
 
 export default {reduce, type, ron2js};

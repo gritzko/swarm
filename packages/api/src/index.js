@@ -168,7 +168,7 @@ class Subscription {
     if (!v) return;
 
     // $FlowFixMe ?
-    this.api.cache[v._id] = v;
+    this.api.cache[v.id] = v;
     const {ids, frame, tree} = buildTree(this.api.cache, this.id);
 
     if (this.prev !== frame.toString()) {
@@ -195,7 +195,8 @@ function buildTree(
   frame.push(new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID));
   let root = cache[id];
   if (!root) return {frame, tree: null, ids};
-  root = {...root};
+  // $FlowFixMe
+  root = Object.assign(Object.create(Object.getPrototypeOf(root)), root);
   for (const key of Object.keys(root)) {
     const v = root[key];
     if (v instanceof UUID) {

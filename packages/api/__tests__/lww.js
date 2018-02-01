@@ -44,13 +44,14 @@ test('API lset', async () => {
   expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
 
   expect(obj).toEqual({
-    _id: 'object',
     username: 'olebedev',
     profile: profileUUID,
   });
 
+  expect(obj.id).toBe('object');
+  expect(obj.type).toBe('lww');
+
   expect(api.cache['object']).toEqual({
-    _id: 'object',
     profile: UUID.fromString('1ABC4+user'),
     username: 'olebedev',
   });
@@ -60,21 +61,18 @@ test('API lset', async () => {
   set = await api.lset(profileUUID.toString(), {active: true});
   expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC6+user!:active>true');
   expect(api.cache['object']).toEqual({
-    _id: 'object',
     profile: UUID.fromString('1ABC4+user'),
     username: 'olebedev',
   });
 
   expect(api.cache['1ABC4+user']).toEqual({
-    _id: '1ABC4+user',
     active: true,
   });
+  expect(api.cache['1ABC4+user'].id).toBe('1ABC4+user');
 
   expect(obj).toEqual({
-    _id: 'object',
     username: 'olebedev',
     profile: {
-      _id: profileUUID.toString(),
       active: true,
     },
   });
@@ -85,10 +83,8 @@ test('API lset', async () => {
   expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC7+user!:active>false');
 
   expect(obj).toEqual({
-    _id: 'object',
     username: 'olebedev',
     profile: {
-      _id: profileUUID.toString(),
       active: false,
     },
   });
@@ -110,7 +106,6 @@ test('API lset', async () => {
   expect(api.uuid().toString()).toBe('1ABD1+user');
 
   expect(obj).toEqual({
-    _id: 'object',
     username: 'olebedev',
   });
 });

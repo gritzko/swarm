@@ -28,25 +28,23 @@ test('Set sadd', async () => {
   await api.sadd('object', 5);
 
   expect(obj).toEqual({
-    _id: 'object',
     '0': 5,
-    length: 1,
   });
 
   await api.sadd('object', 5);
   expect(obj).toEqual({
-    _id: 'object',
     '0': 5,
-    length: 1,
   });
+  expect(Array.prototype.slice.call(obj)).toEqual([5]);
 
   await api.sadd('object', 42);
   expect(obj).toEqual({
-    _id: 'object',
     '0': 42,
     '1': 5,
-    length: 2,
   });
+
+  expect(obj.id).toBe('object');
+  expect(Array.prototype.slice.call(obj)).toEqual([42, 5]);
 
   await new Promise(r => setTimeout(r, 500));
   // $FlowFixMe
@@ -56,11 +54,9 @@ test('Set sadd', async () => {
   const sub = api.uuid();
   await api.sadd('object', sub);
   expect(obj).toEqual({
-    _id: 'object',
     '0': sub,
     '1': 42,
     '2': 5,
-    length: 3,
   });
 
   await new Promise(r => setTimeout(r, 300));
@@ -69,15 +65,11 @@ test('Set sadd', async () => {
 
   await api.sadd(sub.toString(), 37);
   expect(obj).toEqual({
-    _id: 'object',
     '0': {
-      _id: sub.toString(),
-      length: 1,
       '0': 37,
     },
     '1': 42,
     '2': 5,
-    length: 3,
   });
 
   await new Promise(r => setTimeout(r, 300));

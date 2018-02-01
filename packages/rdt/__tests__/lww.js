@@ -55,27 +55,30 @@ test('lww reduce', () => {
 
 test('lww map to js', () => {
   const array_ron = "*lww#array@2!@1:~%=0@2:%1'1':%2=1:%3=2:%4>notexists";
-  expect(ron2js(array_ron)).toEqual({
-    _id: 'array',
+  let obj = ron2js(array_ron);
+  expect(obj).toEqual({
     '0': 0,
     '1': '1',
     '2': 1,
     '3': 2,
     '4': UUID.fromString('notexists'),
-    length: 5,
   });
+  expect(obj.id).toBe('array');
+  expect(obj.type).toBe('lww');
+  expect(obj.length).toBe(5);
+  expect(Array.prototype.slice.call(obj)).toEqual([0, '1', 1, 2, UUID.fromString('notexists')]);
 
   const object_ron = "*lww#obj@2:d!:a'A2':b'B2'@1:c'C1'";
-  expect(ron2js(object_ron)).toEqual({a: 'A2', b: 'B2', c: 'C1', _id: 'obj'});
+  expect(ron2js(object_ron)).toEqual({a: 'A2', b: 'B2', c: 'C1'});
 
   const array_ref = '*lww#ref@t-o!:~%=1:%1=2:%2>arr';
-  expect(ron2js(array_ref)).toEqual({length: 3, '0': 1, '1': 2, '2': UUID.fromString('arr'), _id: 'ref'});
+  expect(ron2js(array_ref)).toEqual({'0': 1, '1': 2, '2': UUID.fromString('arr')});
 
   const lww = '*lww#test@time-orig!:key=1:obj>time1-orig';
-  expect(ron2js(lww)).toEqual({key: 1, obj: UUID.fromString('time1-orig'), _id: 'test'});
+  expect(ron2js(lww)).toEqual({key: 1, obj: UUID.fromString('time1-orig')});
 
   const array_no = '*lww#ref@t-o!:key>arr:~%=1:~%1=2';
-  expect(ron2js(array_no)).toEqual({'0': 1, '1': 2, key: UUID.fromString('arr'), _id: 'ref'});
+  expect(ron2js(array_no).length).toBeUndefined();
 
   const with_refs = `
   *lww#root@1! :one>left :two>right
@@ -83,11 +86,9 @@ test('lww map to js', () => {
   #right@3! :number=42
    .
   `;
-  expect(ron2js(with_refs)).toEqual({one: UUID.fromString('left'), two: UUID.fromString('right'), _id: 'root'});
+  expect(ron2js(with_refs)).toEqual({one: UUID.fromString('left'), two: UUID.fromString('right')});
 
   expect(ron2js('*lww#1ABC4+user@1ABC7+user!:active>false')).toEqual({
-    _id: '1ABC4+user',
-    length: undefined,
     active: false,
   });
 });

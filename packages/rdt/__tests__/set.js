@@ -22,19 +22,19 @@ test('Set reduce', () => {
 });
 
 test('Set map to js', () => {
-  expect(ron2js('*set#test1@2:d!:0=2@1=1')).toEqual({'0': 2, '1': 1, _id: 'test1', length: 2});
+  expect(ron2js('*set#test1@2:d!:0=2@1=1').type).toBe('set');
+  expect(ron2js('*set#test1@2:d!:0=2@1=1').length).toBe(2);
+  expect(ron2js('*set#test1@2:d!:0=2@1=1').id).toBe('test1');
+  expect(ron2js('*set#test1@2:d!:0=2@1=1')).toEqual({'0': 2, '1': 1});
+
   expect(ron2js('*set#test1@3:d!:0>object@2=2@1=1')).toEqual({
     '0': UUID.fromString('object'),
     '1': 2,
     '2': 1,
-    _id: 'test1',
-    length: 3,
   });
   expect(ron2js('*set#test1@3:d!:0>object@2=2#test@1=1#test1@=3')).toEqual({
     '0': UUID.fromString('object'),
     '1': 2,
     '2': 3,
-    _id: 'test1',
-    length: 3,
   });
 });

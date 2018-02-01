@@ -55,23 +55,28 @@ export function setComparator(a: Op, b: Op): number {
   return -ae.compare(be);
 }
 
-export function ron2js(rawFrame: string): {[string]: Atom, _id: string, length: number | void} | null {
+export function ron2js(rawFrame: string): {[string]: Atom} {
   const set = new Frame(rawFrame);
-  const values: {[string]: boolean} = {};
-  const ret = {length: 0, _id: ''};
+  const values: {[string]: true} = {};
+  const ret = {};
+  const proto = {length: 0, id: '', type: 'set'};
 
   for (const op of set) {
-    if (!ret._id) ret._id = op.uuid(1).toString();
-    if (ret._id !== op.uuid(1).toString() || !op.isRegular()) {
+    if (!proto.id) proto.id = op.uuid(1).toString();
+    if (proto.id !== op.uuid(1).toString() || !op.isRegular()) {
       continue;
     }
     if (op.values && !values[op.values]) {
       values[op.values] = true;
-      ret[ret.length++] = op.value(0);
+      ret[proto.length++] = {
+        value: op.value(0),
+        writable: false,
+        enumerable: true,
+      };
     }
   }
 
-  return ret.length ? Object.freeze(ret) : null;
+  return Object.create(proto, ret);
 }
 
 export default {reduce, type, setComparator, ron2js};
