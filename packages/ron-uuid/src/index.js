@@ -19,6 +19,10 @@ export default class UUID {
     return this.sep; // TODO swap, phase out
   }
 
+  toJSON(): string {
+    return this.toString();
+  }
+
   toString(ctxUUID?: UUID): string {
     const ctx = ctxUUID || ZERO;
     if (this.origin === '0') {

@@ -80,6 +80,25 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
 
   if (Object.keys(ret).length > 1 && length > 0) {
     proto.length = length;
+    proto.values = function() {
+      return Array.prototype.slice.call(this);
+    };
+    // $FlowFixMe
+    proto.valueOf = function() {
+      return this.values();
+    };
+    proto[Symbol.iterator] = function() {
+      return this.values()[Symbol.iterator]();
+    };
+    proto.toJSON = function() {
+      return JSON.stringify(
+        this.values().map(i => {
+          if (i instanceof UUID) {
+            return '#' + i.toString();
+          } else return i;
+        }),
+      );
+    };
   }
 
   return Object.create(proto, ret);

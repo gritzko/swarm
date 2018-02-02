@@ -59,7 +59,29 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
   const set = new Frame(rawFrame);
   const values: {[string]: true} = {};
   const ret = {};
-  const proto = {length: 0, id: '', type: 'set'};
+  const proto = {
+    length: 0,
+    id: '',
+    type: 'set',
+    values: function() {
+      return Array.prototype.slice.call(this);
+    },
+    valueOf: function() {
+      return this.values();
+    },
+    [Symbol.iterator]: function() {
+      return this.values()[Symbol.iterator]();
+    },
+    toJSON: function() {
+      return JSON.stringify(
+        this.values().map(i => {
+          if (i instanceof UUID) {
+            return '#' + i.toString();
+          } else return i;
+        }),
+      );
+    },
+  };
 
   for (const op of set) {
     if (!proto.id) proto.id = op.uuid(1).toString();
