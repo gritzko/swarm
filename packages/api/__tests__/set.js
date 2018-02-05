@@ -35,7 +35,7 @@ test('Set sadd', async () => {
   expect(obj).toEqual({
     '0': 5,
   });
-  expect(Array.prototype.slice.call(obj)).toEqual([5]);
+  expect(obj.valueOf()).toEqual([5]);
 
   await api.sadd('object', 42);
   expect(obj).toEqual({
@@ -44,7 +44,7 @@ test('Set sadd', async () => {
   });
 
   expect(obj.id).toBe('object');
-  expect(Array.prototype.slice.call(obj)).toEqual([42, 5]);
+  expect(obj.valueOf()).toEqual([42, 5]);
 
   await new Promise(r => setTimeout(r, 500));
   // $FlowFixMe
@@ -112,8 +112,8 @@ test('Set srm', async () => {
   // $FlowFixMe
   expect(api.client.storage.storage.object).toBe('*set#object@1ABC1+user!=5');
 
-  await api.srm('object', 5);
-  // FIXME result must be true
+  rm = await api.srm('object', 5);
+  expect(rm).toBeTruthy();
   expect(obj).toEqual({});
 
   await new Promise(r => setTimeout(r, 300));

@@ -1,5 +1,7 @@
 // @flow
 
+import regeneratorRuntime from 'regenerator-runtime';
+
 import Client from 'swarm-client';
 import Op, {Frame, ZERO, UUID, FRAME_SEP, js2ron} from 'swarm-ron';
 import {ZERO as ZERO_UUID} from 'swarm-ron-uuid';

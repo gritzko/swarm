@@ -27,21 +27,30 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
     "babel-eslint": "^8.1.2",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-regenerator": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
     "eslint": "^4.14.0",
     "eslint-plugin-flowtype": "^2.40.1",
+    "flow-bin": "^0.63.1",
+    "flow-copy-source": "^1.2.2",
     "flow-coverage-report": "^0.4.1",
     "jest": "22.0.3",
-    "lerna": "^2.5.1"
+    "lerna": "^2.5.1",
+    "rimraf": "^2.6.2"
   },
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "lerna run build && jest",
     "build": "lerna run build",
     "build:clean": "lerna run build:clean",
     "build:lib": "lerna run build:lib",
     "build:flow": "lerna run build:flow",
-    "coverage":
-      "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html"
+    "coverage": "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html"
   }
 }

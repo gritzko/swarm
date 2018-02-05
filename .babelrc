@@ -3,8 +3,12 @@
     "es2015"
   ],
   "plugins": [
+  	["transform-regenerator", {
+      "asyncGenerators": false,
+      "generators": false,
+      "async": true
+    }],
     "transform-flow-strip-types",
-    "async-to-promises",
     "transform-es2015-spread",
     "transform-object-rest-spread"
   ]

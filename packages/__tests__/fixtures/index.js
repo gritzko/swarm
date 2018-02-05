@@ -47,10 +47,8 @@ export class Connection implements IConn {
   }
 
   send(payload: string): void {
-    // setTimeout(() => {
     this.session.push(new RawFrame(payload, '>'));
     this.pushPending();
-    // }, 0);
   }
 
   pushPending(): void {

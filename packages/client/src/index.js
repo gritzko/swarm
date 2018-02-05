@@ -1,5 +1,7 @@
 /* @flow */
 
+import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
+
 import RWS from 'reconnectable-websocket';
 
 import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
@@ -172,6 +174,7 @@ export default class Client {
       switch (dbOpts.clockMode) {
         case 'Logical':
           this.clock = new Logical(this.id);
+          break;
         default:
           throw new Error(`TODO: Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
       }
@@ -335,8 +338,8 @@ export default class Client {
     // save
     const pending = await this.storage.get('__pending__');
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
+    this.upstream.send(frame);
     await this.update(frame);
-    await this.upstream.send(frame);
   }
 
   // Update updates local states and notifies listeners.
