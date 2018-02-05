@@ -35,16 +35,15 @@ export default class API {
     return this.client.clock.time();
   }
 
-  async on(id: string, cbk: (value: Value) => void): Promise<Subscription | void> {
-    if (!id || !cbk) return;
+  async on(id: string, cbk: (value: Value) => void): Promise<boolean> {
+    if (!id || !cbk) return false;
     for (const sub of this.subs) {
-      if (sub.id === id && sub.cbk === cbk) return sub;
+      if (sub.id === id && sub.cbk === cbk) return false;
     }
-
     const sub = new Subscription(this.client, this.cache, id, cbk);
     this.subs.push(sub);
-    await sub.on();
-    return sub;
+    const subscribed = await sub.on();
+    return subscribed;
   }
 
   off(id: string, cbk: Value => void): boolean {
@@ -153,21 +152,24 @@ class Subscription {
 
   off(): boolean {
     if (this.active === true) {
-      return (this.active = this.client.off(this.prev, this._invoke));
+      return (this.active = !!this.client.off(this.prev, this._invoke));
     }
     return false;
   }
 
   async on(): Promise<boolean> {
     if (this.active !== undefined) return false;
-    this.active = await this.client.on(this.prev, this._invoke);
+    const {frame} = buildTree(this.cache, this.id);
+    this.active = await this.client.on((this.prev = frame.toString()), this._invoke);
     return this.active || false;
   }
 
-  _invoke(f: string, s: string): void {
+  _invoke(l: string, s: string): void {
+    // TODO handle log and state
     // prevent unauthorized calls
     if (this.active === false) {
-      this.client.off(f, this._invoke);
+      const {frame} = buildTree(this.cache, this.id);
+      this.client.off(frame.toString(), this._invoke);
       return;
     }
     if (!s) return;

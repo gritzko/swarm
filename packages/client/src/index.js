@@ -292,7 +292,13 @@ export default class Client {
   }
 
   // Off removes subscriptions.
-  off(query: string, callback: ?(frame: string, state: string) => void): boolean {
+  off(q: string | void, callback: ?(frame: string, state: string) => void): string | void {
+    // unless query passed fetch all the keys to unsubscribe from them
+    const query: string =
+      q ||
+      Object.keys(this.lstn)
+        .map(i => '#' + i)
+        .join(';');
     const fwd = new Frame();
     for (const op of new Frame(query)) {
       const key = op.uuid(1).toString();
@@ -313,9 +319,9 @@ export default class Client {
     }
     if (fwd.toString()) {
       this.upstream.send(fwd.toString());
-      return true;
+      return fwd.toString();
     }
-    return false;
+    return;
   }
 
   // Push sends updates to remote and local storages.

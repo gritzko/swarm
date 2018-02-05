@@ -68,6 +68,7 @@ test('API lset', async () => {
   expect(api.cache['1ABC4+user']).toEqual({
     active: true,
   });
+  // $FlowFixMe
   expect(api.cache['1ABC4+user'].id).toBe('1ABC4+user');
 
   expect(obj).toEqual({

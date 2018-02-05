@@ -42,15 +42,15 @@
     "lerna": "^2.5.1",
     "rimraf": "^2.6.2"
   },
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": ["packages/*"],
   "scripts": {
-    "test": "lerna run build && jest",
+    "test": "jest",
     "build": "lerna run build",
     "build:clean": "lerna run build:clean",
     "build:lib": "lerna run build:lib",
     "build:flow": "lerna run build:flow",
-    "coverage": "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html"
+    "coverage":
+      "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html",
+    "postinstall": "yarn build"
   }
 }
