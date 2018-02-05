@@ -16,7 +16,7 @@ export default class API {
   client: Client;
   options: Options;
   subs: Array<Subscription>;
-  cache: {[string]: {[string]: Atom, _id: string, length: number}};
+  cache: {[string]: Value};
 
   constructor(options: Options): API {
     this.client = new Client(options);
@@ -41,7 +41,7 @@ export default class API {
       if (sub.id === id && sub.cbk === cbk) return sub;
     }
 
-    const sub = new Subscription(this, id, cbk);
+    const sub = new Subscription(this.client, this.cache, id, cbk);
     this.subs.push(sub);
     await sub.on();
     return sub;
@@ -130,15 +130,17 @@ export default class API {
 }
 
 class Subscription {
-  api: API;
+  cache: {[string]: Value};
+  client: Client;
   id: string;
   prev: string;
   cbk: Value => void;
   keys: {[string]: true};
   active: boolean | void;
 
-  constructor(api: API, id: string, cbk: Value => void): Subscription {
-    this.api = api;
+  constructor(client: Client, cache: {[string]: Value}, id: string, cbk: Value => void): Subscription {
+    this.client = client;
+    this.cache = cache;
     this.id = id;
     this.cbk = cbk;
     this.prev = new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString();
@@ -151,21 +153,21 @@ class Subscription {
 
   off(): boolean {
     if (this.active === true) {
-      return (this.active = this.api.client.off(this.prev, this._invoke));
+      return (this.active = this.client.off(this.prev, this._invoke));
     }
     return false;
   }
 
   async on(): Promise<boolean> {
     if (this.active !== undefined) return false;
-    this.active = await this.api.client.on(this.prev, this._invoke);
+    this.active = await this.client.on(this.prev, this._invoke);
     return this.active || false;
   }
 
   _invoke(f: string, s: string): void {
     // prevent unauthorized calls
     if (this.active === false) {
-      this.api.client.off(f, this._invoke);
+      this.client.off(f, this._invoke);
       return;
     }
     if (!s) return;
@@ -173,16 +175,16 @@ class Subscription {
     if (!v) return;
 
     // $FlowFixMe ?
-    this.api.cache[v.id] = v;
-    const {ids, frame, tree} = buildTree(this.api.cache, this.id);
+    this.cache[v.id] = v;
+    const {ids, frame, tree} = buildTree(this.cache, this.id);
 
     if (this.prev !== frame.toString()) {
       this.keys = ids;
-      this.api.client.on(frame.toString(), this._invoke);
+      this.client.on(frame.toString(), this._invoke);
 
       // get the difference and unsubscribe from lost refs
       const off = getOff(ids, this.prev);
-      if (off) this.api.client.off(off, this._invoke);
+      if (off) this.client.off(off, this._invoke);
       this.prev = frame.toString();
     }
 

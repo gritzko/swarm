@@ -230,11 +230,10 @@ export default class Client {
     const clock = this.clock;
     if (!clock) throw new Error('Have no clock');
 
-    const self = this;
     for (const op of new Frame(message)) {
       clock.see(op.event);
       if (op.event.origin === clock.origin()) {
-        const pending = await self.storage.get('__pending__');
+        const pending = await this.storage.get('__pending__');
         let updates: Array<string> = JSON.parse(pending || '[]');
 
         let i = -1;
@@ -249,9 +248,9 @@ export default class Client {
           }
         }
         if (i === updates.length - 1) updates = [];
-        await self.storage.set('__pending__', JSON.stringify(updates));
+        await this.storage.set('__pending__', JSON.stringify(updates));
       } else {
-        await self.update(message);
+        await this.update(message);
       }
       break;
     }
@@ -260,12 +259,11 @@ export default class Client {
   // On installs subscriptions.
   async on(query: string, callback: ?(frame: string, state: string) => void): Promise<boolean> {
     const fwd = new Frame();
-    const self = this;
     for (let op of new Frame(query)) {
       if (op.uuid(1).eq(ZERO)) throw new Error(`ID is not specified: "${op.toString()}"`);
       const key = op.uuid(1).toString();
       let base = ZERO;
-      const stored = await self.storage.get(key);
+      const stored = await this.storage.get(key);
       if (stored) {
         for (const op of new Frame(stored)) {
           base = op.event;
@@ -274,11 +272,11 @@ export default class Client {
       }
       let found = false;
       if (callback) {
-        for (const l of self.lstn[key] || []) {
+        for (const l of this.lstn[key] || []) {
           found = found || l === callback;
         }
         if (!found) {
-          self.lstn[key] = (self.lstn[key] || []).concat(callback);
+          this.lstn[key] = (this.lstn[key] || []).concat(callback);
         }
       }
       if (!found) {
@@ -287,9 +285,9 @@ export default class Client {
     }
 
     if (fwd.toString()) {
-      self.upstream.send(fwd.toString());
+      this.upstream.send(fwd.toString());
     }
-    if (callback && fwd.toString()) await self.update(fwd.toString(), true);
+    if (callback && fwd.toString()) await this.update(fwd.toString(), true);
     return !!fwd.toString();
   }
 
@@ -344,16 +342,15 @@ export default class Client {
 
   // Update updates local states and notifies listeners.
   async update(frame: string, skipMerge: ?true): Promise<void> {
-    const self = this;
     for (const op of new Frame(frame)) {
       const key = op.uuid(1).toString();
-      let state = await self.storage.get(key);
+      let state = await this.storage.get(key);
       if (!skipMerge) {
         state = state ? reduce(Batch.fromStringArray(state.toString(), frame)).toString() : frame;
-        await self.storage.set(key, state);
+        await this.storage.set(key, state);
       }
       if (state) {
-        for (const l of self.lstn[key] || []) {
+        for (const l of this.lstn[key] || []) {
           l(!skipMerge ? frame : '', state.toString());
         }
       }
