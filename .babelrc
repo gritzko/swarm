@@ -1,15 +1,16 @@
 {
-  "presets": [
-    "es2015"
-  ],
+  "presets": [["env", {
+  	"loose": true,
+  	"useBuiltIns": false
+  }]],
   "plugins": [
-  	["transform-regenerator", {
-      "asyncGenerators": false,
-      "generators": false,
-      "async": true
-    }],
-    "transform-flow-strip-types",
+    [
+      "transform-object-rest-spread",
+      {
+        "useBuiltIns": true
+      }
+    ],
     "transform-es2015-spread",
-    "transform-object-rest-spread"
+    "transform-flow-strip-types"
   ]
 }
