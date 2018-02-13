@@ -47,7 +47,7 @@ export function reduce(batch: Batch): Frame {
       type = op.type;
       break;
     }
-    break;
+    if (!type.eq(ZERO)) break;
   }
 
   if (rdt[type.toString()]) {
@@ -56,7 +56,7 @@ export function reduce(batch: Batch): Frame {
   return empty(batch);
 }
 
-export function ron2js(rawFrame: string): {[string]: Atom} {
+export function ron2js(rawFrame: string): {[string]: Atom} | null {
   for (const op of new Frame(rawFrame)) {
     switch (true) {
       case lww.type.eq(op.type):
@@ -64,7 +64,8 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
       case set.type.eq(op.type):
         return set.ron2js(rawFrame);
       default:
-        throw new Error(`${op.type.toString()}.ron2js() is not implemented yet`);
+        return null;
+      // throw new Error(`${op.type.toString()}.ron2js() is not implemented yet`);
     }
   }
   return Object.create({id: '~', type: '~'});

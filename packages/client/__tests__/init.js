@@ -12,7 +12,7 @@ test('Client: new', async () => {
     upstream: new Connection('002-hs.ron'),
     db: {
       name: 'test',
-      credentials: {password: '12345'},
+      auth: 'JwT.t0k.en',
     },
   });
 
@@ -21,12 +21,17 @@ test('Client: new', async () => {
   let dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
   // $FlowFixMe
-  expect(client.storage.storage).toEqual({
-    __meta__:
-      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
-      '"credentials":{"password":"12345"},"clockMode":"Logical"}',
+  expect(JSON.parse(client.storage.storage.__meta__)).toEqual({
+    name: 'test',
+    clockLen: 5,
+    forkMode: '// FIXME',
+    peerIdBits: 30,
+    horizont: 604800,
+    auth: 'JwT.t0k.en',
+    clockMode: 'Logical',
   });
-  expect(client.clock && client.clock.last().eq(UUID.fromString('1ABC+server'))).toBeTruthy();
+  // $FlowFixMe
+  expect(client.clock.last().toString()).toBe('1ABC+server');
   expect(client.clock && client.clock.time().toString()).toBe('1ABC1+user');
 });
 

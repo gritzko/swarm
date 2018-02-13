@@ -12,7 +12,7 @@ test('API new', async () => {
     upstream: new Connection('002-hs.ron'),
     db: {
       name: 'test',
-      credentials: {password: '12345'},
+      auth: 'JwT.t0k.en',
     },
   });
 
@@ -21,10 +21,14 @@ test('API new', async () => {
   let dump = api.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
   // $FlowFixMe
-  expect(api.client.storage.storage).toEqual({
-    __meta__:
-      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' +
-      '"credentials":{"password":"12345"},"clockMode":"Logical"}',
+  expect(JSON.parse(api.client.storage.storage.__meta__)).toEqual({
+    name: 'test',
+    clockLen: 5,
+    forkMode: '// FIXME',
+    peerIdBits: 30,
+    horizont: 604800,
+    auth: 'JwT.t0k.en',
+    clockMode: 'Logical',
   });
   expect(api.uuid().toString()).toBe('1ABC1+user');
 });

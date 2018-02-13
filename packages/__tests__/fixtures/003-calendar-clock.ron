@@ -1,6 +1,6 @@
 *~ '>' *db#test@+user?!.
 *~ '<'
-      *db#test@)2+server?!
+      *db#test$user@)2+server?!
         @)1:ClockMode>Calendar
         :ClockLen=5.
 

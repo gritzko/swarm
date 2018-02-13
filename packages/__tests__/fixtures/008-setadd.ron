@@ -1,5 +1,5 @@
-*~ '>' *db#test@+user?!:password'12345'.
-*~ '<' *db#test$server@1ABC+user:1ABC+server!.
+*~ '>' *db#test@+user?!'JwT.t0k.en'.
+*~ '<' *db#test$user@1ABC+user!.
 *~ '>' #object?!.
 *~ '>' *set#object@1ABC1+user!=5.
 *~ '>' *set#object@1ABC2+user!=5.

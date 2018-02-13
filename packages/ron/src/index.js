@@ -304,6 +304,11 @@ export class Frame {
     for (const op of this) return op.isHeader() && op.uuid(3).isZero();
     return false;
   }
+
+  isPayload(): boolean {
+    for (const op of this) if (op.isRegular()) return true;
+    return false;
+  }
 }
 
 // Substitute UUIDs in all of the frame's ops.

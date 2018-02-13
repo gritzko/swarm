@@ -45,6 +45,7 @@ test('lww reduce', () => {
     //   "*lww#array@2! :0%)1 '1',  :)1%0 = 1,  :)1%)1 = 2",
     //   "*lww#array@2!@1:%=0@2:%)1'1':)1)=1:%)1=2",
     // ],
+    ['#1X8C30K+user!', "*lww#1X8C30K+user@1X8C30M+user!:some'value'", "*lww#1X8C30K+user@1X8C30M+user!:some'value'"],
   ];
 
   for (const c of cases) {
@@ -63,9 +64,9 @@ test('lww map to js', () => {
     '3': 2,
     '4': UUID.fromString('notexists'),
   });
-  expect(obj.id).toBe('array');
-  expect(obj.type).toBe('lww');
-  expect(obj.length).toBe(5);
+  expect(obj && obj.id).toBe('array');
+  expect(obj && obj.type).toBe('lww');
+  expect(obj && obj.length).toBe(5);
   expect(Array.prototype.slice.call(obj)).toEqual([0, '1', 1, 2, UUID.fromString('notexists')]);
 
   const object_ron = "*lww#obj@2:d!:a'A2':b'B2'@1:c'C1'";
@@ -78,7 +79,7 @@ test('lww map to js', () => {
   expect(ron2js(lww)).toEqual({key: 1, obj: UUID.fromString('time1-orig')});
 
   const array_no = '*lww#ref@t-o!:key>arr:~%=1:~%1=2';
-  expect(ron2js(array_no).length).toBeUndefined();
+  expect((ron2js(array_no) || {length: 42}).length).toBeUndefined();
 
   const with_refs = `
   *lww#root@1! :one>left :two>right

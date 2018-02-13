@@ -46,7 +46,7 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
   const ret = {};
   const proto = {};
   proto.type = 'lww';
-  const lww: Frame = new Frame(rawFrame);
+  const lww = new Frame(rawFrame);
   let length: number = 0;
 
   for (const op of lww) {

@@ -13,7 +13,7 @@ test('Set sadd', async () => {
     upstream: new Connection('008-setadd.ron'),
     db: {
       name: 'test',
-      credentials: {password: '12345'},
+      auth: 'JwT.t0k.en',
     },
   });
 
@@ -88,7 +88,7 @@ test('Set srm', async () => {
     upstream: new Connection('010-setrm.ron'),
     db: {
       name: 'test',
-      credentials: {password: '12345'},
+      auth: 'JwT.t0k.en',
     },
   });
 

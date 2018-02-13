@@ -73,8 +73,8 @@ test('connection', () => {
   const conn = new Connection('001-conn.ron');
   const dump = conn.dump();
   expect(JSON.stringify(dump.fixtures)).toBe(
-    "[\"*~ '>' *db#test@0+user?!:password'12345'.\"," +
-      '"*~ \'<\' *db#test$server@1ABC+user:1ABC+server!.",' +
+    "[\"*~ '>' *db#test@0+user?!'JwT.t0k.en'.\"," +
+      '"*~ \'<\' *db#test$user@1ABC+user!.",' +
       '"*~ \'>\' #object?.",' +
       "\"*~ '<' *lww#object@time+author!:key'value'.\"]",
   );

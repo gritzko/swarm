@@ -13,7 +13,7 @@ test('API lset', async () => {
     upstream: new Connection('006-lwwset.ron'),
     db: {
       name: 'test',
-      credentials: {password: '12345'},
+      auth: 'JwT.t0k.en',
     },
   });
 
@@ -97,13 +97,23 @@ test('API lset', async () => {
   const dump = api.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
   // $FlowFixMe
-  expect(api.client.storage.storage).toEqual({
-    '1ABC4+user': '*lww#1ABC4+user@1ABC7+user!:active>false',
-    __meta__:
-      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"credentials":{"password":"12345"},"clockMode":"Logical"}',
-    __pending__: '[]',
-    object: "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
+  expect(api.client.storage.storage['1ABC4+user']).toBe('*lww#1ABC4+user@1ABC7+user!:active>false');
+  // $FlowFixMe
+  expect(JSON.parse(api.client.storage.storage.__meta__)).toEqual({
+    name: 'test',
+    clockLen: 5,
+    forkMode: '// FIXME',
+    peerIdBits: 30,
+    horizont: 604800,
+    auth: 'JwT.t0k.en',
+    clockMode: 'Logical',
   });
+  // $FlowFixMe
+  expect(JSON.parse(api.client.storage.storage.__pending__)).toEqual([]);
+  // $FlowFixMe
+  expect(api.client.storage.storage.object).toBe(
+    "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
+  );
   expect(api.uuid().toString()).toBe('1ABD1+user');
 
   expect(obj).toEqual({

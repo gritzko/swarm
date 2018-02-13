@@ -1,7 +1,14 @@
 {
   "lerna": "2.5.1",
   "packages": [
-    "packages/*"
+    "packages/api",
+    "packages/client",
+    "packages/clock",
+    "packages/rdt",
+    "packages/regular-grammar",
+    "packages/ron-grammar",
+    "packages/ron-uuid",
+    "packages/ron"
   ],
   "version": "independent",
   "npmClient": "yarn",

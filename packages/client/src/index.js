@@ -28,7 +28,7 @@ export type Meta = {
   forkMode?: string,
   peerIdBits?: number,
   horizont?: number,
-  credentials?: {},
+  auth?: string,
   seen?: string,
 };
 
@@ -42,15 +42,15 @@ export type Options = {
 
 const defaultMeta: Meta = {
   name: 'default',
+  // FIXME clockMode: 'Calendar',
   clockLen: 5,
-  forkMode: '// FIXME', // keep it sync with server
+  forkMode: '// FIXME', // keep possible values sync with server
   peerIdBits: 30,
   horizont: 604800, // one week in seconds
 };
 
-// A simple client, keeps data in memory.
-// Consumes updates from the server, feeds resulting RON states
-// back to the listeners.
+// A simple client. Consumes updates from the server,
+// feeds resulting RON states back to the listeners.
 export default class Client {
   clock: ?Clock;
   lstn: {[key: string]: Array<(frame: string, state: string) => void>}; // ?
@@ -76,6 +76,7 @@ export default class Client {
       hsTimeout: options.hsTimeout || 3e5 /* 5min */,
     };
     this.init(options);
+    //
   }
 
   async init(options: Options) {
@@ -129,20 +130,17 @@ export default class Client {
     const head = new Op(
       new UUID('db', '0', '$'),
       new UUID(this.db.name, '0', '$'),
-      new UUID(this.clock ? this.clock.last().value : '0', this.id, '+'),
+      new UUID(this.clock ? this.clock.last().value : '0', this.id || '0', '+'),
       ZERO,
       undefined,
       QUERY_SEP,
     );
     hello.push(head);
-    hello.push(new Op(head.uuid(0), head.uuid(1), head.uuid(2), head.uuid(3), undefined, FRAME_SEP));
+    hello.pushWithTerm(head, FRAME_SEP);
 
-    const creds = this.db.credentials || {};
-    for (const cred of Object.keys(creds)) {
-      hello.pushWithTerm(
-        new Op(head.uuid(0), head.uuid(1), head.uuid(2), UUID.fromString(cred), js2ron([creds[cred]])),
-        ',',
-      );
+    const {auth} = this.db;
+    if (auth) {
+      hello.push(new Op(head.uuid(0), head.uuid(1), head.uuid(2), head.uuid(3), js2ron([auth]), ','));
     }
     this.upstream.send(hello.toString());
 
@@ -151,12 +149,13 @@ export default class Client {
     const dbOpts: Meta = {
       clockMode: 'Logical',
       ...this.db,
-      credentials: {...this.db.credentials},
     };
 
     let seen: UUID = ZERO;
     for (const op of new Frame(resp)) {
-      if (op.uuid(3).gt(seen)) seen = op.uuid(3);
+      if (seen.eq(ZERO)) {
+        seen = op.uuid(2);
+      }
       const val = op.value(0);
       if (val) {
         let key = op.uuid(3).toString();
@@ -249,11 +248,10 @@ export default class Client {
         }
         if (i === updates.length - 1) updates = [];
         await this.storage.set('__pending__', JSON.stringify(updates));
-      } else {
-        await this.update(message);
       }
       break;
     }
+    await this.update(message);
   }
 
   // On installs subscriptions.
@@ -348,11 +346,15 @@ export default class Client {
 
   // Update updates local states and notifies listeners.
   async update(frame: string, skipMerge: ?true): Promise<void> {
-    for (const op of new Frame(frame)) {
+    const fr = new Frame(frame);
+    if (!fr.isPayload()) return;
+
+    for (const op of fr) {
       const key = op.uuid(1).toString();
       let state = await this.storage.get(key);
       if (!skipMerge) {
         state = state ? reduce(Batch.fromStringArray(state.toString(), frame)).toString() : frame;
+
         await this.storage.set(key, state);
       }
       if (state) {

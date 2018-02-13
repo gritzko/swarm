@@ -97,7 +97,6 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
       };
     }
   }
-
   return Object.create(proto, ret);
 }
 
