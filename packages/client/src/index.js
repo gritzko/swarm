@@ -193,11 +193,8 @@ export default class Client {
     }
 
     // resubscribe
-    let query: string = '';
-    for (const key of Object.keys(this.lstn)) {
-      query += key;
-    }
-    if (query) await this.on(query);
+    let query: Array<string> = Object.keys(this.lstn);
+    if (query.length) await this.on('#' + query.join('#'));
   }
 
   // Ensure returns Promise which will be resolved after connection
@@ -282,10 +279,12 @@ export default class Client {
       }
     }
 
-    if (fwd.toString()) {
+    if (this.clock && fwd.toString()) {
       this.upstream.send(fwd.toString());
     }
-    if (callback && fwd.toString()) await this.update(fwd.toString(), true);
+    if (callback && fwd.toString()) {
+      await this.update(fwd.toString(), true);
+    }
     return !!fwd.toString();
   }
 
@@ -347,15 +346,15 @@ export default class Client {
   // Update updates local states and notifies listeners.
   async update(frame: string, skipMerge: ?true): Promise<void> {
     const fr = new Frame(frame);
-    if (!fr.isPayload()) return;
-
     for (const op of fr) {
       const key = op.uuid(1).toString();
       let state = await this.storage.get(key);
       if (!skipMerge) {
-        state = state ? reduce(Batch.fromStringArray(state.toString(), frame)).toString() : frame;
-
-        await this.storage.set(key, state);
+        state =
+          state && fr.isPayload()
+            ? reduce(Batch.fromStringArray(state, frame)).toString()
+            : fr.isPayload() ? frame : null;
+        if (state) await this.storage.set(key, state);
       }
       if (state) {
         for (const l of this.lstn[key] || []) {

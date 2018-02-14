@@ -48,6 +48,7 @@ export class Connection implements IConn {
 
   send(payload: string): void {
     this.session.push(new RawFrame(payload, '>'));
+    // console.log(`connection.send('${payload}')`);
     this.pushPending();
   }
 

@@ -5,6 +5,7 @@
     "packages/client",
     "packages/clock",
     "packages/rdt",
+    "packages/react",
     "packages/regular-grammar",
     "packages/ron-grammar",
     "packages/ron-uuid",

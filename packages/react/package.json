@@ -1,7 +1,7 @@
 {
-  "name": "swarm-api",
+  "name": "swarm-react",
   "version": "2.0.0",
-  "description": "Swarm API",
+  "description": "Swarm to React bindings",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
   "repository": {
@@ -9,10 +9,17 @@
     "url": ""
   },
   "dependencies": {
-    "swarm-client": "^2.0.0",
-    "swarm-rdt": "^2.0.20",
-    "swarm-ron": "^2.0.23",
-    "swarm-ron-uuid": "^2.0.9"
+    "swarm-api": "^2.0.0"
+  },
+  "devDependencies": {
+    "babel-preset-react": "^6.24.1",
+    "react-test-renderer": "16.2.0"
+  },
+  "peerDependencies": {
+    "invariant": "^2.2.2",
+    "prop-types": "^15.6.0",
+    "react": "16.2.0",
+    "react-dom": "16.2.0"
   },
   "files": ["*.js", "README.md"],
   "scripts": {
@@ -21,6 +28,6 @@
     "build:lib": "../../node_modules/.bin/babel -d lib src --ignore '**/__tests__/**'",
     "build:flow": "../../node_modules/.bin/flow-copy-source -v -i '**/__tests__/**' src lib"
   },
-  "keywords": ["swarm", "replicated", "RON", "CRDT"],
+  "keywords": ["swarm", "react", "replicated", "RON", "CRDT"],
   "license": "MIT"
 }

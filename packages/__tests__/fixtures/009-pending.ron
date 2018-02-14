@@ -1,5 +1,5 @@
 *~ '>' *db#test@+user?!'JwT.t0k.en'.
-*~ '<' *db#test$server@1ABC+user!.
+*~ '<' *db#test$user@1ABC+user!.
 *~ '>' *lww#object@1ABC1+user!:username'olebedev'.
 *~ '>' *lww#object@1ABC2+user!:email'ole6edev@gmail.com'.
 *~ '>' *lww#object@1ABC3+user!:email,.

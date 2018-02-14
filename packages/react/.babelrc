@@ -1,0 +1,17 @@
+{
+  "presets": [
+    ["env", {
+      "loose": true,
+      "useBuiltIns": false
+    }],
+    "react"
+  ],
+  "plugins": [
+    ["transform-object-rest-spread", {
+      "useBuiltIns": true }
+    ],
+    "transform-es2015-spread",
+    "transform-flow-strip-types",
+    "transform-node-env-inline"
+  ]
+}

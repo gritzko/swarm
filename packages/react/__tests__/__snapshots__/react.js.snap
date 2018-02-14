@@ -1,0 +1,41 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`React, basic 1`] = `
+<div
+  initialized={false}
+>
+  {"object":null}
+</div>
+`;
+
+exports[`React, basic 2`] = `
+<div
+  initialized={false}
+>
+  {"object":null}
+</div>
+`;
+
+exports[`React, basic 3`] = `
+<div
+  initialized={true}
+>
+  {"object":null}
+</div>
+`;
+
+exports[`React, basic 4`] = `
+<div
+  initialized={true}
+>
+  {"object":{"test":5}}
+</div>
+`;
+
+exports[`React, basic 5`] = `
+<div
+  initialized={true}
+>
+  {"object":{"test":5}}
+</div>
+`;
