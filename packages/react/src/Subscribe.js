@@ -15,12 +15,14 @@ type Props = {
     initialized: boolean,
     swarm: ?API,
     data: {[string]: Value},
+    error?: Error | string,
   }) => React.Node,
 };
 
 type State = {
   initialized: boolean,
   data: {[string]: Value},
+  error?: Error | string,
 };
 
 export default class Subscribe extends React.Component<Props, State> {
@@ -50,7 +52,9 @@ export default class Subscribe extends React.Component<Props, State> {
           this._subscribe();
           this.setState({initialized: true});
         })
-        .catch(e => console.error(e));
+        .catch(error => {
+          this.setState({error});
+        });
     } else {
       this._subscribe();
     }
@@ -73,7 +77,10 @@ export default class Subscribe extends React.Component<Props, State> {
         this.setState(state);
       };
 
-      this.swarm && this.swarm.on(k, this.cbks[k]).catch(e => console.error(e));
+      this.swarm &&
+        this.swarm.on(k, this.cbks[k]).catch(error => {
+          this.setState({error});
+        });
     }
   }
 
