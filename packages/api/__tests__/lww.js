@@ -8,12 +8,13 @@ import {InMemory} from '../../client/src/storage';
 test('API lset', async () => {
   const storage = new InMemory();
   const api = new API({
-    id: 'user',
     storage,
     upstream: new Connection('006-lwwset.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 
@@ -107,6 +108,8 @@ test('API lset', async () => {
     horizont: 604800,
     auth: 'JwT.t0k.en',
     clockMode: 'Logical',
+    id: 'user',
+    offset: 0,
   });
   // $FlowFixMe
   expect(JSON.parse(api.client.storage.storage.__pending__)).toEqual([]);

@@ -8,12 +8,13 @@ import {InMemory} from '../../client/src/storage';
 test('Set sadd', async () => {
   const storage = new InMemory();
   const api = new API({
-    id: 'user',
     storage,
     upstream: new Connection('008-setadd.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 
@@ -83,12 +84,13 @@ test('Set sadd', async () => {
 test('Set srm', async () => {
   const storage = new InMemory();
   const api = new API({
-    id: 'user',
     storage,
     upstream: new Connection('010-setrm.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 

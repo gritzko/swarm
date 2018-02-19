@@ -1,4 +1,4 @@
-*~ '>' *db#test@+user?!.
+*~ '>' *db#test@+?!.
 *~ '<'
       *db#test$user@)2+server?!
         @)1:ClockMode>Calendar

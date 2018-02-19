@@ -7,7 +7,7 @@ import RWS from 'reconnectable-websocket';
 import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
 import type {Atom} from 'swarm-ron';
 import type {Clock} from 'swarm-clock';
-import {Logical} from 'swarm-clock';
+import {Logical, Calendar} from 'swarm-clock';
 import {ZERO, NEVER} from 'swarm-ron-uuid';
 import {lww} from 'swarm-rdt';
 import {reduce} from 'swarm-rdt';
@@ -22,6 +22,7 @@ export interface Connection {
 }
 
 export type Meta = {
+  id?: string,
   name: string,
   clockMode?: 'Logical' | 'Epoch' | 'Calendar',
   clockLen?: number,
@@ -30,10 +31,10 @@ export type Meta = {
   horizont?: number,
   auth?: string,
   seen?: string,
+  offset?: number,
 };
 
 export type Options = {
-  id: string,
   storage: Storage,
   upstream?: string | Connection,
   hsTimeout?: number,
@@ -47,6 +48,7 @@ const defaultMeta: Meta = {
   forkMode: '// FIXME', // keep possible values sync with server
   peerIdBits: 30,
   horizont: 604800, // one week in seconds
+  offset: 0,
 };
 
 // A simple client. Consumes updates from the server,
@@ -58,13 +60,11 @@ export default class Client {
   storage: Storage;
   queue: Array<[() => void, (err: Error) => void]> | void;
   db: Meta;
-  id: string;
   options: {
     hsTimeout: number,
   };
 
   constructor(options: Options) {
-    this.id = options.id;
     this.db = {
       ...defaultMeta,
       ...options.db,
@@ -87,16 +87,19 @@ export default class Client {
         ...JSON.parse(meta || '{}'),
       }: Meta);
 
-      if (this.db.clockMode) {
+      if (this.db.clockMode && this.db.id) {
         switch (this.db.clockMode) {
           case 'Logical':
-            this.clock = new Logical(this.id);
-            await this.storage.set('__meta__', JSON.stringify(this.db));
+            this.clock = new Logical(this.db.id);
+            break;
+          case 'Calendar':
+            this.clock = new Calendar(this.db.id, {offset: this.db.offset || 0});
             break;
           default:
             throw new Error(`TODO: Clock mode '${this.db.clockMode}' is not supported yet`);
         }
       }
+      await this.storage.set('__meta__', JSON.stringify(this.db));
 
       if (typeof options.upstream === 'string') {
         this.upstream = new RWS(options.upstream, undefined, {reconnectOnError: true});
@@ -130,7 +133,7 @@ export default class Client {
     const head = new Op(
       new UUID('db', '0', '$'),
       new UUID(this.db.name, '0', '$'),
-      new UUID(this.clock ? this.clock.last().value : '0', this.id || '0', '+'),
+      new UUID(this.clock ? this.clock.last().value : '0', this.db.id || '0', '+'),
       ZERO,
       undefined,
       QUERY_SEP,
@@ -147,7 +150,7 @@ export default class Client {
     const resp = await hs;
 
     const dbOpts: Meta = {
-      clockMode: 'Logical',
+      clockMode: 'Calendar',
       ...this.db,
     };
 
@@ -164,19 +167,36 @@ export default class Client {
       }
     }
 
+    // *db #test$user @1ABC+server!
+    //           └──┘
+    //             ^
+    // read replica id assigned by the server
+    const op = Op.fromString(resp);
+    if (op) {
+      dbOpts.id = op.uuid(1).origin;
+    } else {
+      throw new Error(`Expected replica id not found in the handshake response: \n\t'${(op || '').toString()}'`);
+    }
+
     if (this.clock) {
       if (this.db.clockMode !== dbOpts.clockMode)
         throw new Error(
           `Different clock mode: '${this.db.clockMode || 'undefined'}' !== '${dbOpts.clockMode || 'undefined'}'`,
         );
-    } else {
+    } else if (dbOpts.id) {
       switch (dbOpts.clockMode) {
         case 'Logical':
-          this.clock = new Logical(this.id);
+          this.clock = new Logical(dbOpts.id);
+          break;
+        case 'Calendar':
+          this.clock = new Calendar(dbOpts.id, {offset: dbOpts.offset || 0});
+          // TODO check the difference and apply offset if needed
           break;
         default:
-          throw new Error(`TODO: Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
+          throw new Error(`Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
       }
+    } else {
+      throw new Error(`Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
     }
 
     this.clock.see(seen);
@@ -279,7 +299,7 @@ export default class Client {
       }
     }
 
-    if (this.clock && fwd.toString()) {
+    if (this.upstream && this.clock && fwd.toString()) {
       this.upstream.send(fwd.toString());
     }
     if (callback && fwd.toString()) {

@@ -18,10 +18,14 @@ test('React, basic', async () => {
 
   const storage = new InMemory();
   const api = new API({
-    id: 'user',
     storage,
     upstream,
-    db: {name: 'test', auth: 'JwT.t0k.en'},
+    db: {
+      id: 'user',
+      name: 'test',
+      auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
+    },
   });
 
   // subscribe independent listener

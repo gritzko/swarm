@@ -7,12 +7,13 @@ import {InMemory} from '../src/storage';
 
 test('Client: new', async () => {
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
     upstream: new Connection('002-hs.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 
@@ -29,6 +30,8 @@ test('Client: new', async () => {
     horizont: 604800,
     auth: 'JwT.t0k.en',
     clockMode: 'Logical',
+    id: 'user',
+    offset: 0,
   });
   // $FlowFixMe
   expect(client.clock.last().toString()).toBe('1ABC+server');
@@ -62,30 +65,33 @@ test('Client: w/o clock/url/connection', async () => {
 
 test('Client: not supported clock', async () => {
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
-    db: {name: 'test', clockMode: 'Epoch'},
+    db: {
+      id: 'user',
+      name: 'test',
+      clockMode: 'Epoch',
+    },
   });
 
   try {
     await client.ensure();
+    expect('~').toBe("this section mustn't be executed");
   } catch (e) {
     expect(e).toEqual(new Error("TODO: Clock mode 'Epoch' is not supported yet"));
   }
 });
 
-test('Client: not supported clock from peer', async () => {
+test('Client: assigned id', async () => {
   const conn = new Connection('003-calendar-clock.ron');
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
     upstream: conn,
-    db: {name: 'test'},
+    db: {
+      name: 'test',
+    },
   });
 
-  try {
-    await client.ensure();
-  } catch (e) {
-    expect(e).toEqual(new Error("TODO: Clock mode 'Calendar' is not supported yet"));
-  }
+  await client.ensure();
+  // $FlowFixMe
+  expect(client.clock.origin()).toBe('user');
 });

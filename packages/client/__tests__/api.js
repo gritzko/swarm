@@ -6,10 +6,13 @@ import {InMemory} from '../src/storage';
 
 test('client.on(...)', async () => {
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
     upstream: new Connection('004-query.ron'),
-    db: {name: 'test'},
+    db: {
+      name: 'test',
+      id: 'user',
+      clockMode: 'Logical',
+    },
   });
 
   await client.ensure();
@@ -38,6 +41,8 @@ test('client.on(...)', async () => {
     peerIdBits: 30,
     horizont: 604800,
     clockMode: 'Logical',
+    id: 'user',
+    offset: 0,
   });
 
   function cbk(a: string, b: string) {}
@@ -58,9 +63,12 @@ test('client.update(...)', async () => {
   const toCheck = [];
   // stealth-mode client
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
-    db: {clockMode: 'Logical', name: 'test'},
+    db: {
+      id: 'user',
+      clockMode: 'Logical',
+      name: 'test',
+    },
   });
 
   await client.ensure();
@@ -73,11 +81,19 @@ test('client.update(...)', async () => {
   await client.update("*lww#object@time1+author!:key'value1'");
 
   // $FlowFixMe
-  expect(client.storage.storage).toEqual({
-    object: "*lww#object@time1+author!@(2+:key'value2'",
-    __meta__:
-      '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,' + '"clockMode":"Logical"}',
+  expect(client.storage.storage.object).toBe("*lww#object@time1+author!@(2+:key'value2'");
+  // $FlowFixMe
+  expect(JSON.parse(client.storage.storage.__meta__)).toEqual({
+    name: 'test',
+    clockLen: 5,
+    forkMode: '// FIXME',
+    peerIdBits: 30,
+    horizont: 604800,
+    clockMode: 'Logical',
+    id: 'user',
+    offset: 0,
   });
+
   expect(toCheck).toEqual([
     {
       frame: "*lww#object@time+author!:key'value'",
@@ -132,10 +148,13 @@ test('client.off(...)', async () => {
 
 test('client.push(...)', async () => {
   const client = new Client({
-    id: 'user',
     storage: new InMemory(),
     upstream: new Connection('005-push.ron'),
-    db: {name: 'test'},
+    db: {
+      id: 'user',
+      name: 'test',
+      clockMode: 'Logical',
+    },
   });
 
   await client.ensure();
@@ -189,12 +208,13 @@ test('client.storage.__pending__', async () => {
   });
 
   let client = new Client({
-    id: 'user',
     storage,
     upstream: new Connection('007-pending.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 
@@ -227,12 +247,13 @@ test('client.storage.__pending__', async () => {
   });
 
   client = new Client({
-    id: 'user',
     storage,
     upstream: new Connection('009-pending.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'jwt',
+      clockMode: 'Logical',
     },
   });
 

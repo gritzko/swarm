@@ -7,12 +7,13 @@ import {InMemory} from '../../client/src/storage';
 
 test('API new', async () => {
   const api = new API({
-    id: 'user',
     storage: new InMemory(),
     upstream: new Connection('002-hs.ron'),
     db: {
+      id: 'user',
       name: 'test',
       auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
     },
   });
 
@@ -29,6 +30,8 @@ test('API new', async () => {
     horizont: 604800,
     auth: 'JwT.t0k.en',
     clockMode: 'Logical',
+    id: 'user',
+    offset: 0,
   });
   expect(api.uuid().toString()).toBe('1ABC1+user');
 });
