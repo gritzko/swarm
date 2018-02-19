@@ -9,7 +9,10 @@ import {lww, set, ron2js} from 'swarm-rdt';
 import type {Atom} from 'swarm-ron';
 import type {Options as ClntOpts} from 'swarm-client';
 
-export type Options = ClntOpts;
+export type Options = ClntOpts & {
+  gcPeriod: number,
+};
+
 export type Value = {[string]: Atom | Value} | null;
 
 export default class API {
@@ -17,12 +20,16 @@ export default class API {
   options: Options;
   subs: Array<Subscription>;
   cache: {[string]: Value};
+  gcInterval: IntervalID;
 
   constructor(options: Options): API {
     this.client = new Client(options);
     this.options = options;
     this.subs = [];
     this.cache = {};
+    if (options.gcPeriod) {
+      this.gcInterval = setInterval(this.gc.bind(this), options.gcPeriod);
+    }
     return this;
   }
 
@@ -57,6 +64,24 @@ export default class API {
       }
     }
     return false;
+  }
+
+  // garbage collection for unused cached data
+  gc(): {|deleted: number, existing: number|} {
+    const ret = {deleted: 0, existing: 0};
+    const lstnrs = {};
+    for (const id of Object.keys(this.client.lstn)) lstnrs[id] = true;
+
+    for (const id of Object.keys(this.cache)) {
+      if (!lstnrs[id]) {
+        delete this.cache[id];
+        ret.deleted++;
+      } else {
+        ret.existing++;
+      }
+    }
+
+    return ret;
   }
 
   async lset(id: string, value: {[string]: Atom | void}): Promise<boolean> {
