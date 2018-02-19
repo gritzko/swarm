@@ -4,7 +4,7 @@ import * as React from 'react';
 import PropTypes from 'prop-types';
 import API from 'swarm-api';
 
-export default class Provider extends React.Component<{swarm: API, children: React.Node}> {
+export default class Provider extends React.Component<{swarm: API, children: React.ChildrenArray<React.Node>}> {
   getChildContext() {
     return {swarm: this.props.swarm};
   }

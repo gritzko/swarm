@@ -10,7 +10,7 @@ import type {Atom} from 'swarm-ron';
 import type {Options as ClntOpts} from 'swarm-client';
 
 export type Options = ClntOpts & {
-  gcPeriod: number,
+  gcPeriod?: number,
 };
 
 export type Value = {[string]: Atom | Value} | null;

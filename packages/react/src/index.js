@@ -1,2 +1,4 @@
-export { default as Provider } from './Provider';
-export { default as Subscribe } from './Subscribe';
+// @flow
+
+export {default as Provider} from './Provider';
+export {default as Subscribe} from './Subscribe';
