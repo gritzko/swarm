@@ -156,6 +156,14 @@ export default class UUID {
     if (this.eq(uuid)) return 0;
     return this.lt(uuid) ? -1 : 1;
   }
+
+  isLocal(): boolean {
+    return this.origin === LOCAL;
+  }
+
+  local(): UUID {
+    return new UUID(this.value, LOCAL, this.sep);
+  }
 }
 
 export const ZERO = new UUID('0', '0');
@@ -165,6 +173,7 @@ export const ERROR = new UUID('~~~~~~~~~~', '0');
 export const RE = new RegExp(RON.UUID.source, 'g');
 export const PREFIXES = '([{}])';
 export const TIME_CONST = {'0': 1, '~': 1, '~~~~~~~~~~': 1};
+export const LOCAL = `~local`;
 
 export const BASE64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
 export const CODES: Int8Array = new Int8Array(128);

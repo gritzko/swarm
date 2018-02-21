@@ -295,7 +295,9 @@ export default class Client {
         }
       }
       if (!found) {
-        fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+        if (!op.object.isLocal()) {
+          fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+        }
       }
     }
 
@@ -327,11 +329,11 @@ export default class Client {
           if (cbk === callback) this.lstn[key].splice(i, 1);
         }
         if (!this.lstn[key].length) {
-          fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+          if (!op.uuid(1).isLocal()) fwd.push(new Op(op.type, op.object, NEVER, ZERO));
         }
       } else {
         delete this.lstn[key];
-        fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+        if (!op.uuid(1).isLocal()) fwd.push(new Op(op.type, op.object, NEVER, ZERO));
       }
     }
     if (fwd.toString()) {
@@ -359,7 +361,8 @@ export default class Client {
     // save
     const pending = await this.storage.get('__pending__');
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
-    this.upstream.send(frame);
+    const filtered = new Frame(frame).filter(op => !op.uuid(1).isLocal()).toString();
+    if (filtered) this.upstream.send(filtered);
     await this.update(frame);
   }
 

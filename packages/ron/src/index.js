@@ -309,6 +309,12 @@ export class Frame {
     for (const op of this) if (op.isRegular()) return true;
     return false;
   }
+
+  filter(p: Op => boolean): Frame {
+    const ret = new Frame();
+    for (const op of this) if (p(op)) ret.push(op);
+    return ret;
+  }
 }
 
 // Substitute UUIDs in all of the frame's ops.

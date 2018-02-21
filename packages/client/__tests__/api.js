@@ -257,10 +257,72 @@ test('client.storage.__pending__', async () => {
     },
   });
 
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise(r => setTimeout(r, 500));
 
   // $FlowFixMe
   dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
   expect(storage.storage.__pending__).toBe('[]');
+});
+
+test('client, local uuids', async () => {
+  let client = new Client({
+    storage: new InMemory(),
+    upstream: new Connection('012-local-uuids.ron'),
+    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+  });
+
+  await client.ensure();
+
+  const cbk = (f: string, s: string) => {};
+
+  await client.on(
+    '#' +
+      client.clock
+        // $FlowFixMe
+        .time()
+        .local()
+        .toString(),
+    cbk,
+  );
+  await client.on(
+    '#' +
+      client.clock
+        // $FlowFixMe
+        .time()
+        .local()
+        .toString(),
+    cbk,
+  );
+  await client.on('#object', cbk);
+  await client.on(
+    '#' +
+      client.clock
+        // $FlowFixMe
+        .time()
+        .local()
+        .toString(),
+    cbk,
+  );
+
+  await client.push(
+    `*lww#${client.clock
+      // $FlowFixMe
+      .last()
+      .local()
+      .toString()}@time+author!:key'value'`,
+  );
+  await client.push("*lww#object@time+author!:key'value'");
+  client.off(
+    `#${client.clock
+      // $FlowFixMe
+      .last()
+      .local()
+      .toString()}`,
+    cbk,
+  );
+
+  // $FlowFixMe
+  const dump = client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
 });
