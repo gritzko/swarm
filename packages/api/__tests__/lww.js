@@ -5,7 +5,7 @@ import {Connection} from '../../__tests__/fixtures';
 import API from '../src';
 import {InMemory} from '../../client/src/storage';
 
-test('API lset', async () => {
+test('api.set(...)', async () => {
   const storage = new InMemory();
   const api = new API({
     storage,
@@ -25,18 +25,18 @@ test('API lset', async () => {
   }
   await api.on('object', cbk);
 
-  let set = await api.lset('object', {username: 'olebedev'});
+  let set = await api.set('object', {username: 'olebedev'});
   expect(storage.storage['object']).toBe("*lww#object@1ABC1+user!:username'olebedev'");
-  set = await api.lset('object', {email: 'ole6edev@gmail.com'});
+  set = await api.set('object', {email: 'ole6edev@gmail.com'});
   expect(storage.storage['object']).toBe("*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'");
-  set = await api.lset('object', {email: undefined});
+  set = await api.set('object', {email: undefined});
   expect(storage.storage['object']).toBe("*lww#object@1ABC3+user!:email,@(1+:username'olebedev'");
 
   expect(Object.keys(api.client.lstn)).toEqual(['object']);
   expect(api.client.lstn['object']).toHaveLength(1);
 
   const profileUUID = api.uuid();
-  set = await api.lset('object', {profile: profileUUID});
+  set = await api.set('object', {profile: profileUUID});
 
   expect(storage.storage['object']).toBe(
     "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
@@ -59,7 +59,7 @@ test('API lset', async () => {
 
   expect(api.cache['1ABC4+user']).toBeUndefined();
 
-  set = await api.lset(profileUUID.toString(), {active: true});
+  set = await api.set(profileUUID.toString(), {active: true});
   expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC6+user!:active>true');
   expect(api.cache['object']).toEqual({
     profile: UUID.fromString('1ABC4+user'),
@@ -81,7 +81,7 @@ test('API lset', async () => {
 
   expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
 
-  set = await api.lset(profileUUID.toString(), {active: false});
+  set = await api.set(profileUUID.toString(), {active: false});
   expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC7+user!:active>false');
 
   expect(obj).toEqual({
@@ -113,8 +113,7 @@ test('API lset', async () => {
   });
   // $FlowFixMe
   expect(JSON.parse(api.client.storage.storage.__pending__)).toEqual([]);
-  // $FlowFixMe
-  expect(api.client.storage.storage.object).toBe(
+  expect(storage.storage.object).toBe(
     "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
   );
   expect(api.uuid().toString()).toBe('1ABD1+user');
@@ -122,4 +121,10 @@ test('API lset', async () => {
   expect(obj).toEqual({
     username: 'olebedev',
   });
+
+  set = await api.set('object', {local: UUID.fromString('test').local()});
+  expect(storage.storage.object).toBe(
+    "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
+  );
+  expect(set).toBeFalsy();
 });

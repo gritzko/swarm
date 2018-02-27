@@ -4,6 +4,7 @@
     "packages/api",
     "packages/client",
     "packages/clock",
+    "packages/db",
     "packages/rdt",
     "packages/react",
     "packages/regular-grammar",

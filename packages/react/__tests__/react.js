@@ -78,7 +78,7 @@ test('React, basic', async () => {
   tree = component.toJSON();
   expect(tree).toMatchSnapshot();
 
-  await api.lset('object', {some: 'value'});
+  await api.set('object', {some: 'value'});
   expect(object).toEqual({test: 5, some: 'value'});
 
   tree = component.toJSON();

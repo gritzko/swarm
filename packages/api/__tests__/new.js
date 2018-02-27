@@ -5,7 +5,7 @@ import {Connection} from '../../__tests__/fixtures';
 import API from '../src';
 import {InMemory} from '../../client/src/storage';
 
-test('API new', async () => {
+test('new API(...)', async () => {
   const api = new API({
     storage: new InMemory(),
     upstream: new Connection('002-hs.ron'),

@@ -5,7 +5,7 @@ import {Connection} from '../../__tests__/fixtures';
 import API from '../src';
 import {InMemory} from '../../client/src/storage';
 
-test('Set sadd', async () => {
+test('set.add(....)', async () => {
   const storage = new InMemory();
   const api = new API({
     storage,
@@ -26,19 +26,19 @@ test('Set sadd', async () => {
   }
 
   await api.on('object', cbk);
-  await api.sadd('object', 5);
+  await api.add('object', 5);
 
   expect(obj).toEqual({
     '0': 5,
   });
 
-  await api.sadd('object', 5);
+  await api.add('object', 5);
   expect(obj).toEqual({
     '0': 5,
   });
   expect(obj.valueOf()).toEqual([5]);
 
-  await api.sadd('object', 42);
+  await api.add('object', 42);
   expect(obj).toEqual({
     '0': 42,
     '1': 5,
@@ -48,12 +48,11 @@ test('Set sadd', async () => {
   expect(obj.valueOf()).toEqual([42, 5]);
 
   await new Promise(r => setTimeout(r, 500));
-  // $FlowFixMe
-  expect(api.client.storage.storage.__pending__).toBe('[]');
+  expect(storage.storage.__pending__).toBe('[]');
   expect(api.uuid().toString()).toBe('1ABC7+user');
 
   const sub = api.uuid();
-  await api.sadd('object', sub);
+  await api.add('object', sub);
   expect(obj).toEqual({
     '0': sub,
     '1': 42,
@@ -61,10 +60,9 @@ test('Set sadd', async () => {
   });
 
   await new Promise(r => setTimeout(r, 300));
-  // $FlowFixMe
-  expect(api.client.storage.storage.__pending__).toBe('[]');
+  expect(storage.storage.__pending__).toBe('[]');
 
-  await api.sadd(sub.toString(), 37);
+  await api.add(sub, 37);
   expect(obj).toEqual({
     '0': {
       '0': 37,
@@ -74,14 +72,18 @@ test('Set sadd', async () => {
   });
 
   await new Promise(r => setTimeout(r, 300));
+
   // $FlowFixMe
   const dump = api.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
-  // $FlowFixMe
-  expect(api.client.storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
+  expect(storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
+
+  const add = await api.add('object', UUID.fromString('test').local());
+  expect(storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
+  expect(add).toBeFalsy();
 });
 
-test('Set srm', async () => {
+test('set.remove(...)', async () => {
   const storage = new InMemory();
   const api = new API({
     storage,
@@ -102,26 +104,33 @@ test('Set srm', async () => {
   }
   await api.on('object', cbk);
 
-  await api.sadd('object', 5);
+  await api.add('object', 5);
   expect(obj).toEqual({
     '0': 5,
   });
 
-  let rm = await api.srm('object', 4);
+  let rm = await api.remove('object', 4);
   expect(rm).toBeFalsy();
   expect(obj).toEqual({'0': 5});
 
-  // $FlowFixMe
-  expect(api.client.storage.storage.object).toBe('*set#object@1ABC1+user!=5');
+  expect(storage.storage.object).toBe('*set#object@1ABC1+user!=5');
 
-  rm = await api.srm('object', 5);
+  rm = await api.remove('object', 5);
   expect(rm).toBeTruthy();
   expect(obj).toEqual({});
+
+  await new Promise(r => setTimeout(r, 300));
+
+  rm = await api.remove('thisone', 42);
+  expect(rm).toBeTruthy();
+  expect(obj).toEqual({});
+
+  const thisone = await new Promise(async r => await api.on('thisone', r));
+  expect(thisone).toEqual({});
 
   await new Promise(r => setTimeout(r, 300));
   // $FlowFixMe
   const dump = api.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
-  // $FlowFixMe
-  expect(api.client.storage.storage.object).toBe('*set#object@1ABC3+user!:1ABC1+user,');
+  expect(storage.storage.object).toBe('*set#object@1ABC3+user!:1ABC1+user,');
 });

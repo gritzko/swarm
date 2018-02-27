@@ -47,6 +47,7 @@
     "packages/api",
     "packages/client",
     "packages/clock",
+    "packages/db",
     "packages/rdt",
     "packages/react",
     "packages/regular-grammar",
@@ -60,13 +61,11 @@
     "build:clean": "lerna run build:clean",
     "build:lib": "lerna run build:lib",
     "build:flow": "lerna run build:flow",
-    "coverage": "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html",
+    "coverage":
+      "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html",
     "postinstall": "yarn build"
   },
   "jest": {
-    "testPathIgnorePatterns": [
-      "/node_modules/",
-      "/playground/"
-    ]
+    "testPathIgnorePatterns": ["/node_modules/", "/playground/"]
   }
 }

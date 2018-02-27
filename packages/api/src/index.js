@@ -1,6 +1,7 @@
 // @flow
 
 import regeneratorRuntime from 'regenerator-runtime';
+import hash from 'object-hash';
 
 import Client from 'swarm-client';
 import Op, {Frame, ZERO, UUID, FRAME_SEP, js2ron} from 'swarm-ron';
@@ -13,13 +14,18 @@ export type Options = ClntOpts & {
   gcPeriod?: number,
 };
 
-export type Value = {[string]: Atom | Value} | null;
+export type Value = {[string]: Atom | Value} | Value[] | null;
+
+interface Subscription {
+  off(): boolean;
+  is(hash: string): boolean;
+}
 
 export default class API {
   client: Client;
   options: Options;
   subs: Array<Subscription>;
-  cache: {[string]: Value};
+  cache: {[string]: {[string]: Atom}};
   gcInterval: IntervalID;
 
   constructor(options: Options): API {
@@ -38,27 +44,29 @@ export default class API {
   }
 
   uuid(): UUID {
-    if (!this.client.clock) throw new Error('have no clock yet, invoke `await api.ensure()` first');
+    if (!this.client.clock) throw new Error('have no clock yet, invoke `await <swarm>.ensure()` first');
     return this.client.clock.time();
   }
 
-  async on(id: string, cbk: (value: Value) => void): Promise<boolean> {
+  async on(id: string | UUID, cbk: (value: Value) => void): Promise<boolean> {
     if (!id || !cbk) return false;
+    const h = OnSub.hash(id.toString(), cbk);
     for (const sub of this.subs) {
-      if (sub.id === id && sub.cbk === cbk) return false;
+      if (sub.is(h)) return false;
     }
-    const sub = new Subscription(this.client, this.cache, id, cbk);
+    const sub = new OnSub(this.client, this.cache, id.toString(), cbk);
     this.subs.push(sub);
     const subscribed = await sub.on();
     return subscribed;
   }
 
-  off(id: string, cbk: Value => void): boolean {
+  off(id: string | UUID, cbk: Value => void): boolean {
     if (!id || !cbk) return false;
     let i = -1;
+    const h = OnSub.hash(id.toString(), cbk);
     for (const sub of this.subs) {
       i++;
-      if (sub.id === id && sub.cbk === cbk) {
+      if (sub.is(h)) {
         this.subs.splice(i, 1);
         return sub.off();
       }
@@ -84,11 +92,12 @@ export default class API {
     return ret;
   }
 
-  async lset(id: string, value: {[string]: Atom | void}): Promise<boolean> {
+  async set(id: string | UUID, value: {[string]: Atom | void}): Promise<boolean> {
     if (!id) return false;
+    const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
     const frame = new Frame();
-    let op = new Op(lww.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    let op = new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
 
     for (const k of Object.keys(value)) {
@@ -96,6 +105,9 @@ export default class API {
       op.location = UUID.fromString(k);
       if (value[k] !== undefined) {
         op.values = js2ron([value[k]]);
+        if (!uuid.isLocal() && value[k] instanceof UUID && value[k].isLocal()) {
+          return false;
+        }
       }
       frame.pushWithTerm(op, ',');
     }
@@ -107,14 +119,19 @@ export default class API {
     return false;
   }
 
-  async sadd(id: string, value: Atom): Promise<boolean> {
+  async add(id: string | UUID, value: Atom): Promise<boolean> {
     if (!id) return false;
+    const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
     const frame = new Frame();
     const time = this.uuid();
-    let op = new Op(set.type, UUID.fromString(id), time, ZERO_UUID, undefined, FRAME_SEP);
+    let op = new Op(set.type, uuid, time, ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
     op = op.clone();
+
+    if (!uuid.isLocal() && value instanceof UUID && value.isLocal()) {
+      return false;
+    }
 
     op.values = js2ron([value]);
     frame.pushWithTerm(op, ',');
@@ -123,19 +140,26 @@ export default class API {
     return true;
   }
 
-  async srm(id: string, value: Atom): Promise<boolean> {
+  async remove(id: string | UUID, value: Atom): Promise<boolean> {
     if (!id) return false;
+    const uuid = id instanceof UUID ? id : UUID.fromString(id);
+    id = uuid.toString();
     await this.client.ensure();
     const frame = new Frame();
     let deleted = false;
-    let op = new Op(set.type, UUID.fromString(id), this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    const ts = this.uuid();
+    let op = new Op(set.type, uuid, ts, ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
 
-    const local = await this.client.storage.get(id);
-    if (!local) return false;
+    let state = await this.client.storage.get(id);
+    if (!state) {
+      state = await this.client.once(`#${id}`);
+    }
+
+    if (!state) return false;
 
     const str = js2ron([value]);
-    for (const v of new Frame(local)) {
+    for (const v of new Frame(state)) {
       if (!v.isRegular()) continue;
       if (v.values === str) {
         deleted = true;
@@ -153,26 +177,37 @@ export default class API {
   }
 }
 
-class Subscription {
-  cache: {[string]: Value};
-  client: Client;
+interface IClient {
+  on(id: string, cbk: (f: string, s: string) => void): Promise<boolean>;
+  off(id: string, cbk: (f: string, s: string) => void): string | void;
+}
+
+class OnSub {
+  cache: {[string]: {[string]: Atom}};
+  client: IClient;
   id: string;
   prev: string;
   cbk: Value => void;
   keys: {[string]: true};
   active: boolean | void;
+  hash: string;
 
-  constructor(client: Client, cache: {[string]: Value}, id: string, cbk: Value => void): Subscription {
+  constructor(client: IClient, cache: {[string]: {[string]: Atom}}, id: string, cbk: Value => void): OnSub {
     this.client = client;
     this.cache = cache;
     this.id = id;
     this.cbk = cbk;
+    this.hash = OnSub.hash(id, cbk);
     this.prev = new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString();
     this.keys = {};
     this.keys[this.id] = true;
     // $FlowFixMe
     this._invoke = this._invoke.bind(this);
     return this;
+  }
+
+  is(hash: string): boolean {
+    return this.hash === hash;
   }
 
   off(): boolean {
@@ -191,10 +226,10 @@ class Subscription {
 
   _invoke(l: string, s: string): void {
     // TODO handle log and state
+
     // prevent unauthorized calls
     if (this.active === false) {
-      const {frame} = buildTree(this.cache, this.id);
-      this.client.off(frame.toString(), this._invoke);
+      this.client.off('', this._invoke);
       return;
     }
     if (!s) return;
@@ -216,6 +251,10 @@ class Subscription {
     }
 
     this.cbk(tree);
+  }
+
+  static hash(id: string, cbk: Value => void): string {
+    return hash({id, cbk});
   }
 }
 
@@ -240,7 +279,7 @@ function buildTree(
   return {frame, tree: Object.freeze(root), ids};
 }
 
-function getOff(keys: {[string]: true}, ids: string): string {
+export function getOff(keys: {[string]: true}, ids: string): string {
   const ret = new Frame();
   for (const op of new Frame(ids)) {
     const id = op.object.toString();

@@ -3,6 +3,7 @@
 export interface Storage {
   set(key: string, value: string): Promise<void>;
   get(key: string): Promise<?string>;
+  multiGet(keys: string[]): Promise<{[string]: ?string}>;
   remove(key: string): Promise<void>;
   keys(): Promise<Array<string>>;
 }
@@ -20,7 +21,15 @@ export class InMemory implements Storage {
   }
 
   get(key: string): Promise<?string> {
-    return Promise.resolve(this.storage[key]);
+    return Promise.resolve(this.storage[key] || null);
+  }
+
+  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+    const ret = {};
+    for (const k of keys) {
+      ret[k] = this.storage[k] || null;
+    }
+    return Promise.resolve(ret);
   }
 
   remove(key: string): Promise<void> {
@@ -33,7 +42,7 @@ export class InMemory implements Storage {
   }
 }
 
-export default class LocalStorage implements Storage {
+export class LocalStorage implements Storage {
   set(key: string, value: string): Promise<void> {
     localStorage.setItem(key, value);
     return Promise.resolve();
@@ -41,6 +50,14 @@ export default class LocalStorage implements Storage {
 
   get(key: string): Promise<?string> {
     return Promise.resolve(localStorage.getItem(key));
+  }
+
+  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+    const ret = {};
+    for (const k of keys) {
+      ret[k] = localStorage.getItem(k) || null;
+    }
+    return Promise.resolve(ret);
   }
 
   remove(key: string): Promise<void> {

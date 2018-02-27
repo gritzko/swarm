@@ -1,7 +1,7 @@
 {
-  "name": "swarm-api",
+  "name": "swarm-db",
   "version": "2.0.0",
-  "description": "Swarm API",
+  "description": "SwarmDB",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
   "repository": {
@@ -9,11 +9,11 @@
     "url": ""
   },
   "dependencies": {
+    "graphql": "^0.13.1",
+    "graphql-anywhere": "^4.1.5",
+    "graphql-tag": "^2.8.0",
     "object-hash": "^1.2.0",
-    "swarm-client": "^2.0.0",
-    "swarm-rdt": "^2.0.20",
-    "swarm-ron": "^2.0.23",
-    "swarm-ron-uuid": "^2.0.9"
+    "swarm-api": "^2.0.0"
   },
   "files": [
     "*.js",

@@ -92,4 +92,14 @@ test('lww map to js', () => {
   expect(ron2js('*lww#1ABC4+user@1ABC7+user!:active>false')).toEqual({
     active: false,
   });
+
+  const t = "*lww#1ABC1+user@1ABC3+user!:a=42:b'wat':c^0.1:d>false:e>true:f>1ABC2+user";
+  expect(ron2js(t)).toEqual({
+    a: 42,
+    b: 'wat',
+    c: 0.1,
+    d: false,
+    e: true,
+    f: UUID.fromString('1ABC2+user'),
+  });
 });

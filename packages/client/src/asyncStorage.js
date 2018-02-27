@@ -21,6 +21,19 @@ export default class AsyncStorage {
     });
   }
 
+  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+    return new Promise((res, rej) => {
+      RNAS.multiGet(keys, (err, tuples) => {
+        if (err) return rej(err);
+        const ret = {};
+        for (const [k, v] of tupels) {
+          ret[k] = v || null;
+        }
+        res(ret);
+      });
+    });
+  }
+
   remove(key: string): Promise<void> {
     return new Promise((res, rej) => {
       RNAS.removeItem(key, err => {

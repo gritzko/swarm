@@ -76,9 +76,9 @@ test('client.update(...)', async () => {
   await client.on('*lww#object', (frame: string, state: string): void => {
     toCheck.push({frame, state});
   });
-  await client.update("*lww#object@time+author!:key'value'");
-  await client.update("*lww#object@time2+author!:key'value2'");
-  await client.update("*lww#object@time1+author!:key'value1'");
+  await client.merge("*lww#object@time+author!:key'value'");
+  await client.merge("*lww#object@time2+author!:key'value2'");
+  await client.merge("*lww#object@time1+author!:key'value1'");
 
   // $FlowFixMe
   expect(client.storage.storage.object).toBe("*lww#object@time1+author!@(2+:key'value2'");
@@ -265,7 +265,7 @@ test('client.storage.__pending__', async () => {
   expect(storage.storage.__pending__).toBe('[]');
 });
 
-test('client, local uuids', async () => {
+test('client.clock.time().local()', async () => {
   let client = new Client({
     storage: new InMemory(),
     upstream: new Connection('012-local-uuids.ron'),
@@ -274,7 +274,10 @@ test('client, local uuids', async () => {
 
   await client.ensure();
 
-  const cbk = (f: string, s: string) => {};
+  let value: string[] = [];
+  const cbk = (f: string, s: string) => {
+    value.push(s);
+  };
 
   await client.on(
     '#' +
@@ -322,7 +325,33 @@ test('client, local uuids', async () => {
     cbk,
   );
 
+  expect(Object.keys(client.lstn)).toEqual(['1ABC1+~local', '1ABC2+~local', 'object', '1ABC3+~local']);
+  for (const id of Object.keys(client.lstn)) {
+    await client.push(`*lww#${id}@time+author!:key'value'`);
+  }
+
+  expect(value).toEqual([
+    "*lww#1ABC3+~local@time+author!:key'value'",
+    "*lww#object@time+author!:key'value'",
+    "*lww#1ABC1+~local@time+author!:key'value'",
+    "*lww#1ABC2+~local@time+author!:key'value'",
+    "*lww#object@time+author!:key'value'",
+  ]);
+
   // $FlowFixMe
   const dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
+});
+
+test('client.once(...)', async () => {
+  let client = new Client({
+    storage: new InMemory(),
+    upstream: new Connection('013-once.ron'),
+    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+  });
+
+  await client.ensure();
+  const state = await client.once('#object');
+  expect(state).toBe("*lww#object@time+author!:key'value'");
+  expect(client.lstn['object']).toEqual([]);
 });

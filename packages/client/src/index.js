@@ -14,6 +14,8 @@ import {reduce} from 'swarm-rdt';
 import type {Storage} from './storage';
 import {InMemory} from './storage';
 
+export {InMemory, LocalStorage} from './storage';
+
 export interface Connection {
   onmessage: (ev: MessageEvent) => any;
   onopen: (ev: Event) => any;
@@ -268,12 +270,13 @@ export default class Client {
       }
       break;
     }
-    await this.update(message);
+    await this.merge(message);
   }
 
   // On installs subscriptions.
   async on(query: string, callback: ?(frame: string, state: string) => void): Promise<boolean> {
     const fwd = new Frame();
+    const upstrm = new Frame();
     for (let op of new Frame(query)) {
       if (op.uuid(1).eq(ZERO)) throw new Error(`ID is not specified: "${op.toString()}"`);
       const key = op.uuid(1).toString();
@@ -296,18 +299,35 @@ export default class Client {
       }
       if (!found) {
         if (!op.object.isLocal()) {
-          fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+          upstrm.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
         }
+        fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
       }
     }
 
-    if (this.upstream && this.clock && fwd.toString()) {
-      this.upstream.send(fwd.toString());
+    if (this.upstream && this.clock && upstrm.toString()) {
+      this.upstream.send(upstrm.toString());
     }
     if (callback && fwd.toString()) {
-      await this.update(fwd.toString(), true);
+      await this.notify(fwd.toString());
     }
     return !!fwd.toString();
+  }
+
+  // Once accepts only single ID and sends full state.
+  async once(query: string): Promise<string> {
+    for (const op of new Frame(query)) {
+      const state = await new Promise(async r => {
+        const key = `#${op.uuid(1).toString()}`;
+        const once = (f: string, s: string): void => {
+          this.off(key, once);
+          r(reduce(Batch.fromStringArray(f, s)).toString());
+        };
+        await this.on(key, once);
+      });
+      return state;
+    }
+    throw new Error('ID not found in: ' + query);
   }
 
   // Off removes subscriptions.
@@ -317,8 +337,11 @@ export default class Client {
       q ||
       Object.keys(this.lstn)
         .map(i => '#' + i)
-        .join(';');
+        .join('');
+    let c = 0;
     const fwd = new Frame();
+    fwd.push(new Op(ZERO, ZERO, NEVER, ZERO, undefined, QUERY_SEP));
+
     for (const op of new Frame(query)) {
       const key = op.uuid(1).toString();
       this.lstn[key] = this.lstn[key] || [];
@@ -326,17 +349,25 @@ export default class Client {
         let i = -1;
         for (const cbk of this.lstn[key]) {
           i++;
-          if (cbk === callback) this.lstn[key].splice(i, 1);
+          if (cbk === callback) {
+            this.lstn[key].splice(i, 1);
+          }
         }
         if (!this.lstn[key].length) {
-          if (!op.uuid(1).isLocal()) fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+          if (!op.uuid(1).isLocal()) {
+            fwd.push(new Op(op.type, op.object, NEVER, ZERO, undefined, ','));
+            c++;
+          }
         }
       } else {
         delete this.lstn[key];
-        if (!op.uuid(1).isLocal()) fwd.push(new Op(op.type, op.object, NEVER, ZERO));
+        if (!op.uuid(1).isLocal()) {
+          fwd.push(new Op(op.type, op.object, NEVER, ZERO, undefined, ','));
+          c++;
+        }
       }
     }
-    if (fwd.toString()) {
+    if (!!c) {
       this.upstream.send(fwd.toString());
       return fwd.toString();
     }
@@ -363,11 +394,25 @@ export default class Client {
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
     const filtered = new Frame(frame).filter(op => !op.uuid(1).isLocal()).toString();
     if (filtered) this.upstream.send(filtered);
-    await this.update(frame);
+    await this.merge(frame);
   }
 
-  // Update updates local states and notifies listeners.
-  async update(frame: string, skipMerge: ?true): Promise<void> {
+  // Notify sends local states to all the listeners in the given frame
+  async notify(frame: string): Promise<void> {
+    const keys: string[] = [];
+    for (const op of new Frame(frame)) keys.push(op.uuid(1).toString());
+    const store = await this.storage.multiGet(keys);
+
+    for (const key of keys) {
+      const state = store[key];
+      if (state) {
+        for (const l of this.lstn[key] || []) l('', state);
+      }
+    }
+  }
+
+  // Merge updates local states and notifies listeners.
+  async merge(frame: string, skipMerge: ?true): Promise<void> {
     const fr = new Frame(frame);
     for (const op of fr) {
       const key = op.uuid(1).toString();
