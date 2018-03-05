@@ -102,8 +102,8 @@ export default class API {
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
 
-    const type = await this.typeOf(id);
-    if (type && type !== lww.type.toString()) return false;
+    // const type = await this.typeOf(id);
+    // if (type && type !== lww.type.toString()) return false;
 
     const frame = new Frame();
     let op = new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
@@ -133,8 +133,8 @@ export default class API {
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
 
-    const type = await this.typeOf(id);
-    if (type && type !== set.type.toString()) return false;
+    // const type = await this.typeOf(id);
+    // if (type && type !== set.type.toString()) return false;
 
     const frame = new Frame();
     const time = this.uuid();
@@ -159,8 +159,8 @@ export default class API {
     id = uuid.toString();
     await this.client.ensure();
 
-    const type = await this.typeOf(id);
-    if (type !== set.type.toString()) return false;
+    // const type = await this.typeOf(id);
+    // if (type !== set.type.toString()) return false;
 
     const frame = new Frame();
     const ts = this.uuid();
@@ -169,6 +169,9 @@ export default class API {
     frame.push(op);
 
     let state = await this.client.storage.get(id);
+    if (!state) {
+      state = await this.client.once(`#${id.toString()}`);
+    }
     if (!state) return false;
 
     const str = js2ron([value]);
