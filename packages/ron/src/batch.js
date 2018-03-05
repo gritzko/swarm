@@ -1,6 +1,7 @@
 // @flow
 
 import {Frame} from './index';
+import {ZERO} from 'swarm-ron-uuid';
 
 export default class Batch implements Iterator<Frame> {
   frames: Array<Frame>;
@@ -87,5 +88,26 @@ export default class Batch implements Iterator<Frame> {
 
   static fromStringArray(...input: Array<string>): Batch {
     return new Batch(...input.map(i => new Frame(i)));
+  }
+
+  static splitByID(source: string): Batch {
+    const b = new Batch();
+    let id = ZERO;
+    let c: Frame = new Frame();
+
+    for (const op of new Frame(source)) {
+      if (op.uuid(1).eq(id)) {
+        c.push(op);
+      } else {
+        if (!id.eq(ZERO)) {
+          b.push(c);
+        }
+        id = op.uuid(1);
+        c = new Frame();
+        c.push(op);
+      }
+    }
+    b.push(c);
+    return b;
   }
 }

@@ -23,6 +23,7 @@ export interface Connection {
   send(data: string): void;
   readyState: number;
   close(): void;
+  open(): void;
 }
 
 export type Meta = {
@@ -272,7 +273,7 @@ export default class Client {
         throw new Error(op.uuid(3).toString());
       }
       // skip milformed NEVERs explisitly
-      // waitign for a fix at server side
+      // waiting for the fix at server side
       if (!op.event.eq(NEVER)) {
         clock.see(op.event);
       }
@@ -300,13 +301,15 @@ export default class Client {
       break;
     }
 
-    // go further and merge payload if prev
-    // checks were passed
-    //
-    // merge method also accepts acks:
-    //    notifies listeners with null payload
-    //    if there is no saved state
-    await this.merge(message, {local: false});
+    for (const f of Batch.splitByID(message)) {
+      // go further and merge payload if prev
+      // checks were passed
+      //
+      // merge method also accepts acks:
+      //    notifies listeners with null payload
+      //    if there is no saved state
+      await this.merge(f.toString(), {local: false});
+    }
   }
 
   // On installs subscriptions.
@@ -435,7 +438,9 @@ export default class Client {
     const pending = await this.storage.get('__pending__');
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
     const filtered = new Frame(frame).filter(op => !op.uuid(1).isLocal()).toString();
-    if (filtered) this.upstream.send(filtered);
+    if (filtered) {
+      this.upstream.send(filtered);
+    }
     await this.merge(frame, {local: true});
   }
 
@@ -501,11 +506,15 @@ class DevNull implements Connection {
   onopen: (ev: Event) => any;
   readyState: number;
   constructor() {
-    this.readyState = 3;
-    setTimeout(() => this.onopen(new Event('')), 0);
+    this.readyState = 0;
+    setTimeout(() => {
+      this.readyState = 0;
+      this.onopen(new Event(''));
+    }, 0);
   }
   send(data: string): void {}
   close(): void {}
+  open(): void {}
 }
 
 function panic(err: any) {

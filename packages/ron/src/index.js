@@ -7,6 +7,7 @@ import UUID, {ZERO as ZERO_UUID, ERROR, COMMENT} from 'swarm-ron-uuid';
 export {default as UUID} from 'swarm-ron-uuid';
 export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
 export {default as Batch} from './batch';
+import Batch from './batch';
 
 export type Atom = string | number | boolean | null | UUID;
 
@@ -314,6 +315,11 @@ export class Frame {
     const ret = new Frame();
     for (const op of this) if (p(op)) ret.push(op);
     return ret;
+  }
+
+  ID(): UUID {
+    for (const op of this) return op.uuid(1);
+    return ZERO_UUID;
   }
 }
 

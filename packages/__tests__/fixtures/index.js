@@ -14,6 +14,7 @@ export class Connection implements IConn {
   onopen: (ev: Event) => any;
   readyState: number;
 
+  open(): void {}
   constructor(fixtures: ?string) {
     this.fixtures = [];
     this.session = [];

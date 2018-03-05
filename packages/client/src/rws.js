@@ -59,6 +59,8 @@ class ReconnectableWebSocket {
   send = data => {
     if (this._socket && this._socket.readyState === ReconnectableWebSocket.OPEN) {
       this._socket.send(data);
+    } else if (!this._socket || this._socket.readyState > ReconnectableWebSocket.OPEN) {
+      this._tryReconnect();
     }
   };
 
