@@ -22,7 +22,7 @@ test('client.on(...)', async () => {
 
   expect(resp).toEqual({
     state: "*lww#object@time+author!:key'value'",
-    frame: "*lww#object@time+author!:key'value'",
+    frame: '#object',
   });
 
   expect(client.lstn['object']).toBeDefined();
@@ -96,15 +96,15 @@ test('client.update(...)', async () => {
 
   expect(toCheck).toEqual([
     {
-      frame: "*lww#object@time+author!:key'value'",
+      frame: '#object',
       state: "*lww#object@time+author!:key'value'",
     },
     {
-      frame: "*lww#object@time2+author!:key'value2'",
+      frame: '#object',
       state: "*lww#object@time2+author!:key'value2'",
     },
     {
-      frame: "*lww#object@time1+author!:key'value1'",
+      frame: '#object',
       state: "*lww#object@time1+author!@(2+:key'value2'",
     },
   ]);
@@ -165,7 +165,7 @@ test('client.push(...)', async () => {
   expect(client.lstn['object']).toBeDefined();
   expect(resp).toEqual({
     state: "*lww#object@1ABD+author!:key'value'",
-    frame: "*lww#object@1ABD+author!:key'value'",
+    frame: '#object',
   });
 
   client.off('#object');
@@ -335,7 +335,6 @@ test('client.clock.time().local()', async () => {
     "*lww#object@time+author!:key'value'",
     "*lww#1ABC1+~local@time+author!:key'value'",
     "*lww#1ABC2+~local@time+author!:key'value'",
-    "*lww#object@time+author!:key'value'",
   ]);
 
   // $FlowFixMe
@@ -354,4 +353,12 @@ test('client.once(...)', async () => {
   const state = await client.once('#object');
   expect(state).toBe("*lww#object@time+author!:key'value'");
   expect(client.lstn['object']).toEqual([]);
+
+  const another = await client.once('#another');
+  expect(another).toBe('');
+  expect(client.lstn['another']).toEqual([]);
+
+  // $FlowFixMe
+  const dump = client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
 });

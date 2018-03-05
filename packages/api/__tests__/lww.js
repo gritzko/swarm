@@ -59,6 +59,8 @@ test('api.set(...)', async () => {
 
   expect(api.cache['1ABC4+user']).toBeUndefined();
 
+  await new Promise(r => setTimeout(r, 300));
+
   set = await api.set(profileUUID.toString(), {active: true});
   expect(storage.storage[profileUUID.toString()]).toBe('*lww#1ABC4+user@1ABC6+user!:active>true');
   expect(api.cache['object']).toEqual({

@@ -28,8 +28,6 @@ test('React, basic', async () => {
     },
   });
 
-  // subscribe independent listener
-  // to be able to test unsunscribe
   let object = {};
   api.on('object', o => {
     object = o;
@@ -75,6 +73,7 @@ test('React, basic', async () => {
   await new Promise(r => setTimeout(r, 500));
 
   expect(object).toEqual({test: 5});
+
   tree = component.toJSON();
   expect(tree).toMatchSnapshot();
 

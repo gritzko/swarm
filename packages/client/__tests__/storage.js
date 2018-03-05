@@ -10,5 +10,5 @@ test('InMemory', async () => {
   expect(keys).toEqual(['foo']);
   await store.remove('foo');
   const foo2 = await store.get('foo');
-  expect(foo2).toBe(null);
+  expect(foo2).toBe(undefined);
 });

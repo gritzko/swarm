@@ -2,7 +2,7 @@
 
 import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
 
-import RWS from 'reconnectable-websocket';
+import RWS from './rws';
 
 import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
 import type {Atom} from 'swarm-ron';
@@ -14,6 +14,7 @@ import {reduce} from 'swarm-rdt';
 import type {Storage} from './storage';
 import {InMemory} from './storage';
 
+export {default as WebSocket} from './rws';
 export {InMemory, LocalStorage} from './storage';
 
 export interface Connection {
@@ -21,6 +22,7 @@ export interface Connection {
   onopen: (ev: Event) => any;
   send(data: string): void;
   readyState: number;
+  close(): void;
 }
 
 export type Meta = {
@@ -40,6 +42,7 @@ export type Options = {
   storage: Storage,
   upstream?: string | Connection,
   hsTimeout?: number,
+  fetchTimeout?: number,
   db?: Meta,
 };
 
@@ -64,6 +67,7 @@ export default class Client {
   db: Meta;
   options: {
     hsTimeout: number,
+    fetchTimeout: number,
   };
 
   constructor(options: Options) {
@@ -76,6 +80,7 @@ export default class Client {
     this.queue = [];
     this.options = {
       hsTimeout: options.hsTimeout || 3e5 /* 5min */,
+      fetchTimeout: options.fetchTimeout || 3e4 /* 30sec */,
     };
     this.init(options);
     //
@@ -159,6 +164,10 @@ export default class Client {
     let seen: UUID = ZERO;
     for (const op of new Frame(resp)) {
       if (seen.eq(ZERO)) {
+        if (op.uuid(3).isError()) {
+          this.close();
+          throw new Error(op.uuid(3).toString());
+        }
         seen = op.uuid(2);
       }
       const val = op.value(0);
@@ -216,7 +225,9 @@ export default class Client {
 
     // resubscribe
     let query: Array<string> = Object.keys(this.lstn);
-    if (query.length) await this.on('#' + query.join('#'));
+    if (query.length) {
+      await this.on('#' + query.join('#'));
+    }
   }
 
   // Ensure returns Promise which will be resolved after connection
@@ -244,12 +255,29 @@ export default class Client {
     delete this.queue;
   }
 
+  close(): void {
+    if (this.upstream) this.upstream.close();
+  }
+
   async onMessage(message: string): Promise<void> {
     const clock = this.clock;
     if (!clock) throw new Error('Have no clock');
 
+    let c = -1;
     for (const op of new Frame(message)) {
-      clock.see(op.event);
+      c++;
+      // check if it's an error from the server
+      if (c === 0 && op.uuid(0).toString() === 'db') {
+        this.close();
+        throw new Error(op.uuid(3).toString());
+      }
+      // skip milformed NEVERs explisitly
+      // waitign for a fix at server side
+      if (!op.event.eq(NEVER)) {
+        clock.see(op.event);
+      }
+
+      // operate over pending messages
       if (op.event.origin === clock.origin()) {
         const pending = await this.storage.get('__pending__');
         let updates: Array<string> = JSON.parse(pending || '[]');
@@ -268,9 +296,17 @@ export default class Client {
         if (i === updates.length - 1) updates = [];
         await this.storage.set('__pending__', JSON.stringify(updates));
       }
+
       break;
     }
-    await this.merge(message);
+
+    // go further and merge payload if prev
+    // checks were passed
+    //
+    // merge method also accepts acks:
+    //    notifies listeners with null payload
+    //    if there is no saved state
+    await this.merge(message, {local: false});
   }
 
   // On installs subscriptions.
@@ -289,6 +325,7 @@ export default class Client {
         }
       }
       let found = false;
+      let exists = !!callback && !!this.lstn[key] && this.lstn[key].length;
       if (callback) {
         for (const l of this.lstn[key] || []) {
           found = found || l === callback;
@@ -297,8 +334,9 @@ export default class Client {
           this.lstn[key] = (this.lstn[key] || []).concat(callback);
         }
       }
+
       if (!found) {
-        if (!op.object.isLocal()) {
+        if (!exists && !op.object.isLocal()) {
           upstrm.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
         }
         fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
@@ -317,12 +355,16 @@ export default class Client {
   // Once accepts only single ID and sends full state.
   async once(query: string): Promise<string> {
     for (const op of new Frame(query)) {
-      const state = await new Promise(async r => {
+      const state = await new Promise(async (r, rej) => {
         const key = `#${op.uuid(1).toString()}`;
         const once = (f: string, s: string): void => {
           this.off(key, once);
-          r(reduce(Batch.fromStringArray(f, s)).toString());
+          r(s);
         };
+        setTimeout(() => {
+          this.off(key, once);
+          rej(new Error(`Time is out while fetching '#${key}'.`));
+        }, this.options.fetchTimeout);
         await this.on(key, once);
       });
       return state;
@@ -394,7 +436,7 @@ export default class Client {
     await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
     const filtered = new Frame(frame).filter(op => !op.uuid(1).isLocal()).toString();
     if (filtered) this.upstream.send(filtered);
-    await this.merge(frame);
+    await this.merge(frame, {local: true});
   }
 
   // Notify sends local states to all the listeners in the given frame
@@ -402,31 +444,49 @@ export default class Client {
     const keys: string[] = [];
     for (const op of new Frame(frame)) keys.push(op.uuid(1).toString());
     const store = await this.storage.multiGet(keys);
-
     for (const key of keys) {
       const state = store[key];
-      if (state) {
-        for (const l of this.lstn[key] || []) l('', state);
+      // check if the value exists even empty string
+      if (state != null) {
+        for (const l of this.lstn[key] || []) l('#' + key, state);
       }
     }
   }
 
   // Merge updates local states and notifies listeners.
-  async merge(frame: string, skipMerge: ?true): Promise<void> {
+  // Accepts acks messsages.
+  //    notifies listeners with empty payload(once)
+  //    if there is no saved state
+  async merge(frame: string, options: {local: boolean} = {local: true}): Promise<void> {
     const fr = new Frame(frame);
     for (const op of fr) {
       const key = op.uuid(1).toString();
       let state = await this.storage.get(key);
-      if (!skipMerge) {
-        state =
-          state && fr.isPayload()
-            ? reduce(Batch.fromStringArray(state, frame)).toString()
-            : fr.isPayload() ? frame : null;
-        if (state) await this.storage.set(key, state);
+      const prev = state;
+
+      if (fr.isPayload()) {
+        if (typeof state === 'string') {
+          state = reduce(Batch.fromStringArray(key, state, frame)).toString();
+        } else {
+          state = frame;
+        }
+      } else {
+        if (state) {
+          // It's ack, do nothing.
+          // Pendings were reduced in onMessage method
+          return;
+        } else {
+          // Empty state from server, object does not exists.
+          // Notify with empty state, set empty string as state.
+          state = '';
+        }
       }
-      if (state) {
+
+      // ensure that it's an update(don't repeat)
+      if (prev !== state) {
+        await this.storage.set(key, state);
         for (const l of this.lstn[key] || []) {
-          l(!skipMerge ? frame : '', state.toString());
+          l('#' + key, state.toString());
         }
       }
       // read only first operation of the frame
@@ -445,6 +505,7 @@ class DevNull implements Connection {
     setTimeout(() => this.onopen(new Event('')), 0);
   }
   send(data: string): void {}
+  close(): void {}
 }
 
 function panic(err: any) {

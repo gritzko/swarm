@@ -164,6 +164,10 @@ export default class UUID {
   local(): UUID {
     return new UUID(this.value, LOCAL, this.sep);
   }
+
+  isError(): boolean {
+    return this.origin === '~~~~~~~~~~';
+  }
 }
 
 export const ZERO = new UUID('0', '0');

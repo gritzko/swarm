@@ -1,12 +1,13 @@
 *~ '>' *db#test@+user?!'JwT.t0k.en'.
 *~ '<' *db#test$user@1ABC+user!.
 *~ '>' #object?!.
+*~ '<' #object!.
 *~ '>' *set#object@1ABC1+user!=5.
 *~ '>' *set#object@1ABC2+user!=5.
 *~ '>' *set#object@1ABC3+user!=42.
 *~ '<' @1ABC6+user!.
 *~ '>' *set#object@1ABC9+user!>1ABC8+user.
 *~ '>' #1ABC8+user?!.
-*~ '<' @1ABC10+user!.
+*~ '<' #1ABC8+user!.
 *~ '>' *set#1ABC8+user@1ABCA+user!=37.
 *~ '<' @1ABD+user!.

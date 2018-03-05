@@ -63,12 +63,9 @@ export function ron2js(rawFrame: string): {[string]: Atom} | null {
         return lww.ron2js(rawFrame);
       case set.type.eq(op.type):
         return set.ron2js(rawFrame);
-      default:
-        return null;
-      // throw new Error(`${op.type.toString()}.ron2js() is not implemented yet`);
     }
   }
-  return Object.create({id: '~', type: '~'});
+  return null;
 }
 
 export {default as lww} from './lww';

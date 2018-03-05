@@ -30,6 +30,7 @@
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.1.2",
+    "babel-plugin-transform-class-bound-properties": "^1.0.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-plugin-transform-node-env-inline": "^0.3.0",
     "babel-plugin-transform-regenerator": "^6.26.0",
@@ -61,11 +62,13 @@
     "build:clean": "lerna run build:clean",
     "build:lib": "lerna run build:lib",
     "build:flow": "lerna run build:flow",
-    "coverage":
-      "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html",
+    "coverage": "flow-coverage-report -o coverage -i 'packages/*/src/**/*.js' -x 'packages/client/src/asyncStorage.js' -t html -t json -t text --threshold 90 && open ./coverage/index.html",
     "postinstall": "yarn build"
   },
   "jest": {
-    "testPathIgnorePatterns": ["/node_modules/", "/playground/"]
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/playground/"
+    ]
   }
 }

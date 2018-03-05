@@ -1,11 +1,13 @@
 *~ '>' *db#test@+user?!'JwT.t0k.en'.
 *~ '<' *db#test$user@1ABC+user!.
 *~ '>' #object?!.
+*~ '<' #object!.
 *~ '>' *lww#object@1ABC1+user!:username'olebedev'.
 *~ '>' *lww#object@1ABC2+user!:email'ole6edev@gmail.com'.
 *~ '>' *lww#object@1ABC3+user!:email,.
 *~ '>' *lww#object@1ABC5+user!:profile>1ABC4+user.
 *~ '>' #1ABC4+user?!.
+*~ '<' #1ABC4+user!.
 *~ '>' *lww#1ABC4+user@1ABC6+user!:active>true.
 *~ '>' *lww#1ABC4+user@1ABC7+user!:active>false.
 *~ '<' @1ABC7+user!.

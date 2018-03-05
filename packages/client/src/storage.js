@@ -2,8 +2,8 @@
 
 export interface Storage {
   set(key: string, value: string): Promise<void>;
-  get(key: string): Promise<?string>;
-  multiGet(keys: string[]): Promise<{[string]: ?string}>;
+  get(key: string): Promise<string | void>;
+  multiGet(keys: string[]): Promise<{[string]: string | void}>;
   remove(key: string): Promise<void>;
   keys(): Promise<Array<string>>;
 }
@@ -20,14 +20,14 @@ export class InMemory implements Storage {
     return Promise.resolve();
   }
 
-  get(key: string): Promise<?string> {
-    return Promise.resolve(this.storage[key] || null);
+  get(key: string): Promise<string | void> {
+    return Promise.resolve(this.storage[key]);
   }
 
-  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+  multiGet(keys: string[]): Promise<{[string]: string | void}> {
     const ret = {};
     for (const k of keys) {
-      ret[k] = this.storage[k] || null;
+      ret[k] = this.storage[k];
     }
     return Promise.resolve(ret);
   }
@@ -48,14 +48,16 @@ export class LocalStorage implements Storage {
     return Promise.resolve();
   }
 
-  get(key: string): Promise<?string> {
-    return Promise.resolve(localStorage.getItem(key));
+  get(key: string): Promise<string | void> {
+    const v = localStorage.getItem(key);
+    return Promise.resolve(v != null ? v : undefined);
   }
 
-  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+  multiGet(keys: string[]): Promise<{[string]: string | void}> {
     const ret = {};
     for (const k of keys) {
-      ret[k] = localStorage.getItem(k) || null;
+      const item = localStorage.getItem(k);
+      ret[k] = item !== null ? item : undefined;
     }
     return Promise.resolve(ret);
   }

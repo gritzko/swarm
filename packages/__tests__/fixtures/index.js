@@ -68,6 +68,8 @@ export class Connection implements IConn {
       } else break;
     }
   }
+
+  close() {}
 }
 
 test('connection', () => {

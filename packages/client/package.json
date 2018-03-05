@@ -12,7 +12,6 @@
     "url": ""
   },
   "dependencies": {
-    "reconnectable-websocket": "^0.1.10",
     "regenerator-runtime": "^0.11.1",
     "swarm-clock": "^2.0.0",
     "swarm-rdt": "^2.0.20",

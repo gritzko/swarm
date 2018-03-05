@@ -26,7 +26,9 @@ test('set.add(....)', async () => {
   }
 
   await api.on('object', cbk);
-  await api.add('object', 5);
+  await new Promise(r => setTimeout(r, 300));
+  let ok = await api.add('object', 5);
+  expect(ok).toBeTruthy();
 
   expect(obj).toEqual({
     '0': 5,
@@ -38,7 +40,8 @@ test('set.add(....)', async () => {
   });
   expect(obj.valueOf()).toEqual([5]);
 
-  await api.add('object', 42);
+  ok = await api.add('object', 42);
+  expect(ok).toBeTruthy();
   expect(obj).toEqual({
     '0': 42,
     '1': 5,
@@ -60,7 +63,6 @@ test('set.add(....)', async () => {
   });
 
   await new Promise(r => setTimeout(r, 300));
-  expect(storage.storage.__pending__).toBe('[]');
 
   await api.add(sub, 37);
   expect(obj).toEqual({
@@ -104,6 +106,8 @@ test('set.remove(...)', async () => {
   }
   await api.on('object', cbk);
 
+  await new Promise(r => setTimeout(r, 500));
+
   await api.add('object', 5);
   expect(obj).toEqual({
     '0': 5,
@@ -121,7 +125,11 @@ test('set.remove(...)', async () => {
 
   await new Promise(r => setTimeout(r, 300));
 
+  // $FlowFixMe
+  expect(api.client.lstn['thisone']).toBeUndefined();
   rm = await api.remove('thisone', 42);
+  // $FlowFixMe
+  expect(api.client.lstn['thisone']).toHaveLength(0);
   expect(rm).toBeTruthy();
   expect(obj).toEqual({});
 

@@ -60,6 +60,11 @@ export default class API {
     return subscribed;
   }
 
+  async once(id: string | UUID): Promise<{[string]: Atom} | null> {
+    const s = await this.client.once(`#${id.toString()}`);
+    return ron2js(s);
+  }
+
   off(id: string | UUID, cbk: Value => void): boolean {
     if (!id || !cbk) return false;
     let i = -1;
@@ -96,6 +101,10 @@ export default class API {
     if (!id) return false;
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
+
+    const type = await this.typeOf(id);
+    if (type && type !== lww.type.toString()) return false;
+
     const frame = new Frame();
     let op = new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
@@ -123,6 +132,10 @@ export default class API {
     if (!id) return false;
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
+
+    const type = await this.typeOf(id);
+    if (type && type !== set.type.toString()) return false;
+
     const frame = new Frame();
     const time = this.uuid();
     let op = new Op(set.type, uuid, time, ZERO_UUID, undefined, FRAME_SEP);
@@ -145,17 +158,17 @@ export default class API {
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     id = uuid.toString();
     await this.client.ensure();
+
+    const type = await this.typeOf(id);
+    if (type !== set.type.toString()) return false;
+
     const frame = new Frame();
-    let deleted = false;
     const ts = this.uuid();
+    let deleted = false;
     let op = new Op(set.type, uuid, ts, ZERO_UUID, undefined, FRAME_SEP);
     frame.push(op);
 
     let state = await this.client.storage.get(id);
-    if (!state) {
-      state = await this.client.once(`#${id}`);
-    }
-
     if (!state) return false;
 
     const str = js2ron([value]);
@@ -174,6 +187,24 @@ export default class API {
       await this.client.push(frame.toString());
     }
     return deleted;
+  }
+
+  close(): void {
+    return this.client.close();
+  }
+
+  async typeOf(id: string | UUID): Promise<string | null> {
+    const obj = this.cache[id.toString()];
+    if (obj !== undefined) {
+      // found in cache
+      return obj && obj.type && typeof obj.type === 'string' ? obj.type : '';
+    }
+
+    const state = await this.client.once(`#${id.toString()}`);
+    const op = Op.fromString(state);
+    if (op) return op.uuid(0).toString();
+    // exists but empty
+    return null;
   }
 }
 
@@ -224,7 +255,7 @@ class OnSub {
     return this.active || false;
   }
 
-  _invoke(l: string, s: string): void {
+  _invoke(id: string, s: string): void {
     // TODO handle log and state
 
     // prevent unauthorized calls
@@ -232,12 +263,12 @@ class OnSub {
       this.client.off('', this._invoke);
       return;
     }
-    if (!s) return;
-    const v = ron2js(s);
-    if (!v) return;
 
+    const v = ron2js(s);
+
+    const op = Op.fromString(id);
     // $FlowFixMe ?
-    this.cache[v.id] = v;
+    this.cache[op.uuid(1).toString()] = v;
     const {ids, frame, tree} = buildTree(this.cache, this.id);
 
     if (this.prev !== frame.toString()) {

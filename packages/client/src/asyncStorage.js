@@ -12,23 +12,23 @@ export default class AsyncStorage {
     });
   }
 
-  get(key: string): Promise<?string> {
+  get(key: string): Promise<string | void> {
     return new Promise((res, rej) => {
       RNAS.getItem(key, (err, result) => {
         if (err) return rej(err);
-        res(result);
+        res(result != null ? result : undefined);
       });
     });
   }
 
-  multiGet(keys: string[]): Promise<{[string]: ?string}> {
+  multiGet(keys: string[]): Promise<{[string]: string | void}> {
     return new Promise((res, rej) => {
       RNAS.multiGet(keys, (err, tuples) => {
         if (err) return rej(err);
         const ret = {};
-        for (const [k, v] of tupels) {
-          ret[k] = v || null;
-        }
+        tuples.map((result, i, store) => {
+          res[store[i][0]] = store[i][1] === null ? undefined : store[i][1];
+        });
         res(ret);
       });
     });

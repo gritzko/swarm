@@ -12,6 +12,7 @@
     ],
     "transform-es2015-spread",
     "transform-flow-strip-types",
+    "transform-class-bound-properties",
     "transform-node-env-inline"
   ]
 }
