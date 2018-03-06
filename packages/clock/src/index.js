@@ -106,6 +106,10 @@ export class Calendar implements Clock {
   }
 }
 
+export function calendarBase2Date(base: string): Date {
+  return pair2date(base2pair(base));
+}
+
 type Pair = {|high: number, low: number|};
 
 function date2pair(d: Date): Pair {

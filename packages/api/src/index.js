@@ -12,6 +12,7 @@ import type {Options as ClntOpts} from 'swarm-client';
 
 export type Options = ClntOpts & {
   gcPeriod?: number,
+  strictMode?: boolean,
 };
 
 export type Value = {[string]: Atom | Value} | Value[] | null;
@@ -102,8 +103,10 @@ export default class API {
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
 
-    // const type = await this.typeOf(id);
-    // if (type && type !== lww.type.toString()) return false;
+    if (this.options.strictMode) {
+      const type = await this.typeOf(id);
+      if (type && type !== lww.type.toString()) return false;
+    }
 
     const frame = new Frame();
     let op = new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
@@ -133,8 +136,10 @@ export default class API {
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
 
-    // const type = await this.typeOf(id);
-    // if (type && type !== set.type.toString()) return false;
+    if (this.options.strictMode) {
+      const type = await this.typeOf(id);
+      if (type && type !== set.type.toString()) return false;
+    }
 
     const frame = new Frame();
     const time = this.uuid();
@@ -159,8 +164,10 @@ export default class API {
     id = uuid.toString();
     await this.client.ensure();
 
-    // const type = await this.typeOf(id);
-    // if (type !== set.type.toString()) return false;
+    if (this.options.strictMode) {
+      const type = await this.typeOf(id);
+      if (type !== set.type.toString()) return false;
+    }
 
     const frame = new Frame();
     const ts = this.uuid();
@@ -206,7 +213,7 @@ export default class API {
     const state = await this.client.once(`#${id.toString()}`);
     const op = Op.fromString(state);
     if (op) return op.uuid(0).toString();
-    // exists but empty
+    // type is not defined
     return null;
   }
 }

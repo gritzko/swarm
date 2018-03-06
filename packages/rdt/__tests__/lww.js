@@ -66,6 +66,7 @@ test('lww map to js', () => {
   });
   expect(obj && obj.id).toBe('array');
   expect(obj && obj.type).toBe('lww');
+  expect(obj && obj.version).toBe('2');
   expect(obj && obj.length).toBe(5);
   expect(Array.prototype.slice.call(obj)).toEqual([0, '1', 1, 2, UUID.fromString('notexists')]);
 

@@ -19,11 +19,11 @@ export type Response = {
 
 export type Request = {
   gql: DocumentNode,
-  args?: {[string]: Atom},
+  args?: {[string]: Atom | {[string]: Atom}},
 };
 
 const directives = {
-  [set.type.toString()]: ['length', 'slice'],
+  [set.type.toString()]: ['length', 'slice'], // TODO 'reverse'
   [lww.type.toString()]: [],
 };
 
@@ -52,7 +52,7 @@ export default class SwarmDB extends API implements Swarm {
     }
 
     await this.ensure();
-    const sub = new GQLSub(this.client, this.cache, request, cbk);
+    const sub = new GQLSub(this, this.client, this.cache, request, cbk);
     this.subs.push(sub);
     sub.finalize((h: string) => {
       let c = -1;
@@ -77,9 +77,16 @@ interface IClient {
   off(id: string, cbk: (string, string) => void): string | void;
 }
 
+interface IApi {
+  set(id: string | UUID, payload: {[string]: Atom | void}): Promise<boolean>;
+  add(id: string | UUID, value: Atom): Promise<boolean>;
+  remove(id: string | UUID, value: Atom): Promise<boolean>;
+}
+
 class GQLSub {
   cache: {[string]: {[string]: Atom}};
   client: IClient;
+  api: IApi;
   finalizer: ((h: string) => void) | void;
   prev: string;
   cbk: (Response => void) | void;
@@ -90,7 +97,14 @@ class GQLSub {
 
   operation: 'query' | 'mutation' | 'subscription';
 
-  constructor(client: IClient, cache: {[string]: {[string]: Atom}}, request: Request, cbk?: Response => void): GQLSub {
+  constructor(
+    api: IApi,
+    client: IClient,
+    cache: {[string]: {[string]: Atom}},
+    request: Request,
+    cbk?: Response => void,
+  ): GQLSub {
+    this.api = api;
     this.request = request;
     this.id = GQLSub.hash(request, cbk);
     // $FlowFixMe
@@ -111,7 +125,17 @@ class GQLSub {
 
   off(): boolean {
     if (this.active === true) {
-      const ret = (this.active = !!this.client.off(this.prev, this._invoke));
+      let ret = false;
+      switch (this.operation) {
+        case 'query':
+        case 'subscription':
+          // TODO check
+          ret = this.active = !!this.client.off(this.prev, this._invoke);
+          break;
+        case 'mutation':
+          // do nothing actually
+          this.active = ret = false;
+      }
       this.finalizer && this.finalizer(this.id);
       return ret;
     }
@@ -135,7 +159,7 @@ class GQLSub {
         } else this.active = true;
         break;
       case 'mutation':
-        // TODO
+        this.active = await this.runMutation();
         break;
       default:
         throw new Error(`unknown operation: '${this.operation}'`);
@@ -299,6 +323,59 @@ class GQLSub {
     }
 
     return obj;
+  }
+
+  async runMutation(): Promise<boolean> {
+    const ctx = {};
+    const tree = graphql(this.mutation.bind(this), this.request.gql, {}, ctx, this.request.args);
+
+    const all = [];
+
+    for (const key of Object.keys(tree)) {
+      const v = tree[key];
+      all.push(
+        Promise.resolve(v).then(ok => {
+          tree[key] = ok;
+        }),
+      );
+    }
+
+    Promise.all(all)
+      .then(() => {
+        if (this.cbk) this.cbk({data: tree});
+      })
+      .catch(error => {
+        if (this.cbk) this.cbk({data: null, error});
+      });
+
+    return true;
+  }
+
+  mutation(
+    fieldName: string,
+    root: {[string]: Atom},
+    // args: {[string]: Atom | {[string]: Atom}},
+    args: {
+      id: string | UUID,
+      value?: Atom,
+      payload?: {[string]: Atom | void},
+    },
+    // args: {[string]: Atom | {[string]: Atom}},
+    context: {[string]: true},
+    info: {directives: {[string]: {[string]: Atom}} | void},
+  ): mixed {
+    if (!info.isLeaf) return false;
+    switch (fieldName) {
+      case 'set':
+        if (!args.payload) return false;
+        return this.api.set(args.id, args.payload);
+      case 'add':
+        return this.api.add(args.id, args.value || null);
+      case 'remove':
+        return this.api.remove(args.id, args.value || null);
+      default:
+        return Promise.resolve(false);
+    }
   }
 
   static hash(request: Request, cbk?: Response => void): string {

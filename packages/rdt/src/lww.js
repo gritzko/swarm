@@ -48,10 +48,12 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
   proto.type = 'lww';
   const lww = new Frame(rawFrame);
   let length: number = 0;
+  let latest = ZERO;
 
   for (const op of lww) {
     const id = op.object.toString();
     proto.id = proto.id || id;
+    if (op.event.gt(latest)) latest = op.event;
     if (id !== proto.id || op.isHeader() || op.isQuery()) continue;
 
     let value = op.value(0);
@@ -77,6 +79,8 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
       enumerable: true,
     };
   }
+
+  proto.version = latest.toString();
 
   if (Object.keys(ret).length > 1 && length > 0) {
     proto.length = length;

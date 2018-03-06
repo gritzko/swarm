@@ -1,0 +1,5 @@
+*~ '>' *db#test@+user?!'JwT.t0k.en'.
+*~ '<' *db#test$user@1ABC+server!.
+*~ '>' *lww#1ABC1+user@1ABC2+user!:test=1.
+*~ '>' *lww#1ABC1+user@1ABC3+user!:hello'world'.
+*~ '<' @1ABC3+user!.

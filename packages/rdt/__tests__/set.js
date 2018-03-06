@@ -24,11 +24,9 @@ test('Set reduce', () => {
 });
 
 test('Set map to js', () => {
-  // $FlowFixMe
   expect(ron2js('*set#test1@2:d!:0=2@1=1').type).toBe('set');
-  // $FlowFixMe
+  expect(ron2js('*set#test1@2:d!:0=2@1=1').version).toBe('2');
   expect(ron2js('*set#test1@2:d!:0=2@1=1').length).toBe(2);
-  // $FlowFixMe
   expect(ron2js('*set#test1@2:d!:0=2@1=1').id).toBe('test1');
   expect(ron2js('*set#test1@2:d!:0=2@1=1')).toEqual({'0': 2, '1': 1});
 

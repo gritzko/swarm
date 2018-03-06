@@ -368,3 +368,44 @@ test('swarm.execute({ query })', async () => {
 
   expect(swarm.subs).toHaveLength(0);
 });
+
+test('swarm.execute({ mutation })', async () => {
+  const upstream = new Connection('015-gql-mutation.ron');
+  const storage = new InMemory();
+  let swarm = new SwarmDB({
+    storage,
+    upstream,
+    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+  });
+
+  swarm = ((swarm: any): SwarmDB);
+
+  await swarm.ensure();
+
+  const objID = swarm.uuid();
+
+  const q = gql`
+    mutation Test($id: UUID!, $payload: Payload!, $payload2: Payload!) {
+      set(id: $id, payload: $payload)
+      another: set(id: $id, payload: $payload2)
+    }
+  `;
+
+  let sub;
+  const resp = await new Promise(async r => {
+    const payload = {test: 1};
+    const payload2 = {hello: 'world'};
+    sub = await swarm.execute({gql: q, args: {id: objID, payload, payload2}}, r);
+  });
+
+  expect(resp).toEqual({
+    data: {
+      set: true,
+      another: true,
+    },
+  });
+
+  await new Promise(r => setTimeout(r, 300));
+  const dump = upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
+});
