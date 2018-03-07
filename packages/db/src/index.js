@@ -22,10 +22,7 @@ export type Request = {
   args?: {[string]: Atom | {[string]: Atom}},
 };
 
-const directives = {
-  [set.type.toString()]: ['length', 'slice'], // TODO 'reverse'
-  [lww.type.toString()]: [],
-};
+const directives = ['ensure', 'reverse', 'slice'];
 
 type callable = () => boolean;
 
@@ -130,7 +127,8 @@ class GQLSub {
         case 'query':
         case 'subscription':
           // TODO check
-          ret = this.active = !!this.client.off(this.prev, this._invoke);
+          ret = !!this.client.off(this.prev, this._invoke);
+          this.active = !ret;
           break;
         case 'mutation':
           // do nothing actually
@@ -154,9 +152,10 @@ class GQLSub {
         const {ids, frame} = this.buildTree();
         this.prev = frame.toString();
         this.keys = ids;
-        if (frame.toString()) {
-          this.active = await this.client.on((this.prev = frame.toString()), this._invoke);
-        } else this.active = true;
+        this.active = true;
+        if (this.prev) {
+          this.client.on(this.prev, this._invoke);
+        }
         break;
       case 'mutation':
         this.active = await this.runMutation();
@@ -178,8 +177,8 @@ class GQLSub {
     if (!v) return;
 
     // $FlowFixMe ?
-    this.cache[v.id] = v;
-    const {ids, frame, tree} = this.buildTree();
+    this.cache[v.id] = v; // TODO parse ID from `l`
+    const {ready, ids, frame, tree} = this.buildTree();
 
     if (this.prev !== frame.toString()) {
       this.keys = ids;
@@ -192,6 +191,8 @@ class GQLSub {
       }
       this.prev = frame.toString();
     }
+
+    if (!ready) return;
 
     if (this.cbk) {
       if (this.operation !== 'subscription') {
@@ -207,28 +208,35 @@ class GQLSub {
     }
   }
 
-  buildTree(): {frame: Frame, tree: Value, ids: {[string]: true}} {
-    const ids: {[string]: true} = {};
-    const tree = graphql(this.resolver.bind(this), this.request.gql, {}, ids, this.request.args);
+  buildTree(): {frame: Frame, tree: Value, ids: {[string]: true}, ready: boolean} {
+    const ctx: {ids: {[string]: true}, ready: boolean} = {ids: {}, ready: true};
+    const tree = graphql(this.resolver.bind(this), this.request.gql, {}, ctx, this.request.args);
 
-    const keys = Object.keys(ids);
+    const keys = Object.keys(ctx.ids);
     if (keys.length) {
       return {
         frame: new Frame('#' + keys.join('#')),
-        ids,
+        ids: ctx.ids,
         tree,
+        ready: ctx.ready,
       };
     }
-    return {frame: new Frame(), ids, tree};
+    return {
+      frame: new Frame(),
+      ids: ctx.ids,
+      tree,
+      ready: ctx.ready,
+    };
   }
 
   resolver(
     fieldName: string,
     root: {[string]: Atom},
     args: {[string]: Atom},
-    context: {[string]: true},
+    context: {ids: {[string]: true}, ready: boolean},
     info: {directives: {[string]: {[string]: Atom}} | void},
   ): mixed {
+    // check @ensure directive for arrays
     if (root instanceof UUID) return null;
 
     // workaround __typename
@@ -238,91 +246,68 @@ class GQLSub {
     if (typeof value === 'undefined') value = null;
 
     // get UUID from @node directive if presented
-    // thus, override the value
-    if (info.directives && info.directives.node) {
-      value =
-        info.directives.node.id instanceof UUID
-          ? info.directives.node.id
-          : // $FlowFixMe
-            UUID.fromString('' + info.directives.node.id);
+    // thus, override the value if `id` argument passed
+    value = node(info.directives, value);
+
+    // if atom value is not a UUID or is a leaf, return w/o
+    // any additional business logic
+    if (!(value instanceof UUID)) {
+      return value;
+    } else if (info.isLeaf) {
+      return value.toString();
     }
 
-    // if atom value is not a UUID, then just return w/o
-    // any additional business logic
-    if (!(value instanceof UUID)) return value;
-
-    // the value is UUID
+    // so, the value is UUID
     // keep it in the context
-    context[value.toString()] = true;
+    context.ids[value.toString()] = true;
 
+    const exists = this.cache.hasOwnProperty(value.toString());
     // try to fetch an object from the cache
+
     // $FlowFixMe
     let obj: Value = this.cache[value.toString()];
-    if (!obj) {
-      return null;
-    }
 
-    const t = obj.type;
-    if (t === set.type.value) {
-      obj = obj.valueOf();
-    }
-
-    const dirs: string[] = [];
-
-    if (info.directives) {
+    for (const key of Object.keys(info.directives || {})) {
       // $FlowFixMe
-      const byType = directives[t] || [];
-      for (const key of Object.keys(info.directives)) {
-        if (byType.indexOf(key) !== -1) dirs.push(key);
-      }
-
-      // apply directives
-      // TODO decompose
-      for (const name of dirs) {
-        switch (name) {
-          case 'slice':
-            // $FlowFixMe
-            const args = [info.directives[name].begin || 0];
-            if (info.directives[name].end || 0) {
-              args.push(info.directives[name].end);
-            }
-            // $FlowFixMe
-            obj = obj.slice(...args);
-            break;
-          case 'length':
-            // $FlowFixMe
-            obj = obj.length;
-            break;
-        }
-      }
-    }
-
-    switch (t) {
-      // fill out the array with objects
-      case set.type.value:
-        if (!Array.isArray(obj)) {
+      const dir = info.directives[key];
+      // $FlowFixMe
+      if (!info.directives.hasOwnProperty(key)) continue;
+      if (!context.ready) break;
+      switch (key) {
+        case 'ensure':
+          context.ready = context.ready && exists;
           break;
-        } else if (info.isLeaf) {
-          return value.toString();
-        }
-        // $FlowFixMe
-        obj = obj.map(i => {
-          if (i instanceof UUID) {
-            context[i.toString()] = true;
-            // $FlowFixMe
-            return this.cache[i.toString()] || null;
-          }
-          return i;
-        });
-        break;
-      case lww.type.value:
-        if (info.isLeaf) {
-          return value.toString();
-        }
-        break;
+        case 'slice':
+          if (!obj) continue;
+          const args = [dir.begin || 0];
+          if (dir.end || 0) args.push(dir.end);
+          obj = obj.valueOf().slice(...args);
+          break;
+        case 'reverse':
+          if (!obj) continue;
+          obj = obj.valueOf();
+          obj.reverse();
+          break;
+      }
     }
 
-    return obj;
+    if (Array.isArray(obj)) {
+      // $FlowFixMe
+      const ensure = info.directives.hasOwnProperty('ensure');
+      obj = obj.map(i => {
+        if (i instanceof UUID) {
+          context.ids[i.toString()] = true;
+          if (ensure) {
+            context.ready = context.ready && this.cache.hasOwnProperty(i.toString());
+          }
+          // $FlowFixMe
+          return this.cache[i.toString()] || null;
+        }
+        return i;
+      });
+    }
+
+    return obj || null;
   }
 
   async runMutation(): Promise<boolean> {
@@ -354,13 +339,11 @@ class GQLSub {
   mutation(
     fieldName: string,
     root: {[string]: Atom},
-    // args: {[string]: Atom | {[string]: Atom}},
     args: {
       id: string | UUID,
       value?: Atom,
       payload?: {[string]: Atom | void},
     },
-    // args: {[string]: Atom | {[string]: Atom}},
     context: {[string]: true},
     info: {directives: {[string]: {[string]: Atom}} | void},
   ): mixed {
@@ -374,11 +357,28 @@ class GQLSub {
       case 'remove':
         return this.api.remove(args.id, args.value || null);
       default:
-        return Promise.resolve(false);
+        return false;
     }
   }
 
   static hash(request: Request, cbk?: Response => void): string {
     return hash({request, cbk});
   }
+}
+
+function node(directives: {[string]: {[string]: Atom}} = {}, value: Atom): Atom {
+  if (directives && directives.hasOwnProperty('node')) {
+    if (!directives.node && typeof value === 'string') {
+      return UUID.fromString(value);
+    } else if (directives.node.id instanceof UUID) {
+      return directives.node.id;
+    } else if (typeof directives.node.id === 'string') {
+      return UUID.fromString(directives.node.id);
+    }
+  }
+  return value;
+}
+
+function ensure(): boolean {
+  return false;
 }

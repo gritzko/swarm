@@ -11,7 +11,7 @@ test('swarm.execute({ subscription })', async () => {
   const storage = new InMemory();
   let swarm = new SwarmDB({
     storage,
-    upstream: new Connection('014-gql-basics.ron'),
+    upstream: new Connection('014-gql-subs.ron'),
     db: {
       id: 'user',
       name: 'test',
@@ -85,15 +85,16 @@ test('swarm.execute({ subscription })', async () => {
         c
         d
         e
-        f @slice(begin: 2, end: 7) {
+        f {
           id
           __typename
-          value
+          length
+          list: id @node @slice(begin: 2, end: 7) {
+            id
+            __typename
+            value
+          }
         }
-        # set type as a leaf with @length directive
-        fLength: f @length
-        # just use ID string instead of full body
-        fID: f
         internal @node(id: $id) {
           a
           c
@@ -120,6 +121,7 @@ test('swarm.execute({ subscription })', async () => {
   await new Promise(r => setTimeout(r, 0));
 
   expect(swarm.client.lstn['nope']).toHaveLength(1);
+
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
@@ -129,15 +131,18 @@ test('swarm.execute({ subscription })', async () => {
       c: 0.1,
       d: false,
       e: true,
-      f: [
-        {__typename: 'lww', id: '1ABCB+user', value: 8},
-        {__typename: 'lww', id: '1ABC9+user', value: 6},
-        {__typename: 'lww', id: '1ABC8+user', value: 5},
-        {__typename: 'lww', id: '1ABC7+user', value: 4},
-        {__typename: 'lww', id: '1ABC6+user', value: 3},
-      ],
-      fID: '1ABC2+user',
-      fLength: 9,
+      f: {
+        id: '1ABC2+user',
+        __typename: 'set',
+        length: 9,
+        list: [
+          {__typename: 'lww', id: '1ABCB+user', value: 8},
+          {__typename: 'lww', id: '1ABC9+user', value: 6},
+          {__typename: 'lww', id: '1ABC8+user', value: 5},
+          {__typename: 'lww', id: '1ABC7+user', value: 4},
+          {__typename: 'lww', id: '1ABC6+user', value: 3},
+        ],
+      },
       id: '1ABC1+user',
       internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null},
     },
@@ -156,15 +161,18 @@ test('swarm.execute({ subscription })', async () => {
       c: 0.1,
       d: false,
       e: true,
-      f: [
-        {__typename: 'lww', id: '1ABCC+user', value: 9},
-        {__typename: 'lww', id: '1ABCB+user', value: 8},
-        {__typename: 'lww', id: '1ABC9+user', value: 6},
-        {__typename: 'lww', id: '1ABC8+user', value: 5},
-        {__typename: 'lww', id: '1ABC7+user', value: 4},
-      ],
-      fID: '1ABC2+user',
-      fLength: 10,
+      f: {
+        id: '1ABC2+user',
+        __typename: 'set',
+        length: 10,
+        list: [
+          {__typename: 'lww', id: '1ABCC+user', value: 9},
+          {__typename: 'lww', id: '1ABCB+user', value: 8},
+          {__typename: 'lww', id: '1ABC9+user', value: 6},
+          {__typename: 'lww', id: '1ABC8+user', value: 5},
+          {__typename: 'lww', id: '1ABC7+user', value: 4},
+        ],
+      },
       id: '1ABC1+user',
       internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null},
     },
@@ -187,15 +195,18 @@ test('swarm.execute({ subscription })', async () => {
       c: 0.1,
       d: false,
       e: true,
-      f: [
-        {__typename: 'lww', id: '1ABCC+user', value: 9},
-        {__typename: 'lww', id: '1ABCB+user', value: 8},
-        {__typename: 'lww', id: '1ABC9+user', value: 6},
-        {__typename: 'lww', id: '1ABC8+user', value: 5},
-        {__typename: 'lww', id: '1ABC7+user', value: 4},
-      ],
-      fID: '1ABC2+user',
-      fLength: 10,
+      f: {
+        id: '1ABC2+user',
+        __typename: 'set',
+        length: 10,
+        list: [
+          {__typename: 'lww', id: '1ABCC+user', value: 9},
+          {__typename: 'lww', id: '1ABCB+user', value: 8},
+          {__typename: 'lww', id: '1ABC9+user', value: 6},
+          {__typename: 'lww', id: '1ABC8+user', value: 5},
+          {__typename: 'lww', id: '1ABC7+user', value: 4},
+        ],
+      },
       id: '1ABC1+user',
       internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: {id: 'nope', test: 1}},
     },
@@ -217,15 +228,18 @@ test('swarm.execute({ subscription })', async () => {
       c: 0.1,
       d: false,
       e: true,
-      f: [
-        {__typename: 'lww', id: '1ABCC+user', value: 9},
-        {__typename: 'lww', id: '1ABCB+user', value: 8},
-        {__typename: 'lww', id: '1ABC9+user', value: 6},
-        {__typename: 'lww', id: '1ABC8+user', value: 5},
-        {__typename: 'lww', id: '1ABC7+user', value: 4},
-      ],
-      fID: '1ABC2+user',
-      fLength: 10,
+      f: {
+        id: '1ABC2+user',
+        __typename: 'set',
+        length: 10,
+        list: [
+          {__typename: 'lww', id: '1ABCC+user', value: 9},
+          {__typename: 'lww', id: '1ABCB+user', value: 8},
+          {__typename: 'lww', id: '1ABC9+user', value: 6},
+          {__typename: 'lww', id: '1ABC8+user', value: 5},
+          {__typename: 'lww', id: '1ABC7+user', value: 4},
+        ],
+      },
       id: '1ABC1+user',
       internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: {id: 'nope', test: 1}},
     },
@@ -239,15 +253,11 @@ test('swarm.execute({ subscription })', async () => {
 
 test('swarm.execute({ query })', async () => {
   const storage = new InMemory();
+  const upstream = new Connection('016-gql-query.ron');
   let swarm = new SwarmDB({
     storage,
-    upstream: new Connection('014-gql-basics.ron'),
-    db: {
-      id: 'user',
-      name: 'test',
-      auth: 'JwT.t0k.en',
-      clockMode: 'Logical',
-    },
+    upstream,
+    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
   });
 
   swarm = ((swarm: any): SwarmDB);
@@ -266,24 +276,10 @@ test('swarm.execute({ query })', async () => {
     f: listID,
   });
 
-  const list = [
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid().local(),
-    swarm.uuid(),
-    swarm.uuid(),
-    swarm.uuid(),
-  ];
+  const id = swarm.uuid();
 
-  let c = 1;
-  for (const item of list) {
-    await swarm.add(listID, item);
-    await swarm.set(item, {value: c++});
-  }
+  await swarm.add(listID, id);
+  await swarm.set(id, {value: 1});
 
   const q = gql`
     query Test($id: UUID!, $nope: UUID!) {
@@ -300,10 +296,6 @@ test('swarm.execute({ query })', async () => {
           __typename
           value
         }
-        # set type as a leaf with @length directive
-        fLength: f @length
-        # just use ID string instead of full body
-        fID: f
         internal @node(id: $id) {
           a
           c
@@ -318,16 +310,14 @@ test('swarm.execute({ query })', async () => {
     }
   `;
 
-  let res = {};
+  expect(swarm.cache).toEqual({});
 
-  const r = await swarm.execute({gql: q, args: {id: objID, nope: UUID.fromString('nope')}}, (v: Response) => {
-    res = v;
+  const res = await new Promise(async resolve => {
+    const r = await swarm.execute({gql: q, args: {id: objID, nope: UUID.fromString('nope')}}, resolve);
+    expect(r.ok).toBeTruthy();
+    // $FlowFixMe
+    expect(swarm.subs).toHaveLength(0);
   });
-
-  expect(r.ok).toBeTruthy();
-
-  // waiting for all subscription  will be initialized
-  await new Promise(r => setTimeout(r, 0));
 
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
@@ -338,35 +328,11 @@ test('swarm.execute({ query })', async () => {
       c: 0.1,
       d: false,
       e: true,
-      f: [null, null, null, null, null],
-      fID: '1ABC2+user',
-      fLength: 9,
+      f: null,
       id: '1ABC1+user',
       internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null},
     },
   });
-
-  let item = swarm.uuid();
-  await swarm.add(listID, item);
-  await swarm.set(item, {value: c++});
-
-  expect(res.data).toEqual({
-    result: {
-      __typename: 'lww',
-      a: 42,
-      b: 'wat',
-      c: 0.1,
-      d: false,
-      e: true,
-      f: [null, null, null, null, null],
-      fID: '1ABC2+user',
-      fLength: 9,
-      id: '1ABC1+user',
-      internal: {a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null},
-    },
-  });
-
-  expect(swarm.subs).toHaveLength(0);
 });
 
 test('swarm.execute({ mutation })', async () => {

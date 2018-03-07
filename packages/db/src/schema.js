@@ -6,23 +6,24 @@ import gql from 'graphql-tag';
 //
 // Not in use, just for info.
 export const Schema = gql`
-  # Can be UUID instance or serialized to plain string.
+  # An UUID instance or string representation.
   scalar UUID
 
   # RON Atom.
   # Note that null value is also possible, but cannot be
-  # defined explictly in GraphQL language.
+  # defined explictly in GraphQL.
   union Atom = String | Int | Float | Bool | UUID
 
   # Generic interface to describe a node in the swarm.
-  # Due to strict nature of types in the GraphQL language
-  # it's not possible to define compound field names, so we have to
+  # Due to strict nature of types in the GraphQL it's not
+  # possible to define compound field names, so we have to
   # make an agreement that this interface describes all possible
   # shapes w/o explicit definition. But we still know that
   # at least two field are available.
   interface Node {
-    id: UUID!
+    id: UUID
     __typename: String
+    version: String
   }
 
   directive @include(if: Bool!) on FIELD
@@ -31,18 +32,24 @@ export const Schema = gql`
 
   # To be able to define which node must be unwrapped
   # Can be missed if the field contains a UUID itself.
-  # Overrides if explicitly passed.
-  directive @node(id: UUID!) on FIELD
+  # Overrides if id explicitly passed.
+  # Works also for string representation of UUID if defined w/o
+  # parameters.
+  directive @node(id: UUID) on FIELD
 
   # Casts Set's payload to an array and slice it with given arguments
   # A field should either already contains UUID or @node directive
   # must be passed first.
   directive @slice(offset: Int!, limit: Int) on FIELD
 
-  # Returns a length of Set
-  # A field should either already contains UUID or @node directive
-  # must be passed first.
-  directive @length on FIELD
+  # Reverse works for Set type only
+  directive @reverse on FIELD
+
+  # Ensure is a directive which adds more control to
+  # data flow management. This directive tells the runtime
+  # to ensure that the node either explicitly doesn't exist or
+  # exist and presented in the resulting response.
+  directive @ensure on FIELD
 
   # Note. Priority of execution of directives from the first to the last.
 
