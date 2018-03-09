@@ -3,14 +3,14 @@
 import * as React from 'react';
 import renderer from 'react-test-renderer';
 
-import API from 'swarm-api';
+import API from 'swarm-db';
 import {Provider, Subscribe} from '../src';
 import {Connection} from '../../__tests__/fixtures';
 import {InMemory} from '../../client/src/storage';
 
 const Basic = ({data, initialized}) => <div initialized={initialized}>{JSON.stringify(data)}</div>;
 
-test('React, basic', async () => {
+test('React: subscribe', async () => {
   const upstream = new Connection('011-react.ron');
 
   // to keep the connection closed after initialization explicitly

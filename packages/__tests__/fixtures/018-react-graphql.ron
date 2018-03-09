@@ -1,0 +1,7 @@
+*~ '>' *db#test@+user?!'JwT.t0k.en'.
+*~ '<' *db#test$user@1ABC+user!.
+*~ '>' #object?!.
+*~ '<' *lww#object@1ABC1+user!:test=5.
+*~ '>' *lww#object@1ABC2+user!:some'value'.
+*~ '>' *lww#object@1ABC3+user!:test=6.
+*~ '>' *lww#object@1ABC4+user!:additional>true.

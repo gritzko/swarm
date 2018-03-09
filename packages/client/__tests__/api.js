@@ -331,6 +331,11 @@ test('client.clock.time().local()', async () => {
   }
 
   expect(value).toEqual([
+    // empty b/c it's a local object, so we call back
+    // anyway even w/ empty state to avoid deadlock for `once`
+    '',
+    '',
+    '',
     "*lww#1ABC3+~local@time+author!:key'value'",
     "*lww#object@time+author!:key'value'",
     "*lww#1ABC1+~local@time+author!:key'value'",

@@ -26,14 +26,14 @@ const directives = ['ensure', 'reverse', 'slice'];
 
 type callable = () => boolean;
 
-interface Swarm {
-  execute(request: Request, cbk?: (Response) => void): Promise<{ok: boolean, off?: () => boolean}>;
-  uuid(): UUID;
-  ensure(): Promise<void>;
-}
+// interface Swarm {
+//   execute(request: Request, cbk?: (Response) => void): Promise<{ok: boolean, off?: () => boolean}>;
+//   uuid(): UUID;
+//   ensure(): Promise<void>;
+// }
 
-export default class SwarmDB extends API implements Swarm {
-  constructor(options: Options): Swarm {
+export default class SwarmDB extends API {
+  constructor(options: Options): SwarmDB {
     super(options);
     return this;
   }
@@ -172,12 +172,16 @@ class GQLSub {
       this.client.off('', this._invoke);
       return;
     }
-    if (!s) return;
     const v = ron2js(s);
-    if (!v) return;
+
+    let id;
+    const head = Op.fromString(l);
+    if (head && !head.object.eq(ZERO)) {
+      id = head.object.toString();
+    } else return;
 
     // $FlowFixMe ?
-    this.cache[v.id] = v; // TODO parse ID from `l`
+    this.cache[id] = v;
     const {ready, ids, frame, tree} = this.buildTree();
 
     if (this.prev !== frame.toString()) {

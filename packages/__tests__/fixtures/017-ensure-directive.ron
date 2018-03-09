@@ -1,0 +1,8 @@
+*~ '>' *db#test@+user?!'JwT.t0k.en'.
+*~ '<' *db#test$user@1ABC+server!.
+*~ '>' *lww#1ABC1+user@1ABC3+user!:collection>1ABC2+user.
+*~ '>' *set#1ABC2+user@1ABC5+user!>1ABC4+user.
+*~ '>' *lww#1ABC4+user@1ABC6+user!:value=1.
+*~ '>' #1ABC1+user@1ABC3+user?!.
+*~ '>' #1ABC2+user@1ABC5+user?!#nope@0?!.
+*~ '<' #nope!.

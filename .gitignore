@@ -24,3 +24,4 @@ lib
 .Trashes
 packages/playground
 packages/examples
+packages/chat

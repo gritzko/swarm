@@ -8,7 +8,7 @@ import {InMemory} from '../../client/src/storage';
 
 test('directive @ensure', async () => {
   const storage = new InMemory();
-  const upstream = new Connection('002-hs.ron');
+  const upstream = new Connection('017-ensure-directive.ron');
   let swarm = new SwarmDB({
     storage,
     upstream,
@@ -76,7 +76,7 @@ test('directive @ensure', async () => {
 
 test('directive @ensure #2', async () => {
   const storage = new InMemory();
-  const upstream = new Connection('002-hs.ron');
+  const upstream = new Connection('017-ensure-directive.ron');
   let swarm = new SwarmDB({
     storage,
     upstream,
@@ -110,11 +110,18 @@ test('directive @ensure #2', async () => {
           version
           length
         }
+        notExists @node(id: "nope") @ensure {
+          id
+        }
       }
     }
   `;
 
   let c = 0;
+  setTimeout(() => {
+    const dump = upstream.dump();
+    console.log(JSON.stringify(dump.session, null, 2));
+  }, 1000);
   const res = await new Promise(async resolve => {
     const r = await swarm.execute({gql: q, args: {id: objID}}, v => {
       c++;
@@ -134,6 +141,7 @@ test('directive @ensure #2', async () => {
         version: '1ABC5+user',
         length: 1,
       },
+      notExists: null,
     },
   });
 

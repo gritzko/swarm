@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`React: graphql 1`] = `
+<div>
+  {"object":{"id":"object","version":"1ABC1+user","test":5,"some":null,"additional":null}}
+  <button
+    onClick={[Function]}
+  >
+    update
+  </button>
+</div>
+`;
+
+exports[`React: graphql 2`] = `
+<div>
+  {"object":{"id":"object","version":"1ABC2+user","test":5,"some":"value","additional":null}}
+  <button
+    onClick={[Function]}
+  >
+    update
+  </button>
+</div>
+`;
+
+exports[`React: graphql 3`] = `
+<div>
+  {"object":{"id":"object","version":"1ABC3+user","test":6,"some":"value","additional":null}}
+  <button
+    onClick={[Function]}
+  >
+    update
+  </button>
+</div>
+`;
+
+exports[`React: graphql 4`] = `
+<div>
+  {"object":{"id":"object","version":"1ABC4+user","test":6,"some":"value","additional":true}}
+  <button
+    onClick={[Function]}
+  >
+    update
+  </button>
+</div>
+`;

@@ -446,14 +446,15 @@ export default class Client {
 
   // Notify sends local states to all the listeners in the given frame
   async notify(frame: string): Promise<void> {
-    const keys: string[] = [];
-    for (const op of new Frame(frame)) keys.push(op.uuid(1).toString());
-    const store = await this.storage.multiGet(keys);
-    for (const key of keys) {
+    const keys: {[string]: true} = {};
+    for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
+    const ks = Object.keys(keys);
+    const store = await this.storage.multiGet(ks);
+    for (const key of ks) {
       const state = store[key];
       // check if the value exists even empty string
-      if (state != null) {
-        for (const l of this.lstn[key] || []) l('#' + key, state);
+      if (state != null || UUID.fromString(key).isLocal()) {
+        for (const l of this.lstn[key] || []) l('#' + key, state || '');
       }
     }
   }
