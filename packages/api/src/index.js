@@ -37,6 +37,8 @@ export default class API {
     if (options.gcPeriod) {
       this.gcInterval = setInterval(this.gc.bind(this), options.gcPeriod);
     }
+    // $FlowFixMe
+    this.uuid = this.uuid.bind(this);
     return this;
   }
 
