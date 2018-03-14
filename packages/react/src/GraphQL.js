@@ -6,24 +6,26 @@ import invariant from 'invariant';
 import type {DocumentNode} from 'graphql';
 
 import DB from 'swarm-db';
-import type {Request, Response} from 'swarm-db';
+import type {Request, Response as DBResponse} from 'swarm-db';
 import type {Value} from 'swarm-api';
 import type {Atom} from 'swarm-ron';
 import UUID, {ERROR} from 'swarm-ron-uuid';
 
 type args = {[string]: Atom | {[string]: Atom}};
 
+export type Response = {
+  data: Value,
+  uuid: () => UUID,
+  error?: Error,
+  mutations?: {[string]: (args: args) => Promise<Value>},
+};
+
 type Props = {
   query: DocumentNode,
   args?: args,
   swarm?: DB,
   mutations?: {[string]: DocumentNode},
-  children: ({
-    data: Value,
-    uuid: () => UUID,
-    error?: Error,
-    mutations?: {[string]: (args: args) => Promise<Value>},
-  }) => React.Node,
+  children: (r: Response) => React.Node,
 };
 
 type State = {
@@ -87,7 +89,7 @@ export default class GraphQL extends React.Component<Props, State> {
     const {props: {query, args}, swarm} = this;
     if (!swarm || !swarm.execute) return;
 
-    const sub = await swarm.execute({gql: query, args}, (r: Response) => {
+    const sub = await swarm.execute({gql: query, args}, (r: DBResponse) => {
       this.setState({data: r.data, error: r.error});
     });
 
@@ -106,7 +108,7 @@ export default class GraphQL extends React.Component<Props, State> {
       for (const key of Object.keys(mutations)) {
         ret[key] = async (args: args): Promise<Value> => {
           return new Promise((resolve, reject) => {
-            swarm.execute({gql: mutations[key], args: args}, (r: Response) => {
+            swarm.execute({gql: mutations[key], args: args}, (r: DBResponse) => {
               r.error ? reject(r.error) : resolve(r.data);
             });
           });
