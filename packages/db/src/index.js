@@ -11,8 +11,8 @@ import API, {getOff} from 'swarm-api';
 import type {Options, Value} from 'swarm-api';
 import type {Atom} from 'swarm-ron';
 
-export type Response = {
-  data: Value,
+export type Response<T> = {
+  data: T,
   off?: () => boolean,
   error?: Error,
 };
@@ -26,19 +26,13 @@ const directives = ['ensure', 'reverse', 'slice'];
 
 type callable = () => boolean;
 
-// interface Swarm {
-//   execute(request: Request, cbk?: (Response) => void): Promise<{ok: boolean, off?: () => boolean}>;
-//   uuid(): UUID;
-//   ensure(): Promise<void>;
-// }
-
 export default class SwarmDB extends API {
   constructor(options: Options): SwarmDB {
     super(options);
     return this;
   }
 
-  async execute(request: Request, cbk?: Response => void): Promise<{ok: boolean, off?: () => boolean}> {
+  async execute(request: Request, cbk?: (Response<any>) => void): Promise<{ok: boolean, off?: () => boolean}> {
     const h = GQLSub.hash(request, cbk);
     for (const s of this.subs) {
       if (s.is(h)) return {ok: false};
@@ -86,7 +80,7 @@ class GQLSub {
   api: IApi;
   finalizer: ((h: string) => void) | void;
   prev: string;
-  cbk: (Response => void) | void;
+  cbk: ((Response<any>) => void) | void;
   keys: {[string]: true};
   active: boolean | void;
   request: Request;
@@ -99,7 +93,7 @@ class GQLSub {
     client: IClient,
     cache: {[string]: {[string]: Atom}},
     request: Request,
-    cbk?: Response => void,
+    cbk?: (Response<any>) => void,
   ): GQLSub {
     this.api = api;
     this.request = request;
@@ -365,7 +359,7 @@ class GQLSub {
     }
   }
 
-  static hash(request: Request, cbk?: Response => void): string {
+  static hash(request: Request, cbk?: (Response<any>) => void): string {
     return hash({request, cbk});
   }
 }

@@ -13,8 +13,8 @@ import UUID, {ERROR} from 'swarm-ron-uuid';
 
 type args = {[string]: Atom | {[string]: Atom}};
 
-export type Response = {
-  data: Value,
+export type Response<T> = {
+  data: T,
   uuid: () => UUID,
   error?: Error,
   mutations?: {[string]: (args: args) => Promise<Value>},
@@ -25,7 +25,7 @@ type Props = {
   args?: args,
   swarm?: DB,
   mutations?: {[string]: DocumentNode},
-  children: (r: Response) => React.Node,
+  children: (r: Response<any>) => React.Node,
 };
 
 type State = {
@@ -89,7 +89,7 @@ export default class GraphQL extends React.Component<Props, State> {
     const {props: {query, args}, swarm} = this;
     if (!swarm || !swarm.execute) return;
 
-    const sub = await swarm.execute({gql: query, args}, (r: DBResponse) => {
+    const sub = await swarm.execute({gql: query, args}, (r: DBResponse<any>) => {
       this.setState({data: r.data, error: r.error});
     });
 
@@ -108,7 +108,7 @@ export default class GraphQL extends React.Component<Props, State> {
       for (const key of Object.keys(mutations)) {
         ret[key] = async (args: args): Promise<Value> => {
           return new Promise((resolve, reject) => {
-            swarm.execute({gql: mutations[key], args: args}, (r: DBResponse) => {
+            swarm.execute({gql: mutations[key], args: args}, (r: DBResponse<any>) => {
               r.error ? reject(r.error) : resolve(r.data);
             });
           });
