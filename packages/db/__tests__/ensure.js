@@ -1,10 +1,10 @@
 // @flow
 import gql from 'graphql-tag';
-import {Frame, UUID} from '../../ron/src';
-import {Connection} from '../../__tests__/fixtures';
+import { Frame, UUID } from '../../ron/src';
+import { Connection } from '../../__tests__/fixtures';
 import SwarmDB from '../src';
-import type {Response} from '../src';
-import {InMemory} from '../../client/src/storage';
+import type { Response } from '../src';
+import { InMemory } from '../../client/src/storage';
 
 test('directive @ensure', async () => {
   const storage = new InMemory();
@@ -12,7 +12,7 @@ test('directive @ensure', async () => {
   let swarm = new SwarmDB({
     storage,
     upstream,
-    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
   });
 
   swarm = ((swarm: any): SwarmDB);
@@ -29,7 +29,7 @@ test('directive @ensure', async () => {
   const id = swarm.uuid();
 
   await swarm.add(listID, id);
-  await swarm.set(id, {value: 1});
+  await swarm.set(id, { value: 1 });
 
   const q = gql`
     query Test($id: UUID!) {
@@ -48,7 +48,7 @@ test('directive @ensure', async () => {
 
   let c = 0;
   const res = await new Promise(async resolve => {
-    const r = await swarm.execute({gql: q, args: {id: objID}}, v => {
+    const r = await swarm.execute({ gql: q, args: { id: objID } }, v => {
       c++;
       resolve(v);
     });
@@ -80,7 +80,7 @@ test('directive @ensure #2', async () => {
   let swarm = new SwarmDB({
     storage,
     upstream,
-    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
   });
 
   swarm = ((swarm: any): SwarmDB);
@@ -97,7 +97,7 @@ test('directive @ensure #2', async () => {
   const id = swarm.uuid();
 
   await swarm.add(listID, id);
-  await swarm.set(id, {value: 1});
+  await swarm.set(id, { value: 1 });
 
   const q = gql`
     query Test($id: UUID!) {
@@ -123,7 +123,7 @@ test('directive @ensure #2', async () => {
     console.log(JSON.stringify(dump.session, null, 2));
   }, 1000);
   const res = await new Promise(async resolve => {
-    const r = await swarm.execute({gql: q, args: {id: objID}}, v => {
+    const r = await swarm.execute({ gql: q, args: { id: objID } }, v => {
       c++;
       resolve(v);
     });

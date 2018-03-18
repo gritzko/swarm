@@ -1,11 +1,12 @@
-import {AsyncStorage as RNAS} from 'react-native';
+// @flow
 
-// FIXME @flow
+// $FlowFixMe
+import { AsyncStorage } from 'react-native';
 
-export default class AsyncStorage {
+export default class {
   set(key: string, value: string): Promise<void> {
     return new Promise((res, rej) => {
-      RNAS.setItem(key, value, err => {
+      AsyncStorage.setItem(key, value, err => {
         if (err) return rej(err);
         res();
       });
@@ -14,20 +15,22 @@ export default class AsyncStorage {
 
   get(key: string): Promise<string | void> {
     return new Promise((res, rej) => {
-      RNAS.getItem(key, (err, result) => {
+      AsyncStorage.getItem(key, (err, result) => {
         if (err) return rej(err);
         res(result != null ? result : undefined);
       });
     });
   }
 
-  multiGet(keys: string[]): Promise<{[string]: string | void}> {
+  multiGet(keys: string[]): Promise<{ [string]: string | void }> {
     return new Promise((res, rej) => {
-      RNAS.multiGet(keys, (err, tuples) => {
+      AsyncStorage.multiGet(keys, (err, tuples) => {
         if (err) return rej(err);
         const ret = {};
         tuples.map((result, i, store) => {
-          res[store[i][0]] = store[i][1] === null ? undefined : store[i][1];
+          const key = store[i][0];
+          const value = store[i][1];
+          ret[key] = value === null ? undefined : value;
         });
         res(ret);
       });
@@ -36,7 +39,7 @@ export default class AsyncStorage {
 
   remove(key: string): Promise<void> {
     return new Promise((res, rej) => {
-      RNAS.removeItem(key, err => {
+      AsyncStorage.removeItem(key, err => {
         if (err) return rej(err);
         res();
       });
@@ -45,7 +48,7 @@ export default class AsyncStorage {
 
   keys(): Promise<Array<string>> {
     return new Promise((res, rej) => {
-      RNAS.getAllKeys((err, keys) => {
+      AsyncStorage.getAllKeys((err, keys) => {
         if (err) return rej(err);
         res(keys || []);
       });

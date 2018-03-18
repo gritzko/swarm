@@ -1,11 +1,11 @@
 // @flow
 
-import {readFileSync} from 'fs';
-import {join} from 'path';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-import Op, {Frame} from 'swarm-ron';
-import UUID, {ZERO} from 'swarm-ron-uuid';
-import type {Connection as IConn} from '../../client/src';
+import Op, { Frame } from 'swarm-ron';
+import UUID, { ZERO } from 'swarm-ron-uuid';
+import type { Connection as IConn } from '../../client/src';
 
 export class Connection implements IConn {
   fixtures: Array<RawFrame>;
@@ -25,8 +25,10 @@ export class Connection implements IConn {
         const frame = new Frame(chunk);
         for (const op of frame) {
           if (op.isComment() && op.source) {
-            // $FlowFixMe
-            this.fixtures.push(new RawFrame(frame.body.slice(op.source.length), op.value(0)));
+            this.fixtures.push(
+              // $FlowFixMe
+              new RawFrame(frame.body.slice(op.source.length), op.value(0)),
+            );
           } else {
             throw new Error('unexpected op');
           }
@@ -40,7 +42,7 @@ export class Connection implements IConn {
     }, 0);
   }
 
-  dump(): {fixtures: Array<RawFrame>, session: Array<RawFrame>} {
+  dump(): { fixtures: Array<RawFrame>, session: Array<RawFrame> } {
     return {
       fixtures: this.fixtures,
       session: this.session,
@@ -62,7 +64,7 @@ export class Connection implements IConn {
           setTimeout(() => {
             // console.log(`session.push('${raw.toString()}')`);
             this.session.push(raw);
-            this.onmessage((({data: raw.body}: any): MessageEvent));
+            this.onmessage((({ data: raw.body }: any): MessageEvent));
             // console.log('message was sent');
           }, 100 << i);
         })(raw);

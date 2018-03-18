@@ -1,12 +1,13 @@
 // @flow
 
-import {Connection} from '../../__tests__/fixtures';
+import { Connection } from '../../__tests__/fixtures';
 import Client from '../src';
-import {InMemory} from '../src/storage';
+import { InMemory } from '../src/storage';
 
 test('client.on(...)', async () => {
+  const storage = new InMemory();
   const client = new Client({
-    storage: new InMemory(),
+    storage,
     upstream: new Connection('004-query.ron'),
     db: {
       name: 'test',
@@ -16,23 +17,39 @@ test('client.on(...)', async () => {
   });
 
   await client.ensure();
-  const resp = await new Promise(async r => {
-    client.on('#object', (frame, state) => r({frame, state}));
+  let resp = await new Promise(async r => {
+    client.on('#object', (frame, state) => r({ frame, state }));
   });
 
   expect(resp).toEqual({
-    state: "*lww#object@time+author!:key'value'",
+    state: '',
     frame: '#object',
   });
 
   expect(client.lstn['object']).toBeDefined();
+  expect(client.lstn['object']).toHaveLength(1);
+
+  await new Promise(r => setTimeout(r, 500));
+
+  resp = await new Promise(async r => {
+    client.on('#object', (frame, state) => r({ frame, state }));
+  });
+
+  expect(client.lstn['object']).toHaveLength(2);
+  expect(storage.storage['object']).toBe("*lww#object@time+author!:key'value'");
+  expect(resp).toEqual({
+    state: "*lww#object@time+author!:key'value'",
+    frame: '#object',
+  });
 
   // $FlowFixMe
   let dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
 
   // $FlowFixMe
-  expect(client.storage.storage.object).toBe("*lww#object@time+author!:key'value'");
+  expect(client.storage.storage.object).toBe(
+    "*lww#object@time+author!:key'value'",
+  );
   // $FlowFixMe
   expect(JSON.parse(client.storage.storage.__meta__ || '{}')).toEqual({
     name: 'test',
@@ -74,14 +91,16 @@ test('client.update(...)', async () => {
   await client.ensure();
 
   await client.on('*lww#object', (frame: string, state: string): void => {
-    toCheck.push({frame, state});
+    toCheck.push({ frame, state });
   });
   await client.merge("*lww#object@time+author!:key'value'");
   await client.merge("*lww#object@time2+author!:key'value2'");
   await client.merge("*lww#object@time1+author!:key'value1'");
 
   // $FlowFixMe
-  expect(client.storage.storage.object).toBe("*lww#object@time1+author!@(2+:key'value2'");
+  expect(client.storage.storage.object).toBe(
+    "*lww#object@time1+author!@(2+:key'value2'",
+  );
   // $FlowFixMe
   expect(JSON.parse(client.storage.storage.__meta__)).toEqual({
     name: 'test',
@@ -95,6 +114,10 @@ test('client.update(...)', async () => {
   });
 
   expect(toCheck).toEqual([
+    {
+      frame: '#object',
+      state: '',
+    },
     {
       frame: '#object',
       state: "*lww#object@time+author!:key'value'",
@@ -115,7 +138,7 @@ test('client.off(...)', async () => {
   const client = new Client({
     id: 'user',
     storage: new InMemory(),
-    db: {clockMode: 'Logical', name: 'test'},
+    db: { clockMode: 'Logical', name: 'test' },
   });
   await client.ensure();
   const cbk = (frame: string, state: string): void => {};
@@ -159,14 +182,16 @@ test('client.push(...)', async () => {
 
   await client.ensure();
   const resp = await new Promise(async r => {
-    client.on('#object', (frame, state) => r({frame, state}));
+    client.on('#object', (frame, state) => r({ frame, state }));
   });
 
   expect(client.lstn['object']).toBeDefined();
   expect(resp).toEqual({
-    state: "*lww#object@1ABD+author!:key'value'",
+    state: '',
     frame: '#object',
   });
+
+  await new Promise(r => setTimeout(r, 200));
 
   client.off('#object');
 
@@ -179,7 +204,9 @@ test('client.push(...)', async () => {
   expect(dump.session).toEqual(dump.fixtures);
 
   // $FlowFixMe
-  expect(client.storage.storage.object).toBe("*lww#object@1ABD2+user!@(1+:bar'biz'@(2+:foo>object@(+author:key'value'");
+  expect(client.storage.storage.object).toBe(
+    "*lww#object@1ABD2+user!@(1+:bar'biz'@(2+:foo>object@(+author:key'value'",
+  );
   // $FlowFixMe
   expect(JSON.parse(client.storage.storage.__pending__)).toEqual([
     "*lww#object@1ABD1+user!:bar'biz'",
@@ -223,7 +250,9 @@ test('client.storage.__pending__', async () => {
   // $FlowFixMe
   let dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
-  expect(JSON.parse(storage.storage.__pending__)).toEqual(['*lww#1ABC4+user@1ABC7+user!:active>false']);
+  expect(JSON.parse(storage.storage.__pending__)).toEqual([
+    '*lww#1ABC4+user@1ABC7+user!:active>false',
+  ]);
 
   // ----------------------- //
   storage = new InMemory({
@@ -269,7 +298,7 @@ test('client.clock.time().local()', async () => {
   let client = new Client({
     storage: new InMemory(),
     upstream: new Connection('012-local-uuids.ron'),
-    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
   });
 
   await client.ensure();
@@ -325,14 +354,20 @@ test('client.clock.time().local()', async () => {
     cbk,
   );
 
-  expect(Object.keys(client.lstn)).toEqual(['1ABC1+~local', '1ABC2+~local', 'object', '1ABC3+~local']);
+  expect(Object.keys(client.lstn)).toEqual([
+    '1ABC1+~local',
+    '1ABC2+~local',
+    'object',
+    '1ABC3+~local',
+  ]);
   for (const id of Object.keys(client.lstn)) {
     await client.push(`*lww#${id}@time+author!:key'value'`);
   }
 
   expect(value).toEqual([
     // empty b/c it's a local object, so we call back
-    // anyway even w/ empty state to avoid deadlock for `once`
+    // anyway first
+    '',
     '',
     '',
     '',
@@ -341,27 +376,6 @@ test('client.clock.time().local()', async () => {
     "*lww#1ABC1+~local@time+author!:key'value'",
     "*lww#1ABC2+~local@time+author!:key'value'",
   ]);
-
-  // $FlowFixMe
-  const dump = client.upstream.dump();
-  expect(dump.session).toEqual(dump.fixtures);
-});
-
-test('client.once(...)', async () => {
-  let client = new Client({
-    storage: new InMemory(),
-    upstream: new Connection('013-once.ron'),
-    db: {id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical'},
-  });
-
-  await client.ensure();
-  const state = await client.once('#object');
-  expect(state).toBe("*lww#object@time+author!:key'value'");
-  expect(client.lstn['object']).toEqual([]);
-
-  const another = await client.once('#another');
-  expect(another).toBe('');
-  expect(client.lstn['another']).toEqual([]);
 
   // $FlowFixMe
   const dump = client.upstream.dump();

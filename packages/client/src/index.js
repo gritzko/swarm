@@ -4,18 +4,27 @@ import regeneratorRuntime from 'regenerator-runtime'; // for async/await work fl
 
 import RWS from './rws';
 
-import Op, {Batch, Frame, Cursor, UUID, QUERY_SEP, FRAME_SEP, mapUUIDs, js2ron} from 'swarm-ron';
-import type {Atom} from 'swarm-ron';
-import type {Clock} from 'swarm-clock';
-import {Logical, Calendar} from 'swarm-clock';
-import {ZERO, NEVER} from 'swarm-ron-uuid';
-import {lww} from 'swarm-rdt';
-import {reduce} from 'swarm-rdt';
-import type {Storage} from './storage';
-import {InMemory} from './storage';
+import Op, {
+  Batch,
+  Frame,
+  Cursor,
+  UUID,
+  QUERY_SEP,
+  FRAME_SEP,
+  mapUUIDs,
+  js2ron,
+} from 'swarm-ron';
+import type { Atom } from 'swarm-ron';
+import type { Clock } from 'swarm-clock';
+import { Logical, Calendar } from 'swarm-clock';
+import { ZERO, NEVER } from 'swarm-ron-uuid';
+import { lww } from 'swarm-rdt';
+import { reduce } from 'swarm-rdt';
+import type { Storage } from './storage';
+import { InMemory } from './storage';
 
-export {default as WebSocket} from './rws';
-export {InMemory, LocalStorage} from './storage';
+export { default as WebSocket } from './rws';
+export { InMemory, LocalStorage } from './storage';
 
 export interface Connection {
   onmessage: (ev: MessageEvent) => any;
@@ -61,7 +70,7 @@ const defaultMeta: Meta = {
 // feeds resulting RON states back to the listeners.
 export default class Client {
   clock: ?Clock;
-  lstn: {[key: string]: Array<(frame: string, state: string) => void>}; // ?
+  lstn: { [key: string]: Array<(frame: string, state: string) => void> }; // ?
   upstream: Connection;
   storage: Storage;
   queue: Array<[() => void, (err: Error) => void]> | void;
@@ -101,16 +110,22 @@ export default class Client {
             this.clock = new Logical(this.db.id);
             break;
           case 'Calendar':
-            this.clock = new Calendar(this.db.id, {offset: this.db.offset || 0});
+            this.clock = new Calendar(this.db.id, {
+              offset: this.db.offset || 0,
+            });
             break;
           default:
-            throw new Error(`TODO: Clock mode '${this.db.clockMode}' is not supported yet`);
+            throw new Error(
+              `TODO: Clock mode '${this.db.clockMode}' is not supported yet`,
+            );
         }
       }
       await this.storage.set('__meta__', JSON.stringify(this.db));
 
       if (typeof options.upstream === 'string') {
-        this.upstream = new RWS(options.upstream, undefined, {reconnectOnError: true});
+        this.upstream = new RWS(options.upstream, undefined, {
+          reconnectOnError: true,
+        });
       } else if (options.upstream) {
         this.upstream = options.upstream;
       } else if (!options.upstream && this.db.clockMode) {
@@ -134,14 +149,19 @@ export default class Client {
 
     const hs = new Promise((resolve, reject) => {
       setTimeout(reject, this.options.hsTimeout);
-      this.upstream.onmessage = (me: MessageEvent) => resolve(((me.data: any): string));
+      this.upstream.onmessage = (me: MessageEvent) =>
+        resolve(((me.data: any): string));
     });
 
     const hello = new Frame();
     const head = new Op(
       new UUID('db', '0', '$'),
       new UUID(this.db.name, '0', '$'),
-      new UUID(this.clock ? this.clock.last().value : '0', this.db.id || '0', '+'),
+      new UUID(
+        this.clock ? this.clock.last().value : '0',
+        this.db.id || '0',
+        '+',
+      ),
       ZERO,
       undefined,
       QUERY_SEP,
@@ -149,9 +169,18 @@ export default class Client {
     hello.push(head);
     hello.pushWithTerm(head, FRAME_SEP);
 
-    const {auth} = this.db;
+    const { auth } = this.db;
     if (auth) {
-      hello.push(new Op(head.uuid(0), head.uuid(1), head.uuid(2), head.uuid(3), js2ron([auth]), ','));
+      hello.push(
+        new Op(
+          head.uuid(0),
+          head.uuid(1),
+          head.uuid(2),
+          head.uuid(3),
+          js2ron([auth]),
+          ',',
+        ),
+      );
     }
     this.upstream.send(hello.toString());
 
@@ -187,13 +216,18 @@ export default class Client {
     if (op) {
       dbOpts.id = op.uuid(1).origin;
     } else {
-      throw new Error(`Expected replica id not found in the handshake response: \n\t'${(op || '').toString()}'`);
+      throw new Error(
+        `Expected replica id not found in the handshake response: \n\t'${(
+          op || ''
+        ).toString()}'`,
+      );
     }
 
     if (this.clock) {
       if (this.db.clockMode !== dbOpts.clockMode)
         throw new Error(
-          `Different clock mode: '${this.db.clockMode || 'undefined'}' !== '${dbOpts.clockMode || 'undefined'}'`,
+          `Different clock mode: '${this.db.clockMode ||
+            'undefined'}' !== '${dbOpts.clockMode || 'undefined'}'`,
         );
     } else if (dbOpts.id) {
       switch (dbOpts.clockMode) {
@@ -201,21 +235,27 @@ export default class Client {
           this.clock = new Logical(dbOpts.id);
           break;
         case 'Calendar':
-          this.clock = new Calendar(dbOpts.id, {offset: dbOpts.offset || 0});
+          this.clock = new Calendar(dbOpts.id, { offset: dbOpts.offset || 0 });
           // TODO check the difference and apply offset if needed
           break;
         default:
-          throw new Error(`Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
+          throw new Error(
+            `Clock mode '${dbOpts.clockMode ||
+              'undefined'}' is not supported yet`,
+          );
       }
     } else {
-      throw new Error(`Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`);
+      throw new Error(
+        `Clock mode '${dbOpts.clockMode || 'undefined'}' is not supported yet`,
+      );
     }
 
     this.clock.see(seen);
 
-    this.db = {...this.db, ...dbOpts};
+    this.db = { ...this.db, ...dbOpts };
     await this.storage.set('__meta__', JSON.stringify(this.db));
-    this.upstream.onmessage = (me: MessageEvent) => this.onMessage(((me.data: any): string)).catch(panic);
+    this.upstream.onmessage = (me: MessageEvent) =>
+      this.onMessage(((me.data: any): string)).catch(panic);
     this.upstream.onopen = () => this.handshake().catch(panic);
 
     // resend all the frames
@@ -234,7 +274,7 @@ export default class Client {
   // Ensure returns Promise which will be resolved after connection
   // installed or rejected if an error occurred.
   async ensure(): Promise<void> {
-    const {queue} = this;
+    const { queue } = this;
     if (queue === undefined) {
       return Promise.resolve();
     } else {
@@ -308,16 +348,20 @@ export default class Client {
       // merge method also accepts acks:
       //    notifies listeners with null payload
       //    if there is no saved state
-      await this.merge(f.toString(), {local: false});
+      await this.merge(f.toString(), { local: false });
     }
   }
 
   // On installs subscriptions.
-  async on(query: string, callback: ?(frame: string, state: string) => void): Promise<boolean> {
+  async on(
+    query: string,
+    callback: ?(frame: string, state: string) => void,
+  ): Promise<boolean> {
     const fwd = new Frame();
     const upstrm = new Frame();
     for (let op of new Frame(query)) {
-      if (op.uuid(1).eq(ZERO)) throw new Error(`ID is not specified: "${op.toString()}"`);
+      if (op.uuid(1).eq(ZERO))
+        throw new Error(`ID is not specified: "${op.toString()}"`);
       const key = op.uuid(1).toString();
       let base = ZERO;
       const stored = await this.storage.get(key);
@@ -340,9 +384,13 @@ export default class Client {
 
       if (!found) {
         if (!exists && !op.object.isLocal()) {
-          upstrm.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+          upstrm.push(
+            new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
+          ); // FIXME check fork mode
         }
-        fwd.push(new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
+        fwd.push(
+          new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
+        ); // FIXME check fork mode
       }
     }
 
@@ -355,28 +403,11 @@ export default class Client {
     return !!fwd.toString();
   }
 
-  // Once accepts only single ID and sends full state.
-  async once(query: string): Promise<string> {
-    for (const op of new Frame(query)) {
-      const state = await new Promise(async (r, rej) => {
-        const key = `#${op.uuid(1).toString()}`;
-        const once = (f: string, s: string): void => {
-          this.off(key, once);
-          r(s);
-        };
-        setTimeout(() => {
-          this.off(key, once);
-          rej(new Error(`Time is out while fetching '#${key}'.`));
-        }, this.options.fetchTimeout);
-        await this.on(key, once);
-      });
-      return state;
-    }
-    throw new Error('ID not found in: ' + query);
-  }
-
   // Off removes subscriptions.
-  off(q: string | void, callback: ?(frame: string, state: string) => void): string | void {
+  off(
+    q: string | void,
+    callback: ?(frame: string, state: string) => void,
+  ): string | void {
     // unless query passed fetch all the keys to unsubscribe from them
     const query: string =
       q ||
@@ -424,7 +455,7 @@ export default class Client {
   // read-only mode until installed connection.
   async push(rawFrame: string): Promise<void> {
     await this.ensure();
-    let stamps: {[string]: UUID | void} = {};
+    let stamps: { [string]: UUID | void } = {};
 
     const frame = mapUUIDs(rawFrame, (uuid, position, _, op): UUID => {
       if (position === 0) return uuid.eq(ZERO) ? lww.type : uuid;
@@ -436,34 +467,39 @@ export default class Client {
 
     // save
     const pending = await this.storage.get('__pending__');
-    await this.storage.set('__pending__', JSON.stringify(JSON.parse(pending || '[]').concat(frame)));
-    const filtered = new Frame(frame).filter(op => !op.uuid(1).isLocal()).toString();
+    await this.storage.set(
+      '__pending__',
+      JSON.stringify(JSON.parse(pending || '[]').concat(frame)),
+    );
+    const filtered = new Frame(frame)
+      .filter(op => !op.uuid(1).isLocal())
+      .toString();
     if (filtered) {
       this.upstream.send(filtered);
     }
-    await this.merge(frame, {local: true});
+    await this.merge(frame, { local: true });
   }
 
-  // Notify sends local states to all the listeners in the given frame
+  // Notify sends states to all the listeners in the given frame
   async notify(frame: string): Promise<void> {
-    const keys: {[string]: true} = {};
+    const keys: { [string]: true } = {};
     for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
     const ks = Object.keys(keys);
     const store = await this.storage.multiGet(ks);
     for (const key of ks) {
       const state = store[key];
-      // check if the value exists even empty string
-      if (state != null || UUID.fromString(key).isLocal()) {
-        for (const l of this.lstn[key] || []) l('#' + key, state || '');
-      }
+      for (const l of this.lstn[key] || []) l('#' + key, state || '');
     }
   }
 
-  // Merge updates local states and notifies listeners.
-  // Accepts acks messsages.
-  //    notifies listeners with empty payload(once)
+  // Merge updates local state and notifies listeners.
+  // Accepts single frame.
+  //    notifies listeners with empty payload
   //    if there is no saved state
-  async merge(frame: string, options: {local: boolean} = {local: true}): Promise<void> {
+  async merge(
+    frame: string,
+    options: { local: boolean } = { local: true },
+  ): Promise<void> {
     const fr = new Frame(frame);
     for (const op of fr) {
       const key = op.uuid(1).toString();
@@ -488,7 +524,7 @@ export default class Client {
         }
       }
 
-      // ensure that it's an update(don't repeat)
+      // ensure that it's anupdate with changes
       if (prev !== state) {
         await this.storage.set(key, state);
         for (const l of this.lstn[key] || []) {

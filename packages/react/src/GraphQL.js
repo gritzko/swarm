@@ -3,42 +3,42 @@
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import invariant from 'invariant';
-import type {DocumentNode} from 'graphql';
+import type { DocumentNode } from 'graphql';
 
 import DB from 'swarm-db';
-import type {Request, Response as DBResponse} from 'swarm-db';
-import type {Value} from 'swarm-api';
-import type {Atom} from 'swarm-ron';
-import UUID, {ERROR} from 'swarm-ron-uuid';
+import type { Request, Response as DBResponse } from 'swarm-db';
+import type { Value } from 'swarm-api';
+import type { Atom } from 'swarm-ron';
+import UUID, { ERROR } from 'swarm-ron-uuid';
 
-type args = {[string]: Atom | {[string]: Atom}};
+type args = { [string]: Atom | { [string]: Atom } };
 
 export type Response<T> = {
-  data: T,
+  data: ?T,
   uuid: () => UUID,
   error?: Error,
-  mutations?: {[string]: (args: args) => Promise<Value>},
+  mutations?: { [string]: (args: args) => Promise<Value> },
 };
 
-type Props = {
+type Props<T> = {
   query: DocumentNode,
   args?: args,
   swarm?: DB,
-  mutations?: {[string]: DocumentNode},
-  children: (r: Response<any>) => React.Node,
+  mutations?: { [string]: DocumentNode },
+  children: (r: Response<T>) => React.Node,
 };
 
-type State = {
-  data: Value,
+type State<T> = {
+  data: ?T,
   error?: Error,
-  mutations?: {[string]: (args: args) => Promise<Value>},
+  mutations?: { [string]: (args: args) => Promise<Value> },
 };
 
-export default class GraphQL extends React.Component<Props, State> {
+export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
   swarm: ?DB;
   _off: void | (() => boolean);
 
-  constructor(props: Props, context: {swarm: ?DB}) {
+  constructor(props: Props<T>, context: { swarm: ?DB }) {
     super(props, context);
     this.swarm = context.swarm || this.props.swarm;
     invariant(
@@ -59,11 +59,11 @@ export default class GraphQL extends React.Component<Props, State> {
       this.swarm
         .ensure()
         .then(this._subscribe.bind(this))
-        .catch(error => this.setState({error}));
+        .catch(error => this.setState({ error }));
     }
   }
 
-  componentDidUpdate(prev: Props) {
+  componentDidUpdate(prev: Props<T>) {
     if (
       this.props.query !== prev.query ||
       !shallowEqual(this.props.args, prev.args) ||
@@ -86,12 +86,15 @@ export default class GraphQL extends React.Component<Props, State> {
   }
 
   async _subscribe(): Promise<void> {
-    const {props: {query, args}, swarm} = this;
+    const { props: { query, args }, swarm } = this;
     if (!swarm || !swarm.execute) return;
 
-    const sub = await swarm.execute({gql: query, args}, (r: DBResponse<any>) => {
-      this.setState({data: r.data, error: r.error});
-    });
+    const sub = await swarm.execute(
+      { gql: query, args },
+      (r: DBResponse<any>) => {
+        this.setState({ data: r.data, error: r.error });
+      },
+    );
 
     if (this._off) this._off();
     this._off = sub.off;
@@ -101,16 +104,19 @@ export default class GraphQL extends React.Component<Props, State> {
     this._off && this._off();
   }
 
-  _bindMutations(): {[string]: (args: args) => Promise<Value>} | void {
-    const {props: {mutations}, swarm} = this;
+  _bindMutations(): { [string]: (args: args) => Promise<Value> } | void {
+    const { props: { mutations }, swarm } = this;
     if (mutations && swarm) {
       const ret = {};
       for (const key of Object.keys(mutations)) {
         ret[key] = async (args: args): Promise<Value> => {
           return new Promise((resolve, reject) => {
-            swarm.execute({gql: mutations[key], args: args}, (r: DBResponse<any>) => {
-              r.error ? reject(r.error) : resolve(r.data);
-            });
+            swarm.execute(
+              { gql: mutations[key], args: args },
+              (r: DBResponse<any>) => {
+                r.error ? reject(r.error) : resolve(r.data);
+              },
+            );
           });
         };
       }

@@ -1,9 +1,9 @@
 // @flow
 
-import {Frame, UUID} from '../../ron/src';
-import {Connection} from '../../__tests__/fixtures';
+import { Frame, UUID } from '../../ron/src';
+import { Connection } from '../../__tests__/fixtures';
 import API from '../src';
-import {InMemory} from '../../client/src/storage';
+import { InMemory } from '../../client/src/storage';
 
 test('set.add(....)', async () => {
   const storage = new InMemory();
@@ -78,10 +78,14 @@ test('set.add(....)', async () => {
   // $FlowFixMe
   const dump = api.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
-  expect(storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
+  expect(storage.storage.object).toBe(
+    '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
+  );
 
   const add = await api.add('object', UUID.fromString('test').local());
-  expect(storage.storage.object).toBe('*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5');
+  expect(storage.storage.object).toBe(
+    '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
+  );
   expect(add).toBeFalsy();
 });
 
@@ -115,7 +119,7 @@ test('set.remove(...)', async () => {
 
   let rm = await api.remove('object', 4);
   expect(rm).toBeFalsy();
-  expect(obj).toEqual({'0': 5});
+  expect(obj).toEqual({ '0': 5 });
 
   expect(storage.storage.object).toBe('*set#object@1ABC1+user!=5');
 
@@ -127,9 +131,13 @@ test('set.remove(...)', async () => {
 
   // $FlowFixMe
   expect(api.client.lstn['thisone']).toBeUndefined();
+  await api.client.on('#thisone');
+  await new Promise(r => setTimeout(r, 300));
+  api.client.off('#thisone');
+
   rm = await api.remove('thisone', 42);
+
   // $FlowFixMe
-  expect(api.client.lstn['thisone']).toHaveLength(0);
   expect(rm).toBeTruthy();
   expect(obj).toEqual({});
 

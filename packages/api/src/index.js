@@ -4,18 +4,18 @@ import regeneratorRuntime from 'regenerator-runtime';
 import hash from 'object-hash';
 
 import Client from 'swarm-client';
-import Op, {Frame, ZERO, UUID, FRAME_SEP, js2ron} from 'swarm-ron';
-import {ZERO as ZERO_UUID} from 'swarm-ron-uuid';
-import {lww, set, ron2js} from 'swarm-rdt';
-import type {Atom} from 'swarm-ron';
-import type {Options as ClntOpts} from 'swarm-client';
+import Op, { Frame, ZERO, UUID, FRAME_SEP, js2ron } from 'swarm-ron';
+import { ZERO as ZERO_UUID } from 'swarm-ron-uuid';
+import { lww, set, ron2js } from 'swarm-rdt';
+import type { Atom } from 'swarm-ron';
+import type { Options as ClntOpts } from 'swarm-client';
 
 export type Options = ClntOpts & {
   gcPeriod?: number,
   strictMode?: boolean,
 };
 
-export type Value = {[string]: Atom | Value} | Value[] | null;
+export type Value = { [string]: Atom | Value } | Value[] | null;
 
 interface Subscription {
   off(): boolean;
@@ -26,7 +26,7 @@ export default class API {
   client: Client;
   options: Options;
   subs: Array<Subscription>;
-  cache: {[string]: {[string]: Atom}};
+  cache: { [string]: { [string]: Atom } };
   gcInterval: IntervalID;
 
   constructor(options: Options): API {
@@ -47,7 +47,10 @@ export default class API {
   }
 
   uuid(): UUID {
-    if (!this.client.clock) throw new Error('have no clock yet, invoke `await <swarm>.ensure()` first');
+    if (!this.client.clock)
+      throw new Error(
+        'have no clock yet, invoke `await <swarm>.ensure()` first',
+      );
     return this.client.clock.time();
   }
 
@@ -61,11 +64,6 @@ export default class API {
     this.subs.push(sub);
     const subscribed = await sub.on();
     return subscribed;
-  }
-
-  async once(id: string | UUID): Promise<{[string]: Atom} | null> {
-    const s = await this.client.once(`#${id.toString()}`);
-    return ron2js(s);
   }
 
   off(id: string | UUID, cbk: Value => void): boolean {
@@ -83,8 +81,8 @@ export default class API {
   }
 
   // garbage collection for unused cached data
-  gc(): {|deleted: number, existing: number|} {
-    const ret = {deleted: 0, existing: 0};
+  gc(): {| deleted: number, existing: number |} {
+    const ret = { deleted: 0, existing: 0 };
     const lstnrs = {};
     for (const id of Object.keys(this.client.lstn)) lstnrs[id] = true;
 
@@ -100,7 +98,10 @@ export default class API {
     return ret;
   }
 
-  async set(id: string | UUID, value: {[string]: Atom | void}): Promise<boolean> {
+  async set(
+    id: string | UUID,
+    value: { [string]: Atom | void },
+  ): Promise<boolean> {
     if (!id) return false;
     const uuid = id instanceof UUID ? id : UUID.fromString(id);
     await this.client.ensure();
@@ -111,7 +112,14 @@ export default class API {
     }
 
     const frame = new Frame();
-    let op = new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP);
+    let op = new Op(
+      lww.type,
+      uuid,
+      this.uuid(),
+      ZERO_UUID,
+      undefined,
+      FRAME_SEP,
+    );
     frame.push(op);
 
     for (const k of Object.keys(value)) {
@@ -178,9 +186,6 @@ export default class API {
     frame.push(op);
 
     let state = await this.client.storage.get(id);
-    if (!state) {
-      state = await this.client.once(`#${id.toString()}`);
-    }
     if (!state) return false;
 
     const str = js2ron([value]);
@@ -212,9 +217,11 @@ export default class API {
       return obj && obj.type && typeof obj.type === 'string' ? obj.type : '';
     }
 
-    const state = await this.client.once(`#${id.toString()}`);
-    const op = Op.fromString(state);
-    if (op) return op.uuid(0).toString();
+    const state = await this.client.storage.get(id.toString());
+    if (state) {
+      const op = Op.fromString(state);
+      if (op) return op.uuid(0).toString();
+    }
     // type is not defined
     return null;
   }
@@ -226,22 +233,32 @@ interface IClient {
 }
 
 class OnSub {
-  cache: {[string]: {[string]: Atom}};
+  cache: { [string]: { [string]: Atom } };
   client: IClient;
   id: string;
   prev: string;
   cbk: Value => void;
-  keys: {[string]: true};
+  keys: { [string]: true };
   active: boolean | void;
   hash: string;
 
-  constructor(client: IClient, cache: {[string]: {[string]: Atom}}, id: string, cbk: Value => void): OnSub {
+  constructor(
+    client: IClient,
+    cache: { [string]: { [string]: Atom } },
+    id: string,
+    cbk: Value => void,
+  ): OnSub {
     this.client = client;
     this.cache = cache;
     this.id = id;
     this.cbk = cbk;
     this.hash = OnSub.hash(id, cbk);
-    this.prev = new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID).toString();
+    this.prev = new Op(
+      ZERO_UUID,
+      UUID.fromString(id),
+      ZERO_UUID,
+      ZERO_UUID,
+    ).toString();
     this.keys = {};
     this.keys[this.id] = true;
     // $FlowFixMe
@@ -262,8 +279,11 @@ class OnSub {
 
   async on(): Promise<boolean> {
     if (this.active !== undefined) return false;
-    const {frame} = buildTree(this.cache, this.id);
-    this.active = await this.client.on((this.prev = frame.toString()), this._invoke);
+    const { frame } = buildTree(this.cache, this.id);
+    this.active = await this.client.on(
+      (this.prev = frame.toString()),
+      this._invoke,
+    );
     return this.active || false;
   }
 
@@ -281,7 +301,7 @@ class OnSub {
     const op = Op.fromString(id);
     // $FlowFixMe ?
     this.cache[op.uuid(1).toString()] = v;
-    const {ids, frame, tree} = buildTree(this.cache, this.id);
+    const { ids, frame, tree } = buildTree(this.cache, this.id);
 
     if (this.prev !== frame.toString()) {
       this.keys = ids;
@@ -297,7 +317,7 @@ class OnSub {
   }
 
   static hash(id: string, cbk: Value => void): string {
-    return hash({id, cbk});
+    return hash({ id, cbk });
   }
 }
 
@@ -305,24 +325,25 @@ function buildTree(
   cache: *,
   id: string,
   frame: Frame = new Frame(),
-  ids: {[string]: true} = {},
-): {frame: Frame, tree: Value, ids: {[string]: true}} {
+  ids: { [string]: true } = {},
+): { frame: Frame, tree: Value, ids: { [string]: true } } {
   ids[id] = true;
   frame.push(new Op(ZERO_UUID, UUID.fromString(id), ZERO_UUID, ZERO_UUID));
   let root = cache[id];
-  if (!root) return {frame, tree: null, ids};
+  if (!root) return { frame, tree: null, ids };
   // $FlowFixMe
   root = Object.assign(Object.create(Object.getPrototypeOf(root)), root);
   for (const key of Object.keys(root)) {
     const v = root[key];
     if (v instanceof UUID) {
-      root[key] = buildTree(cache, v.toString(), frame, ids).tree || Object.freeze(v);
+      root[key] =
+        buildTree(cache, v.toString(), frame, ids).tree || Object.freeze(v);
     }
   }
-  return {frame, tree: Object.freeze(root), ids};
+  return { frame, tree: Object.freeze(root), ids };
 }
 
-export function getOff(keys: {[string]: true}, ids: string): string {
+export function getOff(keys: { [string]: true }, ids: string): string {
   const ret = new Frame();
   for (const op of new Frame(ids)) {
     const id = op.object.toString();

@@ -4,11 +4,13 @@ import * as React from 'react';
 import renderer from 'react-test-renderer';
 
 import API from 'swarm-db';
-import {Provider, Subscribe} from '../src';
-import {Connection} from '../../__tests__/fixtures';
-import {InMemory} from '../../client/src/storage';
+import { Provider, Subscribe } from '../src';
+import { Connection } from '../../__tests__/fixtures';
+import { InMemory } from '../../client/src/storage';
 
-const Basic = ({data, initialized}) => <div initialized={initialized}>{JSON.stringify(data)}</div>;
+const Basic = ({ data, initialized }) => (
+  <div initialized={initialized}>{JSON.stringify(data)}</div>
+);
 
 test('React: subscribe', async () => {
   const upstream = new Connection('011-react.ron');
@@ -42,11 +44,11 @@ test('React: subscribe', async () => {
         {props => {
           expect(props.swarm).toBe(api);
           c++;
-          if (c === 2) props.unsubscribe();
+          if (c === 3) props.unsubscribe();
           // try to return malformed markup, but won't happened actually
           // b/c the state won't changed and next call won't happened
           // b/c of props.unsubscribe call
-          if (c > 2) return <span>¯\_(ツ)_/¯</span>;
+          if (c > 3) return <span>¯\_(ツ)_/¯</span>;
           return <Basic {...props} />;
         }}
       </Subscribe>
@@ -72,13 +74,13 @@ test('React: subscribe', async () => {
   // b/c of async nature of mock connection
   await new Promise(r => setTimeout(r, 500));
 
-  expect(object).toEqual({test: 5});
+  expect(object).toEqual({ test: 5 });
 
   tree = component.toJSON();
   expect(tree).toMatchSnapshot();
 
-  await api.set('object', {some: 'value'});
-  expect(object).toEqual({test: 5, some: 'value'});
+  await api.set('object', { some: 'value' });
+  expect(object).toEqual({ test: 5, some: 'value' });
 
   tree = component.toJSON();
   expect(tree).toMatchSnapshot();

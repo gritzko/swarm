@@ -5,11 +5,12 @@ import renderer from 'react-test-renderer';
 import gql from 'graphql-tag';
 
 import DB from 'swarm-db';
-import {Provider, GraphQL} from '../src';
-import {Connection} from '../../__tests__/fixtures';
-import {InMemory} from '../../client/src/storage';
+import { Provider, GraphQL } from '../src';
+import type { Response } from '../src';
+import { Connection } from '../../__tests__/fixtures';
+import { InMemory } from '../../client/src/storage';
 
-const Basic = ({data, error, onClick}) => (
+const Basic = ({ data, error, onClick }) => (
   <div>
     {JSON.stringify(data || error)}
     <button onClick={onClick}>update</button>
@@ -50,16 +51,17 @@ test('React: graphql', async () => {
 
   const component = renderer.create(
     <Provider swarm={api}>
-      <GraphQL query={sub} mutations={{obj: mutateObj}}>
+      <GraphQL query={sub} mutations={{ obj: mutateObj }}>
         {props => {
           return (
             <Basic
               {...props}
-              onClick={payload => {
+              onClick={(payload: Response<null>) => {
                 // $FlowFixMe
-                const p = payload || {test: props.data.object.test + 1};
+                const p = payload || { test: props.data.object.test + 1 };
                 if (props.mutations) {
-                  props.mutations.obj({payload: p});
+                  // $FlowFixMe
+                  props.mutations.obj({ payload: p });
                 }
               }}
             />
@@ -73,7 +75,7 @@ test('React: graphql', async () => {
   let tree = component.toJSON();
   expect(tree).toMatchSnapshot();
 
-  component.root.findByType('button').props.onClick({some: 'value'});
+  component.root.findByType('button').props.onClick({ some: 'value' });
 
   await new Promise(r => setTimeout(r, 100));
 
@@ -87,7 +89,7 @@ test('React: graphql', async () => {
   tree = component.toJSON();
   expect(tree).toMatchSnapshot();
 
-  component.root.findByType('button').props.onClick({additional: true});
+  component.root.findByType('button').props.onClick({ additional: true });
 
   await new Promise(r => setTimeout(r, 100));
 
