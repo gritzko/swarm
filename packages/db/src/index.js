@@ -1,5 +1,7 @@
 // @flow
 
+import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
+
 import type { DocumentNode } from 'graphql';
 import graphql from 'graphql-anywhere';
 import hash from 'object-hash';
@@ -37,7 +39,9 @@ export default class SwarmDB extends API {
   ): Promise<{ ok: boolean, off?: () => boolean }> {
     const h = GQLSub.hash(request, cbk);
     for (const s of this.subs) {
-      if (s.is(h)) return { ok: false };
+      if (s.is(h)) {
+        return { ok: false };
+      }
     }
 
     if (request.gql.definitions.length !== 1) {
@@ -56,6 +60,7 @@ export default class SwarmDB extends API {
         if (s.is(h)) {
           this.subs.splice(c, 1);
           break;
+        } else {
         }
       }
     });
@@ -129,7 +134,7 @@ class GQLSub {
           this.active = !ret;
           break;
         case 'mutation':
-          // do nothing actually
+          // do nothing actually b/c we have no any real subscriptions
           this.active = ret = false;
       }
       this.finalizer && this.finalizer(this.id);
@@ -196,13 +201,14 @@ class GQLSub {
 
     if (!ready) return;
 
-    if (this.cbk) {
+    const { cbk } = this;
+    if (cbk) {
       if (this.operation !== 'subscription') {
         // drop this sub from
         this.off();
-        this.cbk && this.cbk({ data: tree });
+        cbk({ data: tree });
       } else {
-        this.cbk({
+        cbk({
           data: tree,
           off: () => this.off(),
         });

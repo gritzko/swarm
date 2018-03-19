@@ -275,7 +275,12 @@ test('swarm.execute({ query })', async () => {
   let swarm = new SwarmDB({
     storage,
     upstream,
-    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
+    db: {
+      id: 'user',
+      name: 'test',
+      auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
+    },
   });
 
   swarm = ((swarm: any): SwarmDB);
@@ -336,9 +341,8 @@ test('swarm.execute({ query })', async () => {
       resolve,
     );
     expect(r.ok).toBeTruthy();
-    // $FlowFixMe
-    expect(swarm.subs).toHaveLength(0);
   });
+  expect(swarm.subs).toHaveLength(0);
 
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
@@ -351,7 +355,13 @@ test('swarm.execute({ query })', async () => {
       e: true,
       f: null,
       id: '1ABC1+user',
-      internal: { a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null },
+      internal: {
+        a: 42,
+        c: 0.1,
+        e: true,
+        flat: '1ABC1+user',
+        notExists: null,
+      },
     },
   });
 });

@@ -78,14 +78,11 @@ test('client.on(...)', async () => {
 
 test('client.update(...)', async () => {
   const toCheck = [];
+  const storage = new InMemory();
   // stealth-mode client
   const client = new Client({
-    storage: new InMemory(),
-    db: {
-      id: 'user',
-      clockMode: 'Logical',
-      name: 'test',
-    },
+    storage,
+    db: { clockMode: 'Logical', name: 'test' },
   });
 
   await client.ensure();
@@ -102,14 +99,13 @@ test('client.update(...)', async () => {
     "*lww#object@time1+author!@(2+:key'value2'",
   );
   // $FlowFixMe
-  expect(JSON.parse(client.storage.storage.__meta__)).toEqual({
+  expect(JSON.parse(storage.storage.__meta__)).toEqual({
     name: 'test',
     clockLen: 5,
     forkMode: '// FIXME',
     peerIdBits: 30,
     horizont: 604800,
     clockMode: 'Logical',
-    id: 'user',
     offset: 0,
   });
 
@@ -380,4 +376,27 @@ test('client.clock.time().local()', async () => {
   // $FlowFixMe
   const dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
+});
+
+test('client: offline re-start', async () => {
+  const storage = new InMemory({
+    __meta__: JSON.stringify({
+      name: 'test',
+      id: 'user',
+      clockLen: 5,
+      forkMode: '// FIXME',
+      peerIdBits: 30,
+      horizont: 604800,
+      auth: 'JwT.t0k.en',
+      clockMode: 'Logical',
+    }),
+  });
+
+  let client = new Client({
+    storage,
+    upstream: new Connection('019-pending.ron'),
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
+  });
+
+  await client.ensure();
 });

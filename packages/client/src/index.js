@@ -66,7 +66,7 @@ const defaultMeta: Meta = {
   offset: 0,
 };
 
-// A simple client. Consumes updates from the server,
+// A bare-bone swarm client. Consumes updates from the server,
 // feeds resulting RON states back to the listeners.
 export default class Client {
   clock: ?Clock;
@@ -80,7 +80,7 @@ export default class Client {
     fetchTimeout: number,
   };
 
-  constructor(options: Options) {
+  constructor(options: Options): Client {
     this.db = {
       ...defaultMeta,
       ...options.db,
@@ -93,7 +93,7 @@ export default class Client {
       fetchTimeout: options.fetchTimeout || 3e4 /* 30sec */,
     };
     this.init(options);
-    //
+    return this;
   }
 
   async init(options: Options) {
@@ -120,7 +120,6 @@ export default class Client {
             );
         }
       }
-      await this.storage.set('__meta__', JSON.stringify(this.db));
 
       if (typeof options.upstream === 'string') {
         this.upstream = new RWS(options.upstream, undefined, {
@@ -134,18 +133,26 @@ export default class Client {
         throw new Error('neither connection options nor clock options found');
       }
 
-      await new Promise(r => {
-        this.upstream.onopen = r;
-      });
-      await this.handshake();
-      this.release(null);
+      // check if we start over existing replica
+      if (meta && this.clock) {
+        this.upstream.onopen = () => this.handshake().catch(panic);
+        this.release(null);
+      } else {
+        this.upstream.onopen = () =>
+          this.handshake()
+            .then(() => this.release(null))
+            .catch(e => this.release((e: Error)));
+      }
     } catch (e) {
       this.release((e: Error));
     }
   }
 
   async handshake(): Promise<void> {
-    if (this.upstream instanceof DevNull) return;
+    if (this.upstream instanceof DevNull) {
+      await this.storage.set('__meta__', JSON.stringify(this.db));
+      return;
+    }
 
     const hs = new Promise((resolve, reject) => {
       setTimeout(reject, this.options.hsTimeout);
@@ -357,6 +364,7 @@ export default class Client {
     query: string,
     callback: ?(frame: string, state: string) => void,
   ): Promise<boolean> {
+    await this.ensure();
     const fwd = new Frame();
     const upstrm = new Frame();
     for (let op of new Frame(query)) {
@@ -546,7 +554,7 @@ class DevNull implements Connection {
     this.readyState = 0;
     setTimeout(() => {
       this.readyState = 0;
-      this.onopen(new Event(''));
+      this.onopen && this.onopen(new Event(''));
     }, 0);
   }
   send(data: string): void {}

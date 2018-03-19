@@ -7,7 +7,10 @@ import Op, { Frame } from 'swarm-ron';
 import UUID, { ZERO } from 'swarm-ron-uuid';
 import type { Connection as IConn } from '../../client/src';
 
+let id = 1;
+
 export class Connection implements IConn {
+  id: string;
   fixtures: Array<RawFrame>;
   session: Array<RawFrame>;
   onmessage: (ev: MessageEvent) => any;
@@ -16,6 +19,7 @@ export class Connection implements IConn {
 
   open(): void {}
   constructor(fixtures: ?string) {
+    this.id = `#${id++} ${fixtures || ''}`;
     this.fixtures = [];
     this.session = [];
     if (fixtures) {
@@ -51,7 +55,7 @@ export class Connection implements IConn {
 
   send(payload: string): void {
     this.session.push(new RawFrame(payload, '>'));
-    // console.log(`connection.send('${payload}')`);
+    // console.log(`[${this.id}] connection.send('${payload}')`);
     this.pushPending();
   }
 
@@ -61,9 +65,9 @@ export class Connection implements IConn {
       i++;
       if (raw.direction === '<') {
         (raw => {
+          this.session.push(raw);
           setTimeout(() => {
-            // console.log(`session.push('${raw.toString()}')`);
-            this.session.push(raw);
+            // console.log(`[${this.id}] #${i} session.push('${raw.toString()}')`);
             this.onmessage((({ data: raw.body }: any): MessageEvent));
             // console.log('message was sent');
           }, 100 << i);

@@ -63,6 +63,7 @@ test('api.set(...)', async () => {
     username: 'olebedev',
   });
 
+  await new Promise(r => setTimeout(r, 300));
   expect(api.cache['1ABC4+user']).toBe(null);
 
   await new Promise(r => setTimeout(r, 300));
