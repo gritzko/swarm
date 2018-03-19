@@ -15,8 +15,6 @@ test('directive @ensure', async () => {
     db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
   });
 
-  swarm = ((swarm: any): SwarmDB);
-
   await swarm.ensure();
 
   const objID = swarm.uuid();
@@ -29,7 +27,9 @@ test('directive @ensure', async () => {
   const id = swarm.uuid();
 
   await swarm.add(listID, id);
-  await swarm.set(id, { value: 1 });
+  setTimeout(() => {
+    swarm.set(id, { value: 1 });
+  }, 500);
 
   const q = gql`
     query Test($id: UUID!) {
@@ -83,8 +83,6 @@ test('directive @ensure #2', async () => {
     db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
   });
 
-  swarm = ((swarm: any): SwarmDB);
-
   await swarm.ensure();
 
   const objID = swarm.uuid();
@@ -119,8 +117,7 @@ test('directive @ensure #2', async () => {
 
   let c = 0;
   setTimeout(() => {
-    const dump = upstream.dump();
-    console.log(JSON.stringify(dump.session, null, 2));
+    swarm.set('nope', { hello: 'world' });
   }, 1000);
   const res = await new Promise(async resolve => {
     const r = await swarm.execute({ gql: q, args: { id: objID } }, v => {
@@ -141,7 +138,7 @@ test('directive @ensure #2', async () => {
         version: '1ABC5+user',
         length: 1,
       },
-      notExists: null,
+      notExists: { id: 'nope' },
     },
   });
 

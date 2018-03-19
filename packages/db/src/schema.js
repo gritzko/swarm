@@ -47,8 +47,7 @@ export const Schema = gql`
 
   # Ensure is a directive which adds more control to
   # data flow management. This directive tells the runtime
-  # to ensure that the node either explicitly doesn't exist or
-  # exist and presented in the resulting response.
+  # to ensure that the node presented in the resulting response.
   directive @ensure on FIELD
 
   # Note. Priority of execution of directives from the first to the last.

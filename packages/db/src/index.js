@@ -258,7 +258,6 @@ class GQLSub {
     context: { ids: { [string]: true }, ready: boolean },
     info: { directives: { [string]: { [string]: Atom } } | void },
   ): mixed {
-    // check @ensure directive for arrays
     if (root instanceof UUID) return null;
 
     // workaround __typename
@@ -279,58 +278,60 @@ class GQLSub {
       return applyScalarDirectives(value.toString(), info.directives);
     }
 
+    const id = value.toString();
     // so, the value is UUID
     // keep it in the context
-    context.ids[value.toString()] = true;
+    context.ids[id] = true;
 
-    const exists = this.cache.hasOwnProperty(value.toString());
+    context.ready = context.ready && this.cache.hasOwnProperty(id);
     // try to fetch an object from the cache
 
     // $FlowFixMe
-    let obj: Value = this.cache[value.toString()];
+    let obj: Value = this.cache[id];
+    let ensure = false;
 
     for (const key of Object.keys(info.directives || {})) {
       // $FlowFixMe
       const dir = info.directives[key];
-      // $FlowFixMe
-      if (!info.directives.hasOwnProperty(key)) continue;
-      if (!context.ready) break;
       switch (key) {
         case 'ensure':
-          context.ready = context.ready && exists;
+          context.ready = context.ready && !!obj;
+          ensure = true;
           break;
         case 'slice':
           if (!obj) continue;
+          if (!Array.isArray(obj)) obj = obj.valueOf();
+          // $FlowFixMe
           const args = [dir.begin || 0];
           if (dir.end || 0) args.push(dir.end);
-          obj = obj.valueOf().slice(...args);
+          obj = obj.slice(...args);
           break;
         case 'reverse':
           if (!obj) continue;
-          obj = obj.valueOf();
+          if (!Array.isArray(obj)) obj = obj.valueOf();
           obj.reverse();
           break;
       }
     }
 
-    if (Array.isArray(obj)) {
+    if (!Array.isArray(obj)) return obj;
+
+    for (let i = 0; i < obj.length; i++) {
+      if (!(obj[i] instanceof UUID)) continue;
       // $FlowFixMe
-      const ensure = info.directives.hasOwnProperty('ensure');
-      obj = obj.map(i => {
-        if (i instanceof UUID) {
-          context.ids[i.toString()] = true;
-          if (ensure) {
-            context.ready =
-              context.ready && this.cache.hasOwnProperty(i.toString());
-          }
-          // $FlowFixMe
-          return this.cache[i.toString()] || null;
-        }
-        return i;
-      });
+      context.ids[obj[i].toString()] = true;
+      // $FlowFixMe
+      const value = this.cache[obj[i].toString()];
+      // check if value presented
+      if (typeof value === 'undefined') {
+        context.ready = false;
+        // $FlowFixMe
+      } else if (ensure) context.ready = context.ready && value && value.id;
+      // $FlowFixMe
+      obj[i] = value || null;
     }
 
-    return obj || null;
+    return obj;
   }
 
   async runMutation(): Promise<boolean> {
