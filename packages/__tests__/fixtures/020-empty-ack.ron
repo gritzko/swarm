@@ -1,0 +1,4 @@
+*~ '>' *db#test@+user?!.
+*~ '<' *db#test$user@1ABC+server!.
+*~ '>' #ack?!.
+*~ '<' #ack!

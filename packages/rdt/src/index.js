@@ -1,15 +1,15 @@
 // @flow
 'use strict';
 
-import Op, {Batch, Frame, FRAME_SEP} from 'swarm-ron';
-import type {Atom} from 'swarm-ron';
-import UUID, {ZERO} from 'swarm-ron-uuid';
+import Op, { Batch, Frame, FRAME_SEP } from 'swarm-ron';
+import type { Atom } from 'swarm-ron';
+import UUID, { ZERO } from 'swarm-ron-uuid';
 
 import lww from './lww';
 import log from './log';
 import set from './set';
 
-const rdt: {[string]: {type: UUID, reduce: Batch => Frame}} = {
+const rdt: { [string]: { type: UUID, reduce: Batch => Frame } } = {
   lww,
   log,
   set,
@@ -56,18 +56,23 @@ export function reduce(batch: Batch): Frame {
   return empty(batch);
 }
 
-export function ron2js(rawFrame: string): {[string]: Atom} | null {
+export function ron2js(rawFrame: string): { [string]: Atom } | null {
   for (const op of new Frame(rawFrame)) {
     switch (true) {
       case lww.type.eq(op.type):
         return lww.ron2js(rawFrame);
       case set.type.eq(op.type):
         return set.ron2js(rawFrame);
+      case ZERO.eq(op.type):
+        const v = set.ron2js(rawFrame);
+        // $FlowFixMe
+        Object.getPrototypeOf(v).type = '';
+        return v;
     }
   }
   return null;
 }
 
-export {default as lww} from './lww';
-export {default as log} from './log';
-export {default as set} from './set';
+export { default as lww } from './lww';
+export { default as log } from './log';
+export { default as set } from './set';

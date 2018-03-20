@@ -13,16 +13,16 @@ export default class {
     });
   }
 
-  get(key: string): Promise<string | void> {
+  get(key: string): Promise<string | null> {
     return new Promise((res, rej) => {
       AsyncStorage.getItem(key, (err, result) => {
         if (err) return rej(err);
-        res(result != null ? result : undefined);
+        res(typeof result === 'undefined' ? null : result);
       });
     });
   }
 
-  multiGet(keys: string[]): Promise<{ [string]: string | void }> {
+  multiGet(keys: string[]): Promise<{ [string]: string | null }> {
     return new Promise((res, rej) => {
       AsyncStorage.multiGet(keys, (err, tuples) => {
         if (err) return rej(err);
@@ -30,7 +30,7 @@ export default class {
         tuples.map((result, i, store) => {
           const key = store[i][0];
           const value = store[i][1];
-          ret[key] = value === null ? undefined : value;
+          ret[key] = value;
         });
         res(ret);
       });

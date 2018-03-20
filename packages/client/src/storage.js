@@ -2,16 +2,16 @@
 
 export interface Storage {
   set(key: string, value: string): Promise<void>;
-  get(key: string): Promise<string | void>;
-  multiGet(keys: string[]): Promise<{[string]: string | void}>;
+  get(key: string): Promise<string | null>;
+  multiGet(keys: string[]): Promise<{ [string]: string | null }>;
   remove(key: string): Promise<void>;
   keys(): Promise<Array<string>>;
 }
 
 export class InMemory implements Storage {
-  storage: {[string]: string};
+  storage: { [string]: string };
 
-  constructor(storage: {[string]: string} = {}) {
+  constructor(storage: { [string]: string } = {}) {
     this.storage = storage;
   }
 
@@ -20,14 +20,16 @@ export class InMemory implements Storage {
     return Promise.resolve();
   }
 
-  get(key: string): Promise<string | void> {
-    return Promise.resolve(this.storage[key]);
+  get(key: string): Promise<string | null> {
+    const v = this.storage[key];
+    return Promise.resolve(typeof v === 'undefined' ? null : v);
   }
 
-  multiGet(keys: string[]): Promise<{[string]: string | void}> {
+  multiGet(keys: string[]): Promise<{ [string]: string | null }> {
     const ret = {};
     for (const k of keys) {
       ret[k] = this.storage[k];
+      if (typeof ret[k] === 'undefined') ret[k] = null;
     }
     return Promise.resolve(ret);
   }
@@ -48,16 +50,16 @@ export class LocalStorage implements Storage {
     return Promise.resolve();
   }
 
-  get(key: string): Promise<string | void> {
+  get(key: string): Promise<string | null> {
     const v = localStorage.getItem(key);
-    return Promise.resolve(v != null ? v : undefined);
+    return Promise.resolve(typeof v === 'undefined' ? null : v);
   }
 
-  multiGet(keys: string[]): Promise<{[string]: string | void}> {
+  multiGet(keys: string[]): Promise<{ [string]: string | null }> {
     const ret = {};
     for (const k of keys) {
       const item = localStorage.getItem(k);
-      ret[k] = item !== null ? item : undefined;
+      ret[k] = typeof item === 'undefined' ? null : item;
     }
     return Promise.resolve(ret);
   }

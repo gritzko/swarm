@@ -21,7 +21,7 @@ test('set.add(...)', async () => {
   await api.ensure();
 
   let obj = [];
-  function cbk(id: string, state: string) {
+  function cbk(id: string, state: string | null) {
     obj.push({ id, state });
   }
 
@@ -31,14 +31,14 @@ test('set.add(...)', async () => {
   expect(ok).toBeTruthy();
 
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
   ]);
 
   await api.add('object', 5);
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
     { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
@@ -47,7 +47,7 @@ test('set.add(...)', async () => {
   ok = await api.add('object', 42);
   expect(ok).toBeTruthy();
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
     { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
@@ -62,12 +62,12 @@ test('set.add(...)', async () => {
   await api.client.on('#' + sub.toString(), cbk);
   await api.add('object', sub);
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
     { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
     { id: '#object', state: '*set#object@1ABC3+user!=42@(2+=5@(1+=5' },
-    { id: '#1ABC8+user', state: '' },
+    { id: '#1ABC8+user', state: null },
     {
       id: '#object',
       state: '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
@@ -78,12 +78,12 @@ test('set.add(...)', async () => {
 
   await api.add(sub, 37);
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
     { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
     { id: '#object', state: '*set#object@1ABC3+user!=42@(2+=5@(1+=5' },
-    { id: '#1ABC8+user', state: '' },
+    { id: '#1ABC8+user', state: null },
     {
       id: '#object',
       state: '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
@@ -124,7 +124,7 @@ test('set.remove(...)', async () => {
   await api.ensure();
 
   let obj = [];
-  function cbk(id: string, state: string) {
+  function cbk(id: string, state: string | null) {
     obj.push({ id, state });
   }
   await api.client.on('#object', cbk);
@@ -133,7 +133,7 @@ test('set.remove(...)', async () => {
 
   await api.add('object', 5);
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
   ]);
@@ -141,7 +141,7 @@ test('set.remove(...)', async () => {
   let rm = await api.remove('object', 4);
   expect(rm).toBeFalsy();
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
   ]);
@@ -151,7 +151,7 @@ test('set.remove(...)', async () => {
   rm = await api.remove('object', 5);
   expect(rm).toBeTruthy();
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: '' },
     { id: '#object', state: '*set#object@1ABC1+user!=5' },
     { id: '#object', state: '*set#object@1ABC3+user!:1ABC1+user,' },
@@ -170,7 +170,7 @@ test('set.remove(...)', async () => {
 
   const thisone = await new Promise(
     async r =>
-      await api.client.on('#thisone', (id: string, state: string) =>
+      await api.client.on('#thisone', (id: string, state: string | null) =>
         r({ id, state }),
       ),
   );

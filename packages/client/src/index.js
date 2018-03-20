@@ -70,7 +70,7 @@ const defaultMeta: Meta = {
 // feeds resulting RON states back to the listeners.
 export default class Client {
   clock: ?Clock;
-  lstn: { [key: string]: Array<(frame: string, state: string) => void> }; // ?
+  lstn: { [key: string]: Array<(frame: string, state: string | null) => void> }; // ?
   upstream: Connection;
   storage: Storage;
   queue: Array<[() => void, (err: Error) => void]> | void;
@@ -362,7 +362,7 @@ export default class Client {
   // On installs subscriptions.
   async on(
     query: string,
-    callback: ?(frame: string, state: string) => void,
+    callback: ?(frame: string, state: string | null) => void,
     options: { updatesOnly?: true } = {},
   ): Promise<boolean> {
     await this.ensure();
@@ -416,7 +416,7 @@ export default class Client {
   // Off removes subscriptions.
   off(
     q: string | void,
-    callback: ?(frame: string, state: string) => void,
+    callback: ?(frame: string, state: string | null) => void,
   ): string | void {
     // unless query passed fetch all the keys to unsubscribe from them
     const query: string =
@@ -490,22 +490,22 @@ export default class Client {
     await this.merge(frame, { local: true });
   }
 
-  // Notify sends existing states to the callback
+  // Notify call back with existing states
   async notify(
     frame: string,
-    callback: ?(frame: string, state: string) => void,
+    callback: ?(frame: string, state: string | null) => void,
   ): Promise<void> {
     const keys: { [string]: true } = {};
     for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
     const ks = Object.keys(keys);
     const store = await this.storage.multiGet(ks);
     if (callback) {
-      for (const key of ks) callback('#' + key, store[key] || '');
+      for (const key of ks) callback('#' + key, store[key]);
     } else {
       for (const key of ks) {
         const state = store[key];
         for (const l of this.lstn[key] || []) {
-          l('#' + key, state || '');
+          l('#' + key, state);
         }
       }
     }
@@ -529,6 +529,8 @@ export default class Client {
         if (typeof state === 'string') {
           state = reduce(Batch.fromStringArray(key, state, frame)).toString();
         } else {
+          // if state is null and state was received
+          // set it w/o reduce
           state = frame;
         }
       } else {
@@ -543,11 +545,11 @@ export default class Client {
         }
       }
 
-      // ensure that it's anupdate with changes
+      // ensure that it's an update with changes
       if (prev !== state) {
         await this.storage.set(key, state);
         for (const l of this.lstn[key] || []) {
-          l('#' + key, state.toString());
+          l('#' + key, state);
         }
       }
       // read only first operation of the frame

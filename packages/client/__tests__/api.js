@@ -22,7 +22,7 @@ test('client.on(...)', async () => {
   });
 
   expect(resp).toEqual({
-    state: '',
+    state: null,
     frame: '#object',
   });
 
@@ -62,9 +62,9 @@ test('client.on(...)', async () => {
     offset: 0,
   });
 
-  function cbk(a: string, b: string) {}
-  function cbk2(a: string, b: string) {}
-  function cbk3(a: string, b: string) {}
+  function cbk(a: string, b: string | null) {}
+  function cbk2(a: string, b: string | null) {}
+  function cbk3(a: string, b: string | null) {}
 
   await client.on('#testlength', cbk);
   await client.on('#testlength', cbk2);
@@ -87,9 +87,12 @@ test('client.update(...)', async () => {
 
   await client.ensure();
 
-  await client.on('*lww#object', (frame: string, state: string): void => {
-    toCheck.push({ frame, state });
-  });
+  await client.on(
+    '*lww#object',
+    (frame: string, state: string | null): void => {
+      toCheck.push({ frame, state });
+    },
+  );
   await client.merge("*lww#object@time+author!:key'value'");
   await client.merge("*lww#object@time2+author!:key'value2'");
   await client.merge("*lww#object@time1+author!:key'value1'");
@@ -112,7 +115,7 @@ test('client.update(...)', async () => {
   expect(toCheck).toEqual([
     {
       frame: '#object',
-      state: '',
+      state: null,
     },
     {
       frame: '#object',
@@ -137,13 +140,13 @@ test('client.off(...)', async () => {
     db: { clockMode: 'Logical', name: 'test' },
   });
   await client.ensure();
-  const cbk = (frame: string, state: string): void => {};
+  const cbk = (frame: string, state: string | null): void => {};
   await client.on('*lww#object', cbk);
   expect(client.lstn['object']).toEqual([cbk]);
   client.off('#object');
   expect(client.lstn['object']).toBeUndefined();
 
-  function cbk2(a: string, b: string) {}
+  function cbk2(a: string, b: string | null) {}
 
   await client.on('#test1', cbk2);
   await client.on('#test2', cbk2);
@@ -183,7 +186,7 @@ test('client.push(...)', async () => {
 
   expect(client.lstn['object']).toBeDefined();
   expect(resp).toEqual({
-    state: '',
+    state: null,
     frame: '#object',
   });
 
@@ -299,8 +302,8 @@ test('client.clock.time().local()', async () => {
 
   await client.ensure();
 
-  let value: string[] = [];
-  const cbk = (f: string, s: string) => {
+  let value: Array<string | null> = [];
+  const cbk = (f: string, s: string | null) => {
     value.push(s);
   };
 
@@ -363,10 +366,10 @@ test('client.clock.time().local()', async () => {
   expect(value).toEqual([
     // empty b/c it's a local object, so we call back
     // anyway first
-    '',
-    '',
-    '',
-    '',
+    null,
+    null,
+    null,
+    null,
     "*lww#1ABC3+~local@time+author!:key'value'",
     "*lww#object@time+author!:key'value'",
     "*lww#1ABC1+~local@time+author!:key'value'",
@@ -399,4 +402,34 @@ test('client: offline re-start', async () => {
   });
 
   await client.ensure();
+});
+
+test('clienti: empty object ack', async () => {
+  const client = new Client({
+    storage: new InMemory(),
+    upstream: new Connection('020-empty-ack.ron'),
+    db: { id: 'user', name: 'test', clockMode: 'Logical' },
+  });
+
+  await client.ensure();
+
+  let calls = 0;
+  const cumul = [];
+  await new Promise(async r => {
+    client.on('#ack', (id: string, state: string | null) => {
+      calls++;
+      cumul.push({ id, state });
+      if (calls === 2) r();
+    });
+  });
+
+  expect(calls).toBe(2);
+  expect(cumul).toEqual([
+    { id: '#ack', state: null },
+    { id: '#ack', state: '' },
+  ]);
+
+  // $FlowFixMe
+  const dump = client.upstream.dump();
+  expect(dump.session).toEqual(dump.fixtures);
 });

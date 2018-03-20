@@ -50,7 +50,7 @@ test('api.set(...)', async () => {
   );
 
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
     {
       id: '#object',
@@ -61,7 +61,7 @@ test('api.set(...)', async () => {
       id: '#object',
       state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
     },
-    { id: '#1ABC4+user', state: '' },
+    { id: '#1ABC4+user', state: null },
     {
       id: '#object',
       state:
@@ -77,7 +77,7 @@ test('api.set(...)', async () => {
   );
 
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
     {
       id: '#object',
@@ -88,7 +88,7 @@ test('api.set(...)', async () => {
       id: '#object',
       state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
     },
-    { id: '#1ABC4+user', state: '' },
+    { id: '#1ABC4+user', state: null },
     {
       id: '#object',
       state:
@@ -105,7 +105,7 @@ test('api.set(...)', async () => {
   );
 
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
     {
       id: '#object',
@@ -116,7 +116,7 @@ test('api.set(...)', async () => {
       id: '#object',
       state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
     },
-    { id: '#1ABC4+user', state: '' },
+    { id: '#1ABC4+user', state: null },
     {
       id: '#object',
       state:
@@ -156,7 +156,7 @@ test('api.set(...)', async () => {
   expect(api.uuid().toString()).toBe('1ABD1+user');
 
   expect(obj).toEqual([
-    { id: '#object', state: '' },
+    { id: '#object', state: null },
     { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
     {
       id: '#object',
@@ -167,7 +167,7 @@ test('api.set(...)', async () => {
       id: '#object',
       state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
     },
-    { id: '#1ABC4+user', state: '' },
+    { id: '#1ABC4+user', state: null },
     {
       id: '#object',
       state:

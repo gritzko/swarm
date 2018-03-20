@@ -192,7 +192,7 @@ test('swarm.execute({ subscription })', async () => {
   let ok2 = await swarm.set('nope', { test: 1 });
   expect(ok2).toBeTruthy();
 
-  await new Promise(r => setTimeout(r, 100));
+  await new Promise(r => setTimeout(r, 200));
 
   expect(calls).toBe(3);
 
@@ -275,6 +275,7 @@ test('swarm.execute({ subscription })', async () => {
   });
 
   await new Promise(r => setTimeout(r, 1000));
+
   // $FlowFixMe
   let dump = swarm.client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
@@ -419,4 +420,43 @@ test('swarm.execute({ mutation })', async () => {
   await new Promise(r => setTimeout(r, 300));
   const dump = upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
+});
+
+test('swarm.execute({ empty })', async () => {
+  const storage = new InMemory();
+  let swarm = new SwarmDB({
+    storage,
+    upstream: new Connection('021-gql-empty-ack.ron'),
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
+  });
+
+  await swarm.ensure();
+
+  const q = gql`
+    subscription {
+      result @node(id: "ack") {
+        id
+        type
+        version
+      }
+    }
+  `;
+
+  const cumul = [];
+  let calls = 0;
+
+  // $FlowFixMe
+  await new Promise(r => {
+    swarm.execute({ gql: q }, (v: Response<any>) => {
+      calls++;
+      cumul.push(v.data);
+      if (calls === 2) r();
+    });
+  });
+
+  expect(calls).toBe(2);
+  expect(cumul).toEqual([
+    { result: null },
+    { result: { id: 'ack', type: '', version: '0' } },
+  ]);
 });

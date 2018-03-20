@@ -71,8 +71,8 @@ export default class SwarmDB extends API {
 }
 
 interface IClient {
-  on(id: string, cbk: (string, string) => void): Promise<boolean>;
-  off(id: string, cbk: (string, string) => void): string | void;
+  on(id: string, cbk: (string, string | null) => void): Promise<boolean>;
+  off(id: string, cbk: (string, string | null) => void): string | void;
 }
 
 interface IApi {
@@ -168,14 +168,20 @@ class GQLSub {
     return this.active || false;
   }
 
-  _invoke(l: string, s: string): void {
+  _invoke(l: string, s: string | null): void {
     // prevent unauthorized calls
     if (this.active === false) {
       this.client.off('', this._invoke);
       return;
     }
     clearTimeout(this.invokeTimer);
-    const v = ron2js(s);
+
+    // passable values:
+    // - null
+    // - {version: '0', id: <id>, type: ''} // server told that there is no data
+    // - full state
+    let v = null;
+    if (s !== null) v = ron2js(s || l);
 
     let id;
     const head = Op.fromString(l);

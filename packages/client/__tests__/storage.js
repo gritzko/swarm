@@ -1,4 +1,4 @@
-import {InMemory} from '../src/storage';
+import { InMemory } from '../src/storage';
 
 test('InMemory', async () => {
   const store = new InMemory();
@@ -10,5 +10,5 @@ test('InMemory', async () => {
   expect(keys).toEqual(['foo']);
   await store.remove('foo');
   const foo2 = await store.get('foo');
-  expect(foo2).toBe(undefined);
+  expect(foo2).toBe(null);
 });
