@@ -25,8 +25,6 @@ export type Request = {
   args?: { [string]: Atom | { [string]: Atom } },
 };
 
-const directives = ['ensure', 'reverse', 'slice'];
-
 export default class SwarmDB extends API {
   constructor(options: Options): SwarmDB {
     super(options);
@@ -90,12 +88,13 @@ class GQLSub {
   finalizer: ((h: string) => void) | void;
   prev: string;
   cbk: (<T>(Response<T>) => void) | void;
-  keys: { [string]: true };
+  keys: { [string]: boolean };
   active: boolean | void;
   request: Request;
   id: string; // hash from payload object
 
   operation: 'query' | 'mutation' | 'subscription';
+  invokeTimer: TimeoutID;
 
   constructor(
     api: IApi,
@@ -175,6 +174,7 @@ class GQLSub {
       this.client.off('', this._invoke);
       return;
     }
+    clearTimeout(this.invokeTimer);
     const v = ron2js(s);
 
     let id;
@@ -185,6 +185,10 @@ class GQLSub {
 
     // $FlowFixMe ?
     this.cache[id] = v;
+    this.invokeTimer = setTimeout(() => this.callback(), 0);
+  }
+
+  callback(): void {
     const { ready, ids, frame, tree } = this.buildTree();
 
     if (this.prev !== frame.toString()) {
@@ -219,10 +223,10 @@ class GQLSub {
   buildTree(): {
     frame: Frame,
     tree: Value,
-    ids: { [string]: true },
+    ids: { [string]: boolean },
     ready: boolean,
   } {
-    const ctx: { ids: { [string]: true }, ready: boolean } = {
+    const ctx: { ids: { [string]: boolean }, ready: boolean } = {
       ids: {},
       ready: true,
     };

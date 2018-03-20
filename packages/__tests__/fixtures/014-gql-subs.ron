@@ -23,8 +23,8 @@
 *~ '>' #1ABC2+user@1ABCW+user?!#nope@0?!.
 *~ '>' #1ABCB+user@1ABCT+user?!#(9+@(P+?!#(8+@(N+?!#(7+@(L+?!#(6+@(J+?!.
 *~ '>' *set#1ABC2+user@1ABCZ+user!>1ABCY+user.
-*~ '>' @~?#1ABC6+user,.
 *~ '>' *lww#1ABCY+user@1ABC_+user!:value=11.
+*~ '>' @~?#1ABC6+user,.
 *~ '>' #1ABCC+user@1ABCV+user?!.
 *~ '>' *lww#nope@1ABCa+user!:test=1.
 *~ '>' @~?#1ABC1+user,#(2+,#(C+,#(B+,#(9+,#(8+,#(7+,#nope,.

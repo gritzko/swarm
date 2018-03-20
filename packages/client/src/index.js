@@ -363,6 +363,7 @@ export default class Client {
   async on(
     query: string,
     callback: ?(frame: string, state: string) => void,
+    options: { updatesOnly?: true } = {},
   ): Promise<boolean> {
     await this.ensure();
     const fwd = new Frame();
@@ -405,8 +406,9 @@ export default class Client {
     if (this.upstream && this.clock && upstrm.toString()) {
       this.upstream.send(upstrm.toString());
     }
-    if (callback && fwd.toString()) {
-      await this.notify(fwd.toString());
+
+    if (callback && fwd.toString() && !options.updatesOnly) {
+      await this.notify(fwd.toString(), callback);
     }
     return !!fwd.toString();
   }
@@ -488,15 +490,24 @@ export default class Client {
     await this.merge(frame, { local: true });
   }
 
-  // Notify sends states to all the listeners in the given frame
-  async notify(frame: string): Promise<void> {
+  // Notify sends existing states to the callback
+  async notify(
+    frame: string,
+    callback: ?(frame: string, state: string) => void,
+  ): Promise<void> {
     const keys: { [string]: true } = {};
     for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
     const ks = Object.keys(keys);
     const store = await this.storage.multiGet(ks);
-    for (const key of ks) {
-      const state = store[key];
-      for (const l of this.lstn[key] || []) l('#' + key, state || '');
+    if (callback) {
+      for (const key of ks) callback('#' + key, store[key] || '');
+    } else {
+      for (const key of ks) {
+        const state = store[key];
+        for (const l of this.lstn[key] || []) {
+          l('#' + key, state || '');
+        }
+      }
     }
   }
 

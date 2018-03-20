@@ -19,11 +19,11 @@ test('api.set(...)', async () => {
   });
 
   await api.ensure();
-  let obj = {};
-  function cbk(v) {
-    obj = v;
+  let obj = [];
+  function cbk(id, state) {
+    obj.push({ id, state });
   }
-  await api.on('object', cbk);
+  await api.client.on('#object', cbk);
 
   let set = await api.set('object', { username: 'olebedev' });
   expect(storage.storage['object']).toBe(
@@ -42,53 +42,60 @@ test('api.set(...)', async () => {
   expect(api.client.lstn['object']).toHaveLength(1);
 
   const profileUUID = api.uuid();
+  await api.client.on('#' + profileUUID.toString(), cbk);
   set = await api.set('object', { profile: profileUUID });
 
   expect(storage.storage['object']).toBe(
     "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
   );
 
-  expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'",
+    },
+    {
+      id: '#object',
+      state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '' },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+    },
+  ]);
 
-  expect(obj).toEqual({
-    username: 'olebedev',
-    profile: profileUUID,
-  });
-
-  expect(obj.id).toBe('object');
-  expect(obj.type).toBe('lww');
-
-  expect(api.cache['object']).toEqual({
-    profile: UUID.fromString('1ABC4+user'),
-    username: 'olebedev',
-  });
-
-  await new Promise(r => setTimeout(r, 300));
-  expect(api.cache['1ABC4+user']).toBe(null);
-
-  await new Promise(r => setTimeout(r, 300));
+  // await new Promise(r => setTimeout(r, 300));
 
   set = await api.set(profileUUID.toString(), { active: true });
   expect(storage.storage[profileUUID.toString()]).toBe(
     '*lww#1ABC4+user@1ABC6+user!:active>true',
   );
-  expect(api.cache['object']).toEqual({
-    profile: UUID.fromString('1ABC4+user'),
-    username: 'olebedev',
-  });
 
-  expect(api.cache['1ABC4+user']).toEqual({
-    active: true,
-  });
-  // $FlowFixMe
-  expect(api.cache['1ABC4+user'].id).toBe('1ABC4+user');
-
-  expect(obj).toEqual({
-    username: 'olebedev',
-    profile: {
-      active: true,
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'",
     },
-  });
+    {
+      id: '#object',
+      state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '' },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '*lww#1ABC4+user@1ABC6+user!:active>true' },
+  ]);
 
   expect(api.client.lstn['object']).toEqual(api.client.lstn['1ABC4+user']);
 
@@ -97,12 +104,27 @@ test('api.set(...)', async () => {
     '*lww#1ABC4+user@1ABC7+user!:active>false',
   );
 
-  expect(obj).toEqual({
-    username: 'olebedev',
-    profile: {
-      active: false,
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'",
     },
-  });
+    {
+      id: '#object',
+      state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '' },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '*lww#1ABC4+user@1ABC6+user!:active>true' },
+    { id: '#1ABC4+user', state: '*lww#1ABC4+user@1ABC7+user!:active>false' },
+  ]);
 
   // due to async nature of connection mock
   await new Promise(r => setTimeout(r, 1000));
@@ -133,9 +155,32 @@ test('api.set(...)', async () => {
   );
   expect(api.uuid().toString()).toBe('1ABD1+user');
 
-  expect(obj).toEqual({
-    username: 'olebedev',
-  });
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: "*lww#object@1ABC1+user!:username'olebedev'" },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC2+user!:email'ole6edev@gmail.com'@(1+:username'olebedev'",
+    },
+    {
+      id: '#object',
+      state: "*lww#object@1ABC3+user!:email,@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '' },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABC5+user!@(3+:email,@(5+:profile>1ABC4+user@(1+:username'olebedev'",
+    },
+    { id: '#1ABC4+user', state: '*lww#1ABC4+user@1ABC6+user!:active>true' },
+    { id: '#1ABC4+user', state: '*lww#1ABC4+user@1ABC7+user!:active>false' },
+    {
+      id: '#object',
+      state:
+        "*lww#object@1ABD+olebedev!@1ABC3+user:email,@1ABD+olebedev:profile,@1ABC1+user:username'olebedev'",
+    },
+  ]);
 
   set = await api.set('object', { local: UUID.fromString('test').local() });
   expect(storage.storage.object).toBe(

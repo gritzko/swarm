@@ -5,7 +5,7 @@ import { Connection } from '../../__tests__/fixtures';
 import API from '../src';
 import { InMemory } from '../../client/src/storage';
 
-test('set.add(....)', async () => {
+test('set.add(...)', async () => {
   const storage = new InMemory();
   const api = new API({
     storage,
@@ -20,58 +20,77 @@ test('set.add(....)', async () => {
 
   await api.ensure();
 
-  let obj = {};
-  function cbk(v) {
-    obj = v;
+  let obj = [];
+  function cbk(id: string, state: string) {
+    obj.push({ id, state });
   }
 
-  await api.on('object', cbk);
+  await api.client.on('#object', cbk);
   await new Promise(r => setTimeout(r, 300));
   let ok = await api.add('object', 5);
   expect(ok).toBeTruthy();
 
-  expect(obj).toEqual({
-    '0': 5,
-  });
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+  ]);
 
   await api.add('object', 5);
-  expect(obj).toEqual({
-    '0': 5,
-  });
-  expect(obj.valueOf()).toEqual([5]);
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+    { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
+  ]);
 
   ok = await api.add('object', 42);
   expect(ok).toBeTruthy();
-  expect(obj).toEqual({
-    '0': 42,
-    '1': 5,
-  });
-
-  expect(obj.id).toBe('object');
-  expect(obj.valueOf()).toEqual([42, 5]);
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+    { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
+    { id: '#object', state: '*set#object@1ABC3+user!=42@(2+=5@(1+=5' },
+  ]);
 
   await new Promise(r => setTimeout(r, 500));
   expect(storage.storage.__pending__).toBe('[]');
   expect(api.uuid().toString()).toBe('1ABC7+user');
 
   const sub = api.uuid();
+  await api.client.on('#' + sub.toString(), cbk);
   await api.add('object', sub);
-  expect(obj).toEqual({
-    '0': sub,
-    '1': 42,
-    '2': 5,
-  });
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+    { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
+    { id: '#object', state: '*set#object@1ABC3+user!=42@(2+=5@(1+=5' },
+    { id: '#1ABC8+user', state: '' },
+    {
+      id: '#object',
+      state: '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
+    },
+  ]);
 
   await new Promise(r => setTimeout(r, 300));
 
   await api.add(sub, 37);
-  expect(obj).toEqual({
-    '0': {
-      '0': 37,
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+    { id: '#object', state: '*set#object@1ABC2+user!=5@(1+=5' },
+    { id: '#object', state: '*set#object@1ABC3+user!=42@(2+=5@(1+=5' },
+    { id: '#1ABC8+user', state: '' },
+    {
+      id: '#object',
+      state: '*set#object@1ABC9+user!>1ABC8+user@(3+=42@(2+=5@(1+=5',
     },
-    '1': 42,
-    '2': 5,
-  });
+    { id: '#1ABC8+user', state: '' },
+    { id: '#1ABC8+user', state: '*set#1ABC8+user@1ABCA+user!=37' },
+  ]);
 
   await new Promise(r => setTimeout(r, 300));
 
@@ -104,28 +123,39 @@ test('set.remove(...)', async () => {
 
   await api.ensure();
 
-  let obj = {};
-  function cbk(v) {
-    obj = v;
+  let obj = [];
+  function cbk(id: string, state: string) {
+    obj.push({ id, state });
   }
-  await api.on('object', cbk);
+  await api.client.on('#object', cbk);
 
   await new Promise(r => setTimeout(r, 500));
 
   await api.add('object', 5);
-  expect(obj).toEqual({
-    '0': 5,
-  });
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+  ]);
 
   let rm = await api.remove('object', 4);
   expect(rm).toBeFalsy();
-  expect(obj).toEqual({ '0': 5 });
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+  ]);
 
   expect(storage.storage.object).toBe('*set#object@1ABC1+user!=5');
 
   rm = await api.remove('object', 5);
   expect(rm).toBeTruthy();
-  expect(obj).toEqual({});
+  expect(obj).toEqual([
+    { id: '#object', state: '' },
+    { id: '#object', state: '' },
+    { id: '#object', state: '*set#object@1ABC1+user!=5' },
+    { id: '#object', state: '*set#object@1ABC3+user!:1ABC1+user,' },
+  ]);
 
   await new Promise(r => setTimeout(r, 300));
 
@@ -136,13 +166,18 @@ test('set.remove(...)', async () => {
   api.client.off('#thisone');
 
   rm = await api.remove('thisone', 42);
-
-  // $FlowFixMe
   expect(rm).toBeTruthy();
-  expect(obj).toEqual({});
 
-  const thisone = await new Promise(async r => await api.on('thisone', r));
-  expect(thisone).toEqual({});
+  const thisone = await new Promise(
+    async r =>
+      await api.client.on('#thisone', (id: string, state: string) =>
+        r({ id, state }),
+      ),
+  );
+  expect(thisone).toEqual({
+    id: '#thisone',
+    state: '*set#thisone@1ABC6+user!:1ABC5+user,',
+  });
 
   await new Promise(r => setTimeout(r, 300));
   // $FlowFixMe

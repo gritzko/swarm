@@ -109,18 +109,20 @@ test('swarm.execute({ subscription })', async () => {
   `;
 
   let res = {};
+  let calls = 0;
   // $FlowFixMe
   const r = await swarm.execute(
     { gql: q, args: { id: objID, nope: UUID.fromString('nope') } },
     (v: Response<any>) => {
       res = v;
+      calls++;
     },
   );
 
   expect(r.ok).toBeTruthy();
 
   // waiting for all subscriptions  will be initialized
-  await new Promise(r => setTimeout(r, 0));
+  await new Promise(r => setTimeout(r, 100));
 
   // console.log(swarm.client.lstn['nope']);
   // expect(swarm.client.lstn['nope']).toHaveLength(1);
@@ -151,9 +153,15 @@ test('swarm.execute({ subscription })', async () => {
     },
   });
 
+  expect(calls).toBe(1);
+
   let item = swarm.uuid();
   await swarm.add(listID, item);
   await swarm.set(item, { value: c++ });
+
+  await new Promise(r => setTimeout(r, 200));
+
+  expect(calls).toBe(2);
 
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
@@ -183,6 +191,10 @@ test('swarm.execute({ subscription })', async () => {
 
   let ok2 = await swarm.set('nope', { test: 1 });
   expect(ok2).toBeTruthy();
+
+  await new Promise(r => setTimeout(r, 100));
+
+  expect(calls).toBe(3);
 
   // $FlowFixMe
   expect(swarm.client.storage.storage['nope']).toBe(
