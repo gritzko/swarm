@@ -196,7 +196,6 @@ class GQLSub {
 
   callback(): void {
     const { ready, ids, frame, tree } = this.buildTree();
-
     if (this.prev !== frame.toString()) {
       this.keys = ids;
       this.client.on(frame.toString(), this._invoke);

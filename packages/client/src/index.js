@@ -317,7 +317,7 @@ export default class Client {
       // check if it's an error from the server
       if (c === 0 && op.uuid(0).toString() === 'db') {
         this.close();
-        throw new Error(op.uuid(3).toString());
+        throw new Error(op.toString());
       }
       // skip milformed NEVERs explisitly
       // waiting for the fix at server side
@@ -527,6 +527,7 @@ export default class Client {
 
       if (fr.isPayload()) {
         if (typeof state === 'string') {
+          const prev = state;
           state = reduce(Batch.fromStringArray(key, state, frame)).toString();
         } else {
           // if state is null and state was received

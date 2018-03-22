@@ -1,6 +1,6 @@
 // @flow
 
-import Op, {UUID, Frame, Batch, Cursor, ZERO} from 'swarm-ron';
+import Op, { UUID, Frame, Batch, Cursor, ZERO } from 'swarm-ron';
 
 export default class IHeap {
   iters: Array<Cursor>;
@@ -65,8 +65,8 @@ export default class IHeap {
     const batch = input instanceof Batch ? input : new Batch(input);
     for (const item of batch) {
       const cursor = new Cursor(item.body);
-      if (cursor.op && cursor.op.isHeader()) cursor.next();
-      if (cursor.op && !cursor.op.isHeader()) {
+      while (cursor.op && !cursor.op.isRegular()) cursor.next();
+      if (cursor.op && cursor.op.isRegular()) {
         const at = this.iters.length;
         this.iters.push(cursor);
         this._raise(at);
@@ -138,12 +138,16 @@ export default class IHeap {
     eqs.push(at);
     const l = at << 1;
     if (l < this.iters.length) {
-      if (0 === this.primary(this.iters[1].op || ZERO, this.iters[l].op || ZERO)) {
+      if (
+        0 === this.primary(this.iters[1].op || ZERO, this.iters[l].op || ZERO)
+      ) {
         this._listEqs(l, eqs);
       }
       const r = l | 1;
       if (r < this.iters.length) {
-        if (0 === this.primary(this.iters[1].op || ZERO, this.iters[r].op || ZERO)) {
+        if (
+          0 === this.primary(this.iters[1].op || ZERO, this.iters[r].op || ZERO)
+        ) {
           this._listEqs(r, eqs);
         }
       }
@@ -151,7 +155,10 @@ export default class IHeap {
   }
 }
 
-function comparator(n: 0 | 1 | 2 | 3, desc: boolean = false): (Op, Op) => number {
+function comparator(
+  n: 0 | 1 | 2 | 3,
+  desc: boolean = false,
+): (Op, Op) => number {
   return (...args: Array<Op>): number => {
     if (desc) args.reverse();
     return args[0].uuid(n).compare(args[1].uuid(n));
