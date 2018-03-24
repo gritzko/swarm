@@ -11,7 +11,6 @@
       "useBuiltIns": true }
     ],
     "transform-es2015-spread",
-    "transform-flow-strip-types",
-    "transform-node-env-inline"
+    "transform-flow-strip-types"
   ]
 }
