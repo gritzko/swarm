@@ -225,7 +225,7 @@ export function js2ron(values: Array<Atom>): string {
 }
 
 export const RE = new RegExp(Grammar.OP.source, 'g');
-export const VALUE_RE = new RegExp(Grammar.ATOM, 'g');
+export const VALUE_RE = new RegExp(Grammar.ATOM.source, 'g');
 export const ZERO = new Op(ZERO_UUID, ZERO_UUID, ZERO_UUID, ZERO_UUID, '>0');
 
 export const END = new Op(ERROR, ERROR, ERROR, ERROR, '>~');
