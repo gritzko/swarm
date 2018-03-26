@@ -180,7 +180,7 @@ export default class API {
     return deleted;
   }
 
-  close(): void {
+  close(): Promise<void> {
     return this.client.close();
   }
 
@@ -199,18 +199,4 @@ export default class API {
     // type is not defined
     return null;
   }
-}
-
-interface IClient {
-  on(id: string, cbk: (f: string, s: string) => void): Promise<boolean>;
-  off(id: string, cbk: (f: string, s: string) => void): string | void;
-}
-
-export function getOff(keys: { [string]: boolean }, ids: string): string {
-  const ret = new Frame();
-  for (const op of new Frame(ids)) {
-    const id = op.object.toString();
-    if (!keys[id]) ret.push(op);
-  }
-  return ret.toString();
 }

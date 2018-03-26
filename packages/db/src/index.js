@@ -9,7 +9,7 @@ import hash from 'object-hash';
 import { lww, set, ron2js } from 'swarm-rdt';
 import Op, { Frame } from 'swarm-ron';
 import UUID, { ZERO } from 'swarm-ron-uuid';
-import API, { getOff } from 'swarm-api';
+import API from 'swarm-api';
 import type { Options, Value } from 'swarm-api';
 import type { Atom } from 'swarm-ron';
 import { calendarBase2Date } from 'swarm-clock';
@@ -440,3 +440,12 @@ const applyScalarDirectives = (value, directives): Atom => {
   }
   return value;
 };
+
+function getOff(keys: { [string]: boolean }, ids: string): string {
+  const ret = new Frame();
+  for (const op of new Frame(ids)) {
+    const id = op.object.toString();
+    if (!keys[id]) ret.push(op);
+  }
+  return ret.toString();
+}

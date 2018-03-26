@@ -2,8 +2,32 @@
 
 // $FlowFixMe
 import { AsyncStorage } from 'react-native';
+import Mutex from './mutex';
 
 export default class {
+  mu: Mutex;
+
+  constructor() {
+    this.mu = new Mutex();
+  }
+
+  merge(
+    key: string,
+    reduce: (prev: string | null) => string | null,
+  ): Promise<string | null> {
+    return this.mu.lock(key, async () => {
+      let prev = await AsyncStorage.getItem(key);
+      prev = typeof prev === 'undefined' ? null : prev;
+      const value = reduce(prev);
+      if (value !== null) {
+        await AsyncStorage.setItem(key, value);
+      } else if (prev !== null) {
+        await AsyncStorage.removeItem(key);
+      }
+      return value;
+    });
+  }
+
   set(key: string, value: string): Promise<void> {
     return new Promise((res, rej) => {
       AsyncStorage.setItem(key, value, err => {

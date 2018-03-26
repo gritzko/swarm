@@ -22,18 +22,12 @@ import { lww } from 'swarm-rdt';
 import { reduce } from 'swarm-rdt';
 import type { Storage } from './storage';
 import { InMemory } from './storage';
+import type { Connection } from './connection';
+import Pending from './pending';
 
 export { default as WebSocket } from './rws';
 export { InMemory, LocalStorage } from './storage';
-
-export interface Connection {
-  onmessage: (ev: MessageEvent) => any;
-  onopen: (ev: Event) => any;
-  send(data: string): void;
-  readyState: number;
-  close(): void;
-  open(): void;
-}
+export type { Connection } from './connection';
 
 export type Meta = {
   id?: string,
@@ -79,6 +73,7 @@ export default class Client {
     hsTimeout: number,
     fetchTimeout: number,
   };
+  pending: Pending;
 
   constructor(options: Options): Client {
     this.db = {
@@ -133,9 +128,11 @@ export default class Client {
         throw new Error('neither connection options nor clock options found');
       }
 
+      this.pending = await Pending.read(this.storage);
+
       // check if we start over existing replica
       if (meta && this.clock) {
-        this.upstream.onopen = () => this.handshake().catch(panic);
+        this.upstream.onopen = () => this.handshake().catch(this.panic);
         this.release(null);
       } else {
         this.upstream.onopen = () =>
@@ -262,16 +259,13 @@ export default class Client {
     this.db = { ...this.db, ...dbOpts };
     await this.storage.set('__meta__', JSON.stringify(this.db));
     this.upstream.onmessage = (me: MessageEvent) =>
-      this.onMessage(((me.data: any): string)).catch(panic);
-    this.upstream.onopen = () => this.handshake().catch(panic);
+      this.onMessage(((me.data: any): string)).catch(this.panic);
+    this.upstream.onopen = () => this.handshake().catch(this.panic);
 
-    // resend all the frames
-    const pending = await this.storage.get('__pending__');
-    for (const frame: string of JSON.parse(pending || '[]')) {
-      this.upstream.send(frame);
-    }
+    // Resend all the frames
+    for (const p of this.pending) this.upstream.send(p);
 
-    // resubscribe
+    // Re-subscribe
     let query: Array<string> = Object.keys(this.lstn);
     if (query.length) {
       await this.on('#' + query.join('#'));
@@ -303,8 +297,9 @@ export default class Client {
     delete this.queue;
   }
 
-  close(): void {
+  async close(): Promise<void> {
     if (this.upstream) this.upstream.close();
+    await this.pending.flush();
   }
 
   async onMessage(message: string): Promise<void> {
@@ -325,24 +320,8 @@ export default class Client {
         clock.see(op.event);
       }
 
-      // operate over pending messages
       if (op.event.origin === clock.origin()) {
-        const pending = await this.storage.get('__pending__');
-        let updates: Array<string> = JSON.parse(pending || '[]');
-
-        let i = -1;
-        for (const _old of updates) {
-          i++;
-          const old = Op.fromString(_old);
-          if (!old) throw new Error(`malformed op: '${_old}'`);
-
-          if (old.event.gt(op.event)) {
-            updates = updates.slice(i + 1);
-            break;
-          }
-        }
-        if (i === updates.length - 1) updates = [];
-        await this.storage.set('__pending__', JSON.stringify(updates));
+        await this.pending.see(op.event);
       }
 
       break;
@@ -373,7 +352,7 @@ export default class Client {
         throw new Error(`ID is not specified: "${op.toString()}"`);
       const key = op.uuid(1).toString();
       let base = ZERO;
-      const stored = await this.storage.get(key);
+      const stored = await this.storage.get(key); // TODO multi get instead
       if (stored) {
         for (const op of new Frame(stored)) {
           base = op.event;
@@ -475,12 +454,8 @@ export default class Client {
       return exists ? exists : (stamps[uuid.toString()] = this.clock.time());
     });
 
-    // save
-    const pending = await this.storage.get('__pending__');
-    await this.storage.set(
-      '__pending__',
-      JSON.stringify(JSON.parse(pending || '[]').concat(frame)),
-    );
+    await this.pending.push(frame);
+
     const filtered = new Frame(frame)
       .filter(op => !op.uuid(1).isLocal())
       .toString();
@@ -520,42 +495,44 @@ export default class Client {
     options: { local: boolean } = { local: true },
   ): Promise<void> {
     const fr = new Frame(frame);
+
+    // Read only first operation of the frame
+    // but with guarantee.
     for (const op of fr) {
       const key = op.uuid(1).toString();
-      let state = await this.storage.get(key);
-      const prev = state;
+      let notify: boolean = false;
 
-      if (fr.isPayload()) {
-        if (typeof state === 'string') {
-          const prev = state;
-          state = reduce(Batch.fromStringArray(key, state, frame)).toString();
-        } else {
-          // if state is null and state was received
-          // set it w/o reduce
-          state = frame;
+      const updated = await this.storage.merge(key, (prev: string | null) => {
+        if (fr.isPayload()) {
+          if (typeof prev === 'string') {
+            const update = reduce(
+              Batch.fromStringArray(key, prev, frame),
+            ).toString();
+            notify = prev !== update;
+            return update;
+          }
+          notify = true;
+          return frame;
         }
-      } else {
-        if (state) {
-          // It's ack, do nothing.
-          // Pendings were reduced in onMessage method
-          return;
-        } else {
-          // Empty state from server, object does not exists.
-          // Notify with empty state, set empty string as state.
-          state = '';
-        }
-      }
+        // It's ack, do nothing. TODO save last timestamp
+        if (prev !== null) return prev;
+        // Empty state from a server, hence, an object does not exist in the system.
+        // Notify with an empty state, set an empty string as a state.
+        notify = true;
+        return '';
+      });
 
-      // ensure that it's an update with changes
-      if (prev !== state) {
-        await this.storage.set(key, state);
+      if (notify) {
         for (const l of this.lstn[key] || []) {
-          l('#' + key, state);
+          l('#' + key, updated);
         }
       }
-      // read only first operation of the frame
       break;
     }
+  }
+
+  panic(err: any): void {
+    throw err;
   }
 }
 
@@ -574,8 +551,4 @@ class DevNull implements Connection {
   send(data: string): void {}
   close(): void {}
   open(): void {}
-}
-
-function panic(err: any) {
-  throw err;
 }
