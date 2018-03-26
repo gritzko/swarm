@@ -47,6 +47,7 @@ export type Options = {
   upstream?: string | Connection,
   hsTimeout?: number,
   fetchTimeout?: number,
+  resendAfter?: number,
   db?: Meta,
 };
 
@@ -72,6 +73,7 @@ export default class Client {
   options: {
     hsTimeout: number,
     fetchTimeout: number,
+    resendAfter: number,
   };
   pending: Pending;
 
@@ -86,6 +88,7 @@ export default class Client {
     this.options = {
       hsTimeout: options.hsTimeout || 3e5 /* 5min */,
       fetchTimeout: options.fetchTimeout || 3e4 /* 30sec */,
+      resendAfter: options.resendAfter || 0,
     };
     this.init(options);
     return this;
@@ -262,8 +265,14 @@ export default class Client {
       this.onMessage(((me.data: any): string)).catch(this.panic);
     this.upstream.onopen = () => this.handshake().catch(this.panic);
 
-    // Resend all the frames
-    for (const p of this.pending) this.upstream.send(p);
+    const { resendAfter } = this.options;
+    if (resendAfter) {
+      this.pending.onIdle(this.onIdle);
+      this.pending.setIdlePeriod(resendAfter);
+    } else {
+      // Resend all the frames
+      for (const p of this.pending) this.upstream.send(p);
+    }
 
     // Re-subscribe
     let query: Array<string> = Object.keys(this.lstn);
@@ -534,6 +543,11 @@ export default class Client {
   panic(err: any): void {
     throw err;
   }
+
+  onIdle = () => {
+    // Resend all the frames
+    for (const p of this.pending) this.upstream.send(p);
+  };
 }
 
 // DevNull connection is used for permanent offline-mode

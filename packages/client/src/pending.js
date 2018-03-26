@@ -8,12 +8,32 @@ import Op, { UUID } from 'swarm-ron';
 class PendingOps {
   storage: Storage;
   ops: Array<string>;
+  _onIdle: void | (() => void);
+  period: number;
+  timer: TimeoutID;
 
   constructor(storage: Storage, ops: string[]): PendingOps {
     this.storage = storage;
     this.ops = ops;
     return this;
   }
+
+  setIdlePeriod(period: number): void {
+    this.period = period;
+    this.check();
+  }
+
+  onIdle(f?: () => void): void {
+    this._onIdle = f;
+  }
+
+  check = (): void => {
+    clearTimeout(this.timer);
+    if (this.ops.length && this._onIdle) this._onIdle();
+    if (this.period > 0) {
+      this.timer = setTimeout(this.check, this.period);
+    }
+  };
 
   /*:: @@iterator(): Iterator<string> { return ({}: any); } */
 
@@ -23,7 +43,7 @@ class PendingOps {
   }
 
   push(frame: string): Promise<void> {
-    this.ops = this.ops.concat(frame);
+    this.ops.push(frame);
     return this.flush();
   }
 
@@ -46,6 +66,10 @@ class PendingOps {
 
   flush(): Promise<void> {
     return this.storage.set(PendingOps.KEY, JSON.stringify(this.ops));
+  }
+
+  get length(): number {
+    return this.ops.length;
   }
 
   static async read(storage: Storage): Promise<PendingOps> {
