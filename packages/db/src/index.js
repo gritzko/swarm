@@ -297,15 +297,14 @@ class GQLSub {
 
     // $FlowFixMe
     let obj: Value = this.cache[id];
-    let ensure = false;
+    let ensure = true;
 
     for (const key of Object.keys(info.directives || {})) {
       // $FlowFixMe
       const dir = info.directives[key];
       switch (key) {
-        case 'ensure':
-          context.ready = context.ready && !!obj;
-          ensure = true;
+        case 'weak':
+          ensure = false;
           break;
         case 'slice':
           if (!obj) continue;
@@ -322,6 +321,8 @@ class GQLSub {
           break;
       }
     }
+
+    if (ensure) context.ready = context.ready && !!obj;
 
     if (!Array.isArray(obj)) return obj;
 
@@ -419,10 +420,6 @@ function node(
     }
   }
   return value;
-}
-
-function ensure(): boolean {
-  return false;
 }
 
 const parseDate = (s: string | UUID): Date => {

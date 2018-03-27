@@ -99,7 +99,7 @@ test('swarm.execute({ subscription })', async () => {
           c
           e
           flat @node(id: $id)
-          notExists @node(id: $nope) {
+          notExists @node(id: $nope) @weak {
             id
             test
           }
@@ -336,7 +336,7 @@ test('swarm.execute({ query })', async () => {
           c
           e
           flat @node(id: $id)
-          notExists @node(id: $nope) {
+          notExists @node(id: $nope) @weak {
             id
             test
           }
@@ -434,7 +434,7 @@ test('swarm.execute({ empty })', async () => {
 
   const q = gql`
     subscription {
-      result @node(id: "ack") {
+      result @node(id: "ack") @weak {
         id
         type
         version
