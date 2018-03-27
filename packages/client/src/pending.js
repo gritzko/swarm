@@ -1,5 +1,7 @@
 // @flow
 
+import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
+
 import type { Storage } from './storage';
 import Op, { UUID } from 'swarm-ron';
 
