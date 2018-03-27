@@ -142,7 +142,7 @@ test('client.off(...)', async () => {
   await client.ensure();
   const cbk = (frame: string, state: string | null): void => {};
   await client.on('*lww#object', cbk);
-  expect(client.lstn['object']).toEqual([cbk]);
+  expect(client.lstn['object']).toEqual([{ f: cbk }]);
   client.off('#object');
   expect(client.lstn['object']).toBeUndefined();
 
@@ -432,4 +432,74 @@ test('clienti: empty object ack', async () => {
   // $FlowFixMe
   const dump = client.upstream.dump();
   expect(dump.session).toEqual(dump.fixtures);
+});
+
+describe('subscription options', () => {
+  const storage = new InMemory();
+  let client = new Client({
+    storage,
+    db: { id: 'user', name: 'test', auth: 'JwT.t0k.en', clockMode: 'Logical' },
+  });
+
+  test('once', async () => {
+    const cumul = [];
+    await client.on(
+      '#1ABC3',
+      (id, state) => {
+        cumul.push({ id, state });
+      },
+      { once: true },
+    );
+
+    expect(cumul).toEqual([
+      {
+        id: '#1ABC3',
+        state: null,
+      },
+    ]);
+    expect(client.lstn['1ABC3']).toHaveLength(0);
+
+    delete storage.storage['1ABC3'];
+  });
+
+  test('ensure', async () => {
+    const cumul = [];
+    await client.on(
+      '#1ABC3',
+      (id, state) => {
+        cumul.push({ id, state });
+      },
+      { ensure: true },
+    );
+    await client.push("*lww#1ABC3@time+author!:key'value'");
+
+    expect(cumul).toEqual([
+      { id: '#1ABC3', state: "*lww#1ABC3@time+author!:key'value'" },
+    ]);
+
+    expect(client.lstn['1ABC3']).toHaveLength(1);
+
+    delete storage.storage['1ABC3'];
+    delete client.lstn['1ABC3'];
+  });
+
+  test('once + ensure', async () => {
+    const cumul = [];
+    await client.on(
+      '#1ABC3',
+      (id, state) => {
+        cumul.push({ id, state });
+      },
+      { ensure: true, once: true },
+    );
+    await client.push("*lww#1ABC3@time+author!:key'value'");
+
+    expect(cumul).toEqual([
+      { id: '#1ABC3', state: "*lww#1ABC3@time+author!:key'value'" },
+    ]);
+
+    expect(client.lstn['1ABC3']).toHaveLength(0);
+
+    delete storage.storage['1ABC3'];
+  });
 });

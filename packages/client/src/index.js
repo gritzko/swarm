@@ -28,6 +28,7 @@ import Pending from './pending';
 export { default as WebSocket } from './rws';
 export { InMemory, LocalStorage } from './storage';
 export type { Connection } from './connection';
+import { DevNull } from './connection';
 
 export type Meta = {
   id?: string,
@@ -61,11 +62,17 @@ const defaultMeta: Meta = {
   offset: 0,
 };
 
+type callback = {
+  f: (frame: string, state: string | null) => void,
+  once?: true,
+  ensure?: true,
+};
+
 // A bare-bone swarm client. Consumes updates from the server,
 // feeds resulting RON states back to the listeners.
 export default class Client {
   clock: ?Clock;
-  lstn: { [key: string]: Array<(frame: string, state: string | null) => void> }; // ?
+  lstn: { [key: string]: Array<callback> };
   upstream: Connection;
   storage: Storage;
   queue: Array<[() => void, (err: Error) => void]> | void;
@@ -351,11 +358,12 @@ export default class Client {
   async on(
     query: string,
     callback: ?(frame: string, state: string | null) => void,
-    options: { updatesOnly?: true } = {},
+    options: { once?: true, ensure?: true } = {},
   ): Promise<boolean> {
     await this.ensure();
     const fwd = new Frame();
     const upstrm = new Frame();
+    const wrapped = { f: callback, ...options };
     for (let op of new Frame(query)) {
       if (op.uuid(1).eq(ZERO))
         throw new Error(`ID is not specified: "${op.toString()}"`);
@@ -370,12 +378,13 @@ export default class Client {
       }
       let found = false;
       let exists = !!callback && !!this.lstn[key] && this.lstn[key].length;
-      if (callback) {
+      if (wrapped.f) {
         for (const l of this.lstn[key] || []) {
-          found = found || l === callback;
+          found = found || l.f === wrapped.f;
         }
         if (!found) {
-          this.lstn[key] = (this.lstn[key] || []).concat(callback);
+          // $FlowFixMe
+          this.lstn[key] = (this.lstn[key] || []).concat([wrapped]);
         }
       }
 
@@ -395,8 +404,8 @@ export default class Client {
       this.upstream.send(upstrm.toString());
     }
 
-    if (callback && fwd.toString() && !options.updatesOnly) {
-      await this.notify(fwd.toString(), callback);
+    if (callback && fwd.toString()) {
+      await this.notify(fwd.toString(), wrapped);
     }
     return !!fwd.toString();
   }
@@ -423,7 +432,7 @@ export default class Client {
         let i = -1;
         for (const cbk of this.lstn[key]) {
           i++;
-          if (cbk === callback) {
+          if (cbk.f === callback) {
             this.lstn[key].splice(i, 1);
           }
         }
@@ -474,24 +483,37 @@ export default class Client {
     await this.merge(frame, { local: true });
   }
 
-  // Notify call back with existing states
+  // Notify calls back with an existing states
   async notify(
     frame: string,
-    callback: ?(frame: string, state: string | null) => void,
+    callback: {
+      f: ?(frame: string, state: string | null) => void,
+      once?: true,
+      ensure?: true,
+    },
   ): Promise<void> {
     const keys: { [string]: true } = {};
     for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
     const ks = Object.keys(keys);
     const store = await this.storage.multiGet(ks);
-    if (callback) {
-      for (const key of ks) callback('#' + key, store[key]);
-    } else {
+    if (callback.f) {
       for (const key of ks) {
-        const state = store[key];
-        for (const l of this.lstn[key] || []) {
-          l('#' + key, state);
+        const value = store[key];
+        if (!callback.ensure || value !== null) {
+          if (callback.once) this.off('#' + key, callback.f);
+          callback.f('#' + key, value);
         }
       }
+      // } else {
+      //   for (const key of ks) {
+      //     const value = store[key];
+      //     for (const l of (this.lstn[key] || []).slice()) {
+      //       if (!l.ensure || value !== null) {
+      //         if (l.once) this.off('#' + key, l.f);
+      //         l.f('#' + key, value);
+      //       }
+      //     }
+      //   }
     }
   }
 
@@ -523,17 +545,22 @@ export default class Client {
           notify = true;
           return frame;
         }
+
         // It's ack, do nothing. TODO save last timestamp
         if (prev !== null) return prev;
+
         // Empty state from a server, hence, an object does not exist in the system.
-        // Notify with an empty state, set an empty string as a state.
         notify = true;
         return '';
       });
 
       if (notify) {
-        for (const l of this.lstn[key] || []) {
-          l('#' + key, updated);
+        // Copy an array to be able to unsubscribe before calling back
+        for (const l of (this.lstn[key] || []).slice()) {
+          if (!l.ensure || updated !== null) {
+            if (l.once) this.off('#' + key, l.f);
+            l.f('#' + key, updated);
+          }
         }
       }
       break;
@@ -548,21 +575,4 @@ export default class Client {
     // Resend all the frames
     for (const p of this.pending) this.upstream.send(p);
   };
-}
-
-// DevNull connection is used for permanent offline-mode
-class DevNull implements Connection {
-  onmessage: (ev: MessageEvent) => any;
-  onopen: (ev: Event) => any;
-  readyState: number;
-  constructor() {
-    this.readyState = 0;
-    setTimeout(() => {
-      this.readyState = 0;
-      this.onopen && this.onopen(new Event(''));
-    }, 0);
-  }
-  send(data: string): void {}
-  close(): void {}
-  open(): void {}
 }
