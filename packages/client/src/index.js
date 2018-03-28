@@ -443,12 +443,14 @@ export default class Client {
           i++;
           if (cbk.f === callback) {
             this.lstn[key].splice(i, 1);
-          }
-        }
-        if (!this.lstn[key].length) {
-          if (!op.uuid(1).isLocal()) {
-            fwd.push(new Op(op.type, op.object, NEVER, ZERO, undefined, ','));
-            c++;
+            if (!this.lstn[key].length) {
+              if (!op.uuid(1).isLocal()) {
+                fwd.push(
+                  new Op(op.type, op.object, NEVER, ZERO, undefined, ','),
+                );
+                c++;
+              }
+            }
           }
         }
       } else {
@@ -501,28 +503,18 @@ export default class Client {
       ensure?: true,
     },
   ): Promise<void> {
+    if (!callback.f) return;
     const keys: { [string]: true } = {};
     for (const op of new Frame(frame)) keys[op.uuid(1).toString()] = true;
     const ks = Object.keys(keys);
     const store = await this.storage.multiGet(ks);
-    if (callback.f) {
-      for (const key of ks) {
-        const value = store[key];
-        if (!callback.ensure || value !== null) {
-          if (callback.once) this.off('#' + key, callback.f);
-          callback.f('#' + key, value);
-        }
+    for (const key of ks) {
+      const value = store[key];
+      if (!callback.ensure || value !== null) {
+        if (callback.once) this.off('#' + key, callback.f);
+        // $FlowFixMe
+        callback.f('#' + key, value);
       }
-      // } else {
-      //   for (const key of ks) {
-      //     const value = store[key];
-      //     for (const l of (this.lstn[key] || []).slice()) {
-      //       if (!l.ensure || value !== null) {
-      //         if (l.once) this.off('#' + key, l.f);
-      //         l.f('#' + key, value);
-      //       }
-      //     }
-      //   }
     }
   }
 

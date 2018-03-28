@@ -2,9 +2,9 @@
 
 import gql from 'graphql-tag';
 
-// Plain GraphQL schema.
+// Swarm GraphQL schema.
 //
-// Not in use, just for info.
+// Not in use, just for reference.
 export const Schema = gql`
   # An UUID instance or string representation.
   scalar UUID
@@ -88,7 +88,13 @@ export const Schema = gql`
     _: Node
   }
 
+  # Static directive ... // TODO description
+  directive @static on FIELD
+
   type Query {
     _: Node
   }
+
+  # Live directive ... // TODO description
+  directive @live on FIELD
 `;

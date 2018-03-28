@@ -63,4 +63,19 @@ export class Dependencies {
     delete this.deps[STATIC_WEAK][id];
     this.deps[k][id] = true;
   }
+
+  static getKind(
+    type: 'query' | 'subscription' | 'mutation',
+    directives: ?{},
+  ): Kind {
+    directives = directives || {};
+    if (
+      (type === 'query' && directives.hasOwnProperty('li' + 've')) ||
+      (type === 'subscription' && !directives.hasOwnProperty('static'))
+    ) {
+      return directives.hasOwnProperty('weak') ? REACTIVE_WEAK : REACTIVE;
+    } else {
+      return directives.hasOwnProperty('weak') ? STATIC_WEAK : STATIC;
+    }
+  }
 }

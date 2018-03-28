@@ -66,7 +66,7 @@ export class GQLSub {
       switch (this.operation) {
         case 'query':
         case 'subscription':
-          ret = !!this.client.off(this.deps.toString(), this._invoke);
+          ret = !!this.client.off('', this._invoke);
           this.active = !ret;
           break;
         case 'mutation':
@@ -127,29 +127,24 @@ export class GQLSub {
   }
 
   subscribe(): void {
-    for (const kind of KINDS)
-      this.client.on(
-        this.deps.toString(kind),
-        this._invoke,
-        this.deps.options(kind),
-      );
+    for (const kind of KINDS) {
+      const on = this.deps.toString(kind);
+      if (on) {
+        const options = this.deps.options(kind);
+        this.client.on(on, this._invoke, options);
+      }
+    }
   }
 
   callback(): void {
-    const { ready, ids, frame, tree, deps } = this.buildTree();
+    if (this.active !== true) return;
+    const { ready, tree, deps } = this.buildTree();
+
     const diff = this.deps.diff(deps);
     this.deps = deps;
     const off = diff.toString();
     if (off) this.client.off(off, this._invoke);
     this.subscribe();
-
-    // console.log('callback', {
-    //   ids,
-    //   deps: deps.index,
-    //   frame: frame.toString(),
-    //   off: deps.toString(),
-    //   ready,
-    // });
 
     if (!ready) return;
 
@@ -169,14 +164,11 @@ export class GQLSub {
   }
 
   buildTree(): {
-    frame: Frame,
     tree: Value,
-    ids: { [string]: boolean },
     deps: Dependencies,
     ready: boolean,
   } {
     const ctx = {
-      ids: {},
       ready: true,
       deps: new Dependencies(),
     };
@@ -189,19 +181,7 @@ export class GQLSub {
       this.request.args,
     );
 
-    const keys = Object.keys(ctx.ids);
-    if (keys.length) {
-      return {
-        frame: new Frame('#' + keys.join('#')),
-        ids: ctx.ids,
-        tree,
-        ready: ctx.ready,
-        deps: ctx.deps,
-      };
-    }
     return {
-      frame: new Frame(),
-      ids: ctx.ids,
       tree,
       ready: ctx.ready,
       deps: ctx.deps,
@@ -212,7 +192,7 @@ export class GQLSub {
     fieldName: string,
     root: { [string]: Atom },
     args: { [string]: Atom },
-    context: { ids: { [string]: true }, ready: boolean, deps: Dependencies },
+    context: { ready: boolean, deps: Dependencies },
     info: { directives: { [string]: { [string]: Atom } } | void },
   ): mixed {
     if (root instanceof UUID) return null;
@@ -235,26 +215,23 @@ export class GQLSub {
       return applyScalarDirectives(value.toString(), info.directives);
     }
 
+    const kind = Dependencies.getKind(this.operation, info.directives);
+    const ensure = (kind | 1) !== kind;
+    const reactive = (kind | 2) !== kind;
     const id = value.toString();
-    // so, the value is UUID
-    // keep it in the context
-    context.ids[id] = true;
-    context.deps.put(REACTIVE_WEAK, id);
-
-    context.ready = context.ready && this.cache.hasOwnProperty(id);
-    // try to fetch an object from the cache
-
     // $FlowFixMe
     let obj: Value = this.cache[id];
-    let ensure = true;
+
+    if (reactive || typeof obj === 'undefined' || (!obj && ensure)) {
+      context.deps.put(kind, id);
+    }
+
+    context.ready = context.ready && this.cache.hasOwnProperty(id);
 
     for (const key of Object.keys(info.directives || {})) {
       // $FlowFixMe
       const dir = info.directives[key];
       switch (key) {
-        case 'weak':
-          ensure = false;
-          break;
         case 'slice':
           if (!obj) continue;
           if (!Array.isArray(obj)) obj = obj.valueOf();
@@ -278,11 +255,12 @@ export class GQLSub {
     for (let i = 0; i < obj.length; i++) {
       if (!(obj[i] instanceof UUID)) continue;
       // $FlowFixMe
-      context.ids[obj[i].toString()] = true;
-      // $FlowFixMe
-      context.deps.put(REACTIVE_WEAK, obj[i].toString());
-      // $FlowFixMe
       const value = this.cache[obj[i].toString()];
+
+      if (reactive || typeof value === 'undefined' || (!value && ensure)) {
+        // $FlowFixMe
+        context.deps.put(kind, obj[i].toString());
+      }
       // check if value presented
       if (typeof value === 'undefined') {
         context.ready = false;

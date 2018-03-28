@@ -76,7 +76,7 @@ test('client.on(...)', async () => {
   expect(client.lstn['testlength']).toHaveLength(3);
 });
 
-test('client.update(...)', async () => {
+test('client.merge(...)', async () => {
   const toCheck = [];
   const storage = new InMemory();
   // stealth-mode client
@@ -166,6 +166,15 @@ test('client.off(...)', async () => {
   expect(client.lstn['batman']).toHaveLength(1);
   client.off('#batman');
   expect(client.lstn['batman']).toBeUndefined();
+
+  const cumul = [];
+  // $FlowFixMe
+  client.upstream.send = v => {
+    cumul.push(v);
+  };
+
+  client.off('', cbk2);
+  expect(cumul).toEqual([]);
 });
 
 test('client.push(...)', async () => {
