@@ -16,17 +16,19 @@ import type { Atom } from 'swarm-ron';
 import type { Request, Response, IClient, IApi } from './types';
 import { getOff, node, parseDate, applyScalarDirectives } from './utils';
 
+import { Dependencies, KINDS, REACTIVE_WEAK } from './deps';
+
 export class GQLSub {
   cache: { [string]: { [string]: Atom } };
   client: IClient;
   api: IApi;
   finalizer: ((h: string) => void) | void;
-  prev: string;
   cbk: (<T>(Response<T>) => void) | void;
-  keys: { [string]: boolean };
   active: boolean | void;
   request: Request;
   id: string; // hash from payload object
+
+  deps: Dependencies;
 
   operation: 'query' | 'mutation' | 'subscription';
   invokeTimer: TimeoutID;
@@ -47,6 +49,7 @@ export class GQLSub {
     this.client = client;
     this.cache = cache;
     this.cbk = cbk;
+    this.deps = new Dependencies();
 
     // $FlowFixMe
     this._invoke = this._invoke.bind(this);
@@ -63,8 +66,7 @@ export class GQLSub {
       switch (this.operation) {
         case 'query':
         case 'subscription':
-          // TODO check
-          ret = !!this.client.off(this.prev, this._invoke);
+          ret = !!this.client.off(this.deps.toString(), this._invoke);
           this.active = !ret;
           break;
         case 'mutation':
@@ -86,13 +88,8 @@ export class GQLSub {
     switch (this.operation) {
       case 'query':
       case 'subscription':
-        const { ids, frame } = this.buildTree();
-        this.prev = frame.toString();
-        this.keys = ids;
         this.active = true;
-        if (this.prev) {
-          this.client.on(this.prev, this._invoke);
-        }
+        this.callback();
         break;
       case 'mutation':
         this.active = await this.runMutation();
@@ -129,19 +126,30 @@ export class GQLSub {
     this.invokeTimer = setTimeout(() => this.callback(), 0);
   }
 
-  callback(): void {
-    const { ready, ids, frame, tree } = this.buildTree();
-    if (this.prev !== frame.toString()) {
-      this.keys = ids;
-      this.client.on(frame.toString(), this._invoke);
+  subscribe(): void {
+    for (const kind of KINDS)
+      this.client.on(
+        this.deps.toString(kind),
+        this._invoke,
+        this.deps.options(kind),
+      );
+  }
 
-      // get the difference and unsubscribe from lost refs
-      const off = getOff(ids, this.prev);
-      if (off) {
-        this.client.off(off, this._invoke);
-      }
-      this.prev = frame.toString();
-    }
+  callback(): void {
+    const { ready, ids, frame, tree, deps } = this.buildTree();
+    const diff = this.deps.diff(deps);
+    this.deps = deps;
+    const off = diff.toString();
+    if (off) this.client.off(off, this._invoke);
+    this.subscribe();
+
+    // console.log('callback', {
+    //   ids,
+    //   deps: deps.index,
+    //   frame: frame.toString(),
+    //   off: deps.toString(),
+    //   ready,
+    // });
 
     if (!ready) return;
 
@@ -164,12 +172,15 @@ export class GQLSub {
     frame: Frame,
     tree: Value,
     ids: { [string]: boolean },
+    deps: Dependencies,
     ready: boolean,
   } {
-    const ctx: { ids: { [string]: boolean }, ready: boolean } = {
+    const ctx = {
       ids: {},
       ready: true,
+      deps: new Dependencies(),
     };
+
     const tree = graphql(
       this.resolver.bind(this),
       this.request.gql,
@@ -185,6 +196,7 @@ export class GQLSub {
         ids: ctx.ids,
         tree,
         ready: ctx.ready,
+        deps: ctx.deps,
       };
     }
     return {
@@ -192,6 +204,7 @@ export class GQLSub {
       ids: ctx.ids,
       tree,
       ready: ctx.ready,
+      deps: ctx.deps,
     };
   }
 
@@ -199,7 +212,7 @@ export class GQLSub {
     fieldName: string,
     root: { [string]: Atom },
     args: { [string]: Atom },
-    context: { ids: { [string]: true }, ready: boolean },
+    context: { ids: { [string]: true }, ready: boolean, deps: Dependencies },
     info: { directives: { [string]: { [string]: Atom } } | void },
   ): mixed {
     if (root instanceof UUID) return null;
@@ -226,6 +239,7 @@ export class GQLSub {
     // so, the value is UUID
     // keep it in the context
     context.ids[id] = true;
+    context.deps.put(REACTIVE_WEAK, id);
 
     context.ready = context.ready && this.cache.hasOwnProperty(id);
     // try to fetch an object from the cache
@@ -265,6 +279,8 @@ export class GQLSub {
       if (!(obj[i] instanceof UUID)) continue;
       // $FlowFixMe
       context.ids[obj[i].toString()] = true;
+      // $FlowFixMe
+      context.deps.put(REACTIVE_WEAK, obj[i].toString());
       // $FlowFixMe
       const value = this.cache[obj[i].toString()];
       // check if value presented

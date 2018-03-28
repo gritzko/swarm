@@ -15,7 +15,11 @@ export type Request = {
 };
 
 export interface IClient {
-  on(id: string, cbk: (string, string | null) => void): Promise<boolean>;
+  on(
+    id: string,
+    cbk: (string, string | null) => void,
+    options?: { once?: true, ensure?: true },
+  ): Promise<boolean>;
   off(id: string, cbk: (string, string | null) => void): string | void;
 }
 
