@@ -1,0 +1,26 @@
+// @flow
+import type { DocumentNode } from 'graphql';
+import type { Atom } from 'swarm-ron';
+import { UUID } from 'swarm-ron';
+
+export type Response<T> = {
+  data: T,
+  off?: () => boolean,
+  error?: Error,
+};
+
+export type Request = {
+  gql: DocumentNode,
+  args?: { [string]: Atom | { [string]: Atom } },
+};
+
+export interface IClient {
+  on(id: string, cbk: (string, string | null) => void): Promise<boolean>;
+  off(id: string, cbk: (string, string | null) => void): string | void;
+}
+
+export interface IApi {
+  set(id: string | UUID, payload: { [string]: Atom | void }): Promise<boolean>;
+  add(id: string | UUID, value: Atom): Promise<boolean>;
+  remove(id: string | UUID, value: Atom): Promise<boolean>;
+}
