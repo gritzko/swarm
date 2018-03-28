@@ -45,10 +45,12 @@ export const Schema = gql`
   # Reverse works for Set type only
   directive @reverse on FIELD
 
-  # Ensure is a directive which adds more control to
+  # Weak is a directive which adds more control to
   # data flow management. This directive tells the runtime
-  # to ensure that the node presented in the resulting response.
-  directive @ensure on FIELD
+  # to call back even if the node is NOT presented in the resulting
+  # response. If there is no state for the object in the local storage.
+  # Useful for offline work.
+  directive @weak on FIELD
 
   # Note. Priority of execution of directives from the first to the last.
 
