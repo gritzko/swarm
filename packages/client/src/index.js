@@ -364,39 +364,48 @@ export default class Client {
     const fwd = new Frame();
     const upstrm = new Frame();
     const wrapped = { f: callback, ...options };
+    let onceSent = 0;
     for (let op of new Frame(query)) {
       if (op.uuid(1).eq(ZERO))
         throw new Error(`ID is not specified: "${op.toString()}"`);
       const key = op.uuid(1).toString();
       let base = ZERO;
       const stored = await this.storage.get(key); // TODO multi get instead
-      if (stored) {
-        for (const op of new Frame(stored)) {
-          base = op.event;
-          break;
-        }
-      }
-      let found = false;
-      let exists = !!callback && !!this.lstn[key] && this.lstn[key].length;
-      if (wrapped.f) {
-        for (const l of this.lstn[key] || []) {
-          found = found || l.f === wrapped.f;
-        }
-        if (!found) {
-          // $FlowFixMe
-          this.lstn[key] = (this.lstn[key] || []).concat([wrapped]);
-        }
-      }
 
-      if (!found) {
-        if (!exists && !op.object.isLocal()) {
-          upstrm.push(
+      // try to avoid network request
+      if (callback && wrapped.once && (stored !== null || !wrapped.ensure)) {
+        callback('#' + key, stored);
+        onceSent++;
+      } else {
+        if (stored) {
+          for (const op of new Frame(stored)) {
+            base = op.event;
+            break;
+          }
+        }
+
+        let found = false;
+        let exists = !!callback && !!this.lstn[key] && this.lstn[key].length;
+        if (wrapped.f) {
+          for (const l of this.lstn[key] || []) {
+            found = found || l.f === wrapped.f;
+          }
+          if (!found) {
+            // $FlowFixMe
+            this.lstn[key] = (this.lstn[key] || []).concat([wrapped]);
+          }
+        }
+
+        if (!found) {
+          if (!exists && !op.object.isLocal()) {
+            upstrm.push(
+              new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
+            ); // FIXME check fork mode
+          }
+          fwd.push(
             new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
           ); // FIXME check fork mode
         }
-        fwd.push(
-          new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
-        ); // FIXME check fork mode
       }
     }
 
@@ -407,7 +416,7 @@ export default class Client {
     if (callback && fwd.toString()) {
       await this.notify(fwd.toString(), wrapped);
     }
-    return !!fwd.toString();
+    return !!fwd.toString() || !!onceSent;
   }
 
   // Off removes subscriptions.

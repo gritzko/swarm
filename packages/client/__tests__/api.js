@@ -457,9 +457,55 @@ describe('subscription options', () => {
         state: null,
       },
     ]);
-    expect(client.lstn['1ABC3']).toHaveLength(0);
+    expect(client.lstn['1ABC3']).not.toBeDefined();
 
     delete storage.storage['1ABC3'];
+  });
+
+  test('once local null', async () => {
+    const cumul = [];
+    // $FlowFixMe
+    client.upstream.send = v => cumul.push(v);
+    await client.on(
+      '#1ABC3',
+      (id, state) => {
+        cumul.push({ id, state });
+      },
+      { once: true },
+    );
+
+    expect(cumul).toEqual([{ id: '#1ABC3', state: null }]);
+    // $FlowFixMe
+    client.upstream.send = () => {};
+  });
+
+  test('once local non-null state', async () => {
+    const cumul = [];
+    // $FlowFixMe
+    client.upstream.send = v => cumul.push(v);
+    await client.on(
+      '#1ABC3',
+      (id, state) => {
+        cumul.push({ id, state });
+      },
+      { once: true, ensure: true },
+    );
+
+    expect(cumul).toEqual(['#1ABC3?!']);
+
+    await client.push("*lww#1ABC3@time+author!:key'value'");
+
+    expect(cumul).toEqual([
+      '#1ABC3?!',
+      "*lww#1ABC3@time+author!:key'value'",
+      '@~?#1ABC3,',
+      { id: '#1ABC3', state: "*lww#1ABC3@time+author!:key'value'" },
+    ]);
+
+    // $FlowFixMe
+    client.upstream.send = () => {};
+    delete storage.storage['1ABC3'];
+    delete client.lstn['1ABC3'];
   });
 
   test('ensure', async () => {
