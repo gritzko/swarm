@@ -315,7 +315,15 @@ export default class Client {
 
   async close(): Promise<void> {
     if (this.upstream) this.upstream.close();
+    this.pending.onIdle(() => {});
+    this.pending.setIdlePeriod(0);
     await this.pending.flush();
+  }
+
+  open(): void {
+    if (this.upstream) {
+      this.upstream.open();
+    }
   }
 
   async onMessage(message: string): Promise<void> {

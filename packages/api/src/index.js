@@ -184,6 +184,10 @@ export default class API {
     return this.client.close();
   }
 
+  open(): void {
+    return this.client.open();
+  }
+
   async typeOf(id: string | UUID): Promise<string | null> {
     const obj = this.cache[id.toString()];
     if (obj !== undefined) {
