@@ -150,15 +150,17 @@ export class GQLSub {
 
     const { cbk } = this;
     if (cbk) {
-      if (this.operation !== 'subscription') {
+      if (this.operation !== 'mutation') {
         // drop this sub from
-        this.off();
-        cbk({ data: tree });
-      } else {
+        if (Object.keys(deps.index).length === 0) {
+          this.off();
+        }
         cbk({
           data: tree,
           off: () => this.off(),
         });
+      } else {
+        cbk({ data: tree });
       }
     }
   }
