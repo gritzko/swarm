@@ -37,6 +37,7 @@ type State<T> = {
 export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
   swarm: ?DB;
   _off: void | (() => boolean);
+  _unmounted: boolean;
 
   constructor(props: Props<T>, context: { swarm: ?DB }) {
     super(props, context);
@@ -50,6 +51,7 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
     );
     invariant(props.query, `Could not find "query" in props of <GraphQL>.`);
 
+    this._unmounted = false;
     this.state = {
       data: null,
       mutations: this._bindMutations(),
@@ -59,7 +61,9 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
       this.swarm
         .ensure()
         .then(this._subscribe.bind(this))
-        .catch(error => this.setState({ error }));
+        .catch(error => {
+          !this._unmounted && this.setState({ error });
+        });
     }
   }
 
@@ -70,18 +74,20 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
       !shallowEqual(this.props.mutations, prev.mutations)
     ) {
       this._unsubscribe();
-      this.setState(
-        {
-          data: null,
-          error: undefined,
-          mutations: this._bindMutations(),
-        },
-        this._subscribe.bind(this),
-      );
+      !this._unmounted &&
+        this.setState(
+          {
+            data: null,
+            error: undefined,
+            mutations: this._bindMutations(),
+          },
+          this._subscribe.bind(this),
+        );
     }
   }
 
   componentWillUnmount() {
+    this._unmounted = true;
     this._unsubscribe();
   }
 
@@ -92,7 +98,7 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
     const sub = await swarm.execute(
       { gql: query, args },
       (r: DBResponse<any>) => {
-        this.setState({ data: r.data, error: r.error });
+        !this._unmounted && this.setState({ data: r.data, error: r.error });
       },
     );
 
