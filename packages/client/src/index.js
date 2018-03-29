@@ -436,29 +436,22 @@ export default class Client {
 
     for (const op of new Frame(query)) {
       const key = op.uuid(1).toString();
-      this.lstn[key] = this.lstn[key] || [];
+      if (!this.lstn[key]) continue;
       if (callback) {
-        let i = -1;
-        for (const cbk of this.lstn[key]) {
-          i++;
-          if (cbk.f === callback) {
-            this.lstn[key].splice(i, 1);
-            if (!this.lstn[key].length) {
-              if (!op.uuid(1).isLocal()) {
-                fwd.push(
-                  new Op(op.type, op.object, NEVER, ZERO, undefined, ','),
-                );
-                c++;
-              }
-            }
+        this.lstn[key] = this.lstn[key].filter(cbk => cbk.f !== callback);
+        if (!this.lstn[key].length) {
+          if (!op.uuid(1).isLocal()) {
+            fwd.push(new Op(op.type, op.object, NEVER, ZERO, undefined, ','));
+            c++;
           }
+          delete this.lstn[key];
         }
       } else {
-        delete this.lstn[key];
         if (!op.uuid(1).isLocal()) {
           fwd.push(new Op(op.type, op.object, NEVER, ZERO, undefined, ','));
           c++;
         }
+        delete this.lstn[key];
       }
     }
     if (!!c) {

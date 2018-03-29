@@ -160,9 +160,9 @@ test('client.off(...)', async () => {
 
   client.off('#test1#test2#test3', cbk2);
 
-  expect(client.lstn['test1']).toHaveLength(0);
-  expect(client.lstn['test2']).toHaveLength(0);
-  expect(client.lstn['test3']).toHaveLength(0);
+  expect(client.lstn['test1']).toBeUndefined();
+  expect(client.lstn['test2']).toBeUndefined();
+  expect(client.lstn['test3']).toBeUndefined();
   expect(client.lstn['batman']).toHaveLength(1);
   client.off('#batman');
   expect(client.lstn['batman']).toBeUndefined();
@@ -366,7 +366,6 @@ test('client.clock.time().local()', async () => {
     '1ABC1+~local',
     '1ABC2+~local',
     'object',
-    '1ABC3+~local',
   ]);
   for (const id of Object.keys(client.lstn)) {
     await client.push(`*lww#${id}@time+author!:key'value'`);
@@ -553,7 +552,7 @@ describe('subscription options', () => {
       { id: '#1ABC3', state: "*lww#1ABC3@time+author!:key'value'" },
     ]);
 
-    expect(client.lstn['1ABC3']).toHaveLength(0);
+    expect(client.lstn['1ABC3']).toBeUndefined();
 
     delete storage.storage['1ABC3'];
   });
