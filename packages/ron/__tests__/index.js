@@ -86,7 +86,7 @@ test('main section', () => {
   de(ron2js('=1\'x\\"y\\"z\'^3.1>ref>true>false>0'), [1, 'x"y"z', 3.1, UUID.fromString('ref'), true, false, null]);
   de(js2ron([1, 'x"y"z', 3.1, UUID.fromString('ref'), true, false, null]), '=1\'x\\"y\\"z\'^3.1>ref>true>false>0');
 
-  expect('~').toBe('~');
+  expect(ron2js(js2ron(["don't"]))).toEqual(["don't"]);
 });
 
 test('Frame: uuid reset', () => {
