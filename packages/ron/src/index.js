@@ -152,22 +152,6 @@ export default class Op {
   }
 }
 
-// Flip quotes.
-export function flipQuotes(v: string): string {
-  if (!v) return v;
-  if (typeof v !== 'string') {
-    throw new Error('unexpected type: ' + typeof v);
-  }
-
-  if (v[0] === '"') {
-    return "'" + v.slice(1, -1) + "'";
-  } else if (v[0] === "'") {
-    return '"' + v.slice(1, -1) + '"';
-  } else {
-    throw new Error('malformed input');
-  }
-}
-
 // Parse RON value atoms.
 export function ron2js(values: string): Array<Atom> {
   VALUE_RE.lastIndex = 0;
@@ -208,7 +192,9 @@ export function js2ron(values: Array<Atom>): string {
 
     switch (v.constructor) {
       case String:
-        return flipQuotes(JSON.stringify(v));
+        const json = JSON.stringify(v);
+        const escq = json.replace(/'/g, "\\u0027");
+        return "'" + escq.substr(1, escq.length-2) + "'";
       case Number:
         return Number.isInteger(v) ? INT_ATOM_SEP + v.toString() : FLOAT_ATOM_SEP + v.toString();
       case UUID:
