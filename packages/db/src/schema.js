@@ -11,7 +11,7 @@ export const Schema = gql`
 
   # RON Atom.
   # Note that null value is also possible, but cannot be
-  # defined explictly in GraphQL.
+  # defined explicitly in GraphQL.
   union Atom = String | Int | Float | Bool | UUID
 
   # Generic interface to describe a node in the swarm.
@@ -47,7 +47,7 @@ export const Schema = gql`
 
   # Weak is a directive which adds more control to
   # data flow management. This directive tells the runtime
-  # to call back even if the node is NOT presented in the resulting
+  # to call back even if the node is not presented in the resulting
   # response. If there is no state for the object in the local storage.
   # Useful for offline work.
   directive @weak on FIELD
@@ -60,8 +60,8 @@ export const Schema = gql`
     subscription: Subscription
   }
 
-  # Non-empty POJO with string keys and Atoms as values. Used for lww type.
-  # To delete field just pass undefined as a value.
+  # Non-empty POJO with string keys and Atoms as values.
+  # Just pass 'undefined' as a value to delete a field.
   type Payload {
     _: Atom
   }
@@ -72,15 +72,15 @@ export const Schema = gql`
   #
   # Note that an error will be raised in case of type mismatch.
   type Mutation {
-    # __typename: lww
+    # LWW
     set(id: UUID!, payload: Payload!): Bool
-    # __typename: set
+
+    # SET
     add(id: UUID!, value: Atom): Bool
-    # __typename: set
     remove(id: UUID!, value: Atom): Bool
   }
 
-  # Well, it's an empty object, '_' field used just
+  # An empty object. '_' field used just
   # to follow GraphQL syntax. It's possible to describe any
   # shape right from the root of subscription, using directives
   # above.
@@ -88,13 +88,17 @@ export const Schema = gql`
     _: Node
   }
 
-  # Static directive ... // TODO description
+  # Static directive tells runtime to just fetch a particular node once.
+  # it's a default behavior for 'query' statement. Hence,  useful for
+  # 'subscription' statement.
   directive @static on FIELD
 
   type Query {
     _: Node
   }
 
-  # Live directive ... // TODO description
+  # Live directive tells runtime to subscribe to a particular node.
+  # it's a default behavior for 'subscription' statement. Hence,
+  # useful for 'query' statement.
   directive @live on FIELD
 `;

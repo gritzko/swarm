@@ -5,8 +5,9 @@ import type { Atom } from 'swarm-ron';
 import { calendarBase2Date } from 'swarm-clock';
 
 export function node(
-  directives: { [string]: { [string]: Atom } } = {},
   value: Atom,
+  isLeaf: boolean,
+  directives: ?{ [string]: { [string]: Atom } } = {},
 ): Atom {
   if (directives && directives.hasOwnProperty('node')) {
     if (!directives.node && typeof value === 'string') {
@@ -16,6 +17,8 @@ export function node(
     } else if (typeof directives.node.id === 'string') {
       return UUID.fromString(directives.node.id);
     }
+  } else if (!isLeaf && typeof value === 'string') {
+    return UUID.fromString(value);
   }
   return value;
 }

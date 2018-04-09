@@ -195,7 +195,10 @@ export class GQLSub {
     root: { [string]: Atom },
     args: { [string]: Atom },
     context: { ready: boolean, deps: Dependencies },
-    info: { directives: { [string]: { [string]: Atom } } | void },
+    info: {
+      isLeaf: boolean,
+      directives: { [string]: { [string]: Atom } } | void,
+    },
   ): mixed {
     if (root instanceof UUID) return null;
 
@@ -207,7 +210,7 @@ export class GQLSub {
 
     // get UUID from @node directive if presented
     // thus, override the value if `id` argument passed
-    value = node(info.directives, value);
+    value = node(value, info.isLeaf, info.directives);
 
     // if atom value is not a UUID or is a leaf, return w/o
     // any additional business logic
