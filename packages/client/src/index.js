@@ -33,7 +33,7 @@ import { DevNull } from './connection';
 export type Meta = {
   id?: string,
   name: string,
-  clockMode?: 'Logical' | 'Epoch' | 'Calendar',
+  clockMode?: 'Logical' | 'Calendar',
   clockLen?: number,
   forkMode?: string,
   peerIdBits?: number,
@@ -112,6 +112,7 @@ export default class Client {
         META,
         SEEN,
       ]);
+      const last = seen ? UUID.fromString(seen) : ZERO;
 
       this.db = ({
         ...this.db,
@@ -121,11 +122,16 @@ export default class Client {
       if (this.db.clockMode && this.db.id) {
         switch (this.db.clockMode) {
           case 'Logical':
-            this.clock = new Logical(this.db.id);
+            this.clock = new Logical(this.db.id, {
+              length: this.db.clockLen,
+              last,
+            });
             break;
           case 'Calendar':
             this.clock = new Calendar(this.db.id, {
               offset: this.db.offset || 0,
+              length: this.db.clockLen,
+              last,
             });
             break;
           default:
@@ -133,12 +139,7 @@ export default class Client {
               `TODO: Clock mode '${this.db.clockMode}' is not supported yet`,
             );
         }
-        if (seen) {
-          const event = UUID.fromString(seen);
-          // $FlowFixMe
-          this.clock.see(event);
-          this.seen = event;
-        }
+        this.seen = last;
       }
 
       if (typeof options.upstream === 'string') {
@@ -256,11 +257,10 @@ export default class Client {
     } else if (dbOpts.id) {
       switch (dbOpts.clockMode) {
         case 'Logical':
-          this.clock = new Logical(dbOpts.id);
+          this.clock = new Logical(dbOpts.id, { length: dbOpts.clockLen });
           break;
         case 'Calendar':
-          this.clock = new Calendar(dbOpts.id, { offset: dbOpts.offset || 0 });
-          // TODO check the difference and apply offset if needed
+          this.clock = new Calendar(dbOpts.id, { length: dbOpts.clockLen });
           break;
         default:
           throw new Error(
@@ -274,6 +274,7 @@ export default class Client {
       );
     }
 
+    dbOpts.offset = this.clock.adjust(seen);
     await this.see(seen);
 
     this.db = { ...this.db, ...dbOpts };
@@ -561,12 +562,6 @@ export default class Client {
           notify = true;
           return frame;
         }
-
-        // // It's ack, save the latest.
-        // if (key === '0') {
-        //   const ack = op.uuid(2).toString();
-        //   return ack > (prev || '') ? ack : prev;
-        // }
 
         // An empty state from the server whereas a local state is full
         if (prev !== null) {

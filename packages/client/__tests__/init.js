@@ -1,9 +1,9 @@
 // @flow
 
-import {Frame, UUID} from '../../ron/src';
-import {Connection} from '../../__tests__/fixtures';
+import { Frame, UUID } from '../../ron/src';
+import { Connection } from '../../__tests__/fixtures';
 import Client from '../src';
-import {InMemory} from '../src/storage';
+import { InMemory } from '../src/storage';
 
 test('Client: new', async () => {
   const client = new Client({
@@ -55,11 +55,13 @@ test('Client: reconnect - init before connnection', async () => {
 });
 
 test('Client: w/o clock/url/connection', async () => {
-  const client = new Client({id: 'user', storage: new InMemory()});
+  const client = new Client({ id: 'user', storage: new InMemory() });
   try {
     await client.ensure();
   } catch (e) {
-    expect(e).toEqual(new Error('neither connection options nor clock options found'));
+    expect(e).toEqual(
+      new Error('neither connection options nor clock options found'),
+    );
   }
 });
 
@@ -69,6 +71,7 @@ test('Client: not supported clock', async () => {
     db: {
       id: 'user',
       name: 'test',
+      // $FlowFixMe
       clockMode: 'Epoch',
     },
   });
@@ -77,7 +80,9 @@ test('Client: not supported clock', async () => {
     await client.ensure();
     expect('~').toBe("this section mustn't be executed");
   } catch (e) {
-    expect(e).toEqual(new Error("TODO: Clock mode 'Epoch' is not supported yet"));
+    expect(e).toEqual(
+      new Error("TODO: Clock mode 'Epoch' is not supported yet"),
+    );
   }
 });
 

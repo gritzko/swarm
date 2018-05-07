@@ -1,13 +1,14 @@
 // @flow
 'use strict';
 
-import UUID, {ERROR, ZERO, BASE64, CODES} from 'swarm-ron-uuid';
+import UUID, { ERROR, ZERO, BASE64, CODES } from 'swarm-ron-uuid';
 
 export interface Clock {
   time(): UUID;
   last(): UUID;
   see(UUID): void;
   origin(): string;
+  adjust(UUID): number;
 }
 
 // Pure logical clock.
@@ -17,7 +18,10 @@ export class Logical implements Clock {
   length: number;
 
   // Create a new clock.
-  constructor(origin: string, options: ?{|length: number, last: UUID | string|}): Logical {
+  constructor(
+    origin: string,
+    options: { length?: number, last?: UUID | string } = {},
+  ): Logical {
     this._origin = origin;
     this._last = ZERO;
     this.length = 5;
@@ -52,6 +56,11 @@ export class Logical implements Clock {
   last(): UUID {
     return this._last;
   }
+
+  adjust(event: UUID): number {
+    this.see(event);
+    return 0;
+  }
 }
 
 export class Calendar implements Clock {
@@ -62,13 +71,19 @@ export class Calendar implements Clock {
   _offset: number;
   _minlen: number;
 
-  constructor(origin: string, options: {last?: UUID | string, offset?: number, minlen?: number} = {}): Calendar {
+  constructor(
+    origin: string,
+    options: { last?: UUID | string, offset?: number, length?: number } = {},
+  ): Calendar {
     this._offset = options.offset || 0;
     this._origin = origin;
-    this._last = options.last ? UUID.fromString(options.last.toString()) : ZERO;
-    this._lastPair = {high: -1, low: -1};
+    this._last = options.last
+      ? // $FlowFixMe
+        new UUID(options.last.value, origin, '+')
+      : ZERO;
+    this._lastPair = { high: -1, low: -1 };
     this._lastBase = '0';
-    this._minlen = options.minlen || 6;
+    this._minlen = options.length || 6;
     return this;
   }
 
@@ -76,8 +91,11 @@ export class Calendar implements Clock {
     let pair = date2pair(new Date(Date.now() + this._offset));
     let next = pair2base(pair);
 
-    if (pair.high <= this._lastPair.high || (pair.high === this._lastPair.high && pair.low <= this._lastPair.low)) {
-      pair = furhter(pair, this._lastPair);
+    if (
+      pair.high <= this._lastPair.high ||
+      (pair.high === this._lastPair.high && pair.low <= this._lastPair.low)
+    ) {
+      pair = further(pair, this._lastPair);
       next = pair2base(pair);
     } else if (this._minlen < 8) {
       next = relax(next, this._lastBase, this._minlen);
@@ -104,13 +122,22 @@ export class Calendar implements Clock {
   last(): UUID {
     return this._last;
   }
+
+  adjust(event: UUID): number {
+    this._offset = calendarBase2Date(event.value).getTime() - Date.now();
+    // if (this._offset) this._offset = 0;
+    this._last = event;
+    this._lastPair = base2pair(event.value);
+    this._lastBase = event.value;
+    return this._offset;
+  }
 }
 
 export function calendarBase2Date(base: string): Date {
   return pair2date(base2pair(base));
 }
 
-type Pair = {|high: number, low: number|};
+type Pair = {| high: number, low: number |};
 
 function date2pair(d: Date): Pair {
   var high = (d.getUTCFullYear() - 2010) * 12 + d.getUTCMonth();
@@ -124,11 +151,11 @@ function date2pair(d: Date): Pair {
   low <<= 12;
   low |= d.getUTCMilliseconds();
   low <<= 12;
-  return {high, low};
+  return { high, low };
 }
 
 function pair2date(pair: Pair): Date {
-  let {low, high} = pair;
+  let { low, high } = pair;
   low >>= 12;
   let msec = low & 4095;
   low >>= 12;
@@ -149,7 +176,7 @@ function pair2date(pair: Pair): Date {
 function base2pair(base: string): Pair {
   const high = base64x32toInt(base.substr(0, 5));
   const low = base.length <= 5 ? 0 : base64x32toInt(base.substr(5, 5));
-  return {high, low};
+  return { high, low };
 }
 
 function pair2base(pair: Pair): string {
@@ -208,11 +235,14 @@ function base64x32toInt(base: string): number {
 
 const MAX32 = (1 << 30) - 1;
 
-function furhter(pair: Pair, prev: Pair): Pair {
+function further(pair: Pair, prev: Pair): Pair {
   if (pair.low < MAX32) {
-    return {high: Math.max(pair.high, prev.high), low: Math.max(pair.low, prev.low) + 1};
+    return {
+      high: Math.max(pair.high, prev.high),
+      low: Math.max(pair.low, prev.low) + 1,
+    };
   } else {
-    return {high: Math.max(pair.high, prev.high) + 1, low: 0};
+    return { high: Math.max(pair.high, prev.high) + 1, low: 0 };
   }
 }
 
