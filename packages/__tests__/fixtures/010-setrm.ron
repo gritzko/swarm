@@ -6,5 +6,6 @@
 *~ '>' *set#object@1ABC3+user!:1ABC1+user,.
 *~ '>' #thisone?!.
 *~ '<' *set#thisone@1ABC5+user!=42.
+*~ '>' @~?#thisone,.
 *~ '>' *set#thisone@1ABC6+user!:1ABC5+user,.
-*~ '>' #thisone@1ABC6+user?!.
+*~ '>' #thisone@1ABC5+user?!.

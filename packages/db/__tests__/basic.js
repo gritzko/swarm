@@ -54,6 +54,7 @@ test('swarm.execute({ subscription })', async () => {
   }
 
   expect(storage.storage).toEqual({
+    '0': '1ABC+server',
     '1ABC1+user':
       "*lww#1ABC1+user@1ABC3+user!:a=42:b'wat':c^0.1:d>false:e>true:f>1ABC2+user",
     '1ABC2+user':

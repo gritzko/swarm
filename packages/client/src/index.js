@@ -52,6 +52,12 @@ export type Options = {
   db?: Meta,
 };
 
+type callback = {
+  f: (frame: string, state: string | null) => void,
+  once?: true,
+  ensure?: true,
+};
+
 const defaultMeta: Meta = {
   name: 'default',
   // FIXME clockMode: 'Calendar',
@@ -62,11 +68,8 @@ const defaultMeta: Meta = {
   offset: 0,
 };
 
-type callback = {
-  f: (frame: string, state: string | null) => void,
-  once?: true,
-  ensure?: true,
-};
+const SEEN = '0';
+const META = '__meta__';
 
 // A bare-bone swarm client. Consumes updates from the server,
 // feeds resulting RON states back to the listeners.
@@ -83,6 +86,7 @@ export default class Client {
     resendAfter: number,
   };
   pending: Pending;
+  seen: UUID;
 
   constructor(options: Options): Client {
     this.db = {
@@ -98,12 +102,17 @@ export default class Client {
       resendAfter: options.resendAfter || 0,
     };
     this.init(options);
+    this.seen = ZERO;
     return this;
   }
 
   async init(options: Options) {
     try {
-      const meta = await this.storage.get('__meta__');
+      const { [META]: meta, [SEEN]: seen } = await this.storage.multiGet([
+        META,
+        SEEN,
+      ]);
+
       this.db = ({
         ...this.db,
         ...JSON.parse(meta || '{}'),
@@ -124,6 +133,12 @@ export default class Client {
               `TODO: Clock mode '${this.db.clockMode}' is not supported yet`,
             );
         }
+        if (seen) {
+          const event = UUID.fromString(seen);
+          // $FlowFixMe
+          this.clock.see(event);
+          this.seen = event;
+        }
       }
 
       if (typeof options.upstream === 'string') {
@@ -140,7 +155,7 @@ export default class Client {
 
       this.pending = await Pending.read(this.storage);
 
-      // check if we start over existing replica
+      // check if we start with an already existing replica
       if (meta && this.clock) {
         this.upstream.onopen = () => this.handshake().catch(this.panic);
         this.release(null);
@@ -157,7 +172,10 @@ export default class Client {
 
   async handshake(): Promise<void> {
     if (this.upstream instanceof DevNull) {
-      await this.storage.set('__meta__', JSON.stringify(this.db));
+      await this.storage.set(META, JSON.stringify(this.db));
+      this.upstream.onmessage = (me: MessageEvent) => {
+        this.onMessage(((me.data: any): string)).catch(this.panic);
+      };
       return;
     }
 
@@ -171,11 +189,7 @@ export default class Client {
     const head = new Op(
       new UUID('db', '0', '$'),
       new UUID(this.db.name, '0', '$'),
-      new UUID(
-        this.clock ? this.clock.last().value : '0',
-        this.db.id || '0',
-        '+',
-      ),
+      new UUID(this.seen.value, this.db.id || '0', '+'),
       ZERO,
       undefined,
       QUERY_SEP,
@@ -222,16 +236,12 @@ export default class Client {
       }
     }
 
-    // *db #test$user @1ABC+server!
-    //           └──┘
-    //             ^
-    // read replica id assigned by the server
     const op = Op.fromString(resp);
     if (op) {
       dbOpts.id = op.uuid(1).origin;
     } else {
       throw new Error(
-        `Expected replica id not found in the handshake response: \n\t'${(
+        `Expected replica id not found in a handshake response: \n\t'${(
           op || ''
         ).toString()}'`,
       );
@@ -264,10 +274,10 @@ export default class Client {
       );
     }
 
-    this.clock.see(seen);
+    await this.see(seen);
 
     this.db = { ...this.db, ...dbOpts };
-    await this.storage.set('__meta__', JSON.stringify(this.db));
+    await this.storage.set(META, JSON.stringify(this.db));
     this.upstream.onmessage = (me: MessageEvent) =>
       this.onMessage(((me.data: any): string)).catch(this.panic);
     this.upstream.onopen = () => this.handshake().catch(this.panic);
@@ -327,39 +337,32 @@ export default class Client {
   }
 
   async onMessage(message: string): Promise<void> {
-    const clock = this.clock;
+    const { clock } = this;
     if (!clock) throw new Error('Have no clock');
 
-    let c = -1;
     for (const op of new Frame(message)) {
-      c++;
       // check if it's an error from the server
-      if (c === 0 && op.uuid(0).toString() === 'db') {
+      if (op.uuid(0).toString() === 'db') {
         this.close();
+        // TODO destroy replica ?
         throw new Error(op.toString());
       }
-      // skip milformed NEVERs explisitly
+
+      // skip malformed NEVERs explicitly
       // waiting for the fix at server side
       if (!op.event.eq(NEVER)) {
-        clock.see(op.event);
-      }
-
-      if (op.event.origin === clock.origin()) {
-        await this.pending.see(op.event);
+        await this.see(op.event);
+        // handle ack
+        if (op.event.origin === clock.origin()) {
+          const seen = await this.pending.release(op.event);
+        }
       }
 
       break;
     }
 
-    for (const f of Batch.splitByID(message)) {
-      // go further and merge payload if prev
-      // checks were passed
-      //
-      // merge method also accepts acks:
-      //    notifies listeners with null payload
-      //    if there is no saved state
+    for (const f of Batch.splitByID(message))
       await this.merge(f.toString(), { local: false });
-    }
   }
 
   // On installs subscriptions.
@@ -373,12 +376,19 @@ export default class Client {
     const upstrm = new Frame();
     const wrapped = { f: callback, ...options };
     let onceSent = 0;
-    for (let op of new Frame(query)) {
+
+    const keys = new Frame(query).unzip().map(op => {
       if (op.uuid(1).eq(ZERO))
         throw new Error(`ID is not specified: "${op.toString()}"`);
-      const key = op.uuid(1).toString();
+      return op.uuid(1).toString();
+    });
+
+    const data = await this.storage.multiGet(keys.concat('0'));
+
+    for (const key of keys) {
+      const id = UUID.fromString(key);
       let base = ZERO;
-      const stored = await this.storage.get(key); // TODO multi get instead
+      const stored = data[key];
 
       // try to avoid network request
       if (callback && wrapped.once && (stored !== null || !wrapped.ensure)) {
@@ -387,17 +397,20 @@ export default class Client {
       } else {
         if (stored) {
           for (const op of new Frame(stored)) {
-            base = op.event;
+            base = op.event.lt(this.seen) ? op.event : this.seen;
+            // base = op.event;
             break;
           }
         }
 
         let found = false;
         let exists = !!callback && !!this.lstn[key] && this.lstn[key].length;
+
         if (wrapped.f) {
           for (const l of this.lstn[key] || []) {
             found = found || l.f === wrapped.f;
           }
+
           if (!found) {
             // $FlowFixMe
             this.lstn[key] = (this.lstn[key] || []).concat([wrapped]);
@@ -405,14 +418,12 @@ export default class Client {
         }
 
         if (!found) {
-          if (!exists && !op.object.isLocal()) {
+          if (!exists && !id.isLocal()) {
             upstrm.push(
-              new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
+              new Op(ZERO, id, base, ZERO, '', QUERY_SEP + FRAME_SEP),
             ); // FIXME check fork mode
           }
-          fwd.push(
-            new Op(op.type, op.object, base, ZERO, '', QUERY_SEP + FRAME_SEP),
-          ); // FIXME check fork mode
+          fwd.push(new Op(ZERO, id, base, ZERO, '', QUERY_SEP + FRAME_SEP)); // FIXME check fork mode
         }
       }
     }
@@ -424,6 +435,7 @@ export default class Client {
     if (callback && fwd.toString()) {
       await this.notify(fwd.toString(), wrapped);
     }
+
     return !!fwd.toString() || !!onceSent;
   }
 
@@ -533,6 +545,8 @@ export default class Client {
     // but with guarantee.
     for (const op of fr) {
       const key = op.uuid(1).toString();
+      if (key === '0') return; // ack
+
       let notify: boolean = false;
 
       const updated = await this.storage.merge(key, (prev: string | null) => {
@@ -548,8 +562,16 @@ export default class Client {
           return frame;
         }
 
-        // It's ack, do nothing. TODO save last timestamp
-        if (prev !== null) return prev;
+        // // It's ack, save the latest.
+        // if (key === '0') {
+        //   const ack = op.uuid(2).toString();
+        //   return ack > (prev || '') ? ack : prev;
+        // }
+
+        // An empty state from the server whereas a local state is full
+        if (prev !== null) {
+          return prev;
+        }
 
         // Empty state from a server, hence, an object does not exist in the system.
         notify = true;
@@ -577,4 +599,13 @@ export default class Client {
     // Resend all the frames
     for (const p of this.pending) this.upstream.send(p);
   };
+
+  async see(event: UUID): Promise<UUID> {
+    const { clock, seen } = this;
+    if (event.lt(seen)) return seen;
+    this.seen = event;
+    clock && clock.see(this.seen);
+    await this.storage.set(SEEN, event.toString());
+    return event;
+  }
 }

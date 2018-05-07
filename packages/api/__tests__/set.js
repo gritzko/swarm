@@ -157,23 +157,20 @@ test('set.remove(...)', async () => {
     { id: '#object', state: '*set#object@1ABC3+user!:1ABC1+user,' },
   ]);
 
-  await new Promise(r => setTimeout(r, 300));
-
   // $FlowFixMe
   expect(api.client.lstn['thisone']).toBeUndefined();
-  await api.client.on('#thisone');
-  await new Promise(r => setTimeout(r, 300));
-  api.client.off('#thisone');
+  await new Promise(resolve => {
+    api.client.on('#thisone', resolve, { ensure: true, once: true });
+  });
 
   rm = await api.remove('thisone', 42);
   expect(rm).toBeTruthy();
 
-  const thisone = await new Promise(
-    async r =>
-      await api.client.on('#thisone', (id: string, state: string | null) =>
-        r({ id, state }),
-      ),
-  );
+  const thisone = await new Promise(r => {
+    api.client.on('#thisone', (id: string, state: string | null) => {
+      r({ id, state });
+    });
+  });
   expect(thisone).toEqual({
     id: '#thisone',
     state: '*set#thisone@1ABC6+user!:1ABC5+user,',

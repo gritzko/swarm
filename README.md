@@ -36,7 +36,7 @@ Free-as-in-freedom (MIT).
 
 ![Swarm: deployment](https://i.imgur.com/hqGwft1.png)
 
-Click around our demos: [Mice](https://olebedev.github.io/mice) and Chat application([Chrome, Safari](https://olebedev.github.io/chat), [iOS](#), [Android](#)).
+Click around our demos: [Mice](https://olebedev.github.io/mice)([source](https://github.com/olebedev/mice)) and Chat application([Chrome, Safari](https://olebedev.github.io/chat), [iOS](#), [Android](#))([source](https://github.com/olebedev/chat)).
 
 ## Table of contents:
 
@@ -75,16 +75,22 @@ And run docker image:
 $ docker run -d --name swarmdb -p 31415:31415 -v `pwd`:/var/lib/swarm olebedev/swarmdb
 ```
 
-Now Swarm server is listening incoming connections on `ws://<container IP address>:31415` and we are ready to initiate connections onto it. Add needed packages into a project by running:
+Now Swarm server is listening incoming connections on `ws://<container IP address>:31415` and we are ready to initiate connections onto it. Setup JavaScript project by running:
 
-```$ yarn add @swarm/db graphql-tag```
+```bash
+$ git clone git@github.com:gritzko/swarm.git
+$ cd swarm
+$ yarn
+$ mkdir -p packages/examples/myapp
+$ cd packages/examples/myapp
+```
 
 Now we can initialize a client instance and connect to running server.
 
 ```javascript
 import gql from 'graphql-tag';
-import SwarmDB from '@swarm/db';
-import { LocalStorage } from '@swarm/client';
+import SwarmDB from 'swarm-db';
+import { LocalStorage } from 'swarm-client';
 
 const swarm = new SwarmDB({
   storage: new LocalStorage(),
@@ -235,14 +241,12 @@ union Atom = String | Int | Float | Boolean | UUID
 `Node` - is an interface of CRDT which presented as a key/value object where a value is a union of `Atom | Node | [Node]`. Internally, each objects JS prototype regardless its type has `id`, `type` and `version` fields. Additionally, the `set` type has `length` field, and `lww` type can also has `length` in case if all the user-land field keys are _numbers_(say, index of array). There are no native JavaScript arrays by default, they can be produced by directives(see below). 
 
 ```graphql
-union Value = Atom | Node | [Node]
-
 interface Node {
   id: String!
   type: String!
   version: String!
   length: Int # only for array-like objects
-  # ... various of keys and Values
+  # ... various of keys and values
 }
 ```
 
@@ -250,13 +254,13 @@ interface Node {
 
 ```graphql
 interface Payload {
-  # ... various of keys and Atoms
+  # ... various of keys and values
 }
 ```
 
 ### Queries & Subscriptions
 
-Both of these two root fields serve to declare the tree you intend to get as a result of the execution. There is nothing special except that you don't need to define and follow schema.
+Both of these two root fields serve to declare the tree you intend to get as a result of the execution. There is nothing special except that you don't need to define schema.
 
 Example. Let's subscribe to the last 100 users from the `users` collection.
 
@@ -306,13 +310,13 @@ const addSettings = gql`
     $patch: Payload!, 
     $sid: UUID!, 
     $settings: Payload!
-  ) {
+  ) {q
     patchUser: set($uid, $patch)
     createSettings: set($sid, $settings)
   }
 `
 
-// create node ID
+// create a node ID
 const sid = swarm.uuid();
 
 // define arguments
@@ -414,7 +418,7 @@ query {
 directive @weak on FIELD
 ```
 
-Adds more control to data flow management. By default Swarm tries to fetch a node from the server if no presented in the local cache. So, query/subscription can block the application if there is no connection opened. This directive tells the runtime to call back with `null` if the node is not presented in the local cache yet. Useful for offline work. 
+Adds more control to data flow management. By default Swarm tries to fetch a node from the server if no presented in the local cache. So, _query_ or _subscription_ can block an application if there is no open connection. This directive tells the runtime to call back with `null`(don't wait for the server response) if the node is not presented in the local cache yet. Useful for offline work. 
 
 
 ```graphql
@@ -479,11 +483,49 @@ query {
 
 > Notice. Priority of execution of directives from the first to the last.
 
-## Using with React
+## Using with [React](https://reactjs.org/)
 
-#### Provider
-#### GraphQL component
-#### State management
+The approach is the same as for Redux binding except that Swarm bindings use a render prop pattern instead of HOC. 
+
+The workflow. You need to add Swarm into the context via `Provider` and then use `GraphQL` component for declarative updates fetching and mutatoins.
+
+```javascript
+import * as React from "react";
+import ReactDOM from "react-dom";
+import { Provider, GraphQL } from "swarm-react";
+import { LocalStorage } from "swarm-client";
+
+const swarm = new SwarmDB({
+  storage: new LocalStorage(),
+  upstream: "wss://example.com",
+  db: { name: "example" }
+});
+
+class List extends React.Component {
+  render() {
+    <GraphQL>
+      {({ data }) => {
+        if (!data) return <span>loading...</span>;
+        return <ul>{data.map(item => <li>{item.username}</li>)}</ul>;
+      }}
+    </GraphQL>;
+  }
+}
+
+class App extends React.Component {
+  render() {
+    return (
+      <Provider swarm={swarm}>
+        <List />
+      </Provider>
+    );
+  }
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+```
+
+**GraphQL** component props:
 
 ## FAQ
 
@@ -491,9 +533,9 @@ query {
 
 The underlying layer - RON is stable and APIs are frozen. The client and the server are ready for building prototypes and kind of MVCs but not production ready yet. 
 
-> May I save collections of document in Swarm?
+> How do I save collections of documents in Swarm?
 
-Of couse. For documents use `lww` type and for collections use `set` type.
+Of course. For documents use `LWW` type and for collections use `Set` type.
 
 Swarm is a JSON graph. Very much like in Firebase or MongoDB - document/collection-based approach. The key difference is you can put references into the graph, so, no need do denormalize your data and keep your data as flat as possible. Opposite to it, shape your data as deep as you want. 
 
@@ -501,7 +543,7 @@ Swarm is a JSON graph. Very much like in Firebase or MongoDB - document/collecti
 
 It's a declarative paradigm approach. It allows shaping resulting data whatever you want, without additional transformations in user space. Also, it's a good fit too due to graph nature of Swarm data.
 
-> Is this possible application state locally?
+> Is this possible to keep application state in Swarm locally?
 
 Sure. Use local UUIDs for nodes you don't want to send to server and sync between all the clients. Example:
 

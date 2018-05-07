@@ -54,10 +54,6 @@ class PendingOps {
     return this.flush();
   }
 
-  see(ack: UUID): Promise<void> {
-    return this.release(ack);
-  }
-
   release(ack: UUID): Promise<void> {
     if (this.seen.gt(ack)) return Promise.resolve();
     this.seen = ack;
