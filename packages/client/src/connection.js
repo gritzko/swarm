@@ -1,6 +1,9 @@
 // @flow
 
 import RWS from './rws';
+import Op from 'swarm-ron';
+import { ZERO } from 'swarm-ron-uuid';
+import { Frame } from 'swarm-ron';
 
 export interface Connection {
   onmessage: (ev: MessageEvent) => any;
@@ -23,7 +26,22 @@ export class DevNull implements Connection {
       this.onopen && this.onopen(new Event(''));
     }, 0);
   }
-  send(data: string): void {}
+
+  send(data: string): void {
+    if (!this.onmessage) return;
+    const frame = new Frame(data);
+    if (!frame.isPayload()) return;
+    for (const op of frame) {
+      if (!op.uuid(2).eq(ZERO)) {
+        setTimeout(() => {
+          // $FlowFixMe
+          this.onmessage({ data: `@${op.uuid(2).toString()}!` });
+        }, 0);
+        return;
+      }
+    }
+  }
+
   close(): void {}
   open(): void {}
 }

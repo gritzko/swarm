@@ -69,8 +69,6 @@ test('api.set(...)', async () => {
     },
   ]);
 
-  // await new Promise(r => setTimeout(r, 300));
-
   set = await api.set(profileUUID.toString(), { active: true });
   expect(storage.storage[profileUUID.toString()]).toBe(
     '*lww#1ABC4+user@1ABC6+user!:active>true',
@@ -127,7 +125,7 @@ test('api.set(...)', async () => {
   ]);
 
   // due to async nature of connection mock
-  await new Promise(r => setTimeout(r, 1000));
+  await new Promise(r => setTimeout(r, 500));
 
   // $FlowFixMe
   const dump = api.client.upstream.dump();

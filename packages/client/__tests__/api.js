@@ -137,7 +137,7 @@ test('client.off(...)', async () => {
   const client = new Client({
     id: 'user',
     storage: new InMemory(),
-    db: { clockMode: 'Logical', name: 'test' },
+    db: { clockMode: 'Logical', name: 'test', id: 'id' },
   });
   await client.ensure();
   const cbk = (frame: string, state: string | null): void => {};
@@ -189,6 +189,8 @@ test('client.push(...)', async () => {
   });
 
   await client.ensure();
+  expect(client.clock).not.toBeNull();
+
   const resp = await new Promise(async r => {
     client.on('#object', (frame, state) => r({ frame, state }));
   });

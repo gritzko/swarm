@@ -1,9 +1,9 @@
 // @flow
 
-import Op, {Frame, Batch, FRAME_SEP} from 'swarm-ron';
-import type {Atom} from 'swarm-ron';
-import UUID, {ZERO} from 'swarm-ron-uuid';
-import IHeap, {refComparator, eventComparatorDesc} from './iheap';
+import Op, { Frame, Batch, FRAME_SEP } from 'swarm-ron';
+import type { Atom } from 'swarm-ron';
+import UUID, { ZERO } from 'swarm-ron-uuid';
+import IHeap, { refComparator, eventComparatorDesc } from './iheap';
 
 export const type = UUID.fromString('lww');
 const DELTA = UUID.fromString('d');
@@ -17,8 +17,17 @@ export function reduce(batch: Batch): Frame {
   for (const frame of batch) {
     if (batch.length === 1) return frame;
     for (const op of frame) {
-      const head = new Op(type, op.uuid(1), op.uuid(2), op.uuid(3), undefined, FRAME_SEP);
-      const theLastOne = Op.fromString(batch.frames[batch.length - 1].toString());
+      const head = new Op(
+        type,
+        op.uuid(1),
+        op.uuid(2),
+        op.uuid(3),
+        undefined,
+        FRAME_SEP,
+      );
+      const theLastOne = Op.fromString(
+        batch.frames[batch.length - 1].toString(),
+      );
       if (theLastOne) head.event = theLastOne.event;
       if (op.isHeader() && op.uuid(3).isZero()) {
         head.location = ZERO;
@@ -42,7 +51,7 @@ export function reduce(batch: Batch): Frame {
   return ret;
 }
 
-export function ron2js(rawFrame: string): {[string]: Atom} {
+export function ron2js(rawFrame: string): { [string]: Atom } {
   const ret = {};
   const proto = {};
   proto.type = 'lww';
@@ -50,7 +59,7 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
   let length: number = 0;
   let latest = ZERO;
 
-  for (const op of lww) {
+  for (const op of lww.unzip().reverse()) {
     const id = op.object.toString();
     proto.id = proto.id || id;
     if (op.event.gt(latest)) latest = op.event;
@@ -61,7 +70,7 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
     let key = op.location.toString();
     if (op.location.isHash()) {
       if (op.location.value !== '~') {
-        throw new Error('only flatten arrays are beign supported');
+        throw new Error('only flatten arrays are being supported');
       }
       key = op.location.origin;
     }
@@ -108,4 +117,4 @@ export function ron2js(rawFrame: string): {[string]: Atom} {
   return Object.create(proto, ret);
 }
 
-export default {reduce, type, ron2js};
+export default { reduce, type, ron2js };

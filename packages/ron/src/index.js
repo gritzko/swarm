@@ -2,11 +2,11 @@
 'use strict';
 
 import Grammar from 'swarm-ron-grammar';
-import UUID, {ZERO as ZERO_UUID, ERROR, COMMENT} from 'swarm-ron-uuid';
+import UUID, { ZERO as ZERO_UUID, ERROR, COMMENT } from 'swarm-ron-uuid';
 
-export {default as UUID} from 'swarm-ron-uuid';
-export {ERROR as UUID_ERROR} from 'swarm-ron-uuid';
-export {default as Batch} from './batch';
+export { default as UUID } from 'swarm-ron-uuid';
+export { ERROR as UUID_ERROR } from 'swarm-ron-uuid';
+export { default as Batch } from './batch';
 import Batch from './batch';
 
 export type Atom = string | number | boolean | null | UUID;
@@ -29,7 +29,14 @@ export default class Op {
   term: string;
   source: ?string;
 
-  constructor(type: UUID, object: UUID, event: UUID, location: UUID, values: ?string, term: ?string): Op {
+  constructor(
+    type: UUID,
+    object: UUID,
+    event: UUID,
+    location: UUID,
+    values: ?string,
+    term: ?string,
+  ): Op {
     this.type = type;
     this.object = object;
     this.event = event;
@@ -102,14 +109,25 @@ export default class Op {
     }
 
     ret += this.values;
-    if (!this.values || (expComma && this.term !== ',') || (!expComma && this.term !== ';')) {
+    if (
+      !this.values ||
+      (expComma && this.term !== ',') ||
+      (!expComma && this.term !== ';')
+    ) {
       ret += this.term;
     }
     return ret;
   }
 
   clone(): Op {
-    return new Op(this.type, this.object, this.event, this.location, this.values, this.term);
+    return new Op(
+      this.type,
+      this.object,
+      this.event,
+      this.location,
+      this.values,
+      this.term,
+    );
   }
 
   equal(other: Op): boolean {
@@ -193,10 +211,12 @@ export function js2ron(values: Array<Atom>): string {
     switch (v.constructor) {
       case String:
         const json = JSON.stringify(v);
-        const escq = json.replace(/'/g, "\\u0027");
-        return "'" + escq.substr(1, escq.length-2) + "'";
+        const escq = json.replace(/'/g, '\\u0027');
+        return "'" + escq.substr(1, escq.length - 2) + "'";
       case Number:
-        return Number.isInteger(v) ? INT_ATOM_SEP + v.toString() : FLOAT_ATOM_SEP + v.toString();
+        return Number.isInteger(v)
+          ? INT_ATOM_SEP + v.toString()
+          : FLOAT_ATOM_SEP + v.toString();
       case UUID:
         return UUID_ATOM_SEP + v.toString();
       case Boolean:
@@ -307,11 +327,20 @@ export class Frame {
     for (const op of this) return op.uuid(1);
     return ZERO_UUID;
   }
+
+  unzip(): Op[] {
+    const cumul: Op[] = [];
+    for (const op of this) cumul.push(op);
+    return cumul;
+  }
 }
 
 // Substitute UUIDs in all of the frame's ops.
 // Typically used for macro expansion.
-export function mapUUIDs(rawFrame: string, fn: (UUID, number, number, Op) => UUID): string {
+export function mapUUIDs(
+  rawFrame: string,
+  fn: (UUID, number, number, Op) => UUID,
+): string {
   const ret = new Frame();
   let index = -1;
   for (const op of new Frame(rawFrame)) {
@@ -335,7 +364,10 @@ export function slice(from: Cursor, till: Cursor): string {
   if (!from.op) return '';
   if (from.body !== till.body) throw new Error('iterators of different frames');
   let ret = from.op.toString();
-  ret += from.body.substring(from.offset + from.length, till.op ? till.offset : undefined);
+  ret += from.body.substring(
+    from.offset + from.length,
+    till.op ? till.offset : undefined,
+  );
   return ret;
 }
 
@@ -395,9 +427,9 @@ export class Cursor implements Iterator<Op> {
     const ret = this.op;
     if (ret) {
       this.nextOp();
-      return {done: false, value: ret};
+      return { done: false, value: ret };
     } else {
-      return {done: true};
+      return { done: true };
     }
   }
 }

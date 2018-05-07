@@ -3,7 +3,10 @@
 import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
 
 import type { Storage } from './storage';
-import Op, { UUID } from 'swarm-ron';
+import Op from 'swarm-ron';
+import UUID, { ZERO } from 'swarm-ron-uuid';
+
+export const KEY = '__pending__';
 
 // A wrapper for convenience and to work with pending
 // ops in an efficient way.
@@ -13,10 +16,12 @@ class PendingOps {
   _onIdle: void | (() => void);
   period: number;
   timer: TimeoutID;
+  seen: UUID;
 
   constructor(storage: Storage, ops: string[]): PendingOps {
     this.storage = storage;
     this.ops = ops;
+    this.seen = ZERO;
     return this;
   }
 
@@ -50,6 +55,12 @@ class PendingOps {
   }
 
   see(ack: UUID): Promise<void> {
+    return this.release(ack);
+  }
+
+  release(ack: UUID): Promise<void> {
+    if (this.seen.gt(ack)) return Promise.resolve();
+    this.seen = ack;
     let i = -1;
     for (const _old of this.ops) {
       i++;
@@ -67,7 +78,7 @@ class PendingOps {
   }
 
   flush(): Promise<void> {
-    return this.storage.set(PendingOps.KEY, JSON.stringify(this.ops));
+    return this.storage.set(KEY, JSON.stringify(this.ops));
   }
 
   get length(): number {
@@ -75,13 +86,9 @@ class PendingOps {
   }
 
   static async read(storage: Storage): Promise<PendingOps> {
-    const pending = await storage.get(PendingOps.KEY);
+    const pending = await storage.get(KEY);
     return new PendingOps(storage, JSON.parse(pending || '[]'));
   }
-
-  static KEY: string;
 }
-
-PendingOps.KEY = '__pending__';
 
 export default PendingOps;

@@ -92,8 +92,10 @@ export class GQLSub {
         this.callback();
         break;
       case 'mutation':
-        this.active = await this.runMutation();
-        break;
+        this.active = true;
+        const res = await this.runMutation();
+        this.off();
+        return res;
       default:
         throw new Error(`unknown operation: '${this.operation}'`);
     }
@@ -114,6 +116,7 @@ export class GQLSub {
     // - full state
     let v = null;
     if (s !== null) v = ron2js(s || l);
+    // console.log('_invoke', { v, l, s });
 
     let id;
     const head = Op.fromString(l);

@@ -1,5 +1,7 @@
 // @flow
 
+import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
+
 import * as React from 'react';
 import PropTypes from 'prop-types';
 import invariant from 'invariant';
@@ -92,7 +94,10 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
   }
 
   async _subscribe(): Promise<void> {
-    const { props: { query, args }, swarm } = this;
+    const {
+      props: { query, args },
+      swarm,
+    } = this;
     if (!swarm || !swarm.execute) return;
 
     const sub = await swarm.execute(
@@ -111,7 +116,10 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
   }
 
   _bindMutations(): { [string]: (args: args) => Promise<Value> } | void {
-    const { props: { mutations }, swarm } = this;
+    const {
+      props: { mutations },
+      swarm,
+    } = this;
     if (mutations && swarm) {
       const ret = {};
       for (const key of Object.keys(mutations)) {

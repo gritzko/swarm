@@ -1,6 +1,7 @@
 // @flow
 
 import { Frame } from 'swarm-ron';
+import UUID, { ZERO } from 'swarm-ron-uuid';
 
 type Kind = 0 | 1 | 2 | 3;
 
@@ -39,7 +40,14 @@ export class Dependencies {
       typeof kind !== 'undefined' ? this.deps[kind] : this.index,
     );
     if (!ret.length) return '';
-    return '#' + ret.join('#');
+
+    let res = '';
+    ret.map(i => UUID.fromString(i)).reduce((prev, current) => {
+      res += '#';
+      res += current.toString(prev);
+      return current;
+    }, ZERO);
+    return res;
   }
 
   options(kind: Kind): { once?: true, ensure?: true } | void {
@@ -70,7 +78,7 @@ export class Dependencies {
   ): Kind {
     directives = directives || {};
     if (
-      (type === 'query' && directives.hasOwnProperty('li' + 've')) ||
+      (type === 'query' && directives.hasOwnProperty('live')) ||
       (type === 'subscription' && !directives.hasOwnProperty('static'))
     ) {
       return directives.hasOwnProperty('weak') ? REACTIVE_WEAK : REACTIVE;
