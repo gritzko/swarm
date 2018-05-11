@@ -6,9 +6,10 @@ import UUID, { ERROR, ZERO, BASE64, CODES } from 'swarm-ron-uuid';
 export interface Clock {
   time(): UUID;
   last(): UUID;
-  see(UUID): void;
+  see(UUID): boolean;
   origin(): string;
-  adjust(UUID): number;
+  adjust(UUID | number): number;
+  isSane(UUID): boolean;
 }
 
 // Pure logical clock.
@@ -46,7 +47,11 @@ export class Logical implements Clock {
 
   // See an UUID. Can only generate larger UUIDs afterwards.
   see(uuid: UUID) {
-    if (uuid.ge(this._last)) this._last = uuid;
+    if (this.isSane(uuid) && this._last.lt(uuid)) {
+      this._last = uuid;
+      return true;
+    }
+    return false;
   }
 
   origin(): string {
@@ -57,9 +62,15 @@ export class Logical implements Clock {
     return this._last;
   }
 
-  adjust(event: UUID): number {
-    this.see(event);
+  adjust(event: UUID | number): number {
+    if (event instanceof UUID) {
+      this.see(event);
+    }
     return 0;
+  }
+
+  isSane(event: UUID): boolean {
+    return !!event.value && event.value < `~`;
   }
 }
 
@@ -107,12 +118,14 @@ export class Calendar implements Clock {
     return this._last;
   }
 
-  see(uuid: UUID) {
-    if (uuid.ge(this._last)) {
+  see(uuid: UUID): boolean {
+    if (this.isSane(uuid) && this._last.lt(uuid)) {
       this._last = uuid;
       this._lastBase = uuid.value;
       this._lastPair = base2pair(this._lastBase);
+      return true;
     }
+    return false;
   }
 
   origin(): string {
@@ -123,13 +136,25 @@ export class Calendar implements Clock {
     return this._last;
   }
 
-  adjust(event: UUID): number {
-    this._offset = calendarBase2Date(event.value).getTime() - Date.now();
-    // if (this._offset) this._offset = 0;
-    this._last = event;
-    this._lastPair = base2pair(event.value);
-    this._lastBase = event.value;
+  adjust(event: UUID | number): number {
+    if (event instanceof UUID) {
+      const { value } = event;
+      this._offset = calendarBase2Date(value).getTime() - Date.now();
+      this._last = new UUID(value, this._origin, '+');
+      this._lastPair = base2pair(value);
+      this._lastBase = value;
+    } else {
+      this._offset = event - Date.now();
+      const d = new Date(event);
+      this._lastPair = date2pair(d);
+      this._lastBase = pair2base(this._lastPair);
+      this._last = new UUID(this._lastBase, this._origin, '+');
+    }
     return this._offset;
+  }
+
+  isSane(event: UUID): boolean {
+    return !!event.value && event.value < `~`;
   }
 }
 

@@ -41,6 +41,7 @@ export type Meta = {
   auth?: string,
   seen?: string,
   offset?: number,
+  '0'?: number,
 };
 
 export type Options = {
@@ -158,13 +159,20 @@ export default class Client {
 
       // check if we start with an already existing replica
       if (meta && this.clock) {
-        this.upstream.onopen = () => this.handshake().catch(this.panic);
+        this.upstream.onopen = () =>
+          this.handshake().catch(async e => {
+            await this.close();
+            this.panic(e);
+          });
         this.release(null);
       } else {
         this.upstream.onopen = () =>
           this.handshake()
             .then(() => this.release(null))
-            .catch(e => this.release((e: Error)));
+            .catch(async e => {
+              await this.close();
+              this.release((e: Error));
+            });
       }
     } catch (e) {
       this.release((e: Error));
@@ -274,7 +282,9 @@ export default class Client {
       );
     }
 
-    dbOpts.offset = this.clock.adjust(seen);
+    dbOpts.offset = this.clock.adjust(dbOpts['0'] || seen);
+    // cleanup server timestamp
+    delete dbOpts['0'];
     await this.see(seen);
 
     this.db = { ...this.db, ...dbOpts };
@@ -586,9 +596,9 @@ export default class Client {
     }
   }
 
-  panic(err: any): void {
-    throw err;
-  }
+  panic = (err: any): void => {
+    console.error('panic: %s', err);
+  };
 
   onIdle = () => {
     // Resend all the frames
@@ -596,11 +606,11 @@ export default class Client {
   };
 
   async see(event: UUID): Promise<UUID> {
-    const { clock, seen } = this;
-    if (event.lt(seen)) return seen;
-    this.seen = event;
-    clock && clock.see(this.seen);
-    await this.storage.set(SEEN, event.toString());
+    const { clock } = this;
+    if (clock && clock.see(event)) {
+      this.seen = event;
+      await this.storage.set(SEEN, event.toString());
+    }
     return event;
   }
 }
