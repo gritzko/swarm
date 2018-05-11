@@ -283,9 +283,7 @@ export default class Client {
     }
 
     dbOpts.offset = this.clock.adjust(dbOpts['0'] || seen);
-    // cleanup server timestamp
     delete dbOpts['0'];
-    await this.see(seen);
 
     this.db = { ...this.db, ...dbOpts };
     await this.storage.set(META, JSON.stringify(this.db));
@@ -564,7 +562,7 @@ export default class Client {
         if (fr.isPayload()) {
           if (typeof prev === 'string') {
             const update = reduce(
-              Batch.fromStringArray(key, prev, frame),
+              Batch.fromStringArray(prev, frame),
             ).toString();
             notify = prev !== update;
             return update;

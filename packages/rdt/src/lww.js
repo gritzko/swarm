@@ -6,35 +6,22 @@ import UUID, { ZERO } from 'swarm-ron-uuid';
 import IHeap, { refComparator, eventComparatorDesc } from './iheap';
 
 export const type = UUID.fromString('lww');
-const DELTA = UUID.fromString('d');
 const heap = new IHeap(refComparator, eventComparatorDesc);
 
 // Last-write-wins reducer.
 export function reduce(batch: Batch): Frame {
+  batch = batch.filter(f => !!f.body);
   const ret = new Frame();
   if (!batch.length) return ret;
+  batch.sort().reverse();
 
   for (const frame of batch) {
     if (batch.length === 1) return frame;
     for (const op of frame) {
-      const head = new Op(
-        type,
-        op.uuid(1),
-        op.uuid(2),
-        op.uuid(3),
-        undefined,
-        FRAME_SEP,
+      ret.push(
+        new Op(type, op.uuid(1), op.uuid(2), ZERO, undefined, FRAME_SEP),
       );
-      const theLastOne = Op.fromString(
-        batch.frames[batch.length - 1].toString(),
-      );
-      if (theLastOne) head.event = theLastOne.event;
-      if (op.isHeader() && op.uuid(3).isZero()) {
-        head.location = ZERO;
-      } else {
-        head.location = DELTA;
-      }
-      ret.push(head);
+
       heap.clear();
       heap.put(batch);
 
@@ -44,6 +31,7 @@ export function reduce(batch: Batch): Frame {
         ret.pushWithTerm(current, ',');
         heap.nextPrim();
       }
+
       return ret;
     }
   }

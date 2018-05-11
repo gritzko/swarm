@@ -171,7 +171,7 @@ export default class UUID {
   }
 
   isError(): boolean {
-    return this.origin === '~~~~~~~~~~';
+    return this.value === '~~~~~~~~~~';
   }
 }
 

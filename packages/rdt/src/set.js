@@ -13,44 +13,23 @@ import IHeap, { refComparatorDesc } from './iheap';
 
 export const type = UUID.fromString('set');
 const heap = new IHeap(setComparator, refComparatorDesc);
-const DELTA = UUID.fromString('d');
 
 // Set, fully commutative, with tombstones.
 // You can either add or remove an atom/tuple.
 // Equal elements possible.
-export function reduce(b: Batch): Frame {
+export function reduce(batch: Batch): Frame {
+  batch = batch.filter(f => !!f.body);
   const ret = new Frame();
-  const batch = new Batch();
-  for (const f of b) {
-    if (f.isPayload()) batch.push(f);
-  }
-
-  if (!b.length) return ret;
+  if (!batch.length) return ret;
+  batch.sort().reverse();
 
   for (const frame of batch) {
     if (batch.length === 1) return frame;
     for (const op of frame) {
-      const head = new Op(
-        type,
-        op.uuid(1),
-        op.uuid(2),
-        op.uuid(3),
-        undefined,
-        FRAME_SEP,
+      ret.push(
+        new Op(type, op.uuid(1), op.uuid(2), ZERO, undefined, FRAME_SEP),
       );
 
-      const theLastOne = Op.fromString(
-        batch.frames[batch.length - 1].toString(),
-      );
-      if (theLastOne) head.event = theLastOne.event;
-
-      if (op.isHeader() && op.uuid(3).isZero()) {
-        head.location = ZERO;
-      } else {
-        head.location = DELTA;
-      }
-
-      ret.push(head);
       heap.clear();
       heap.put(batch);
 

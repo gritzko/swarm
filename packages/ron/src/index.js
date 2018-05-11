@@ -379,7 +379,7 @@ export class Cursor implements Iterator<Op> {
   ctx: ?Op;
 
   constructor(body: ?string): Cursor {
-    this.body = body ? body.toString() : '';
+    this.body = body ? body.toString().trim() : '';
     this.offset = 0;
     this.length = 0;
     this.op = this.nextOp();
@@ -414,6 +414,10 @@ export class Cursor implements Iterator<Op> {
       this.op = op;
     }
     return this.op;
+  }
+
+  eof(): boolean {
+    return !this.op;
   }
 
   /*:: @@iterator(): Iterator<Op> { return ({}: any); } */

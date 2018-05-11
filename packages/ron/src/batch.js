@@ -1,7 +1,7 @@
 // @flow
 
-import {Frame} from './index';
-import {ZERO} from 'swarm-ron-uuid';
+import Op, { Frame } from './index';
+import { ZERO } from 'swarm-ron-uuid';
 
 export default class Batch implements Iterator<Frame> {
   frames: Array<Frame>;
@@ -37,7 +37,7 @@ export default class Batch implements Iterator<Frame> {
         value: this.frames[this.index++],
       };
     }
-    return {done: true};
+    return { done: true };
   }
 
   toString(): string {
@@ -84,6 +84,28 @@ export default class Batch implements Iterator<Frame> {
     }
 
     return true;
+  }
+
+  sort(compare?: (a: Frame, b: Frame) => number): Batch {
+    this.frames.sort(
+      compare ||
+        ((a, b) => {
+          const aop = Op.fromString(a.body);
+          const bop = Op.fromString(b.body);
+          if (aop && bop) return aop.uuid(2).compare(bop.uuid(2));
+          throw new Error('unable to compare invalid frames');
+        }),
+    );
+    return this;
+  }
+
+  reverse(): Batch {
+    this.frames.reverse();
+    return this;
+  }
+
+  filter(f: (frame: Frame) => boolean): Batch {
+    return new Batch(...this.frames.filter(f));
   }
 
   static fromStringArray(...input: Array<string>): Batch {

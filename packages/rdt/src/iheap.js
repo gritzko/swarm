@@ -82,7 +82,11 @@ export default class IHeap {
     if (this.iters.length === 2 && i === 1) {
       this.clear();
     } else {
-      this.iters.splice(i, 1, this.iters.pop());
+      if (this.iters.length - 1 === i) {
+        this.iters.pop();
+      } else {
+        this.iters.splice(i, 1, this.iters.pop());
+      }
       this._sink(i);
     }
   }
@@ -129,7 +133,7 @@ export default class IHeap {
     }
     for (let i = eqs.length - 1; i >= 0; i--) {
       this._next(eqs[i]);
-      this._sink(eqs[i]);
+      // this._sink(eqs[i]);
     }
     return this.current();
   }

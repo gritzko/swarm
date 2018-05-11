@@ -86,29 +86,32 @@ export default class API {
     }
 
     const frame = new Frame();
-    let op = new Op(
-      lww.type,
-      uuid,
-      this.uuid(),
-      ZERO_UUID,
-      undefined,
-      FRAME_SEP,
-    );
-    frame.push(op);
 
-    for (const k of Object.keys(value)) {
-      op = op.clone();
-      op.location = UUID.fromString(k);
+    frame.push(
+      new Op(lww.type, uuid, this.uuid(), ZERO_UUID, undefined, FRAME_SEP),
+    );
+
+    for (const k of Object.keys(value).sort()) {
+      const op = new Op(
+        lww.type,
+        uuid,
+        frame.last.uuid(2),
+        UUID.fromString(k),
+        undefined,
+        ',',
+      );
+
       if (value[k] !== undefined) {
         op.values = js2ron([value[k]]);
         if (!uuid.isLocal() && value[k] instanceof UUID && value[k].isLocal()) {
           return false;
         }
       }
-      frame.pushWithTerm(op, ',');
+
+      frame.push(op);
     }
 
-    if (frame.toString()) {
+    if (frame.isPayload()) {
       await this.client.push(frame.toString());
       return true;
     }

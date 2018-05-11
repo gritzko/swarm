@@ -25,34 +25,33 @@ test('lww reduce', () => {
       // o+o
       "*lww#test@1:a'A1'",
       "*lww#test@2:a'A2'",
-      "*lww#test@2:d!:a'A2'",
+      "*lww#test@2!:a'A2'",
     ],
     [
       // p+p
       "*lww#test@1:d! :a'A1':b'B1':c'C1'",
       "*lww#test@2:d! :a'A2':b'B2'",
-      "*lww#test@2:d!:a'A2':b'B2'@1:c'C1'",
+      "*lww#test@2!:a'A2':b'B2'@1:c'C1'",
     ],
     [
       "*lww#test@0ld!@new:key'new_value'",
       "*lww#test@new:key'new_value'",
       "*lww#test@new!:key'new_value'",
     ],
-    // [
-    //   // lww array 2x2
-    //   //     0   1
-    //   //   +--------+
-    //   // 0 | 0  '1' |
-    //   // 1 | 1   2  |
-    //   //   +--------+
-    //   '*lww#array@1! :0%0 = 0,  :)1%0 = -1',
-    //   "*lww#array@2! :0%)1 '1',  :)1%0 = 1,  :)1%)1 = 2",
-    //   "*lww#array@2!@1:%=0@2:%)1'1':)1)=1:%)1=2",
-    // ],
     [
       '#1X8C30K+user!',
       "*lww#1X8C30K+user@1X8C30M+user!:some'value'",
       "*lww#1X8C30K+user@1X8C30M+user!:some'value'",
+    ],
+    [
+      '*lww#1_A8H+1_A8Gu71@1_A8Ic8F01+1_A8Gu71!:completed>true',
+      "*lww#1_A8H+1_A8Gu71@1_A8HE8C02+1_A8Gu71!:completed>false:title'third'",
+      "*lww#1_A8H+1_A8Gu71@1_A8Ic8F01+1_A8Gu71!:completed>true@(HE8C02+:title'third'",
+    ],
+    [
+      "*lww#1_AAuOCD01+1_AAuJN~@1_AAvY5201+1_AAvK_p!:completed>false@(uOCz01+(uJN~:title'sixth'",
+      '*lww#1_AAuOCD01+1_AAuJN~@1_AAvQ2c01+1_AAvJZk!:completed>true',
+      "*lww#1_AAuOCD01+1_AAuJN~@1_AAvY5201+1_AAvK_p!:completed>false@(uOCz01+(uJN~:title'sixth'",
     ],
   ];
 
