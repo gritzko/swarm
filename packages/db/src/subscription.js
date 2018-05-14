@@ -336,7 +336,7 @@ export class GQLSub {
     }
   }
 
-  static hash(request: Request, cbk?: (Response<any>) => void): string {
+  static hash(request: Request, cbk?: (Response<*>) => void): string {
     return hash({ request, cbk });
   }
 }

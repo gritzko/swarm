@@ -26,9 +26,9 @@ export default class SwarmDB extends API {
 
   async execute<T>(
     request: Request,
-    cbk?: (Response<T>) => void,
+    callback?: (Response<T>) => void,
   ): Promise<{ ok: boolean, off?: () => boolean }> {
-    const h = GQLSub.hash(request, cbk);
+    const h = GQLSub.hash(request, callback);
     for (const s of this.subs) {
       if (s.is(h)) {
         return { ok: false };
@@ -42,7 +42,7 @@ export default class SwarmDB extends API {
     }
 
     await this.ensure();
-    const sub = new GQLSub(this, this.client, this.cache, request, cbk);
+    const sub = new GQLSub(this, this.client, this.cache, request, callback);
     this.subs.push(sub);
     sub.finalize((h: string) => {
       let c = -1;
