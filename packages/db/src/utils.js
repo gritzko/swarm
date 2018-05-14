@@ -35,18 +35,14 @@ export const applyScalarDirectives = (
   for (const key of Object.keys(directives || {})) {
     switch (key) {
       case 'date':
-        if (typeof value === 'string') value = parseDate(value);
+        if (typeof value === 'string' || value instanceof UUID)
+          value = parseDate(value.toString());
+        break;
+      case 'uuid':
+        if (typeof value === 'string' || value instanceof UUID)
+          value = UUID.fromString(value.toString());
         break;
     }
   }
   return value;
 };
-
-export function getOff(keys: { [string]: boolean }, ids: string): string {
-  const ret = new Frame();
-  for (const op of new Frame(ids)) {
-    const id = op.object.toString();
-    if (!keys[id]) ret.push(op);
-  }
-  return ret.toString();
-}

@@ -3,6 +3,8 @@ import type { DocumentNode } from 'graphql';
 import type { Atom } from 'swarm-ron';
 import { UUID } from 'swarm-ron';
 
+export type Variables = { [string]: Atom | { [string]: Atom } };
+
 export type Response<T> = {
   data: T,
   off?: () => boolean,
@@ -10,8 +12,8 @@ export type Response<T> = {
 };
 
 export type Request = {
-  gql: DocumentNode,
-  args?: { [string]: Atom | { [string]: Atom } },
+  query: DocumentNode,
+  variables?: Variables,
 };
 
 export interface IClient {

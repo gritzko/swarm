@@ -22,7 +22,7 @@ export const Schema = gql`
   # at least two field are available.
   interface Node {
     id: UUID
-    __typename: String
+    type: String
     version: String
   }
 

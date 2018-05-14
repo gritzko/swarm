@@ -36,7 +36,7 @@ test('directive @weak', async () => {
         version
         collection {
           id
-          __typename
+          type
           version
           length
         }
@@ -52,7 +52,7 @@ test('directive @weak', async () => {
     swarm.set('nope', { hello: 'world' });
   }, 1000);
   const res = await new Promise(async resolve => {
-    const r = await swarm.execute({ gql: q, args: { id: objID } }, v => {
+    const r = await swarm.execute({ query: q, variables: { id: objID } }, v => {
       c++;
       resolve(v);
     });
@@ -66,7 +66,7 @@ test('directive @weak', async () => {
       version: '1ABC3+user',
       collection: {
         id: '1ABC2+user',
-        __typename: 'set',
+        type: 'set',
         version: '1ABC5+user',
         length: 1,
       },

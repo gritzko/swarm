@@ -14,7 +14,7 @@ import type { Options, Value } from 'swarm-api';
 import type { Atom } from 'swarm-ron';
 
 import type { Request, Response, IClient, IApi } from './types';
-import { getOff, node, parseDate, applyScalarDirectives } from './utils';
+import { node, parseDate, applyScalarDirectives } from './utils';
 
 import { Dependencies, KINDS, REACTIVE_WEAK } from './deps';
 
@@ -44,7 +44,7 @@ export class GQLSub {
     this.request = request;
     this.id = GQLSub.hash(request, cbk);
     // $FlowFixMe
-    this.operation = request.gql.definitions[0].operation;
+    this.operation = request.query.definitions[0].operation;
 
     this.client = client;
     this.cache = cache;
@@ -180,10 +180,10 @@ export class GQLSub {
 
     const tree = graphql(
       this.resolver.bind(this),
-      this.request.gql,
+      this.request.query,
       {},
       ctx,
-      this.request.args,
+      this.request.variables,
     );
 
     return {
@@ -205,8 +205,8 @@ export class GQLSub {
   ): mixed {
     if (root instanceof UUID) return null;
 
-    // workaround __typename
-    if (fieldName === '__typename') fieldName = 'type';
+    // workaround type
+    if (fieldName === 'type') fieldName = 'type';
 
     let value: Atom = root[fieldName];
     if (typeof value === 'undefined') value = null;
@@ -217,10 +217,8 @@ export class GQLSub {
 
     // if atom value is not a UUID or is a leaf, return w/o
     // any additional business logic
-    if (!(value instanceof UUID)) {
+    if (!(value instanceof UUID) || info.isLeaf) {
       return applyScalarDirectives(value, info.directives);
-    } else if (info.isLeaf) {
-      return applyScalarDirectives(value.toString(), info.directives);
     }
 
     const kind = Dependencies.getKind(this.operation, info.directives);
@@ -244,8 +242,8 @@ export class GQLSub {
           if (!obj) continue;
           if (!Array.isArray(obj)) obj = obj.valueOf();
           // $FlowFixMe
-          const args = [dir.begin || 0];
-          if (dir.end || 0) args.push(dir.end);
+          const args = [(dir && dir.begin) || 0];
+          if (dir && dir.end) args.push(dir.end);
           obj = obj.slice(...args);
           break;
         case 'reverse':
@@ -285,10 +283,10 @@ export class GQLSub {
     const ctx = {};
     const tree = graphql(
       this.mutation.bind(this),
-      this.request.gql,
+      this.request.query,
       {},
       ctx,
-      this.request.args,
+      this.request.variables,
     );
 
     const all = [];

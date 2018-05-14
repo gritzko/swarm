@@ -30,7 +30,7 @@ describe('Partial reactivity', () => {
         }
       }
     `;
-    const re = await swarm.execute({ gql: query }, v => {
+    const re = await swarm.execute({ query }, v => {
       cumul.push(v.data);
     });
 
@@ -52,7 +52,7 @@ describe('Partial reactivity', () => {
         }
       }
     `;
-    await swarm.execute({ gql: query }, v => {
+    await swarm.execute({ query }, v => {
       cumul.push(v.data);
     });
 
@@ -73,7 +73,7 @@ describe('Partial reactivity', () => {
       }
     `;
 
-    await swarm.execute({ gql: query }, v => {
+    await swarm.execute({ query }, v => {
       cumul.push(v.data);
     });
 

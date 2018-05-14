@@ -62,6 +62,7 @@ export function ron2js(rawFrame: string): { [string]: Atom } {
   const proto = {
     length: 0,
     id: '',
+    uuid: ZERO,
     type: 'set',
     version: '',
     values: function() {
@@ -86,10 +87,11 @@ export function ron2js(rawFrame: string): { [string]: Atom } {
 
   for (const op of set) {
     if (op.event.gt(latest)) latest = op.event;
-    if (!proto.id) proto.id = op.uuid(1).toString();
-    if (proto.id !== op.uuid(1).toString() || !op.isRegular()) {
-      continue;
+    if (!proto.id) {
+      proto.id = op.uuid(1).toString();
+      proto.uuid = Object.freeze(op.uuid(1));
     }
+    if (!op.uuid(1).eq(proto.uuid) || !op.isRegular()) continue;
     if (op.values && !values[op.values]) {
       values[op.values] = true;
       ret[proto.length++] = {

@@ -54,7 +54,6 @@ test('swarm.execute({ subscription })', async () => {
   }
 
   expect(storage.storage).toEqual({
-    '0': '1ABC+server',
     '1ABC1+user':
       "*lww#1ABC1+user@1ABC3+user!:a=42:b'wat':c^0.1:d>false:e>true:f>1ABC2+user",
     '1ABC2+user':
@@ -79,7 +78,7 @@ test('swarm.execute({ subscription })', async () => {
     subscription Test($id: UUID!, $nope: UUID!) {
       result @node(id: $id) {
         id
-        __typename
+        type
         a
         b
         c
@@ -87,11 +86,11 @@ test('swarm.execute({ subscription })', async () => {
         e
         f {
           id
-          __typename
+          type
           length
           list: id @node @slice(begin: 2, end: 7) {
             id
-            __typename
+            type
             value
           }
         }
@@ -113,7 +112,7 @@ test('swarm.execute({ subscription })', async () => {
   let calls = 0;
   // $FlowFixMe
   const r = await swarm.execute(
-    { gql: q, args: { id: objID, nope: UUID.fromString('nope') } },
+    { query: q, variables: { id: objID, nope: UUID.fromString('nope') } },
     (v: Response<any>) => {
       res = v;
       calls++;
@@ -131,7 +130,7 @@ test('swarm.execute({ subscription })', async () => {
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
-      __typename: 'lww',
+      type: 'lww',
       a: 42,
       b: 'wat',
       c: 0.1,
@@ -139,18 +138,24 @@ test('swarm.execute({ subscription })', async () => {
       e: true,
       f: {
         id: '1ABC2+user',
-        __typename: 'set',
+        type: 'set',
         length: 9,
         list: [
-          { __typename: 'lww', id: '1ABCB+user', value: 8 },
-          { __typename: 'lww', id: '1ABC9+user', value: 6 },
-          { __typename: 'lww', id: '1ABC8+user', value: 5 },
-          { __typename: 'lww', id: '1ABC7+user', value: 4 },
-          { __typename: 'lww', id: '1ABC6+user', value: 3 },
+          { type: 'lww', id: '1ABCB+user', value: 8 },
+          { type: 'lww', id: '1ABC9+user', value: 6 },
+          { type: 'lww', id: '1ABC8+user', value: 5 },
+          { type: 'lww', id: '1ABC7+user', value: 4 },
+          { type: 'lww', id: '1ABC6+user', value: 3 },
         ],
       },
       id: '1ABC1+user',
-      internal: { a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null },
+      internal: {
+        a: 42,
+        c: 0.1,
+        e: true,
+        flat: UUID.fromString('1ABC1+user'),
+        notExists: null,
+      },
     },
   });
 
@@ -167,7 +172,7 @@ test('swarm.execute({ subscription })', async () => {
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
-      __typename: 'lww',
+      type: 'lww',
       a: 42,
       b: 'wat',
       c: 0.1,
@@ -175,18 +180,24 @@ test('swarm.execute({ subscription })', async () => {
       e: true,
       f: {
         id: '1ABC2+user',
-        __typename: 'set',
+        type: 'set',
         length: 10,
         list: [
-          { __typename: 'lww', id: '1ABCC+user', value: 9 },
-          { __typename: 'lww', id: '1ABCB+user', value: 8 },
-          { __typename: 'lww', id: '1ABC9+user', value: 6 },
-          { __typename: 'lww', id: '1ABC8+user', value: 5 },
-          { __typename: 'lww', id: '1ABC7+user', value: 4 },
+          { type: 'lww', id: '1ABCC+user', value: 9 },
+          { type: 'lww', id: '1ABCB+user', value: 8 },
+          { type: 'lww', id: '1ABC9+user', value: 6 },
+          { type: 'lww', id: '1ABC8+user', value: 5 },
+          { type: 'lww', id: '1ABC7+user', value: 4 },
         ],
       },
       id: '1ABC1+user',
-      internal: { a: 42, c: 0.1, e: true, flat: '1ABC1+user', notExists: null },
+      internal: {
+        a: 42,
+        c: 0.1,
+        e: true,
+        flat: UUID.fromString('1ABC1+user'),
+        notExists: null,
+      },
     },
   });
 
@@ -207,7 +218,7 @@ test('swarm.execute({ subscription })', async () => {
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
-      __typename: 'lww',
+      type: 'lww',
       a: 42,
       b: 'wat',
       c: 0.1,
@@ -215,14 +226,14 @@ test('swarm.execute({ subscription })', async () => {
       e: true,
       f: {
         id: '1ABC2+user',
-        __typename: 'set',
+        type: 'set',
         length: 10,
         list: [
-          { __typename: 'lww', id: '1ABCC+user', value: 9 },
-          { __typename: 'lww', id: '1ABCB+user', value: 8 },
-          { __typename: 'lww', id: '1ABC9+user', value: 6 },
-          { __typename: 'lww', id: '1ABC8+user', value: 5 },
-          { __typename: 'lww', id: '1ABC7+user', value: 4 },
+          { type: 'lww', id: '1ABCC+user', value: 9 },
+          { type: 'lww', id: '1ABCB+user', value: 8 },
+          { type: 'lww', id: '1ABC9+user', value: 6 },
+          { type: 'lww', id: '1ABC8+user', value: 5 },
+          { type: 'lww', id: '1ABC7+user', value: 4 },
         ],
       },
       id: '1ABC1+user',
@@ -230,7 +241,7 @@ test('swarm.execute({ subscription })', async () => {
         a: 42,
         c: 0.1,
         e: true,
-        flat: '1ABC1+user',
+        flat: UUID.fromString('1ABC1+user'),
         notExists: { id: 'nope', test: 1 },
       },
     },
@@ -246,7 +257,7 @@ test('swarm.execute({ subscription })', async () => {
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
-      __typename: 'lww',
+      type: 'lww',
       a: 42,
       b: 'wat',
       c: 0.1,
@@ -254,14 +265,14 @@ test('swarm.execute({ subscription })', async () => {
       e: true,
       f: {
         id: '1ABC2+user',
-        __typename: 'set',
+        type: 'set',
         length: 10,
         list: [
-          { __typename: 'lww', id: '1ABCC+user', value: 9 },
-          { __typename: 'lww', id: '1ABCB+user', value: 8 },
-          { __typename: 'lww', id: '1ABC9+user', value: 6 },
-          { __typename: 'lww', id: '1ABC8+user', value: 5 },
-          { __typename: 'lww', id: '1ABC7+user', value: 4 },
+          { type: 'lww', id: '1ABCC+user', value: 9 },
+          { type: 'lww', id: '1ABCB+user', value: 8 },
+          { type: 'lww', id: '1ABC9+user', value: 6 },
+          { type: 'lww', id: '1ABC8+user', value: 5 },
+          { type: 'lww', id: '1ABC7+user', value: 4 },
         ],
       },
       id: '1ABC1+user',
@@ -269,7 +280,7 @@ test('swarm.execute({ subscription })', async () => {
         a: 42,
         c: 0.1,
         e: true,
-        flat: '1ABC1+user',
+        flat: UUID.fromString('1ABC1+user'),
         notExists: { id: 'nope', test: 1 },
       },
     },
@@ -321,7 +332,7 @@ test('swarm.execute({ query })', async () => {
     query Test($id: UUID!, $nope: UUID!) {
       result @node(id: $id) {
         id
-        __typename
+        type
         a
         b
         c
@@ -329,7 +340,7 @@ test('swarm.execute({ query })', async () => {
         e
         f @slice(begin: 2, end: 7) {
           id
-          __typename
+          type
           value
         }
         internal @node(id: $id) {
@@ -350,7 +361,7 @@ test('swarm.execute({ query })', async () => {
 
   const res = await new Promise(async resolve => {
     const r = await swarm.execute(
-      { gql: q, args: { id: objID, nope: UUID.fromString('nope') } },
+      { query: q, variables: { id: objID, nope: UUID.fromString('nope') } },
       resolve,
     );
     expect(r.ok).toBeTruthy();
@@ -360,7 +371,7 @@ test('swarm.execute({ query })', async () => {
   expect(res.error).toBeUndefined();
   expect(res.data).toEqual({
     result: {
-      __typename: 'lww',
+      type: 'lww',
       a: 42,
       b: 'wat',
       c: 0.1,
@@ -372,7 +383,7 @@ test('swarm.execute({ query })', async () => {
         a: 42,
         c: 0.1,
         e: true,
-        flat: '1ABC1+user',
+        flat: UUID.fromString('1ABC1+user'),
         notExists: null,
       },
     },
@@ -406,7 +417,7 @@ test('swarm.execute({ mutation })', async () => {
     const payload = { test: 1 };
     const payload2 = { hello: 'world' };
     sub = await swarm.execute(
-      { gql: q, args: { id: objID, payload, payload2 } },
+      { query: q, variables: { id: objID, payload, payload2 } },
       r,
     );
   });
@@ -448,7 +459,7 @@ test('swarm.execute({ empty })', async () => {
 
   // $FlowFixMe
   await new Promise(r => {
-    swarm.execute({ gql: q }, (v: Response<any>) => {
+    swarm.execute({ query: q }, (v: Response<any>) => {
       calls++;
       cumul.push(v.data);
       if (calls === 2) r();

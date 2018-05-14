@@ -99,7 +99,7 @@ test('client.merge(...)', async () => {
 
   // $FlowFixMe
   expect(client.storage.storage.object).toBe(
-    "*lww#object@time1+author!@(2+:key'value2'",
+    "*lww#object@time2+author!:key'value2'",
   );
   // $FlowFixMe
   expect(JSON.parse(storage.storage.__meta__)).toEqual({
@@ -124,10 +124,6 @@ test('client.merge(...)', async () => {
     {
       frame: '#object',
       state: "*lww#object@time2+author!:key'value2'",
-    },
-    {
-      frame: '#object',
-      state: "*lww#object@time1+author!@(2+:key'value2'",
     },
   ]);
 });
@@ -376,10 +372,10 @@ test('client.clock.time().local()', async () => {
   expect(value).toEqual([
     // empty b/c it's a local object, so we call back
     // anyway first
+    '',
+    '',
     null,
-    null,
-    null,
-    null,
+    '',
     "*lww#1ABC3+~local@time+author!:key'value'",
     "*lww#object@time+author!:key'value'",
     "*lww#1ABC1+~local@time+author!:key'value'",

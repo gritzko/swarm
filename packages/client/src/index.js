@@ -17,7 +17,7 @@ import Op, {
 import type { Atom } from 'swarm-ron';
 import type { Clock } from 'swarm-clock';
 import { Logical, Calendar } from 'swarm-clock';
-import { ZERO, NEVER } from 'swarm-ron-uuid';
+import { ZERO, NEVER, LOCAL } from 'swarm-ron-uuid';
 import { lww } from 'swarm-rdt';
 import { reduce } from 'swarm-rdt';
 import type { Storage } from './storage';
@@ -532,10 +532,11 @@ export default class Client {
     const store = await this.storage.multiGet(ks);
     for (const key of ks) {
       const value = store[key];
-      if (!callback.ensure || value !== null) {
+      const isLocal = key.slice(key.length - LOCAL.length) === LOCAL;
+      if (!callback.ensure || value !== null || isLocal) {
         if (callback.once) this.off('#' + key, callback.f);
         // $FlowFixMe
-        callback.f('#' + key, value);
+        callback.f('#' + key, isLocal ? value || '' : value);
       }
     }
   }

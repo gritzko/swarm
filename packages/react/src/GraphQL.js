@@ -10,21 +10,23 @@ import type { DocumentNode } from 'graphql';
 import DB from 'swarm-db';
 import type { Request, Response as DBResponse } from 'swarm-db';
 import type { Value } from 'swarm-api';
+import type { Variables } from 'swarm-db';
 import type { Atom } from 'swarm-ron';
 import UUID, { ERROR } from 'swarm-ron-uuid';
 
-type args = { [string]: Atom | { [string]: Atom } };
+export type Mutation = Variables => Promise<Value>;
 
 export type Response<T> = {
   data: ?T,
   uuid: () => UUID,
   error?: Error,
-  mutations?: { [string]: (args: args) => Promise<Value> },
+  mutations: { [string]: Mutation },
+  initialized: boolean,
 };
 
 type Props<T> = {
-  query: DocumentNode,
-  args?: args,
+  query?: DocumentNode,
+  variables?: Variables,
   swarm?: DB,
   mutations?: { [string]: DocumentNode },
   children: (r: Response<T>) => React.Node,
@@ -33,7 +35,9 @@ type Props<T> = {
 type State<T> = {
   data: ?T,
   error?: Error,
-  mutations?: { [string]: (args: args) => Promise<Value> },
+  mutations: {
+    [string]: Mutation,
+  },
 };
 
 export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
@@ -51,7 +55,6 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
         `Either wrap the root component in a <Provider>, ` +
         `or explicitly pass "swarm" as a prop to <GraphQL>.`,
     );
-    invariant(props.query, `Could not find "query" in props of <GraphQL>.`);
 
     this._unmounted = false;
     this.state = {
@@ -72,7 +75,7 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
   componentDidUpdate(prev: Props<T>) {
     if (
       this.props.query !== prev.query ||
-      !shallowEqual(this.props.args, prev.args) ||
+      !shallowEqual(this.props.variables, prev.variables) ||
       !shallowEqual(this.props.mutations, prev.mutations)
     ) {
       this._unsubscribe();
@@ -95,13 +98,13 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
 
   async _subscribe(): Promise<void> {
     const {
-      props: { query, args },
+      props: { query, variables },
       swarm,
     } = this;
-    if (!swarm || !swarm.execute) return;
+    if (!swarm || !swarm.execute || !query) return;
 
     const sub = await swarm.execute(
-      { gql: query, args },
+      { query, variables },
       (r: DBResponse<any>) => {
         !this._unmounted && this.setState({ data: r.data, error: r.error });
       },
@@ -115,18 +118,20 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
     this._off && this._off();
   }
 
-  _bindMutations(): { [string]: (args: args) => Promise<Value> } | void {
+  _bindMutations(): {
+    [string]: Mutation,
+  } {
     const {
       props: { mutations },
       swarm,
     } = this;
+    const ret = {};
     if (mutations && swarm) {
-      const ret = {};
       for (const key of Object.keys(mutations)) {
-        ret[key] = async (args: args): Promise<Value> => {
+        ret[key] = async (variables: Variables): Promise<Value> => {
           return new Promise((resolve, reject) => {
             swarm.execute(
-              { gql: mutations[key], args: args },
+              { query: mutations[key], variables },
               (r: DBResponse<any>) => {
                 r.error ? reject(r.error) : resolve(r.data);
               },
@@ -134,8 +139,8 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
           });
         };
       }
-      return ret;
     }
+    return ret;
   }
 
   render() {
@@ -146,6 +151,7 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
         uuid: this.swarm ? this.swarm.uuid : () => ERROR,
         error: this.state.error,
         mutations: this.state.mutations,
+        initialized: this.swarm ? this.swarm.client.queue === undefined : false,
       })
     );
   }

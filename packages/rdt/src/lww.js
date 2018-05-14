@@ -48,10 +48,12 @@ export function ron2js(rawFrame: string): { [string]: Atom } {
   let latest = ZERO;
 
   for (const op of lww.unzip().reverse()) {
-    const id = op.object.toString();
-    proto.id = proto.id || id;
-    if (op.event.gt(latest)) latest = op.event;
-    if (id !== proto.id || op.isHeader() || op.isQuery()) continue;
+    if (!proto.id) {
+      proto.id = op.uuid(1).toString();
+      proto.uuid = op.uuid(1);
+      latest = op.event;
+    }
+    if (!op.uuid(1).eq(proto.uuid) || !op.isRegular()) continue;
 
     let value = op.value(0);
 

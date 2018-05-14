@@ -16,7 +16,7 @@ import type { Atom } from 'swarm-ron';
 import type { Request, Response } from './types';
 import { GQLSub } from './subscription';
 
-export type { Request, Response } from './types';
+export type { Request, Response, Variables } from './types';
 
 export default class SwarmDB extends API {
   constructor(options: Options): SwarmDB {
@@ -35,9 +35,9 @@ export default class SwarmDB extends API {
       }
     }
 
-    if (request.gql.definitions.length !== 1) {
+    if (request.query.definitions.length !== 1) {
       throw new Error(
-        `unexpected length of definitions: ${request.gql.definitions.length}`,
+        `unexpected length of definitions: ${request.query.definitions.length}`,
       );
     }
 
