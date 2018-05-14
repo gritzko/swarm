@@ -230,11 +230,11 @@ export default class Client {
 
     let seen: UUID = ZERO;
     for (const op of new Frame(resp)) {
+      if (op.uuid(3).isError()) {
+        this.close();
+        throw new Error(`Handshake error: ${op.uuid(3).toString()}`);
+      }
       if (seen.eq(ZERO)) {
-        if (op.uuid(3).isError()) {
-          this.close();
-          throw new Error(op.uuid(3).toString());
-        }
         seen = op.uuid(2);
       }
       const val = op.value(0);
@@ -497,7 +497,7 @@ export default class Client {
     await this.ensure();
     let stamps: { [string]: UUID | void } = {};
 
-    const frame = mapUUIDs(rawFrame, (uuid, position, _, op): UUID => {
+    const frame = mapUUIDs(rawFrame, (uuid, position): UUID => {
       if (position === 0) return uuid.eq(ZERO) ? lww.type : uuid;
       if (position > 2 || !uuid.eq(ZERO)) return uuid;
       const exists = stamps[uuid.toString()];
@@ -505,12 +505,11 @@ export default class Client {
       return exists ? exists : (stamps[uuid.toString()] = this.clock.time());
     });
 
-    await this.pending.push(frame);
-
     const filtered = new Frame(frame)
       .filter(op => !op.uuid(1).isLocal())
       .toString();
     if (filtered) {
+      await this.pending.push(filtered);
       this.upstream.send(filtered);
     }
     await this.merge(frame, { local: true });
