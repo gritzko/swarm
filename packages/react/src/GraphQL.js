@@ -18,10 +18,9 @@ export type Mutation = Variables => Promise<Value>;
 
 export type Response<T> = {
   data: ?T,
-  uuid: () => UUID,
+  uuid: ?() => UUID,
   error?: Error,
   mutations: { [string]: Mutation },
-  initialized: boolean,
 };
 
 type Props<T> = {
@@ -38,6 +37,7 @@ type State<T> = {
   mutations: {
     [string]: Mutation,
   },
+  initialized: boolean,
 };
 
 export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
@@ -60,12 +60,16 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
     this.state = {
       data: null,
       mutations: this._bindMutations(),
+      initialized: this.swarm ? this.swarm.client.queue === undefined : false,
     };
 
     if (this.swarm) {
       this.swarm
         .ensure()
-        .then(this._subscribe.bind(this))
+        .then(() => {
+          this._subscribe();
+          this.setState({ initialized: true });
+        })
         .catch(error => {
           !this._unmounted && this.setState({ error });
         });
@@ -103,12 +107,9 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
     } = this;
     if (!swarm || !swarm.execute || !query) return;
 
-    const sub = await swarm.execute(
-      { query, variables },
-      (r: DBResponse<any>) => {
-        !this._unmounted && this.setState({ data: r.data, error: r.error });
-      },
-    );
+    const sub = await swarm.execute({ query, variables }, (r: DBResponse<any>) => {
+      !this._unmounted && this.setState({ data: r.data, error: r.error });
+    });
 
     if (this._off) this._off();
     this._off = sub.off;
@@ -130,12 +131,9 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
       for (const key of Object.keys(mutations)) {
         ret[key] = async (variables: Variables): Promise<Value> => {
           return new Promise((resolve, reject) => {
-            swarm.execute(
-              { query: mutations[key], variables },
-              (r: DBResponse<any>) => {
-                r.error ? reject(r.error) : resolve(r.data);
-              },
-            );
+            swarm.execute({ query: mutations[key], variables }, (r: DBResponse<any>) => {
+              r.error ? reject(r.error) : resolve(r.data);
+            });
           });
         };
       }
@@ -148,10 +146,9 @@ export default class GraphQL<T> extends React.Component<Props<T>, State<T>> {
       this.props.children &&
       this.props.children.call(null, {
         data: this.state.data,
-        uuid: this.swarm ? this.swarm.uuid : () => ERROR,
+        uuid: this.state.initialized && this.swarm ? this.swarm.uuid : null,
         error: this.state.error,
         mutations: this.state.mutations,
-        initialized: this.swarm ? this.swarm.client.queue === undefined : false,
       })
     );
   }

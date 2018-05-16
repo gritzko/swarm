@@ -44,7 +44,10 @@ class ReconnectableWebSocket {
     let socket = (this._socket = new WebSocket(this._url, this._protocols));
     socket.binaryType = this._options.binaryType;
 
-    if (this._options.maxReconnectAttempts && this._options.maxReconnectAttempts < this._reconnectAttempts) {
+    if (
+      this._options.maxReconnectAttempts &&
+      this._options.maxReconnectAttempts < this._reconnectAttempts
+    ) {
       return;
     }
 
@@ -67,7 +70,9 @@ class ReconnectableWebSocket {
   close = (code, reason) => {
     this.wasClean = true;
     if (typeof code === 'undefined') code = 1000;
-    if (this._socket) this._socket.close(code, reason);
+    if (this._socket && this._socket.readyState === ReconnectableWebSocket.OPEN) {
+      this._socket.close(code, reason);
+    }
   };
 
   _onmessage = message => {
@@ -92,7 +97,7 @@ class ReconnectableWebSocket {
 
   _onerror = event => {
     // To avoid undetermined state, we close socket on error
-    this._socket.close();
+    this.close();
 
     this._debug('WebSocket: error', event);
     this._syncState();
@@ -107,7 +112,10 @@ class ReconnectableWebSocket {
       return;
     }
     setTimeout(() => {
-      if (this.readyState === ReconnectableWebSocket.CLOSING || this.readyState === ReconnectableWebSocket.CLOSED) {
+      if (
+        this.readyState === ReconnectableWebSocket.CLOSING ||
+        this.readyState === ReconnectableWebSocket.CLOSED
+      ) {
         this._reconnectAttempts++;
         this.open();
       }
@@ -115,9 +123,14 @@ class ReconnectableWebSocket {
   };
 
   _getTimeout = () => {
-    let timeout = this._options.reconnectInterval * Math.pow(this._options.reconnectDecay, this._reconnectAttempts);
-    timeout = timeout > this._options.maxReconnectInterval ? this._options.maxReconnectInterval : timeout;
-    return this._options.randomRatio ? getRandom(timeout / this._options.randomRatio, timeout) : timeout;
+    let timeout =
+      this._options.reconnectInterval *
+      Math.pow(this._options.reconnectDecay, this._reconnectAttempts);
+    timeout =
+      timeout > this._options.maxReconnectInterval ? this._options.maxReconnectInterval : timeout;
+    return this._options.randomRatio
+      ? getRandom(timeout / this._options.randomRatio, timeout)
+      : timeout;
   };
 
   _syncState = () => {
