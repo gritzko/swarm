@@ -54,8 +54,7 @@ test('swarm.execute({ subscription })', async () => {
   }
 
   expect(storage.storage).toEqual({
-    '1ABC1+user':
-      "*lww#1ABC1+user@1ABC3+user!:a=42:b'wat':c^0.1:d>false:e>true:f>1ABC2+user",
+    '1ABC1+user': "*lww#1ABC1+user@1ABC3+user!:a=42:b'wat':c^0.1:d>false:e>true:f>1ABC2+user",
     '1ABC2+user':
       '*set#1ABC2+user@1ABCW+user!>1ABCD+user@(U+>1ABCC+user@(S+>1ABCB+user@(O+>1ABC9+user@(M+>1ABC8+user@(K+>1ABC7+user@(I+>1ABC6+user@(G+>1ABC5+user@(E+>1ABC4+user',
     '1ABC4+user': '*lww#1ABC4+user@1ABCF+user!:value=1',
@@ -71,7 +70,7 @@ test('swarm.execute({ subscription })', async () => {
     __meta__:
       '{"name":"test","clockLen":5,"forkMode":"// FIXME","peerIdBits":30,"horizont":604800,"offset":0,"id":"user","auth":"JwT.t0k.en","clockMode":"Logical"}',
     __pending__:
-      '["*lww#1ABC1+user@1ABC3+user!:a=42:b\'wat\':c^0.1:d>false:e>true:f>1ABC2+user","*set#1ABC2+user@1ABCE+user!>1ABC4+user","*lww#1ABC4+user@1ABCF+user!:value=1","*set#1ABC2+user@1ABCG+user!>1ABC5+user","*lww#1ABC5+user@1ABCH+user!:value=2","*set#1ABC2+user@1ABCI+user!>1ABC6+user","*lww#1ABC6+user@1ABCJ+user!:value=3","*set#1ABC2+user@1ABCK+user!>1ABC7+user","*lww#1ABC7+user@1ABCL+user!:value=4","*set#1ABC2+user@1ABCM+user!>1ABC8+user","*lww#1ABC8+user@1ABCN+user!:value=5","*set#1ABC2+user@1ABCO+user!>1ABC9+user","*lww#1ABC9+user@1ABCP+user!:value=6","*lww#1ABCA+~local@1ABCR+user!:value=7","*set#1ABC2+user@1ABCS+user!>1ABCB+user","*lww#1ABCB+user@1ABCT+user!:value=8","*set#1ABC2+user@1ABCU+user!>1ABCC+user","*lww#1ABCC+user@1ABCV+user!:value=9","*set#1ABC2+user@1ABCW+user!>1ABCD+user","*lww#1ABCD+user@1ABCX+user!:value=10"]',
+      '["*lww#1ABC1+user@1ABC3+user!:a=42:b\'wat\':c^0.1:d>false:e>true:f>1ABC2+user","*set#1ABC2+user@1ABCE+user!>1ABC4+user","*lww#1ABC4+user@1ABCF+user!:value=1","*set#1ABC2+user@1ABCG+user!>1ABC5+user","*lww#1ABC5+user@1ABCH+user!:value=2","*set#1ABC2+user@1ABCI+user!>1ABC6+user","*lww#1ABC6+user@1ABCJ+user!:value=3","*set#1ABC2+user@1ABCK+user!>1ABC7+user","*lww#1ABC7+user@1ABCL+user!:value=4","*set#1ABC2+user@1ABCM+user!>1ABC8+user","*lww#1ABC8+user@1ABCN+user!:value=5","*set#1ABC2+user@1ABCO+user!>1ABC9+user","*lww#1ABC9+user@1ABCP+user!:value=6","*set#1ABC2+user@1ABCS+user!>1ABCB+user","*lww#1ABCB+user@1ABCT+user!:value=8","*set#1ABC2+user@1ABCU+user!>1ABCC+user","*lww#1ABCC+user@1ABCV+user!:value=9","*set#1ABC2+user@1ABCW+user!>1ABCD+user","*lww#1ABCD+user@1ABCX+user!:value=10"]',
   });
 
   const q = gql`
@@ -209,9 +208,7 @@ test('swarm.execute({ subscription })', async () => {
   expect(calls).toBe(3);
 
   // $FlowFixMe
-  expect(swarm.client.storage.storage['nope']).toBe(
-    '*lww#nope@1ABCa+user!:test=1',
-  );
+  expect(swarm.client.storage.storage['nope']).toBe('*lww#nope@1ABCa+user!:test=1');
 
   expect(swarm.cache['nope']).toEqual({ test: 1 });
 
@@ -416,10 +413,7 @@ test('swarm.execute({ mutation })', async () => {
   const resp = await new Promise(async r => {
     const payload = { test: 1 };
     const payload2 = { hello: 'world' };
-    sub = await swarm.execute(
-      { query: q, variables: { id: objID, payload, payload2 } },
-      r,
-    );
+    sub = await swarm.execute({ query: q, variables: { id: objID, payload, payload2 } }, r);
   });
 
   expect(resp).toEqual({
@@ -467,8 +461,5 @@ test('swarm.execute({ empty })', async () => {
   });
 
   expect(calls).toBe(2);
-  expect(cumul).toEqual([
-    { result: null },
-    { result: { id: 'ack', type: '', version: '0' } },
-  ]);
+  expect(cumul).toEqual([{ result: null }, { result: { id: 'ack', type: '', version: '0' } }]);
 });
