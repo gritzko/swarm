@@ -1,6 +1,6 @@
 // @flow
 
-import Op, { UUID, Batch, Frame } from 'swarm-ron';
+import Op, { UUID, Batch, Frame } from '@swarm/ron';
 import { reduce } from '../src';
 import { ron2js } from '../src/set';
 

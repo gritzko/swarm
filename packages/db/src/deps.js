@@ -1,7 +1,7 @@
 // @flow
 
-import { Frame } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
+import { Frame } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
 
 type Kind = 0 | 1 | 2 | 3;
 

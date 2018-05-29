@@ -1,6 +1,6 @@
 // @flow
 
-import { Batch, UUID } from 'swarm-ron';
+import { Batch, UUID } from '@swarm/ron';
 
 import { reduce } from '../src';
 import { ron2js } from '../src/lww';

@@ -1,7 +1,7 @@
 // @flow
 'use strict';
 
-import RON from 'swarm-ron-grammar';
+import RON from '@swarm/ron-grammar';
 
 export default class UUID {
   value: string;
@@ -68,11 +68,7 @@ export default class UUID {
   }
 
   eq(uuid: UUID): boolean {
-    return (
-      this.value === uuid.value &&
-      this.origin === uuid.origin &&
-      this.sep === uuid.sep
-    );
+    return this.value === uuid.value && this.origin === uuid.origin && this.sep === uuid.sep;
   }
 
   isZero(): boolean {
@@ -107,8 +103,7 @@ export default class UUID {
       while (pre.length < prefix + 4) pre += '0';
       ret = pre + ret.substr(1);
     }
-    while (ret.length > 1 && ret[ret.length - 1] === '0')
-      ret = ret.substr(0, ret.length - 1);
+    while (ret.length > 1 && ret[ret.length - 1] === '0') ret = ret.substr(0, ret.length - 1);
     return ret;
   }
 
@@ -184,8 +179,7 @@ export const PREFIXES = '([{}])';
 export const TIME_CONST = { '0': 1, '~': 1, '~~~~~~~~~~': 1 };
 export const LOCAL = `~local`;
 
-export const BASE64 =
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
+export const BASE64 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz~';
 export const CODES: Int8Array = new Int8Array(128);
 for (let i = 0; i < 128; i++) CODES[i] = -1;
 for (let i = 0; i < BASE64.length; i++) CODES[BASE64.charCodeAt(i)] = i;
@@ -244,8 +238,7 @@ export class Iter {
       this.uuid = null;
     } else {
       this.uuid = UUID.fromString(this.body, this.uuid, this.offset);
-      if (RE.lastIndex === 0 && this.offset !== 0)
-        this.offset = this.body.length;
+      if (RE.lastIndex === 0 && this.offset !== 0) this.offset = this.body.length;
       else this.offset = RE.lastIndex;
       if (this.body[this.offset] === ',') this.offset++;
     }

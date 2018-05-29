@@ -1,6 +1,6 @@
 {
-  "name": "swarm-api",
-  "version": "2.0.0",
+  "name": "@swarm/api",
+  "version": "0.1.0",
   "description": "Swarm API",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
@@ -9,11 +9,12 @@
     "url": ""
   },
   "dependencies": {
+    "@swarm/client": "^0.1.0",
+    "@swarm/rdt": "^0.1.0",
+    "@swarm/ron": "^0.1.0",
+    "@swarm/ron-uuid": "^0.1.0",
     "object-hash": "^1.2.0",
-    "swarm-client": "^2.0.0",
-    "swarm-rdt": "^2.0.20",
-    "swarm-ron": "^2.0.23",
-    "swarm-ron-uuid": "^2.0.9"
+    "regenerator-runtime": "^0.11.1"
   },
   "files": [
     "*.js",
@@ -31,5 +32,8 @@
     "RON",
     "CRDT"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

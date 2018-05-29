@@ -1,7 +1,7 @@
 // @flow
 
 import Op, { Frame } from './index';
-import { ZERO } from 'swarm-ron-uuid';
+import { ZERO } from '@swarm/ron-uuid';
 
 export default class Batch implements Iterator<Frame> {
   frames: Array<Frame>;

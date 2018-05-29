@@ -6,12 +6,12 @@ import type { DocumentNode } from 'graphql';
 import graphql from 'graphql-anywhere';
 import hash from 'object-hash';
 
-import { lww, set, ron2js } from 'swarm-rdt';
-import Op, { Frame } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
-import API from 'swarm-api';
-import type { Options, Value } from 'swarm-api';
-import type { Atom } from 'swarm-ron';
+import { lww, set, ron2js } from '@swarm/rdt';
+import Op, { Frame } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
+import API from '@swarm/api';
+import type { Options, Value } from '@swarm/api';
+import type { Atom } from '@swarm/ron';
 
 import type { Request, Response, IClient, IApi } from './types';
 import { node, parseDate, applyScalarDirectives } from './utils';

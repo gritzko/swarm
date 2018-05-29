@@ -1,9 +1,9 @@
 // @flow
 
 import RWS from './rws';
-import Op from 'swarm-ron';
-import { ZERO } from 'swarm-ron-uuid';
-import { Frame } from 'swarm-ron';
+import Op from '@swarm/ron';
+import { ZERO } from '@swarm/ron-uuid';
+import { Frame } from '@swarm/ron';
 
 export interface Connection {
   onmessage: (ev: MessageEvent) => any;

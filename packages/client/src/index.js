@@ -13,13 +13,13 @@ import Op, {
   FRAME_SEP,
   mapUUIDs,
   js2ron,
-} from 'swarm-ron';
-import type { Atom } from 'swarm-ron';
-import type { Clock } from 'swarm-clock';
-import { Logical, Calendar } from 'swarm-clock';
-import { ZERO, NEVER, LOCAL } from 'swarm-ron-uuid';
-import { lww } from 'swarm-rdt';
-import { reduce } from 'swarm-rdt';
+} from '@swarm/ron';
+import type { Atom } from '@swarm/ron';
+import type { Clock } from '@swarm/clock';
+import { Logical, Calendar } from '@swarm/clock';
+import { ZERO, NEVER, LOCAL } from '@swarm/ron-uuid';
+import { lww } from '@swarm/rdt';
+import { reduce } from '@swarm/rdt';
 import type { Storage } from './storage';
 import { InMemory } from './storage';
 import type { Connection } from './connection';

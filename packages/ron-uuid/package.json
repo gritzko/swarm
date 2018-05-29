@@ -1,24 +1,39 @@
 {
-  "name": "swarm-ron-uuid",
-  "version": "2.0.9",
+  "name": "@swarm/ron-uuid",
+  "version": "0.1.0",
   "description": "A Swarm Replicated Object Notation UUID variant",
   "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
-  "contributors": ["Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"],
+  "contributors": [
+    "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"
+  ],
   "main": "lib/index.js",
   "repository": {
     "type": "git",
     "url": ""
   },
   "dependencies": {
-    "swarm-ron-grammar": "^2.0.0"
+    "@swarm/ron-grammar": "^0.1.0"
   },
-  "files": ["index.js", "test.js", "README.md"],
+  "files": [
+    "index.js",
+    "test.js",
+    "README.md"
+  ],
   "scripts": {
     "build": "yarn run build:clean && yarn run build:lib && yarn run build:flow",
     "build:clean": "../../node_modules/.bin/rimraf lib",
     "build:lib": "../../node_modules/.bin/babel -d lib src --ignore '**/__tests__/**'",
     "build:flow": "../../node_modules/.bin/flow-copy-source -v -i '**/__tests__/**' src lib"
   },
-  "keywords": ["swarm", "replicated", "ron", "grammar", "protocol"],
+  "keywords": [
+    "swarm",
+    "replicated",
+    "ron",
+    "grammar",
+    "protocol"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

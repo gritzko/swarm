@@ -3,12 +3,12 @@
 import regeneratorRuntime from 'regenerator-runtime';
 import hash from 'object-hash';
 
-import Client from 'swarm-client';
-import Op, { Frame, ZERO, UUID, FRAME_SEP, js2ron } from 'swarm-ron';
-import { ZERO as ZERO_UUID } from 'swarm-ron-uuid';
-import { lww, set, ron2js } from 'swarm-rdt';
-import type { Atom } from 'swarm-ron';
-import type { Options as ClntOpts } from 'swarm-client';
+import Client from '@swarm/client';
+import Op, { Frame, ZERO, UUID, FRAME_SEP, js2ron } from '@swarm/ron';
+import { ZERO as ZERO_UUID } from '@swarm/ron-uuid';
+import { lww, set, ron2js } from '@swarm/rdt';
+import type { Atom } from '@swarm/ron';
+import type { Options as ClntOpts } from '@swarm/client';
 
 export type Options = ClntOpts & {
   gcPeriod?: number,

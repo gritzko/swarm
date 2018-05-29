@@ -3,8 +3,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import Op, { Frame } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
+import Op, { Frame } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
 import type { Connection as IConn } from '../../client/src';
 
 let id = 1;

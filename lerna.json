@@ -12,7 +12,11 @@
     "packages/ron-uuid",
     "packages/ron"
   ],
-  "version": "independent",
   "npmClient": "yarn",
-  "useWorkspaces": true
+  "useWorkspaces": true,
+  "commands": {
+    "publish": {
+      "message": "chore(release): publish %s"
+    }
+ }
 }

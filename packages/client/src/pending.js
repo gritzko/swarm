@@ -3,8 +3,8 @@
 import regeneratorRuntime from 'regenerator-runtime'; // for async/await work flow
 
 import type { Storage } from './storage';
-import Op from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
+import Op from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
 
 export const KEY = '__pending__';
 

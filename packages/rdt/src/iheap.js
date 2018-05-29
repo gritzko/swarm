@@ -1,6 +1,6 @@
 // @flow
 
-import Op, { UUID, Frame, Batch, Cursor, ZERO } from 'swarm-ron';
+import Op, { UUID, Frame, Batch, Cursor, ZERO } from '@swarm/ron';
 
 export default class IHeap {
   iters: Array<Cursor>;

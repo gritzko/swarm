@@ -1,7 +1,7 @@
 // @flow
 
 import IHeap, {eventComparator, eventComparatorDesc, refComparator} from '../src/iheap';
-import Op, {Batch, ZERO, Frame} from 'swarm-ron';
+import Op, {Batch, ZERO, Frame} from '@swarm/ron';
 
 test('IHeap put frame', () => {
   const frameA = "*lww#test@time1-orig:number=1@(2:string'2'";

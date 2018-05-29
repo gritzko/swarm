@@ -2396,17 +2396,17 @@ graceful-fs@^4.1.11, graceful-fs@^4.1.2, graceful-fs@^4.1.4, graceful-fs@^4.1.6:
   version "4.1.11"
   resolved "https://registry.yarnpkg.com/graceful-fs/-/graceful-fs-4.1.11.tgz#0e8bdfe4d1ddb8854d64e04ea7c00e2a026e5658"
 
-graphql-anywhere@^4.1.5:
+graphql-anywhere@4.1.5:
   version "4.1.5"
   resolved "https://registry.yarnpkg.com/graphql-anywhere/-/graphql-anywhere-4.1.5.tgz#552ccd27b79a13a899022e20f658a2c2cb75e251"
   dependencies:
     apollo-utilities "^1.0.8"
 
-graphql-tag@^2.8.0:
+graphql-tag@2.8.0:
   version "2.8.0"
   resolved "https://registry.yarnpkg.com/graphql-tag/-/graphql-tag-2.8.0.tgz#52cdea07a842154ec11a2e840c11b977f9b835ce"
 
-graphql@^0.13.1:
+graphql@0.13.1:
   version "0.13.1"
   resolved "https://registry.yarnpkg.com/graphql/-/graphql-0.13.1.tgz#9b3db3d8e40d1827e4172404bfdd2e4e17a58b55"
   dependencies:
@@ -2616,7 +2616,7 @@ inquirer@^3.0.6, inquirer@^3.2.2:
     strip-ansi "^4.0.0"
     through "^2.3.6"
 
-invariant@^2.2.0, invariant@^2.2.2:
+invariant@2.2.2, invariant@^2.2.0, invariant@^2.2.2:
   version "2.2.2"
   resolved "https://registry.yarnpkg.com/invariant/-/invariant-2.2.2.tgz#9e1f56ac0acdb6bf303306f338be3b204ae60360"
   dependencies:
@@ -4066,7 +4066,7 @@ promise@^7.1.1:
   dependencies:
     asap "~2.0.3"
 
-prop-types@^15.5.7, prop-types@^15.6.0:
+prop-types@15.6.0, prop-types@^15.5.7, prop-types@^15.6.0:
   version "15.6.0"
   resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.6.0.tgz#ceaf083022fc46b4a35f69e13ef75aed0d639856"
   dependencies:

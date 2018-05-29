@@ -1,14 +1,8 @@
 // @flow
 
-import Op, {
-  ZERO as ZERO_OP,
-  FRAME_SEP,
-  Batch,
-  Frame,
-  Cursor,
-} from 'swarm-ron';
-import type { Atom } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
+import Op, { ZERO as ZERO_OP, FRAME_SEP, Batch, Frame, Cursor } from '@swarm/ron';
+import type { Atom } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
 import IHeap, { refComparatorDesc } from './iheap';
 
 export const type = UUID.fromString('set');
@@ -26,9 +20,7 @@ export function reduce(batch: Batch): Frame {
   for (const frame of batch) {
     if (batch.length === 1) return frame;
     for (const op of frame) {
-      ret.push(
-        new Op(type, op.uuid(1), op.uuid(2), ZERO, undefined, FRAME_SEP),
-      );
+      ret.push(new Op(type, op.uuid(1), op.uuid(2), ZERO, undefined, FRAME_SEP));
 
       heap.clear();
       heap.put(batch);

@@ -70,5 +70,14 @@
       "/node_modules/",
       "/playground/"
     ]
+  },
+  "dependencies": {
+    "graphql": "0.13.1",
+    "graphql-anywhere": "4.1.5",
+    "graphql-tag": "2.8.0",
+    "invariant": "2.2.2",
+    "prop-types": "15.6.0",
+    "react": "16.2.0",
+    "react-dom": "16.2.0"
   }
 }

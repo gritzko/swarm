@@ -1,6 +1,6 @@
 // @flow
 
-import {Batch} from 'swarm-ron';
+import {Batch} from '@swarm/ron';
 import {reduce} from '../src';
 
 test('log reduce', () => {

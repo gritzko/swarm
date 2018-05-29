@@ -1,8 +1,8 @@
 // @flow
 'use strict';
 
-import Op, {Batch, Frame, FRAME_SEP} from 'swarm-ron';
-import UUID, {ZERO} from 'swarm-ron-uuid';
+import Op, {Batch, Frame, FRAME_SEP} from '@swarm/ron';
+import UUID, {ZERO} from '@swarm/ron-uuid';
 import IHeap, {eventComparatorDesc} from './iheap';
 
 const heap = new IHeap(eventComparatorDesc);

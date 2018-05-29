@@ -1,7 +1,7 @@
 // @flow
 import type { DocumentNode } from 'graphql';
-import type { Atom } from 'swarm-ron';
-import { UUID } from 'swarm-ron';
+import type { Atom } from '@swarm/ron';
+import { UUID } from '@swarm/ron';
 
 export type Variables = { [string]: Atom | { [string]: Atom } };
 

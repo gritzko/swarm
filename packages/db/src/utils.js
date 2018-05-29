@@ -1,8 +1,8 @@
 // @flow
 
-import { UUID, Frame } from 'swarm-ron';
-import type { Atom } from 'swarm-ron';
-import { calendarBase2Date } from 'swarm-clock';
+import { UUID, Frame } from '@swarm/ron';
+import type { Atom } from '@swarm/ron';
+import { calendarBase2Date } from '@swarm/clock';
 
 export function node(
   value: Atom,

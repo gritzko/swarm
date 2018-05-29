@@ -1,5 +1,5 @@
 import Client, { InMemory } from '../src';
-import UUID from 'swarm-ron-uuid';
+import UUID from '@swarm/ron-uuid';
 import { Connection } from '../../__tests__/fixtures';
 
 // @flow

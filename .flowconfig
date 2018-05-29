@@ -7,7 +7,7 @@
 [libs]
 
 [options]
-module.name_mapper='^\(.*\)swarm\-\(.*\)$' -> '<PROJECT_ROOT>/packages/\2/src'
+module.name_mapper='^\(.*\)@swarm\/\(.*\)$' -> '<PROJECT_ROOT>/packages/\2/src'
 munge_underscores=true
 
 [version]

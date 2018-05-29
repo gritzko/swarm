@@ -4,7 +4,7 @@ import * as React from 'react';
 import renderer from 'react-test-renderer';
 import gql from 'graphql-tag';
 
-import DB from 'swarm-db';
+import DB from '@swarm/db';
 import { Provider, GraphQL } from '../src';
 import type { Response } from '../src';
 import { Connection } from '../../__tests__/fixtures';

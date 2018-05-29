@@ -1,24 +1,37 @@
 {
-  "name": "swarm-ron-grammar",
-  "version": "2.0.5",
+  "name": "@swarm/ron-grammar",
+  "version": "0.1.0",
   "description": "A regular grammar for the Swarm Replicated Object Notation",
   "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
-  "contributors": ["Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"],
+  "contributors": [
+    "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)"
+  ],
   "main": "lib/index.js",
   "repository": {
     "type": "git",
     "url": ""
   },
-  "dependencies": {
-    "regular-grammar": "^1.0.0"
-  },
-  "files": ["*.js", "README.md"],
+  "files": [
+    "*.js",
+    "README.md"
+  ],
   "scripts": {
     "build": "yarn run build:clean && yarn run build:lib && yarn run build:flow",
     "build:clean": "../../node_modules/.bin/rimraf lib",
     "build:lib": "../../node_modules/.bin/babel -d lib src --ignore '**/__tests__/**'",
     "build:flow": "../../node_modules/.bin/flow-copy-source -v -i '**/__tests__/**' src lib"
   },
-  "keywords": ["swarm", "replicated", "ron", "grammar", "protocol", "parser", "regex"],
+  "keywords": [
+    "swarm",
+    "replicated",
+    "ron",
+    "grammar",
+    "protocol",
+    "parser",
+    "regex"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

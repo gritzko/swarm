@@ -1,6 +1,6 @@
 {
-  "name": "swarm-db",
-  "version": "2.0.0",
+  "name": "@swarm/db",
+  "version": "0.1.0",
   "description": "SwarmDB",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
@@ -8,12 +8,18 @@
     "type": "git",
     "url": ""
   },
-  "dependencies": {
+  "peerDependencies": {
     "graphql": "^0.13.1",
     "graphql-anywhere": "^4.1.5",
-    "graphql-tag": "^2.8.0",
-    "object-hash": "^1.2.0",
-    "swarm-api": "^2.0.0"
+    "graphql-tag": "^2.8.0"
+  },
+  "dependencies": {
+    "@swarm/api": "^0.1.0",
+    "@swarm/clock": "^0.1.0",
+    "@swarm/rdt": "^0.1.0",
+    "@swarm/ron": "^0.1.0",
+    "@swarm/ron-uuid": "^0.1.0",
+    "object-hash": "^1.2.0"
   },
   "files": [
     "*.js",
@@ -31,5 +37,8 @@
     "RON",
     "CRDT"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT"
 }

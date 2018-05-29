@@ -7,12 +7,12 @@ import PropTypes from 'prop-types';
 import invariant from 'invariant';
 import type { DocumentNode } from 'graphql';
 
-import DB from 'swarm-db';
-import type { Request, Response as DBResponse } from 'swarm-db';
-import type { Value } from 'swarm-api';
-import type { Variables } from 'swarm-db';
-import type { Atom } from 'swarm-ron';
-import UUID, { ERROR } from 'swarm-ron-uuid';
+import DB from '@swarm/db';
+import type { Request, Response as DBResponse } from '@swarm/db';
+import type { Value } from '@swarm/api';
+import type { Variables } from '@swarm/db';
+import type { Atom } from '@swarm/ron';
+import UUID, { ERROR } from '@swarm/ron-uuid';
 
 export type Mutation = Variables => Promise<Value>;
 

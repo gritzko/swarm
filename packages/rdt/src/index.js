@@ -1,9 +1,9 @@
 // @flow
 'use strict';
 
-import Op, { Batch, Frame, FRAME_SEP } from 'swarm-ron';
-import type { Atom } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
+import Op, { Batch, Frame, FRAME_SEP } from '@swarm/ron';
+import type { Atom } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
 
 import lww from './lww';
 import log from './log';

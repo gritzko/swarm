@@ -6,17 +6,22 @@ import type { DocumentNode } from 'graphql';
 import graphql from 'graphql-anywhere';
 import hash from 'object-hash';
 
-import { lww, set, ron2js } from 'swarm-rdt';
-import Op, { Frame } from 'swarm-ron';
-import UUID, { ZERO } from 'swarm-ron-uuid';
-import API from 'swarm-api';
-import type { Options, Value } from 'swarm-api';
-import type { Atom } from 'swarm-ron';
+import { lww, set, ron2js } from '@swarm/rdt';
+import Op, { Frame } from '@swarm/ron';
+import UUID, { ZERO } from '@swarm/ron-uuid';
+import API from '@swarm/api';
+import type { Options, Value } from '@swarm/api';
+import type { Atom } from '@swarm/ron';
 
 import type { Request, Response } from './types';
 import { GQLSub } from './subscription';
 
+export { default as UUID } from '@swarm/ron-uuid';
+export { Verbose } from '@swarm/client/lib/connection';
+export { LocalStorage, InMemory } from '@swarm/client';
+
 export type { Request, Response, Variables } from './types';
+export type { Atom } from '@swarm/ron';
 
 export default class SwarmDB extends API {
   constructor(options: Options): SwarmDB {
@@ -36,9 +41,7 @@ export default class SwarmDB extends API {
     }
 
     if (request.query.definitions.length !== 1) {
-      throw new Error(
-        `unexpected length of definitions: ${request.query.definitions.length}`,
-      );
+      throw new Error(`unexpected length of definitions: ${request.query.definitions.length}`);
     }
 
     await this.ensure();

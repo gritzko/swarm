@@ -1,7 +1,7 @@
 // @flow
 'use strict';
 
-import UUID, { ERROR, ZERO, BASE64, CODES } from 'swarm-ron-uuid';
+import UUID, { ERROR, ZERO, BASE64, CODES } from '@swarm/ron-uuid';
 
 export interface Clock {
   time(): UUID;

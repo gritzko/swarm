@@ -1,8 +1,6 @@
 // @flow
 
-const resolve: (string, {[string]: RegExp}) => void = require('regular-grammar');
-
-const RON_GRAMMAR: {[string]: RegExp} = {
+const RON_GRAMMAR: { [string]: RegExp } = {
   BASE64: /[0-9A-Za-z_~]/,
   UNICODE: /\\u[0-9a-fA-F]{4}/,
   INT: /([\([{}\])])?($BASE64{0,10})/,
@@ -21,5 +19,16 @@ const RON_GRAMMAR: {[string]: RegExp} = {
 };
 
 resolve('FRAME', RON_GRAMMAR);
+
+function resolve(rule_name: string, rules: { [string]: RegExp }): RegExp {
+  var rule = rules[rule_name];
+  var pattern = rule.source.replace(/\$(\w+)/g, function(match, name) {
+    var parser = resolve(name, rules);
+    var pattern = parser.source.replace(/\((?!\?:)/g, '(?:').replace(/(\\\\)*\\\(\?:/g, '$1\\(');
+    return pattern;
+  });
+
+  return pattern === rule.pattern ? rule : (rules[rule_name] = new RegExp(pattern));
+}
 
 export default RON_GRAMMAR;
