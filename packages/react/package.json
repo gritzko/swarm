@@ -1,6 +1,6 @@
 {
   "name": "@swarm/react",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Swarm to React bindings",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@swarm/api": "^0.1.1",
-    "@swarm/db": "^0.1.1",
+    "@swarm/db": "^0.1.2",
     "@swarm/ron": "^0.1.1",
     "@swarm/ron-uuid": "^0.1.1"
   },
