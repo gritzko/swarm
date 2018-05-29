@@ -88,19 +88,16 @@ But let's suppose that we can't talk RON over raw WebSocket.
 Then, let's setup a JavaScript client project:
 
 ```bash
-$ git clone git@github.com:gritzko/swarm.git
-$ cd swarm
-$ yarn
-$ mkdir -p packages/examples/myapp
-$ cd packages/examples/myapp
+$ mkdir ./myapp
+$ cd ./myapp
+$ yarn add @swarm/db graphql-tag
 ```
 
 Now we can initialize a client instance and connect it to the running server.
 
 ```javascript
 import gql from 'graphql-tag';
-import SwarmDB from 'swarm-db';
-import { LocalStorage } from 'swarm-client';
+import SwarmDB, { LocalStorage } from '@swarm/db';
 
 const swarm = new SwarmDB({
   storage: new LocalStorage(),
@@ -590,7 +587,7 @@ Makes the Swarm instance available to the [`<GraphQL />`](#) components in the c
 Example:
 
 ```javascript
-import { Provider } from 'swarm-react';
+import { Provider } from '@swarm/react';
 
 // ...
 
