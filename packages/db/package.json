@@ -8,12 +8,10 @@
     "type": "git",
     "url": ""
   },
-  "peerDependencies": {
+  "dependencies": {
     "graphql": "^0.13.1",
     "graphql-anywhere": "^4.1.5",
-    "graphql-tag": "^2.8.0"
-  },
-  "dependencies": {
+    "graphql-tag": "^2.8.0",
     "@swarm/api": "^0.1.1",
     "@swarm/clock": "^0.1.1",
     "@swarm/rdt": "^0.1.1",
