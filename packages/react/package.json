@@ -1,6 +1,6 @@
 {
   "name": "@swarm/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Swarm to React bindings",
   "author": "Oleg Lebedev <ole6edev@gmail.com> (https://github.com/olebedev)",
   "main": "lib/index.js",
@@ -9,10 +9,10 @@
     "url": ""
   },
   "dependencies": {
-    "@swarm/api": "^0.1.0",
-    "@swarm/db": "^0.1.0",
-    "@swarm/ron": "^0.1.0",
-    "@swarm/ron-uuid": "^0.1.0"
+    "@swarm/api": "^0.1.1",
+    "@swarm/db": "^0.1.1",
+    "@swarm/ron": "^0.1.1",
+    "@swarm/ron-uuid": "^0.1.1"
   },
   "devDependencies": {
     "babel-preset-react": "^6.24.1",
@@ -28,8 +28,8 @@
     "regenerator-runtime": "^0.11.1"
   },
   "files": [
-    "*.js",
-    "README.md"
+    "lib/*.js",
+    "lib/*.js.flow"
   ],
   "scripts": {
     "build": "yarn run build:clean && yarn run build:lib && yarn run build:flow",

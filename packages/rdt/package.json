@@ -1,6 +1,6 @@
 {
   "name": "@swarm/rdt",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Swarm Replicated Data Types - Basic",
   "author": "Victor Grishchenko <victor.grishchenko@gmail.com>",
   "contributors": [
@@ -12,12 +12,12 @@
     "url": ""
   },
   "dependencies": {
-    "@swarm/ron": "^0.1.0",
-    "@swarm/ron-uuid": "^0.1.0"
+    "@swarm/ron": "^0.1.1",
+    "@swarm/ron-uuid": "^0.1.1"
   },
   "files": [
-    "*.js",
-    "README.md"
+    "lib/*.js",
+    "lib/*.js.flow"
   ],
   "scripts": {
     "build": "yarn run build:clean && yarn run build:lib && yarn run build:flow",
