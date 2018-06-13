@@ -71,12 +71,12 @@ See our demos:
     <img src="https://i.imgur.com/TQKTkf2.gif" width="600">
   </details>
 
-Every app works offline, perfectly.
+Every app perfectly works offline.
 
 
 ## Setup
 
-A basic Swarm server implementation is available as a docker image. First, please make sure that you have docker installed. Then, run the container:
+A basic Swarm server implementation is available as a docker image. First, please make sure that you have the docker installed. Then, run the container:
 
 ```bash
 $ docker run -d --name swarmdb -p 31415:31415 -v `pwd`:/var/lib/swarm olebedev/swarmdb
@@ -135,12 +135,12 @@ swarm.execute({ query, variables }, ({ data, error, off }) => {
 
 ## CRDT implementations
 
-* [x] [LWW](packages/rdt/lww.js), a last-write-wins replicated data type that may host a variety of user-land data types, like: a dictionary, a simple 1D array (no splice, no index shifts), a matrix. This LWW employs client-side logical timestamps to decide which write wins, on a field-by-field basis. That is similar to e.g. Cassandra LWW.
+* [x] [LWW](packages/rdt/lww.js), a last-write-wins replicated data type that may host a variety of user-land data types, like: a dictionary, a simple 1D array (no splice, no index shifts). This LWW employs client-side logical timestamps to decide which write wins, on a field-by-field basis. That is similar to e.g. Cassandra LWW.
 
-* [x] [Set](packages/rdt/set.js), fully commutative, ordered, with tombstones. You can either add or remove an atom. 
+* [x] [Set](packages/rdt/set.js), fully commutative, ordered, with tombstones set. You can either add or remove an atom. 
 
-* [ ] [RGA](#), replicated growable array.
-* [ ] [Counter](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#PN-Counter_(Positive-Negative_Counter)), positive-negative counter.
+* [ ] [RGA](#), a replicated growable array.
+* [ ] [Counter](https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type#PN-Counter_(Positive-Negative_Counter)), a positive-negative counter.
 
 ## API
 
@@ -229,7 +229,7 @@ Example:
 const dashboard = swarm.uuid().local() // a local uuid works only for the current instance. 
 ```
 
-Note that a local object can reference a shared object, but not the other way around.
+Note that a local object can reference a shared object, but not the other way round.
 Please take a look at [todo](https://github.com/olebedev/todo/blob/master/src/graphql.js#L50) to see at fully working example of using local UUIDs for local state management.
 
 
@@ -400,7 +400,7 @@ directive @live on FIELD
 
 Both add an ability to define a [partial reactivity](https://youtu.be/BSw05rJaCpA). All the nodes in the _subscription_ root field are reactive along with all the nodes in the _query_ root field are static. _Subscription_ and _query_ root field are interchangeable. So, it's up to developer which root field will be used, depends on how many nodes in a tree should be static or reactive. 
 
-Once a static node was fetched from the server and cached it will be returned from the cache without network activity. 
+Once a static node was fetched from the server and cached, it will be returned from the cache without network activity. 
 
 ```graphql
 # fetch user once and cache for further queries
@@ -436,7 +436,7 @@ query {
 directive @weak on FIELD
 ```
 
-Adds more control to data flow management. By default Swarm tries to fetch a node from the server if no presented in the local cache. So, _query_ or _subscription_ can block an application if there is no open connection. This directive tells the runtime to call back with `null`(don't wait for the server response) if the node is not presented in the local cache yet. Useful for offline work. 
+Adds more control to data flow management. By default, Swarm tries to fetch a node from the server if no presented in the local cache. So, _query_ or _subscription_ can block an application if there is no open connection. This directive tells the runtime to call back with `null`(don't wait for the server response) if the node is not presented in the local cache yet. Useful for offline work. 
 
 
 ```graphql
@@ -515,10 +515,10 @@ It's a React component which uses the [render prop pattern](https://reactjs.org/
 
 #### Props
 
-* `swarm`: The single Swarm instance in your application. In case if don't use [`<Provider />`](#provider-swarm-children) or intend to use another Swarm instance.
+* `swarm`: The single Swarm instance in your application. In case if  you don't use [`<Provider />`](#provider-swarm-children) or intend to use another Swarm instance.
 * `query`: A GraphQL query/subscription wrapped with `gql` function.
 * `variables`: Variables object of the query/subscription.
-* `mutations`: An object of mutatoins fo bind it with Swarm instance. 
+* `mutations`: An object of mutations to bind it with Swarm instance. 
 * `children`: A prop function which returns a component subtree.
   
   Children prop will be called with an object which contains fields:
@@ -526,7 +526,7 @@ It's a React component which uses the [render prop pattern](https://reactjs.org/
   * `data`: A result of query/subscription execution. May be null if there is no result yet.
   * `mutations`: An object with the same shape as a mutation prop but bound to the Swarm instance and ready to call with variables or without. 
   * `error`: An error of operations if any.
-  * `uuid`: [A function](#uuid-uuid) which returns new UUID for each call. Null if the swarm instance is not initialized yet(see [`ensure()`](#ensure-promisevoid)).
+  * `uuid`: [A function](#uuid-uuid) which returns a new UUID. Null if the swarm instance is not initialized yet(see [`ensure()`](#ensure-promisevoid)).
 
   
   
@@ -609,7 +609,7 @@ The underlying layer - RON is stable and APIs are frozen. The client and the ser
 
 For documents use `LWW` type and for collections use `Set` type.
 
-Swarm is a JSON graph. Very much like in Firebase or MongoDB - document/collection-based approach. The key difference is you can put references into the graph, so, no need do denormalize your data and keep your data as flat as possible. Opposite to it, shape your data as deep as you want. 
+Swarm is a JSON graph. Very much like in Firebase or MongoDB - document/collection-based approach. The key difference is thet you can put references into the graph, so, no need to denormalize your data and keep your data as flat as possible. Opposite to it, shape your data as deep as you want. 
 
 > Why GraphQL?
 
