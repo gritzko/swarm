@@ -436,7 +436,7 @@ query {
 directive @weak on FIELD
 ```
 
-Adds more control to data flow management. By default, Swarm tries to fetch a node from the server if no presented in the local cache. So, _query_ or _subscription_ can block an application if there is no open connection. This directive tells the runtime to call back with `null`(don't wait for the server response) if the node is not presented in the local cache yet. Useful for offline work. 
+Adds more control to data flow management. By default, Swarm tries to fetch a node from the server if there is none presented in the local cache. So, _query_ or _subscription_ can block an application if there is no open connection. This directive tells the runtime to call back with `null`(don't wait for the server response) if the node is not presented in the local cache yet. Useful for offline work. 
 
 
 ```graphql
