@@ -1,3 +1,5 @@
+This code is historical. See [RDX C](https://github.com/gritzko/librdx) or [RDX Go](https://github.com/drpcorg/chotki/rdx) for the new generation of the technology. No JavaScript impl yet. Maybe you can help, please use [Issues](https://github.com/gritzko/librdx/issues).
+
 # Swarm 2.0 real-time sync [![BuildStatus](https://travis-ci.org/gritzko/swarm.svg?branch=master)](https://travis-ci.org/gritzko/swarm)
 
 <img align="right" width="400" src="https://i.imgur.com/hqGwft1.png">
